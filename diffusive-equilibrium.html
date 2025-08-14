@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermodynamic: Diffusive Equilibrium</title>
+    <style>
+        :root {
+            --primary-color: #0d6efd; --primary-hover: #0b5ed7;
+            --text-color: #212529; --bg-color: #f8f9fa;
+            --section-bg: #ffffff; --border-color: #dee2e6;
+            --subtle-bg: #e9ecef;
+        }
+        body.high-contrast {
+            --primary-color: #1affff; --primary-hover: #00cccc;
+            --text-color: #ffffff; --bg-color: #000000;
+            --section-bg: #1a1a1a; --border-color: #555555;
+            --subtle-bg: #333333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        header { text-align: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        h2 { margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .subtitle { font-size: 1.1rem; color: #6c757d; }
+        body.high-contrast .subtitle { color: #bbbbbb; }
+        #metadata-bar { font-size: 0.9rem; color: #6c757d; margin-top: 1rem; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 1rem; }
+        body.high-contrast #metadata-bar { color: #bbbbbb; }
+        main { max-width: 1000px; margin: 0 auto; }
+        section { margin-bottom: 2rem; padding: 1.5rem; background-color: var(--section-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Simulation Area */
+        #simulation-canvas { width: 100%; height: auto; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--section-bg); }
+        #stats-display { display: flex; justify-content: space-around; margin-bottom: 1rem; font-size: 1.2rem; font-weight: bold; }
+        .stat-box { background-color: var(--subtle-bg); padding: 0.5rem 1rem; border-radius: 6px; }
+        #controls { padding: 1rem; margin-top: 1rem; background: var(--subtle-bg); border-radius: 8px; }
+        .controls-main { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; justify-content: center; }
+        .control-group { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+        .control-group label { margin-bottom: 0.5rem; }
+        #controls .button-group { display: flex; gap: 0.5rem; align-items: center; }
+
+        button {
+            padding: 0.5rem 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);
+            background-color: var(--primary-color); color: white; border-radius: 5px;
+            cursor: pointer; transition: background-color 0.2s, transform 0.1s, color 0.2s;
+        }
+        body.high-contrast button { color: black; }
+        button:hover, button:focus { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+
+        /* Other styles */
+        #suggestion-box { background-color: #eef7ff; border: 1px solid var(--primary-color); border-radius: 5px; padding: 1rem; margin-bottom: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        body.high-contrast #suggestion-box { background-color: #1a1a1a; }
+        #suggestion-box p { margin: 0 0 0.5rem 0; }
+        footer { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: center; color: #6c757d; font-size: 0.9rem; }
+        #dev-console { margin-top: 1rem; background: var(--subtle-bg); border: 1px solid var(--border-color); border-radius: 8px; text-align: left; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        #dev-console-header { cursor: pointer; padding: 0.5rem 1rem; margin: 0; background: var(--subtle-bg); border-radius: 8px 8px 0 0; }
+        #dev-console-content { max-height: 200px; overflow-y: auto; padding: 0.5rem 1rem; display: none; }
+        #dev-console-content.open { display: block; }
+        #dev-log { list-style-type: none; padding: 0; margin: 0; font-family: monospace; font-size: 0.85rem; }
+        #dev-log li { padding: 2px 0; border-bottom: 1px solid #e0e0e0; }
+        body.high-contrast #dev-log li { border-bottom-color: #444; }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <p>Tune this simulation to your liking:</p>
+        <div class="button-group">
+            <button data-pref="audience" data-value="beginner">Audience: Beginner</button>
+            <button data-pref="audience" data-value="intermediate">Audience: Intermediate</button>
+            <button data-pref="audience" data-value="advanced">Audience: Advanced</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>Diffusive Equilibrium</h1>
+        <p class="subtitle">A simulation of two gases mixing to maximize entropy.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span>
+            <span>Recommended Device: Desktop</span>
+            <span id="html-size"></span>
+            <button id="theme-toggle-btn" aria-label="Toggle high contrast theme">Toggle Contrast</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <section id="simulation-area">
+            <div id="stats-display">
+                <div class="stat-box">Left Side: <span id="left-count">0</span></div>
+                <div class="stat-box">Right Side: <span id="right-count">0</span></div>
+            </div>
+            <canvas id="simulation-canvas" width="800" height="400"></canvas>
+             <div id="controls">
+                <div class="controls-main">
+                    <div class="button-group">
+                        <button id="main-btn" class="action-btn">Remove Partition</button>
+                    </div>
+                     <div class="control-group">
+                        <label>Left Particles: <output id="num-left-value">150</output></label>
+                        <input type="range" id="num-left-slider" min="1" max="300" value="150">
+                    </div>
+                    <div class="control-group">
+                        <label>Right Particles: <output id="num-right-value">20</output></label>
+                        <input type="range" id="num-right-slider" min="0" max="300" value="20">
+                    </div>
+                    <div class="control-group">
+                        <label>Temperature: <output id="temp-value">1.5</output></label>
+                        <input type="range" id="temp-slider" min="0.5" max="5" step="0.1" value="1.5">
+                    </div>
+                </div>
+                <div class="button-group preset-buttons" style="justify-content: center; margin-top: 1rem;">
+                    <button id="preset-imbalance">Preset: High Imbalance</button>
+                    <button id="preset-vacuum">Preset: Vacuum</button>
+                    <button id="preset-equal">Preset: Near Equilibrium</button>
+                </div>
+                <div class="button-group" style="justify-content: center; margin-top: 1rem;">
+                     <button id="perf-mode-btn">Perf. Mode</button>
+                     <button id="export-png-btn">Export PNG</button>
+                     <button id="share-btn">Share</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation shows one of the most fundamental processes in nature: the tendency of systems to reach **diffusive equilibrium**. We start with two different "gases" (blue and red particles) separated by a partition. When you remove the partition, the particles begin to mix due to their random motion. Although the movement of any single particle is unpredictable, the collective result is a predictable march towards a uniform mixture. This process is driven by the Second Law of Thermodynamics—the inexorable increase of **entropy**.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. Random Walks, Predictable Results</h3>
+            <p>Imagine you have a crowded room of people (the blue particles) and an empty room (the red particles), connected by a doorway. If everyone starts wandering around randomly, it's not surprising that eventually, some people from the crowded room will end up in the empty room. Over time, you'd expect the number of people in both rooms to become roughly equal. This is the core idea of diffusion.</p>
+            <p>In this simulation, each particle is given a random velocity. It moves in a straight line until it hits a wall or the partition, at which point it bounces off like a billiard ball. When you click <strong>"Remove Partition"</strong>, the middle wall vanishes, and the particles are free to move between the two halves of the box.</p>
+
+            <h3>2. Watching Equilibrium Happen</h3>
+            <p>The counters at the top of the simulation show the number of particles on the left and right sides. Before you remove the partition, these numbers are fixed. After you remove it, watch how they change. The number on the more crowded side will go down, and the number on the less crowded side will go up. Eventually, they will stop changing much and will hover around the same average value. This state of balance is called <strong>diffusive equilibrium</strong>.</p>
+            <p>It's important to realize this is a <em>dynamic</em> equilibrium. The particles are still moving frantically, and at any given instant, the numbers might not be perfectly equal. But over time, the net flow of particles from left to right is equal to the net flow from right to left, so the macroscopic state (the count on each side) remains stable.</p>
+
+            <h3>3. Why Does This Happen? Entropy</h3>
+            <p>Why doesn't the gas stay separated? Why doesn't it ever spontaneously un-mix? The reason is **entropy**. Entropy can be thought of as a measure of the number of ways you can arrange the particles in a system without changing its overall appearance.
+            <ul>
+                <li>There is essentially only **one** way to arrange the system with all blue particles on the left and all red on the right.</li>
+                <li>There are an absolutely astronomical number of ways to arrange the particles so they are thoroughly mixed up.</li>
+            </ul>
+            The Second Law of Thermodynamics states that systems naturally evolve towards the state with the highest entropy—the state with the most possible arrangements. The mixed-up state is statistically inevitable, not because of any special force, but simply because there are vastly more ways to be mixed than to be separated.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory</h2>
+            <h4>Diffusion and Fick's First Law</h4>
+            <p>Diffusion is the net movement of particles from a region of higher concentration to a region of lower concentration. The rate of this movement, called the diffusive flux (J), is proportional to the negative of the concentration gradient (dC/dx). This means the steeper the difference in concentration, the faster the diffusion.</p>
+            <p class="equation">J = -D * (dC/dx)</p>
+            <p>Here, `D` is the diffusion coefficient, which depends on factors like temperature and the fluid's viscosity. In our simulation, a higher "Temperature" setting leads to faster particle speeds and thus a larger effective diffusion coefficient.</p>
+
+            <h4>The Second Law of Thermodynamics</h4>
+            <p>The driving force behind diffusion is the Second Law of Thermodynamics, which states that the total entropy of an isolated system can only increase over time. Entropy (S) is a measure of disorder, or more precisely, the number of microscopic arrangements (microstates) that correspond to a given macroscopic state.</p>
+            <p class="equation">ΔS ≥ 0</p>
+            <p>The state where the gases are separated has a very low entropy (few arrangements). The mixed state has an enormously high entropy (many possible arrangements). The system spontaneously moves toward the higher entropy state because it is overwhelmingly more probable.</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Default</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Left/Right Particles</strong></td>
+                        <td>150 / 20</td>
+                        <td>[0, 300]</td>
+                        <td>Sets the initial number of particles on each side of the partition before mixing.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Temperature</strong></td>
+                        <td>1.5</td>
+                        <td>[0.5, 5.0]</td>
+                        <td>Controls the average speed of the particles. Higher temperature leads to faster mixing.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group">
+                <h4>1. High Imbalance</h4>
+                <p>This is the default state, with many particles on one side and few on the other.</p>
+                <p><strong>Observe:</strong> When the partition is removed, there is a rapid initial flow of particles from left to right, which slows down as the concentrations become more equal.</p>
+                <button onclick="window.setPreset(150, 20)">Set to High Imbalance</button>
+            </div>
+            <div class="example-group">
+                <h4>2. Expansion into a Vacuum</h4>
+                <p>This sets up a classic thermodynamic experiment where a gas expands to fill an empty volume.</p>
+                <p><strong>Observe:</strong> The particles on the left quickly spread out to fill the entire container, eventually reaching an equilibrium where the particle counts on both sides are nearly equal.</p>
+                <button onclick="window.setPreset(200, 0)">Set to Vacuum</button>
+            </div>
+            <div class="example-group">
+                <h4>3. Near Equilibrium</h4>
+                <p>This starts the system with nearly equal numbers of particles on both sides.</p>
+                <p><strong>Observe:</strong> Even after the partition is removed, the macroscopic counts on the left and right do not change much. The system is already close to equilibrium, so the net flow of particles is very small.</p>
+                <button onclick="window.setPreset(100, 100)">Set to Near Equilibrium</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Observing the Approach to Equilibrium</h4>
+            <ol>
+                <li>Start with the default "High Imbalance" preset. Note the initial counts: Left ≈ 150, Right ≈ 20.</li>
+                <li>Click the <strong>"Remove Partition"</strong> button. The central barrier will disappear.</li>
+                <li>Watch the particles. You will see a clear net movement of blue particles from the left side to the right side, and red particles from right to left.</li>
+                <li>Watch the counters. The "Left Side" count will decrease, and the "Right Side" count will increase.</li>
+                <li>After some time, the counts will stop changing systematically and will instead fluctuate around a stable average value. The system has reached equilibrium. The total number of particles (170) is now roughly evenly split, with about 85 on each side.</li>
+            </ol>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>Fluctuations and Poincaré Recurrence</h4>
+            <p>While the system will never spontaneously un-mix in any reasonable timeframe, it is not theoretically impossible. The random motion of particles means there is a non-zero (but astronomically small) probability that, just by chance, all the blue particles could end up on the left side again. The <strong>Poincaré Recurrence Theorem</strong> states that an isolated system will eventually return to a state arbitrarily close to its initial state. However, for a system with this many particles, the timescale for such an event is many, many times the age of the universe.</p>
+            <h4>Particle-Particle Collisions</h4>
+            <p>This simulation uses an "ideal gas" model where particles are point-like and do not collide with each other. In a real gas, particles do collide, which transfers momentum and energy between them. Adding particle-particle collisions would make the simulation more realistic (and much more computationally expensive) but would not change the final outcome: the system would still reach a uniform diffusive equilibrium.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. Shuffling a Deck of Cards</h4>
+            <p>Imagine a new deck of cards, perfectly ordered by suit and number. This is a low-entropy, highly ordered state.
+            <ul>
+                <li><strong>Initial State:</strong> The ordered deck. Like the separated gases, there is only one way for it to be in this perfect order.</li>
+                <li><strong>The Process (Diffusion):</strong> Shuffling the deck. Each shuffle is like a random particle interaction.</li>
+                <li><strong>Final State (Equilibrium):</strong> A completely randomized, shuffled deck. This is a high-entropy state. Why? Because there are trillions upon trillions of ways for a deck to be "shuffled," but only one way for it to be perfectly ordered. The system naturally finds its way to the most probable (most numerous) configuration. You would never expect to un-shuffle the deck by shuffling it more.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why don't the counts become exactly equal?</dt>
+                <dd>Because the system is dynamic and the particles are moving randomly. At any given moment, there might be slightly more on one side than the other just by chance. These are called statistical fluctuations. However, the *average* number of particles on each side over time will be equal.</dd>
+                <dt>2. What does "Temperature" do in this simulation?</dt>
+                <dd>In this simple model, temperature is just a dial that controls the average speed of the particles. Higher temperature means higher average kinetic energy, so the particles move faster and the system reaches equilibrium more quickly.</dd>
+                <dt>3. Do the colors of the particles matter?</dt>
+                <dd>No. The two sets of particles are identical in their physical behavior (mass, size, etc.). The colors are just a visual aid to help you see the mixing process. This simulates the diffusion of two different gases into each other.</dd>
+                <dt>4. Is this related to osmosis?</dt>
+                <dd>Yes, very much so. Osmosis is a special case of diffusion that occurs across a semi-permeable membrane—a membrane that allows some particles (like water) to pass through but not others (like salt). The tendency of water to move to equalize the salt concentration is driven by the same principle of maximizing entropy.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sim = {
+            canvas: null, ctx: null, width: 800, height: 400,
+            particles: [],
+            partitionRemoved: false,
+            isRunning: true,
+            numLeft: 150, numRight: 20,
+            temperature: 1.5, particleRadius: 3,
+            colors: { bg: '#FFFFFF', leftParticle: 'rgba(0, 123, 255, 0.8)', rightParticle: 'rgba(220, 53, 69, 0.8)', partition: '#6c757d' },
+            highContrastColors: { bg: '#000000', leftParticle: 'rgba(0, 255, 255, 0.9)', rightParticle: 'rgba(255, 100, 100, 0.9)', partition: '#FFFFFF' }
+        };
+        const elements = {};
+
+        function init() {
+            getDOMElements();
+            sim.canvas = elements.canvas;
+            sim.ctx = sim.canvas.getContext('2d');
+            addEventListeners();
+            updateFromControls();
+            reset();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function getDOMElements() {
+            const ids = [
+                'simulation-canvas', 'main-btn', 'num-left-slider', 'num-right-slider', 'temp-slider',
+                'num-left-value', 'num-right-value', 'temp-value', 'left-count', 'right-count',
+                'preset-imbalance', 'preset-vacuum', 'preset-equal', 'perf-mode-btn', 'export-png-btn', 'share-btn',
+                'quality-check-panel', 'html-size', 'theme-toggle-btn',
+                'dev-console-header', 'dev-console-content', 'dev-log', 'performance-meter'
+                ];
+            ids.forEach(id => {
+                const camelCaseId = id.replace(/-./g, x => x[1].toUpperCase());
+                elements[camelCaseId] = document.getElementById(id);
+            });
+            elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+        }
+
+        function addEventListeners() {
+            elements.mainBtn.addEventListener('click', handleMainButtonClick);
+            elements.numLeftSlider.addEventListener('input', updateFromControls);
+            elements.numRightSlider.addEventListener('input', updateFromControls);
+            elements.tempSlider.addEventListener('input', updateFromControls);
+            elements.presetImbalance.addEventListener('click', () => setPreset(150, 20));
+            elements.presetVacuum.addEventListener('click', () => setPreset(200, 0));
+            elements.presetEqual.addEventListener('click', () => setPreset(100, 100));
+
+            elements.perfModeBtn.addEventListener('click', togglePerfMode);
+            elements.exportPngBtn.addEventListener('click', exportPNG);
+            elements.shareBtn.addEventListener('click', shareState);
+            elements.themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                log(`Theme toggled.`);
+            });
+            elements.devConsoleHeader.addEventListener('click', () => elements.devConsoleContent.classList.toggle('open'));
+            elements.suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                    button.classList.add('selected');
+                });
+            });
+        }
+
+        function handleMainButtonClick() {
+            if (sim.partitionRemoved) {
+                reset();
+            } else {
+                sim.partitionRemoved = true;
+                elements.mainBtn.textContent = 'Reset Simulation';
+            }
+        }
+
+        function updateFromControls() {
+            sim.numLeft = parseInt(elements.numLeftSlider.value);
+            sim.numRight = parseInt(elements.numRightSlider.value);
+            sim.temperature = parseFloat(elements.tempSlider.value);
+            elements.numLeftValue.textContent = sim.numLeft;
+            elements.numRightValue.textContent = sim.numRight;
+            elements.tempValue.textContent = sim.temperature.toFixed(1);
+            if (!sim.partitionRemoved) {
+                reset();
+            }
+        }
+
+        function setPreset(left, right) {
+            elements.numLeftSlider.value = left;
+            elements.numRightSlider.value = right;
+            updateFromControls();
+        }
+        window.setPreset = setPreset;
+
+        function reset() {
+            sim.particles = [];
+            sim.partitionRemoved = false;
+            elements.mainBtn.textContent = 'Remove Partition';
+            createParticles();
+        }
+
+        function createParticles() {
+            sim.particles = [];
+            for (let i = 0; i < sim.numLeft; i++) sim.particles.push(createParticle('left'));
+            for (let i = 0; i < sim.numRight; i++) sim.particles.push(createParticle('right'));
+        }
+
+        function createParticle(side) {
+            const sideWidth = sim.width / 2 - sim.particleRadius * 2;
+            return {
+                x: (side === 'left' ? 0 : sim.width / 2) + Math.random() * sideWidth + sim.particleRadius,
+                y: Math.random() * (sim.height - sim.particleRadius * 2) + sim.particleRadius,
+                vx: (Math.random() - 0.5) * 2 * sim.temperature,
+                vy: (Math.random() - 0.5) * 2 * sim.temperature,
+                color: side
+            };
+        }
+
+        function update() {
+            if (!sim.isRunning) return;
+            let leftCount = 0;
+            const partitionX = sim.width / 2;
+
+            for (const p of sim.particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x <= sim.particleRadius || p.x >= sim.width - sim.particleRadius) { p.vx *= -1; p.x = Math.max(sim.particleRadius, Math.min(p.x, sim.width - sim.particleRadius)); }
+                if (p.y <= sim.particleRadius || p.y >= sim.height - sim.particleRadius) { p.vy *= -1; p.y = Math.max(sim.particleRadius, Math.min(p.y, sim.height - sim.particleRadius)); }
+                if (!sim.partitionRemoved) {
+                    if (p.vx > 0 && p.x + sim.particleRadius > partitionX && p.x < partitionX) { p.vx *= -1; p.x = partitionX - sim.particleRadius; }
+                    else if (p.vx < 0 && p.x - sim.particleRadius < partitionX && p.x > partitionX) { p.vx *= -1; p.x = partitionX + sim.particleRadius; }
+                }
+                if (p.x < partitionX) leftCount++;
+            }
+            elements.leftCount.textContent = leftCount;
+            elements.rightCount.textContent = sim.particles.length - leftCount;
+        }
+
+        function draw() {
+            const colors = document.body.classList.contains('high-contrast') ? sim.highContrastColors : sim.colors;
+            sim.ctx.fillStyle = colors.bg;
+            sim.ctx.fillRect(0, 0, sim.width, sim.height);
+
+            if (!sim.partitionRemoved) {
+                sim.ctx.strokeStyle = colors.partition;
+                sim.ctx.lineWidth = 4;
+                sim.ctx.beginPath();
+                sim.ctx.moveTo(sim.width / 2, 0);
+                sim.ctx.lineTo(sim.width / 2, sim.height);
+                sim.ctx.stroke();
+            }
+
+            for (const p of sim.particles) {
+                sim.ctx.fillStyle = p.color === 'left' ? colors.leftParticle : colors.rightParticle;
+                sim.ctx.beginPath();
+                sim.ctx.arc(p.x, p.y, sim.particleRadius, 0, Math.PI * 2);
+                sim.ctx.fill();
+            }
+        }
+
+        function mainLoop() {
+            if (sim.isRunning) {
+                update();
+            }
+            draw();
+            updatePerfMeter();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Final Features & Utilities ---
+        function togglePerfMode() {
+            sim.perfMode = !sim.perfMode;
+            // In perf mode, half the particles
+            const scale = sim.perfMode ? 0.5 : 2;
+            elements.numLeftSlider.value = Math.round(elements.numLeftSlider.value * scale);
+            elements.numRightSlider.value = Math.round(elements.numRightSlider.value * scale);
+            updateFromControls();
+            elements.perfModeBtn.classList.toggle('active', sim.perfMode);
+            log(`Performance mode ${sim.perfMode ? 'enabled' : 'disabled'}. Particle count adjusted.`);
+        }
+
+        function exportPNG() {
+            const url = sim.canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'diffusive_equilibrium.png';
+            link.href = url;
+            link.click();
+        }
+
+        function shareState() {
+            const state = { l: sim.numLeft, r: sim.numRight, t: sim.temperature };
+            const encoded = btoa(JSON.stringify(state));
+            const url = `${window.location.origin}${window.location.pathname}#params=${encoded}`;
+            navigator.clipboard.writeText(url).then(() => log("Share link copied."), () => logError("Failed to copy link."));
+        }
+
+        function loadStateFromURL() {
+            if (!window.location.hash.startsWith('#params=')) return;
+            try {
+                const encoded = window.location.hash.substring(8);
+                const state = JSON.parse(atob(encoded));
+                if (state.l) elements.numLeftSlider.value = state.l;
+                if (state.r) elements.numRightSlider.value = state.r;
+                if (state.t) elements.tempSlider.value = state.t;
+                updateFromControls();
+                log("Loaded state from URL.");
+            } catch (e) { logError("Failed to load state from URL: " + e.message); }
+        }
+
+        function log(message) { if (elements.devLog) { const li = document.createElement('li'); li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`; elements.devLog.prepend(li); } }
+        function logError(message) { if (elements.devLog) { const li = document.createElement('li'); li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`; elements.devLog.prepend(li); } console.error(message); }
+
+        function runQualityChecks() {
+            let errors = [];
+            for (const key in elements) {
+                if (elements[key] === null) errors.push(`Required element '#${key}' not found.`);
+            }
+            if (errors.length > 0) {
+                elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                elements.qualityCheckPanel.style.display = 'block';
+            } else { log("Quality checks passed."); }
+        }
+
+        function populateMetadata() {
+            const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            if (elements.htmlSize) elements.htmlSize.textContent = `Size: ${(htmlSize / 1024).toFixed(1)} KB`;
+        }
+
+        function updatePerfMeter() {
+            const now = performance.now();
+            const delta = now - (sim.lastFrameTime || now);
+            sim.lastFrameTime = now;
+            const fps = 1000 / delta;
+            sim.fpsAvg = (sim.fpsAvg || fps) * 0.95 + fps * 0.05;
+            if (elements.performanceMeter) elements.performanceMeter.textContent = `FPS: ${sim.fpsAvg.toFixed(1)}`;
+        }
+
+        init();
+        loadStateFromURL();
+    });
+    </script>
+</body>
+</html>
