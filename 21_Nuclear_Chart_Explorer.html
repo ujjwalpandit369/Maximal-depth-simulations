@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear Chart Explorer</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #34495e;
+            --code-bg: #e2e8f0;
+            --stable-color: #2c3e50;
+            --beta-minus-color: #2980b9;
+            --beta-plus-color: #c0392b;
+            --alpha-color: #f1c40f;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #5d6d7e;
+            --code-bg: #2d3748;
+            --stable-color: #ecf0f1;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 3; min-width: 400px; }
+        #info-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            cursor: crosshair;
+        }
+
+        #info-panel { min-height: 200px; }
+        #info-panel h3 { margin-top: 0; }
+        .legend { margin-top: 20px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .legend-color { width: 20px; height: 20px; margin-right: 10px; border: 1px solid var(--control-border); }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Interactive Chart of Nuclides</h1>
+            <p class="subtitle">Exploring the "Valley of Stability" and the patterns of radioactive decay.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Every atom is defined by the number of protons and neutrons in its nucleus. The "Chart of Nuclides" is a master map that plots every known combination, or "isotope," based on its proton and neutron count. This interactive chart lets you explore this map. You'll see a distinct pattern emerge: a narrow "Valley of Stability" containing all the stable isotopes that make up our world. Nuclei far from this valley are unstable and undergo radioactive decay to try and get back to it. By clicking on different nuclei, you can discover their properties, like their half-life and decay mode, and see the path they take on their journey toward stability.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: A Map of All Atoms</h2>
+
+            <h3>Step 1: Protons (Z) and Neutrons (N)</h3>
+            <p>The identity of an element is determined by its number of protons (Z). Every atom with 6 protons is Carbon. Every atom with 8 protons is Oxygen. The number of neutrons (N) can vary, however, creating different "isotopes" of the same element. For example, Carbon-12 has 6 protons and 6 neutrons, while the radioactive Carbon-14 has 6 protons and 8 neutrons.</p>
+            <p>The chart you see is a plot with the number of neutrons (N) on the x-axis and the number of protons (Z) on the y-axis. Each colored square represents a specific, unique nucleus (a "nuclide").</p>
+
+            <h3>Step 2: The Valley of Stability</h3>
+            <p>As you look at the chart, you'll see a narrow, curving band of <span style="background:var(--stable-color); color:white; padding: 0 3px;">black</span> squares. This is the **Valley of Stability**. These are the isotopes that are stable and do not undergo radioactive decay. For light elements, stability is found when N ≈ Z (the line y=x). For heavier elements, more and more neutrons are needed to counteract the electrical repulsion of the protons, so the valley curves downwards.</p>
+
+            <h3>Step 3: Radioactive Decay</h3>
+            <p>Nuclei that lie outside this valley are unstable. They will spontaneously decay, changing their proton and neutron count to move closer to a stable configuration. The color of each square tells you its most common decay mode:
+            <ul>
+                <li><span style="background:var(--beta-minus-color); color:white; padding: 0 3px;">Blue (Beta-Minus Decay):</span> These nuclei have too many neutrons. A neutron turns into a proton, moving the nucleus diagonally up and to the left on the chart.</li>
+                <li><span style="background:var(--beta-plus-color); color:white; padding: 0 3px;">Red (Beta-Plus Decay):</span> These nuclei have too many protons. A proton turns into a neutron, moving the nucleus diagonally down and to the right.</li>
+                <li><span style="background:var(--alpha-color); color:black; padding: 0 3px;">Yellow (Alpha Decay):</span> These very heavy nuclei have too many protons *and* neutrons. They shed a chunk of the nucleus (an alpha particle, which is 2 protons and 2 neutrons), moving them diagonally down and to the left by two squares each.</li>
+            </ul>
+            </p>
+
+            <h3>Step 4: Using the Chart</h3>
+            <p>Click on any square to see detailed information about that nuclide in the panel on the right. An arrow will also appear on the chart showing the path its decay product takes. For example, click on the unstable Carbon-14 (Z=6, N=8). You'll see it undergoes Beta-Minus decay, and the arrow will point to the stable Nitrogen-14 (Z=7, N=7).</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="800" aria-label="Interactive Chart of Nuclides"></canvas>
+            </div>
+            <div id="info-area">
+                <div id="info-panel">
+                    <h3>Nuclide Information</h3>
+                    <p>Click on a nuclide in the chart to see its properties.</p>
+                </div>
+                <div class="legend">
+                    <h4>Legend</h4>
+                    <div class="legend-item"><div class="legend-color" style="background-color:var(--stable-color)"></div>Stable</div>
+                    <div class="legend-item"><div class="legend-color" style="background-color:var(--beta-minus-color)"></div>&beta;⁻ Decay</div>
+                    <div class="legend-item"><div class="legend-color" style="background-color:var(--beta-plus-color)"></div>&beta;⁺ / EC Decay</div>
+                    <div class="legend-item"><div class="legend-color" style="background-color:var(--alpha-color)"></div>&alpha; Decay</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    // NOTE: This uses a small, representative subset of nuclide data.
+    // A full chart would require a large database.
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const infoPanel = document.getElementById('info-panel');
+
+        // --- Data ---
+        // Format: 'N,Z': {name, half_life, mode}
+        const nuclideData = {
+            '0,1': { name: 'H-1', half_life: 'Stable', mode: 'S' },
+            '1,1': { name: 'H-2', half_life: 'Stable', mode: 'S' },
+            '2,1': { name: 'H-3', half_life: '12.32 y', mode: 'B-' },
+            '2,2': { name: 'He-4', half_life: 'Stable', mode: 'S' },
+            '4,2': { name: 'He-6', half_life: '806.7 ms', mode: 'B-' },
+            '3,3': { name: 'Li-6', half_life: 'Stable', mode: 'S' },
+            '4,3': { name: 'Li-7', half_life: 'Stable', mode: 'S' },
+            '6,6': { name: 'C-12', half_life: 'Stable', mode: 'S' },
+            '7,6': { name: 'C-13', half_life: 'Stable', mode: 'S' },
+            '8,6': { name: 'C-14', half_life: '5730 y', mode: 'B-' },
+            '7,7': { name: 'N-14', half_life: 'Stable', mode: 'S' },
+            '6,7': { name: 'N-13', half_life: '9.965 m', mode: 'B+' },
+            '8,8': { name: 'O-16', half_life: 'Stable', mode: 'S' },
+            '20,20': { name: 'Ca-40', half_life: 'Stable', mode: 'S' },
+            '30,26': { name: 'Fe-56', half_life: 'Stable', mode: 'S' },
+            '35,28': { name: 'Ni-63', half_life: '100.1 y', mode: 'B-' },
+            '50,40': { name: 'Zr-90', half_life: 'Stable', mode: 'S' },
+            '82,56': { name: 'Ba-138', half_life: 'Stable', mode: 'S' },
+            '126,82': { name: 'Pb-208', half_life: 'Stable', mode: 'S' },
+            '143,92': { name: 'U-235', half_life: '703.8 My', mode: 'A' },
+            '146,92': { name: 'U-238', half_life: '4.468 Gy', mode: 'A' },
+            '144,94': { name: 'Pu-238', half_life: '87.7 y', mode: 'A' },
+        };
+
+        const colors = {
+            S: 'var(--stable-color)',
+            'B-': 'var(--beta-minus-color)',
+            'B+': 'var(--beta-plus-color)',
+            A: 'var(--alpha-color)'
+        };
+
+        // --- View State ---
+        let view = { x: 0, y: 0, zoom: 6 };
+        let selectedNuclide = null;
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const max_N = 150, max_Z = 100;
+
+            // Draw grid and nuclides
+            for(const key in nuclideData) {
+                const [N, Z] = key.split(',').map(Number);
+                const screenX = (N - view.x) * view.zoom;
+                const screenY = canvas.height - ((Z - view.y) * view.zoom);
+
+                if(screenX > -view.zoom && screenX < canvas.width && screenY > -view.zoom && screenY < canvas.height) {
+                    const data = nuclideData[key];
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(colors[data.mode]).trim();
+                    ctx.fillRect(screenX, screenY, view.zoom, view.zoom);
+                }
+            }
+
+            // Draw selected nuclide and decay arrow
+            if(selectedNuclide) {
+                const [N, Z] = selectedNuclide.key.split(',').map(Number);
+                const data = selectedNuclide.data;
+                const sx = (N - view.x + 0.5) * view.zoom;
+                const sy = canvas.height - ((Z - view.y + 0.5) * view.zoom);
+
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(sx - view.zoom/2, sy - view.zoom/2, view.zoom, view.zoom);
+
+                let endX, endY;
+                if(data.mode === 'B-') { // N-1, Z+1
+                    endX = (N-1 - view.x + 0.5) * view.zoom;
+                    endY = canvas.height - ((Z+1 - view.y + 0.5) * view.zoom);
+                } else if (data.mode === 'B+') { // N+1, Z-1
+                    endX = (N+1 - view.x + 0.5) * view.zoom;
+                    endY = canvas.height - ((Z-1 - view.y + 0.5) * view.zoom);
+                } else if (data.mode === 'A') { // N-2, Z-2
+                    endX = (N-2 - view.x + 0.5) * view.zoom;
+                    endY = canvas.height - ((Z-2 - view.y + 0.5) * view.zoom);
+                }
+
+                if(endX !== undefined) {
+                    ctx.strokeStyle = '#e74c3c';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function updateInfoPanel() {
+            if(!selectedNuclide) {
+                infoPanel.innerHTML = '<h3>Nuclide Information</h3><p>Click on a nuclide to see its properties.</p>';
+                return;
+            }
+            const [N, Z] = selectedNuclide.key.split(',').map(Number);
+            const data = selectedNuclide.data;
+            infoPanel.innerHTML = `
+                <h3>${data.name}</h3>
+                <p><strong>Protons (Z):</strong> ${Z}</p>
+                <p><strong>Neutrons (N):</strong> ${N}</p>
+                <p><strong>Mass Number (A):</strong> ${N+Z}</p>
+                <p><strong>Half-life:</strong> ${data.half_life}</p>
+                <p><strong>Decay Mode:</strong> ${data.mode}</p>
+            `;
+        }
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const N = Math.floor(x / view.zoom + view.x);
+            const Z = Math.floor((canvas.height - y) / view.zoom + view.y);
+
+            const key = `${N},${Z}`;
+            if(nuclideData[key]) {
+                selectedNuclide = { key, data: nuclideData[key] };
+                updateInfoPanel();
+            }
+        });
+
+        // Pan and Zoom
+        let isDragging = false;
+        let lastPos = {x:0, y:0};
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; lastPos = {x:e.clientX, y:e.clientY}; });
+        canvas.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                view.x -= (e.clientX - lastPos.x) / view.zoom;
+                view.y += (e.clientY - lastPos.y) / view.zoom;
+                lastPos = {x:e.clientX, y:e.clientY};
+            }
+        });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.2 : 1/1.2;
+            view.zoom *= zoomFactor;
+            view.zoom = Math.max(2, Math.min(20, view.zoom));
+        });
+
+        // --- Init ---
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
