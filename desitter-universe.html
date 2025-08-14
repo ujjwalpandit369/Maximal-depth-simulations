@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The de Sitter Universe</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --danger-color: #d9534f;
+            --success-color: #5cb85c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.2rem; }
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 400px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #111;
+            border-radius: 4px;
+            display: block;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+
+        button, .preset-button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover, .preset-button:hover {
+            background-color: #0077cc;
+        }
+
+        #main-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        #presets, #export-buttons {
+            margin-top: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        th {
+            background-color: #333;
+        }
+
+        code {
+            background-color: #333;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+
+        pre {
+            background-color: #333;
+            padding: 1rem;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        dl dt {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 1rem;
+        }
+
+        dl dd {
+            margin-left: 1rem;
+        }
+
+        /* High Contrast Mode */
+        body.high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #ffc107;
+            --secondary-color: #aaa;
+            --header-bg: #111;
+            --control-bg: #222;
+        }
+        body.high-contrast button, body.high-contrast .preset-button {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+        body.high-contrast button:hover, body.high-contrast .preset-button:hover {
+            background-color: #ffeb3b;
+        }
+        body.high-contrast canvas {
+            background-color: #000;
+            border: 1px solid #fff;
+        }
+        body.high-contrast th {
+            background-color: #444;
+        }
+        body.high-contrast code, body.high-contrast pre {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The de Sitter Universe</h1>
+        <p>A visualization of an empty, accelerating universe dominated by a cosmological constant.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 30 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Welcome to the de Sitter universe, a strange and simple model of the cosmos. Imagine a universe completely empty of matter, radiation, and everything else you know, containing only the energy of space itself—the cosmological constant (Λ). This "vacuum energy" has a remarkable effect: it causes space to expand at an ever-accelerating, exponential rate. This simulation lets you witness this runaway expansion and explore one of its most profound consequences: the cosmological horizon, a point of no return beyond which distant galaxies are swept away faster than the speed of light, forever disappearing from our view.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to an Accelerating Emptiness</h2>
+            <p>A de Sitter universe is a fascinating theoretical playground. It helps us understand the nature of cosmic expansion and the ultimate fate of our own universe. Let's dive in.</p>
+
+            <h4>Step 1: An Empty Universe with an Engine</h4>
+            <p>Unlike the other models we've seen that are filled with matter, a de Sitter universe is defined by being empty. There's no matter to create gravity and slow things down. Instead, the only ingredient is the cosmological constant, Λ. As we learned in the Einstein Static model, Λ acts as a repulsive force embedded in space. With no gravity to fight against, this cosmic repulsion takes over completely, driving the universe to expand.</p>
+
+            <h4>Step 2: Exponential Expansion</h4>
+            <p>The expansion in a de Sitter universe isn't just fast; it's <strong>exponential</strong>. This means the universe doesn't just get bigger, its rate of growth gets bigger too. The more space there is, the more of this repulsive vacuum energy there is, which in turn creates even more space, even faster.</p>
+            <p><strong>Everyday Analogy: A Fast-Forwarding Video.</strong> Imagine you're watching a video and holding down the fast-forward button. The video speeds up. Now imagine the fast-forward button is stuck, and the longer it's held, the more effective it becomes. The video starts speeding up on its own, going from 2x to 4x to 8x to 16x speed, faster and faster. That's exponential growth. In the simulation, you'll see galaxies rushing away from you at this ever-increasing pace.</p>
+
+            <h4>Step 3: The Point of No Return - The Cosmological Horizon</h4>
+            <p>This accelerating expansion leads to a very strange consequence. Because distant objects are carried away by the stretching of space, there is a distance at which space is expanding so fast that objects are receding from us faster than the speed of light. This isn't a contradiction of Einstein's theory of relativity—the objects aren't traveling *through* space faster than light, space *itself* is carrying them away that fast.</p>
+            <p>This boundary is called the <strong>Cosmological Event Horizon</strong>. It is a fundamental limit to our vision. Any light emitted by a galaxy after it crosses the horizon can never reach us, because the space between us and it is expanding too fast for the light to overcome. The galaxy effectively disappears from our observable universe.</p>
+            <p><strong>Visualization Analogy: A Raft on an Accelerating River.</strong> Imagine you are on a raft in the middle of a river. The further you look downstream, the faster the river flows. There is a point ahead of you—let's call it the "Cosmic Waterfall"—where the river's current is faster than your maximum paddling speed. If another raft floats past that point, you can never catch up to it. No matter how hard you paddle, the river carries it away from you faster than you can move towards it. That point of no return is the cosmological horizon. In the simulation, you'll see a sphere representing this horizon. Watch as galaxies drift towards it and vanish once they cross it.</p>
+
+            <h4>Step 4: Using the Simulation</h4>
+            <ol>
+                <li><strong>The Observer's View:</strong> You are at the center of the canvas, watching a grid of distant galaxies.</li>
+                <li><strong>The Λ Slider:</strong> The "Cosmological Constant (Λ)" slider is your only control. A higher Λ means a stronger repulsive force, a faster exponential expansion, and a smaller (closer) cosmological horizon.</li>
+                <li><strong>Watch the Horizon:</strong> The blue sphere represents the cosmological horizon. Notice how its size changes when you adjust Λ. A high Λ creates a small horizon, meaning even relatively nearby galaxies are quickly swept out of view. A low Λ creates a vast observable universe.</li>
+                <li><strong>Observe Disappearance:</strong> Watch as galaxies accelerate away. As they approach the horizon, they will fade and then disappear entirely once they cross it, lost to you forever.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div id="main-controls"></div>
+                <div id="parameter-sliders"></div>
+                <div id="presets"></div>
+                <div id="export-buttons">
+                    <h4>Export & Share</h4>
+                    <button id="export-png" title="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" title="Save current Lambda value as a JSON file">Export JSON</button>
+                    <button id="share-preset" title="Copy a shareable link to the clipboard">Share Preset</button>
+                </div>
+                <div id="accessibility-controls">
+                    <h4>Accessibility</h4>
+                    <label>
+                        <input type="checkbox" id="contrast-toggle">
+                        High Contrast
+                    </label>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+            </div>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>In a de Sitter universe, the cosmological constant is the only parameter that governs the evolution of the cosmos.</p>
+            <table id="params-table">
+                <thead>
+                    <tr><th>Parameter</th><th>Symbol</th><th>Default</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cosmological Constant</td>
+                        <td>Λ</td>
+                        <td>1.0</td>
+                        <td>0.1 - 5.0</td>
+                        <td>Controls the strength of vacuum energy and the rate of exponential expansion.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <div id="examples-content">
+                <div class="preset-example">
+                    <h4>1. Slow Expansion</h4>
+                    <p><strong>Parameters:</strong> Λ = 0.2</p>
+                    <p><strong>Observation:</strong> The expansion is slow and graceful. The cosmological horizon is very large, and it takes a long time for galaxies to reach it. Your observable universe is vast.</p>
+                    <button class="preset-button" data-preset="slow">Load "Slow Expansion"</button>
+                </div>
+                <div class="preset-example">
+                    <h4>2. Moderate Expansion</h4>
+                    <p><strong>Parameters:</strong> Λ = 1.0</p>
+                    <p><strong>Observation:</strong> This is the default state. You can clearly see galaxies accelerating away and disappearing as they cross the moderately-sized horizon.</p>
+                    <button class="preset-button" data-preset="moderate">Load "Moderate Expansion"</button>
+                </div>
+                <div class="preset-example">
+                    <h4>3. Rapid Expansion</h4>
+                    <p><strong>Parameters:</strong> Λ = 4.0</p>
+                    <p><strong>Observation:</strong> The expansion is incredibly fast. The cosmological horizon is very small and close to you. All but the nearest galaxies are almost instantly swept away and disappear from view.</p>
+                    <button class="preset-button" data-preset="rapid">Load "Rapid Expansion"</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <div id="walkthroughs-content">
+                <h4>Walkthrough: The Shrinking Horizon</h4>
+                <ol>
+                    <li>Start with the "Slow Expansion" preset (Λ = 0.2). Note the large size of the blue horizon sphere.</li>
+                    <li>Slowly drag the slider for Λ to the right. As you increase Λ, the expansion rate of the universe gets faster.</li>
+                    <li>Notice that as the expansion gets faster, the horizon gets *smaller*. This is because the "point of no return" gets closer to you when the cosmic river flows faster.</li>
+                    <li><strong>Analogy:</strong> Increasing Λ is like opening a dam further up the river. The water flows faster everywhere, so the point where the current outpaces you moves closer to your raft.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <div id="experiments-content">
+                <ol>
+                    <li><strong>Time to Disappear:</strong> Set Λ to 1.0 and press Reset. Pick a galaxy that is about halfway to the horizon. Pause the simulation and step through time to estimate how long it takes for that galaxy to cross the horizon.</li>
+                    <li><strong>Double the Lambda:</strong> Now, set Λ to 2.0 and repeat the experiment. Does it take half the time for the galaxy to disappear? (Expected: No, it will be much faster than half, because the relationship is exponential).</li>
+                    <li><strong>Edge of Visibility:</strong> Set Λ to its maximum value. How many galaxies remain visible after a few seconds? (Expected: Very few, only the ones that started very close to the center).</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: Exponential Growth</h2>
+            <p>The key features of a de Sitter universe are described by two simple equations.</p>
+            <p>1. The Hubble parameter (expansion rate) H is constant and depends on Λ:</p>
+            <div class="equation">
+                H = &sqrt;(Λ / 3)
+            </div>
+            <p>2. The scale factor a(t), which represents the "size" of the universe, grows exponentially over time:</p>
+            <div class="equation">
+                 a(t) = a(0) * e<sup>Ht</sup>
+            </div>
+            <p>From this, the radius of the cosmological horizon (R<sub>h</sub>) is fixed and inversely proportional to H (and thus Λ):</p>
+            <div class="equation">
+                R<sub>h</sub> = c / H
+            </div>
+            <p>In our simulation, 'c' is just a constant set to 1. This is why when you increase Λ, H increases, and R<sub>h</sub> gets smaller.</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <div id="advanced-content">
+                <p><strong>Spacetime Geometry:</strong> A de Sitter universe is a maximally symmetric vacuum solution of Einstein's field equations with a positive cosmological constant. It has constant positive curvature, but it is "spatially flat." This means that at any given moment in time (a "hypersurface of constant time"), the geometry is the familiar flat Euclidean space. The curvature exists in the full spacetime, connecting space and time.</p>
+                <p><strong>Inflation and Our Universe:</strong> The de Sitter model is believed to be a very good description of two periods in our own universe's history: the inflationary epoch (a tiny fraction of a second after the Big Bang) and the far future, once all matter has diluted away to nothing, leaving only dark energy (Λ).</p>
+            </div>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <div id="analogies-content">
+                <h4>1. Raft on an Accelerating River (Physical Analogy)</h4>
+                <p>As described in the guide, this is a powerful analogy. The river is spacetime, and its accelerating current is the exponential expansion. The "Cosmic Waterfall" ahead of you, where the current is faster than your top speed, is the cosmological horizon.</p>
+                <p><strong>Limitations:</strong> The river is 1D/2D and has banks, whereas the universe is 3D and has no edges. The analogy also has a preferred direction ("downstream"), while the universe's expansion is isotropic (the same in all directions).</p>
+
+                <h4>2. A Fast-Forwarding Video (Visualization Analogy)</h4>
+                <p>This analogy helps grasp the "acceleration of acceleration" that is characteristic of exponential growth. The rate of change itself is changing, leading to a runaway effect.</p>
+                <p><strong>Limitations:</strong> A video has a fixed beginning and end, and the content is predetermined. The universe's evolution is governed by its intrinsic properties in real time.</p>
+
+                <h4>3. Compound Interest (Computational Analogy)</h4>
+                <p>Exponential growth is the same principle as compound interest. If you have $100 with 10% interest, you get $10. The next year, you get 10% of $110, which is $11. The more you have, the more you get. In a de Sitter universe, the more space you have, the more "space-making" energy you have, so the faster new space is created.</p>
+                <p><strong>Limitations:</strong> This is a purely mathematical analogy and doesn't provide any physical or visual intuition for the concepts of a horizon or spacetime.</p>
+            </div>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <div id="faq-content">
+                <dl>
+                    <dt>1. What happens to the galaxies that disappear?</dt>
+                    <dd>Nothing "happens" to them. They are still there, continuing on as normal. They have simply been carried so far away by the expansion of space that light from them can no longer reach us. From their perspective, *we* are the ones who have disappeared beyond *their* horizon.</dd>
+                    <dt>2. Is our universe a de Sitter universe?</dt>
+                    <dd>Not currently, because our universe contains matter and radiation. However, in the far future, as this matter continues to spread out and dilute, our universe will become more and more like a de Sitter universe, dominated only by dark energy (Λ).</dd>
+                    <dt>3. Why is the horizon a sphere?</dt>
+                    <dd>Because the universe is isotropic (the same in all directions). The "point of no return" is at the same distance from you no matter which way you look, defining a perfect sphere with you at the center.</dd>
+                    <dt>4. Can we ever cross the horizon?</dt>
+                    <dd>No. The horizon is a feature of spacetime defined relative to your position. You can never reach it, just as you can never outrun your own shadow. You can only watch other things cross it.</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="perf-safety-content"></div>
+            <div id="performance-meter"></div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <pre id="quality-check-panel"></pre>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- CONFIG & STATE ---
+    const config = { dt: 0.05, particleCount: 150, c: 10, lambda_k: 0.1 };
+    let state = {
+        particles: [], lambda: 1.0, t: 0, h: 0, horizonRadius: 0,
+        isRunning: true, isHighContrast: false,
+    };
+    let lastFrameTime = 0, fps = 0;
+
+    // --- DOM ELEMENTS ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const devConsole = document.getElementById('developer-console');
+    const qualityCheckPanel = document.getElementById('quality-check-panel');
+    const perfMeter = document.getElementById('performance-meter');
+    let lambdaSlider, resetBtn, playPauseBtn, exportPngBtn, exportJsonBtn, sharePresetBtn, contrastToggle;
+
+    // --- INITIALIZATION ---
+    function setup() {
+        logToDevConsole('Initializing de Sitter Universe...');
+        runQualityCheck();
+        createControls();
+        addEventListeners();
+        parseURLHash();
+        reset();
+        logToDevConsole('Initialization complete. Starting main loop.');
+        requestAnimationFrame(mainLoop);
+    }
+
+    // --- QUALITY & HELPERS ---
+    function logToDevConsole(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        devConsole.textContent += `[${timestamp}] ${message}\n`;
+        devConsole.scrollTop = devConsole.scrollHeight;
+    }
+    window.onerror = (msg, src, line, col, err) => { logToDevConsole(`ERROR: ${msg} at ${src.split('/').pop()}:${line}:${col}`); };
+    function runQualityCheck() {
+        const checks = [ { el: 'main-canvas', name: 'Main Canvas' }, { el: 'simulation-controls', name: 'Controls Container' } ];
+        let allPassed = true, report = 'Quality Check Report:\n';
+        checks.forEach(c => {
+            const found = document.getElementById(c.el);
+            report += `- ${c.name}: ${found ? 'OK' : 'FAIL'}\n`;
+            if (!found) allPassed = false;
+        });
+        qualityCheckPanel.textContent = report;
+        qualityCheckPanel.style.color = allPassed ? 'var(--success-color)' : 'var(--danger-color)';
+        qualityCheckPanel.textContent += allPassed ? "\nAll checks passed." : "\nOne or more checks failed.";
+    }
+
+    function createControls() {
+        lambdaSlider = createSlider('lambda', 'Cosmological Constant (Λ)', 0.1, 5.0, 0.1, state.lambda);
+        document.getElementById('parameter-sliders').append(lambdaSlider.container);
+        playPauseBtn = createButton('play-pause', 'Pause (Space)', togglePlayPause, { parent: document.getElementById('main-controls') });
+        resetBtn = createButton('reset', 'Reset (r)', reset, { parent: document.getElementById('main-controls') });
+        exportPngBtn = document.getElementById('export-png');
+        exportJsonBtn = document.getElementById('export-json');
+        sharePresetBtn = document.getElementById('share-preset');
+        contrastToggle = document.getElementById('contrast-toggle');
+    }
+
+    function addEventListeners() {
+        lambdaSlider.slider.addEventListener('input', handleLambdaChange);
+        document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click', handlePresetClick));
+        exportPngBtn.addEventListener('click', exportPNG);
+        exportJsonBtn.addEventListener('click', exportJSON);
+        sharePresetBtn.addEventListener('click', sharePreset);
+        contrastToggle.addEventListener('change', toggleContrastMode);
+        window.addEventListener('keydown', handleKeydown);
+    }
+
+    // --- VEC3 MATH ---
+    const vec3 = {
+        create: (x=0,y=0,z=0) => ({x,y,z}),
+        scale: (a,s) => ({x:a.x*s, y:a.y*s, z:a.z*s}),
+        mag: (a) => Math.sqrt(a.x*a.x + a.y*a.y + a.z*a.z),
+    };
+
+    // --- SIMULATION LOGIC ---
+    function reset() {
+        logToDevConsole(`Resetting with Lambda=${state.lambda.toFixed(2)}`);
+        state.t = 0;
+        state.particles = [];
+        state.h = config.lambda_k * Math.sqrt(state.lambda);
+        state.horizonRadius = config.c / state.h;
+        for (let i = 0; i < config.particleCount; i++) {
+            const r = Math.random() * state.horizonRadius * 1.5;
+            const theta = Math.random() * 2 * Math.PI;
+            const phi = Math.acos(2 * Math.random() - 1);
+            state.particles.push({
+                pos0: vec3.create(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi)),
+                pos: vec3.create(),
+            });
+        }
+        if (!state.isRunning) togglePlayPause();
+    }
+
+    function update() {
+        if (state.isRunning) state.t += config.dt;
+    }
+
+    // --- DRAWING & MAIN LOOP ---
+    function mainLoop(timestamp) {
+        if (lastFrameTime > 0) {
+            fps = 1000 / (timestamp - lastFrameTime);
+            perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+        }
+        lastFrameTime = timestamp;
+        update();
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function draw() {
+        ctx.fillStyle = state.isHighContrast ? '#000' : '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const scaleFactor = Math.exp(state.h * state.t);
+        const sortedParticles = state.particles.map(p => {
+            p.pos = vec3.scale(p.pos0, scaleFactor);
+            return p;
+        }).sort((a,b) => b.pos.z - a.pos.z);
+
+        const projectedHorizonRadius = project(vec3.create(state.horizonRadius, 0, 0)).x - canvas.width/2;
+        ctx.strokeStyle = state.isHighContrast ? '#0FF' : 'rgba(0, 170, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(canvas.width/2, canvas.height/2, projectedHorizonRadius, 0, 2*Math.PI);
+        ctx.stroke();
+
+        for (const p of sortedParticles) {
+            const dist = vec3.mag(p.pos);
+            if (dist > state.horizonRadius * 3) continue;
+            const opacity = Math.max(0, 1 - (dist - state.horizonRadius) / (state.horizonRadius * 0.5));
+            if (opacity <= 0) continue;
+            const { x, y, scale } = project(p.pos);
+            if (scale < 0) continue;
+            ctx.fillStyle = state.isHighContrast ? `rgba(255,255,0,${opacity})` : `rgba(255, 255, 0, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 2 * scale, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+    }
+
+    function project(pos3d) {
+        const focalLength = 400;
+        const scale = focalLength / (focalLength + pos3d.z);
+        return { x: pos3d.x*scale + canvas.width/2, y: pos3d.y*scale + canvas.height/2, scale };
+    }
+
+    // --- UI HELPERS & HANDLERS ---
+    function togglePlayPause() {
+        state.isRunning = !state.isRunning;
+        playPauseBtn.textContent = state.isRunning ? 'Pause (Space)' : 'Play (Space)';
+    }
+
+    function createSlider(id, label, min, max, step, value) {
+        const container = document.createElement('div'), labelEl = document.createElement('label'), slider = document.createElement('input');
+        container.className = 'slider-container';
+        labelEl.htmlFor = id; labelEl.innerHTML = `${label}: <span id="${id}-value">${parseFloat(value).toFixed(2)}</span>`;
+        slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+        container.append(labelEl, slider);
+        return { container, slider, label: labelEl };
+    }
+
+    function createButton(id, text, onClick, {parent}) {
+        const button = document.createElement('button');
+        button.id = id; button.textContent = text; button.addEventListener('click', onClick);
+        if (parent) parent.appendChild(button);
+        return button;
+    }
+
+    function handleLambdaChange(e) {
+        state.lambda = parseFloat(e.target.value);
+        lambdaSlider.label.querySelector('span').textContent = state.lambda.toFixed(2);
+        reset();
+    }
+
+    function handlePresetClick(e) {
+        const preset = e.target.dataset.preset;
+        logToDevConsole(`Loading preset: ${preset}`);
+        if (preset === 'slow') lambdaSlider.slider.value = 0.2;
+        else if (preset === 'moderate') lambdaSlider.slider.value = 1.0;
+        else if (preset === 'rapid') lambdaSlider.slider.value = 4.0;
+        handleLambdaChange({target: lambdaSlider.slider});
+    }
+
+    function toggleContrastMode(e) {
+        state.isHighContrast = e.target.checked;
+        document.body.classList.toggle('high-contrast', state.isHighContrast);
+        logToDevConsole(`High contrast mode ${state.isHighContrast ? 'enabled' : 'disabled'}.`);
+        draw();
+    }
+
+    function handleKeydown(e) {
+        if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+        if (e.code === 'KeyR') { e.preventDefault(); reset(); }
+    }
+
+    function exportPNG() {
+        logToDevConsole('Exporting canvas to PNG...');
+        const link = document.createElement('a');
+        link.download = `desitter-universe-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
+    function exportJSON() {
+        logToDevConsole('Exporting parameters to JSON...');
+        const data = JSON.stringify({ lambda: state.lambda }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `desitter-preset.json`;
+        link.click();
+    }
+
+    function sharePreset() {
+        const params = new URLSearchParams({ lambda: state.lambda }).toString();
+        const url = `${window.location.origin}${window.location.pathname}#${params}`;
+        navigator.clipboard.writeText(url).then(() => {
+            logToDevConsole('Shareable link copied to clipboard.');
+            alert('Shareable link copied to clipboard!');
+        });
+    }
+
+    function parseURLHash() {
+        if (!window.location.hash) return;
+        logToDevConsole('URL hash found, attempting to parse parameters.');
+        const params = new URLSearchParams(window.location.hash.substring(1));
+        const lambda = parseFloat(params.get('lambda'));
+        if (!isNaN(lambda)) {
+            logToDevConsole(`Applying parameters from URL: Lambda=${lambda}`);
+            lambdaSlider.slider.value = lambda;
+            handleLambdaChange({target: lambdaSlider.slider});
+        }
+    }
+
+    // --- START ---
+    setup();
+});
+    </script>
+</body>
+</html>

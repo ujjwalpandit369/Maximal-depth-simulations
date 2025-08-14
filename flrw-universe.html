@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The FLRW Universe</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --danger-color: #d9534f;
+            --success-color: #5cb85c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.2rem; }
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 400px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #111;
+            border-radius: 4px;
+        }
+
+        .chart-container {
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        #energy-budget-chart canvas {
+             margin: 0 auto;
+             display: block;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+
+        button, .preset-button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover, .preset-button:hover {
+            background-color: #0077cc;
+        }
+
+        #main-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        #presets, #export-buttons {
+            margin-top: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        th {
+            background-color: #333;
+        }
+
+        code {
+            background-color: #333;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+
+        pre {
+            background-color: #333;
+            padding: 1rem;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        dl dt {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 1rem;
+        }
+
+        dl dd {
+            margin-left: 1rem;
+        }
+
+        /* High Contrast Mode */
+        body.high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #ffc107;
+            --secondary-color: #aaa;
+            --header-bg: #111;
+            --control-bg: #222;
+        }
+        body.high-contrast button, body.high-contrast .preset-button {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+        body.high-contrast button:hover, body.high-contrast .preset-button:hover {
+            background-color: #ffeb3b;
+        }
+        body.high-contrast canvas {
+            background-color: #000;
+            border: 1px solid #fff;
+        }
+        body.high-contrast .chart-container {
+             background-color: #111;
+        }
+        body.high-contrast th {
+            background-color: #444;
+        }
+        body.high-contrast code, body.high-contrast pre {
+            background-color: #444;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="suggestion-box"></div>
+    <header>
+        <h1>The Friedmann-Lemaître-Robertson-Walker (FLRW) Universe</h1>
+        <p>An interactive dashboard for the standard model of a homogeneous and isotropic universe.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 45 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>The Friedmann-Lemaître-Robertson-Walker (FLRW) model is the cornerstone of modern cosmology. It describes a universe that is, on large scales, the same in all directions (isotropic) and from every location (homogeneous). This simulation lets you explore how the universe evolves based on its fundamental ingredients: matter, which tries to pull everything back together, and dark energy, which mysteriously pushes everything apart. By adjusting these cosmic knobs, you can create universes that expand forever, collapse in a "Big Crunch," or hover in a delicate balance, and you can visualize the very shape of spacetime itself.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to the Expanding Universe</h2>
+            <p>Welcome to your own personal universe! This guide will walk you through the key ideas of modern cosmology using this simulation. We'll use simple steps and analogies to understand the big picture.</p>
+
+            <h4>Step 1: The Biggest Idea - Expanding Space</h4>
+            <p>The most important concept to grasp is that the universe is expanding. But it's not like an explosion where galaxies are flying away from a central point into empty space. Instead, <strong>space itself is stretching</strong>. </p>
+            <p><strong>Everyday Analogy: A Baking Loaf of Raisin Bread.</strong> Imagine a big lump of raisin bread dough. The raisins are like galaxies, and the dough is space. As the loaf bakes and expands, every raisin moves away from every other raisin. A raisin doesn't have to "do" anything to move; the dough (space) expanding between them carries them apart. From the perspective of any single raisin, all the other raisins seem to be rushing away from it. This is what we see in our universe.</p>
+
+            <h4>Step 2: The Cosmic Ingredients</h4>
+            <p>What drives this expansion? The fate of the universe is determined by a cosmic tug-of-war between two main ingredients, which you can control with the sliders:</p>
+            <ul>
+                <li><strong>Matter Density (Ω<sub>m</sub>):</strong> This represents all the "stuff" in the universe – stars, galaxies, gas, and dark matter. Matter has gravity, and gravity pulls things together. Think of it as the universe's anchor or brake, trying to slow the expansion down. The more matter, the stronger the pull.</li>
+                <li><strong>Dark Energy Density (Ω<sub>Λ</sub>):</strong> This is one of the biggest mysteries in science. It's a form of energy that seems to be embedded in the fabric of spacetime itself, and it has the opposite effect of gravity. It acts like a cosmic accelerator, pushing everything apart at an ever-increasing rate.</li>
+            </ul>
+            <p>The "Ω" (Omega) symbol represents a density parameter. It's a ratio: the actual density of a substance compared to the "critical density" needed to make the universe geometrically flat.</p>
+
+            <h4>Step 3: The Shape of the Universe (Curvature, Ω<sub>k</sub>)</h4>
+            <p>The total amount of "stuff" (Matter + Dark Energy) determines the overall shape, or geometry, of the universe. This is what we call curvature, and the simulation calculates it for you as: <strong>Ω<sub>k</sub> = 1 - Ω<sub>m</sub> - Ω<sub>Λ</sub></strong>.</p>
+            <p><strong>Visualization Analogy: A Universe You Can Walk On.</strong> Imagine you are a 2D being living on a surface. The geometry of your universe could be one of three types, which this simulation shows with the 3D grid:</p>
+            <ul>
+                <li>If <strong>Ω<sub>Total</sub> = 1</strong> (i.e., Ω<sub>k</sub> = 0), the universe is <strong>Flat</strong>. Like a giant, infinite sheet of paper, parallel lines stay parallel forever. This is what astronomers believe our universe is like.</li>
+                <li>If <strong>Ω<sub>Total</sub> > 1</strong> (i.e., Ω<sub>k</sub> < 0), the universe is <strong>Closed</strong> or "spherical." Like the surface of a sphere, if you walk in a straight line, you eventually end up back where you started. This universe contains enough matter to eventually halt its expansion and collapse back on itself in a "Big Crunch."</li>
+                <li>If <strong>Ω<sub>Total</sub> < 1</strong> (i.e., Ω<sub>k</sub> > 0), the universe is <strong>Open</strong> or "hyperbolic." Its shape is like a saddle, curving away from itself at every point. This universe doesn't have enough matter to stop its expansion and will expand forever.</li>
+            </ul>
+            <p>Watch how the 3D grid changes shape as you move the sliders above and below a total Omega of 1.</p>
+
+            <h4>Step 4: Using the Simulation</h4>
+            <p>Now you have all the concepts. Here's how to use the tools:</p>
+            <ol>
+                <li><strong>Use the Sliders:</strong> Adjust Ω<sub>m</sub> and Ω<sub>Λ</sub> to define your universe. Notice how the "Total Density (Ω<sub>Total</sub>)" and "Curvature (Ω<sub>k</sub>)" values change automatically.</li>
+                <li><strong>Watch the Graphs:</strong> The "Scale Factor a(t)" graph is the most important. It shows the size of your universe over time. A steep curve means rapid expansion. A curve that goes up and then down means a "Big Crunch."</li>
+                <li><strong>Check the Pie Chart:</strong> The "Dominant Era" chart shows which ingredient is "winning" the cosmic tug-of-war at any given time. In our own universe, matter dominated early on, but now dark energy is taking over.</li>
+                <li><strong>Try the Presets:</strong> The easiest way to start is to click the preset buttons like "Our Universe" to see a simulation of the cosmos we live in.</li>
+            </ol>
+            <p>You are now ready to explore the fate of the cosmos. Happy universe-building!</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div id="main-controls"></div>
+                <div id="parameter-sliders"></div>
+                <div id="presets"></div>
+                <div id="export-buttons">
+                    <h4>Export & Share</h4>
+                    <button id="export-png" title="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" title="Save current parameters as a JSON file">Export JSON</button>
+                    <button id="share-preset" title="Copy a shareable link to the clipboard">Share Preset</button>
+                </div>
+                <div id="accessibility-controls">
+                    <h4>Accessibility & Performance</h4>
+                    <label>
+                        <input type="checkbox" id="perf-toggle">
+                        Performance Mode
+                    </label>
+                    <label>
+                        <input type="checkbox" id="contrast-toggle">
+                        High Contrast
+                    </label>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+                <div id="charts">
+                    <div id="scale-factor-chart" class="chart-container"></div>
+                    <div id="energy-budget-chart" class="chart-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>These parameters control the fundamental physics of your simulated universe. The total density, Ω<sub>Total</sub> = Ω<sub>m</sub> + Ω<sub>Λ</sub>, determines the universe's ultimate fate and geometry.</p>
+            <table id="params-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Symbol</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Matter Density</td>
+                        <td>Ω<sub>m</sub></td>
+                        <td>Dimensionless</td>
+                        <td>0.3</td>
+                        <td>0.0 - 3.0</td>
+                        <td>Controls the gravitational pull of all matter, slowing down expansion.</td>
+                    </tr>
+                    <tr>
+                        <td>Dark Energy Density</td>
+                        <td>Ω<sub>Λ</sub></td>
+                        <td>Dimensionless</td>
+                        <td>0.7</td>
+                        <td>0.0 - 3.0</td>
+                        <td>Controls the repulsive force of dark energy, speeding up expansion.</td>
+                    </tr>
+                    <tr>
+                        <td>Curvature</td>
+                        <td>Ω<sub>k</sub></td>
+                        <td>Dimensionless</td>
+                        <td>0.0</td>
+                        <td>N/A (Calculated)</td>
+                        <td>The resulting geometry of spacetime. Calculated as 1 - Ω<sub>m</sub> - Ω<sub>Λ</sub>.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4>Worked Example</h4>
+            <p>The expansion rate of the universe is governed by the Friedmann Equation. A simplified version is:
+            <code>Expansion Rate² ∝ (Ω<sub>m</sub> / Size³) + (Ω<sub>k</sub> / Size²) + Ω<sub>Λ</sub></code>.
+            Let's plug in the default values for "Our Universe" (Ω<sub>m</sub>=0.3, Ω<sub>Λ</sub>=0.7, so Ω<sub>k</sub>=0) when the universe is at its current size (Size=1):
+            </p>
+            <p><code>Rate² ∝ (0.3 / 1³) + (0 / 1²) + 0.7 = 0.3 + 0 + 0.7 = 1.0</code>. The expansion is driven by both matter and dark energy.</p>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <div id="examples-content">
+                <div class="preset-example">
+                    <h4>1. Our Universe (Flat, Accelerating)</h4>
+                    <p><strong>Parameters:</strong> <code>{"Ω_m": 0.3, "Ω_Λ": 0.7}</code></p>
+                    <p><strong>Observation:</strong> You will see a universe that expands forever at an ever-increasing rate. The pie chart will show matter dominating early on, but dark energy (the blue area) eventually taking over, which is what's happening in our real cosmos.</p>
+                    <button class="preset-button" data-preset="our-universe">Load "Our Universe"</button>
+                </div>
+                <div class="preset-example">
+                    <h4>2. Big Crunch (Closed Universe)</h4>
+                    <p><strong>Parameters:</strong> <code>{"Ω_m": 2.0, "Ω_Λ": 0.0}</code></p>
+                    <p><strong>Observation:</strong> With high matter density and no dark energy, gravity wins. The universe expands for a while, slows down, stops, and then collapses back on itself in a "Big Crunch." The scale factor graph will go up and then come crashing back down.</p>
+                    <button class="preset-button" data-preset="big-crunch">Load "Big Crunch"</button>
+                </div>
+                <div class="preset-example">
+                    <h4>3. Empty & Open Universe (Milne Model)</h4>
+                    <p><strong>Parameters:</strong> <code>{"Ω_m": 0.0, "Ω_Λ": 0.0}</code></p>
+                    <p><strong>Observation:</strong> With no matter or dark energy, the universe expands at a constant rate forever. The scale factor graph will be a straight line. This is the simplest possible expanding universe.</p>
+                    <button class="preset-button" data-preset="empty">Load "Empty Universe"</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <div id="walkthroughs-content">
+                <h4>Walkthrough 1: The Power of Matter</h4>
+                <ol>
+                    <li>Start with the "Empty Universe" preset (Ω<sub>m</sub>=0, Ω<sub>Λ</sub>=0). The expansion is a straight line.</li>
+                    <li>Now, increase <strong>Ω<sub>m</sub> to 1.0</strong>. The total density is now 1, so the universe is flat. Notice how the expansion curve is no longer straight; it's bending downwards. Gravity is putting the brakes on! The expansion rate slows down over time.</li>
+                    <li><strong>Analogy:</strong> This is like throwing a ball in the air. At first it moves fast, but Earth's gravity constantly slows it down. More matter means more gravity.</li>
+                </ol>
+                <h4>Walkthrough 2: The Mystery of Dark Energy</h4>
+                <ol>
+                    <li>Start with the "Our Universe" preset (Ω<sub>m</sub>=0.3, Ω<sub>Λ</sub>=0.7). Notice the expansion curve starts bending down (matter-dominated) and then starts bending up (dark energy-dominated).</li>
+                    <li>Now, keep Ω<sub>m</sub> at 0.3 but increase <strong>Ω<sub>Λ</sub> to 1.5</strong>. The curve becomes much steeper, much faster. The initial matter-dominated era is shorter, and the final acceleration is extreme.</li>
+                    <li><strong>Analogy:</strong> Dark energy is like having a rocket engine attached to the ball you threw. Not only does it counteract gravity, it pushes the ball away even faster over time.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <div id="experiments-content">
+                <ol>
+                    <li><strong>Create a "Static" Universe:</strong> Can you find a balance that makes the scale factor graph almost flat? Try setting Ω<sub>m</sub> high and Ω<sub>Λ</sub> high. You'll see this is very unstable (this is related to the Einstein Static Universe model).</li>
+                    <li><strong>Find the Critical Line:</strong> Set Ω<sub>Λ</sub> = 0. Slowly increase Ω<sub>m</sub> from 0. Watch the geometry. At what exact value of Ω<sub>m</sub> does the universe switch from "Open" to "Closed"? (Expected: 1.0).</li>
+                    <li><strong>The "Hesitating" Universe:</strong> Set Ω<sub>m</sub> = 0.3 and Ω<sub>Λ</sub> = 0.3. The universe expands, but very slowly. It's in a long "hesitation" before it commits to expanding forever.</li>
+                    <li><strong>Maximum Age:</strong> Which universe lives the longest before collapsing? Try different values for Ω<sub>m</sub> > 1 with Ω<sub>Λ</sub> = 0. Does a universe with Ω<sub>m</sub> = 1.1 live longer or shorter than one with Ω<sub>m</sub> = 3.0? (Expected: Higher density leads to a faster collapse).</li>
+                    <li><strong>Dominance Transition:</strong> Using the "Our Universe" preset, pause the simulation and step through time. At what time (approx.) does the Dark Energy slice of the pie chart become bigger than the Matter slice? (This marks the transition to accelerated expansion).</li>
+                    <li><strong>Curvature's Effect:</strong> Compare two universes with the same Ω<sub>m</sub> = 0.3, but one with Ω<sub>Λ</sub> = 0 (Open) and one with Ω<sub>Λ</sub> = 0.7 (Flat). How does adding dark energy to "flatten" the universe affect its expansion?</li>
+                    <li><strong>The Coasting Point:</strong> For the "Our Universe" preset, find the point on the scale factor graph where the curve stops bending down and starts bending up. This is the "inflection point" where acceleration began.</li>
+                    <li><strong>Extreme Dark Energy:</strong> Set Ω<sub>m</sub> = 0.1 and Ω<sub>Λ</sub> = 2.5. Observe the incredibly rapid, exponential expansion. This is known as a "de Sitter" like universe.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Friedmann Equation</h2>
+            <p>The heart of this simulation is the Friedmann Equation. It's derived from Einstein's theory of General Relativity and describes the expansion of spacetime. A simplified form of the equation for the Hubble parameter, H (the expansion rate), is:</p>
+            <div class="equation">
+                H(t)<sup>2</sup> = H<sub>0</sub><sup>2</sup> [ Ω<sub>m,0</sub> / a(t)<sup>3</sup> + Ω<sub>k,0</sub> / a(t)<sup>2</sup> + Ω<sub>Λ,0</sub> ]
+            </div>
+            <h4>Plain-English Translation</h4>
+            <ul>
+                <li><strong>H(t)<sup>2</sup></strong>: This is the "Expansion Speed" squared at any time 't'.</li>
+                <li><strong>H<sub>0</sub><sup>2</sup></strong>: This is the initial "Expansion Speed" squared, at the beginning of the simulation. It sets the overall pace.</li>
+                <li><strong>Ω<sub>m,0</sub> / a(t)<sup>3</sup></strong>: This is the Matter term. As the universe expands (a(t) gets bigger), the density of matter dilutes very quickly (by a factor of the volume, or size cubed). Its gravitational pull gets weaker over time.</li>
+                <li><strong>Ω<sub>k,0</sub> / a(t)<sup>2</sup></strong>: This is the Curvature term. It represents the initial geometry of the universe and dilutes less quickly than matter.</li>
+                <li><strong>Ω<sub>Λ,0</sub></strong>: This is the Dark Energy term. Crucially, it's a constant! As the universe expands, the density of dark energy stays the same. This is why it eventually dominates everything else.</li>
+            </ul>
+            <p>This simulation solves this equation step-by-step to find the scale factor <code>a(t)</code> at each moment in time, then uses that to draw the graphs and the grid.</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <div id="advanced-content">
+                <p><strong>Numerical Stability:</strong> The simulation uses a simple Euler or RK2 integrator to solve the Friedmann equation. This is fast and works well for most parameter values. However, for extreme values or near the "Big Crunch" singularity (where <code>a(t)</code> approaches 0), the steps must be very small to maintain accuracy. A real cosmological simulator would use an adaptive step-size integrator.</p>
+                <p><strong>Edge Cases:</strong> We have restricted Ω<sub>m</sub> and Ω<sub>Λ</sub> to be positive. In some exotic theories, "phantom energy" corresponds to Ω<sub>Λ</sub> < -1, which could lead to a "Big Rip." Negative matter density is generally considered unphysical.</p>
+                <p><strong>How to Extend This Simulation:</strong></p>
+                <ul>
+                    <li><strong>Add Radiation:</strong> A complete model would include a term for radiation, Ω<sub>r</sub>, which dilutes even faster than matter (as 1/a(t)<sup>4</sup>). This is only significant in the very early universe.</li>
+                    <li><strong>Symplectic Integrator:</strong> For better long-term energy conservation in the calculations, one could replace the current integrator with a symplectic one like the Verlet method, though it's more suited to n-body simulations than ODEs.</li>
+                    <li><strong>More Precise Age Calculation:</strong> The age of the universe is calculated by integrating <code>1/H(t)</code> with respect to <code>a(t)</code>. This simulation does it numerically, but for specific cases (like Ω<sub>m</sub>=1, Ω<sub>Λ</sub>=0), there is an exact analytical formula: Age = 2 / (3H<sub>0</sub>).</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <div id="analogies-content">
+                <h4>1. The Expanding Balloon (Physical Analogy)</h4>
+                <p>Imagine drawing dots on the surface of a balloon and then inflating it. The dots (galaxies) move apart from each other not because they are moving on the surface, but because the surface (spacetime) itself is stretching. This is the best simple analogy for the expansion of space.</p>
+                <p><strong>Limitations:</strong> The balloon is a 2D surface expanding in a 3D space. Our 3D universe isn't expanding "into" a 4D space. Also, the balloon has a center, whereas the universe does not.</p>
+
+                <h4>2. Raisin Bread Dough (Visualization Analogy)</h4>
+                <p>As mentioned in the guide, raisins in an expanding loaf of bread all move away from each other. This correctly models the idea of homogeneity – the universe looks the same from any "raisin." It also helps visualize how expansion can be faster for more distant objects (raisins on the far side of the loaf move away faster).</p>
+                <p><strong>Limitations:</strong> The bread has edges, the universe (as far as we know) does not. The expansion of the dough is also caused by chemical reactions, not a fundamental property of the dough itself like dark energy.</p>
+
+                <h4>3. The Zooming Spreadsheet (Computational Analogy)</h4>
+                <p>Imagine a giant spreadsheet where each cell is a point in space. The distance between cells is initially 1 unit. The simulation's "scale factor" <code>a(t)</code> is like a global zoom setting. At each time step, we update the zoom. If <code>a(t)</code> doubles, the distance between every cell doubles. The "galaxies" in the cells don't move from cell A1 to A2; the entire grid just gets bigger. The rules for updating the zoom factor (the Friedmann equation) depend on the sum of values in all the cells (matter) and a fixed "background energy" (dark energy).</p>
+                <p><strong>Limitations:</strong> This analogy treats space as a discrete grid, whereas it is continuous (a continuum). It's good for thinking about the computation, but less so for the physical geometry.</p>
+            </div>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <div id="faq-content">
+                <dl>
+                    <dt>1. What is "critical density"?</dt>
+                    <dd>It's the exact amount of matter and energy needed to make the universe geometrically flat (Ω<sub>Total</sub> = 1). If the actual density is higher, the universe is closed; if lower, it's open.</dd>
+                    <dt>2. Where is the center of the universe? Where did the Big Bang happen?</dt>
+                    <dd>There is no center. The Big Bang wasn't an explosion in space, but an explosion *of* space. It happened everywhere at once. Every point in the universe can be considered the "center" of its own observable patch.</dd>
+                    <dt>3. How can Ω be greater than 1? Isn't that more than 100%?</dt>
+                    <dd>The Ω values are not percentages of a whole in the traditional sense. They are ratios of a measured density to a *different*, theoretical density (the critical density). So, if your universe has twice the critical density of matter, Ω<sub>m</sub> will be 2.0.</dd>
+                    <dt>4. Does the universe expand into anything?</dt>
+                    <dd>No. The universe is, by definition, all there is. Spacetime itself is expanding; it doesn't require an "outside" to expand into.</dd>
+                    <dt>5. Why does the pie chart change over time?</dt>
+                    <dd>Because the densities of matter and dark energy change differently. Matter dilutes as space expands, but dark energy's density remains constant. So, even if you start with lots of matter, dark energy's influence will inevitably grow and take over as the universe gets bigger.</dd>
+                    <dt>6. The simulation is running slow or freezing.</dt>
+                    <dd>Try toggling the "Performance Mode" on, which may reduce the number of points calculated for the graphs or the grid resolution. If it hangs, reloading the page with default settings is the best option. If the problem persists, open your browser's developer console (F12) and report any errors you see.</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="perf-safety-content">
+                <p>This simulation runs entirely in your browser. For most settings, it should be smooth. Setting extreme values may increase calculation time per frame. A performance mode is available to ensure a good experience on less powerful devices.</p>
+                <div id="safety-warning" style="display:none; color: red; font-weight: bold;">Warning: High computational load selected. This may slow down your browser.</div>
+            </div>
+            <div id="performance-meter"></div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    // --- CONFIG & STATE ---
+    const config = {
+        h0: 0.1, dt: 0.1, maxTime: 500, gridSize: 15, particleCount: 100, chartPoints: 500,
+        perfGridSize: 10, perfParticleCount: 50,
+    };
+    let state = {
+        omega_m: 0.3, omega_l: 0.7, omega_k: 0, t: 0, a: 0.1, a_dot: 0,
+        isRunning: false, speed: 1, history: [], particles: [],
+        isHighContrast: false, isPerfMode: false,
+    };
+    // For FPS counter
+    let lastFrameTime = 0, frameCount = 0, fps = 0;
+
+    // --- DOM ELEMENTS ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const devConsole = document.getElementById('developer-console');
+    const qualityCheckPanel = document.getElementById('quality-check-panel');
+    const perfMeter = document.getElementById('performance-meter');
+    let scaleChartCanvas, scaleChartCtx, pieChartCanvas, pieChartCtx;
+    let omegaMSlider, omegaLSlider, speedSlider, playPauseBtn, stepBtn, resetBtn;
+    let exportPngBtn, exportJsonBtn, sharePresetBtn, perfToggle, contrastToggle;
+
+    // --- INITIALIZATION ---
+    function setup() {
+        logToDevConsole('Initializing simulation...');
+        runQualityCheck();
+        createChartCanvases();
+        createControls();
+        addEventListeners();
+        parseURLHash();
+        reset();
+        logToDevConsole('Initialization complete. Starting main loop.');
+        requestAnimationFrame(mainLoop);
+    }
+
+    // --- QUALITY & HELPERS ---
+    function logToDevConsole(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        devConsole.textContent += `[${timestamp}] ${message}\n`;
+        devConsole.scrollTop = devConsole.scrollHeight;
+    }
+
+    window.onerror = (message, source, lineno, colno, error) => {
+        logToDevConsole(`ERROR: ${message} at ${source.split('/').pop()}:${lineno}:${colno}`);
+    };
+
+    function runQualityCheck() {
+        const checks = [
+            { el: 'main-canvas', name: 'Main Canvas' },
+            { el: 'simulation-controls', name: 'Controls Container' },
+            { el: 'try-these-examples', name: 'Presets Section' }
+        ];
+        let allPassed = true;
+        let report = 'Quality Check Report:\n';
+        checks.forEach(check => {
+            const found = document.getElementById(check.el);
+            report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+            if (!found) allPassed = false;
+        });
+        qualityCheckPanel.textContent = report;
+        if (allPassed) {
+            qualityCheckPanel.style.color = 'var(--success-color)';
+            qualityCheckPanel.textContent += "\nAll checks passed. Simulation should be functional.";
+        } else {
+            qualityCheckPanel.style.color = 'var(--danger-color)';
+            qualityCheckPanel.textContent += "\nOne or more checks failed. The simulation may not work correctly. Please report this issue.";
+        }
+    }
+
+    function createChartCanvases() {
+        const scaleChartContainer = document.getElementById('scale-factor-chart');
+        scaleChartContainer.innerHTML = '<h4>Scale Factor a(t) vs. Time</h4>';
+        scaleChartCanvas = document.createElement('canvas');
+        scaleChartCanvas.width = 300; scaleChartCanvas.height = 200;
+        scaleChartContainer.appendChild(scaleChartCanvas);
+        scaleChartCtx = scaleChartCanvas.getContext('2d');
+
+        const pieChartContainer = document.getElementById('energy-budget-chart');
+        pieChartContainer.innerHTML = '<h4>Dominant Era</h4>';
+        pieChartCanvas = document.createElement('canvas');
+        pieChartCanvas.width = 200; pieChartCanvas.height = 200;
+        pieChartContainer.appendChild(pieChartCanvas);
+        pieChartCtx = pieChartCanvas.getContext('2d');
+    }
+
+    function createControls() {
+        omegaMSlider = createSlider('omega_m', 'Matter Density (Ω<sub>m</sub>)', 0, 3, 0.01, state.omega_m);
+        omegaLSlider = createSlider('omega_l', 'Dark Energy Density (Ω<sub>Λ</sub>)', 0, 3, 0.01, state.omega_l);
+        speedSlider = createSlider('speed', 'Speed', 0.1, 10, 0.1, state.speed);
+        playPauseBtn = createButton('play-pause', 'Play (Space)', togglePlayPause, { parent: document.getElementById('main-controls') });
+        stepBtn = createButton('step', 'Step (→)', step, { parent: document.getElementById('main-controls') });
+        resetBtn = createButton('reset', 'Reset (r)', reset, { parent: document.getElementById('main-controls') });
+        document.getElementById('parameter-sliders').append(omegaMSlider.container, omegaLSlider.container, speedSlider.container);
+        exportPngBtn = document.getElementById('export-png');
+        exportJsonBtn = document.getElementById('export-json');
+        sharePresetBtn = document.getElementById('share-preset');
+        perfToggle = document.getElementById('perf-toggle');
+        contrastToggle = document.getElementById('contrast-toggle');
+    }
+
+    function addEventListeners() {
+        omegaMSlider.slider.addEventListener('input', e => updateOmegaM(parseFloat(e.target.value)));
+        omegaLSlider.slider.addEventListener('input', e => updateOmegaL(parseFloat(e.target.value)));
+        speedSlider.slider.addEventListener('input', e => { state.speed = parseFloat(e.target.value); logToDevConsole(`Speed changed to ${state.speed}x`); });
+        document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click', handlePresetClick));
+        exportPngBtn.addEventListener('click', exportPNG);
+        exportJsonBtn.addEventListener('click', exportJSON);
+        sharePresetBtn.addEventListener('click', sharePreset);
+        perfToggle.addEventListener('change', togglePerfMode);
+        contrastToggle.addEventListener('change', toggleContrastMode);
+        window.addEventListener('keydown', handleKeydown);
+    }
+
+    // --- CORE SIMULATION & DRAWING ---
+    function mainLoop(timestamp) {
+        if (lastFrameTime > 0) {
+            const deltaTime = timestamp - lastFrameTime;
+            fps = 1000 / deltaTime;
+            frameCount++;
+            if (frameCount % 15 === 0) { // Update FPS display periodically
+                perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+            }
+        }
+        lastFrameTime = timestamp;
+
+        if (state.isRunning) update();
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function update() {
+        for (let i = 0; i < state.speed; i++) {
+            if (state.a <= 0.001 || state.t >= config.maxTime) {
+                state.isRunning = false;
+                logToDevConsole('Simulation stopped: end condition reached.');
+                return;
+            }
+            const term = config.h0**2 * (state.omega_m / (state.a**3) + state.omega_k / (state.a**2) + state.omega_l);
+            state.a_dot = (term < 0 ? -Math.sqrt(-term) : Math.sqrt(term)) * state.a;
+            state.a += state.a_dot * config.dt;
+            state.t += config.dt;
+        }
+        if (state.history.length >= config.chartPoints) state.history.shift();
+        state.history.push({t: state.t, a: state.a});
+    }
+
+    function draw() {
+        ctx.fillStyle = state.isHighContrast ? '#000' : '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        drawScaleFactorChart();
+        drawPieChart();
+    }
+
+    function drawGrid() {
+        const { width, height } = canvas;
+        const center_x = width / 2, center_y = height / 2;
+        const size = Math.min(width, height) * 0.4;
+        const scale = state.a;
+        const num_lines = state.isPerfMode ? config.perfGridSize : config.gridSize;
+        const spacing = size / num_lines;
+        ctx.save();
+        ctx.translate(center_x, center_y);
+        ctx.strokeStyle = state.isHighContrast ? '#FFF' : '#444';
+        ctx.lineWidth = 1;
+        for (let i = -num_lines; i <= num_lines; i++) {
+            drawCurvedLine(i * spacing * scale, -size * scale, i * spacing * scale, size * scale, state.omega_k);
+            drawCurvedLine(-size * scale, i * spacing * scale, size * scale, i * spacing * scale, state.omega_k);
+        }
+        ctx.fillStyle = state.isHighContrast ? '#FF0' : '#0AF';
+        state.particles.forEach(p => {
+            const {x, y} = project(p.x * size, p.y * size, state.omega_k);
+            ctx.beginPath();
+            ctx.arc(x * scale, y * scale, 2 * scale, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+        ctx.restore();
+    }
+
+    function project(x, y, k) {
+        const r = Math.sqrt(x*x + y*y);
+        if (r === 0) return {x, y};
+        const K = -k * 0.1;
+        if (K > 0) {
+            const factor = Math.sin(r * Math.sqrt(K)) / (r * Math.sqrt(K));
+            return {x: x * factor, y: y * factor};
+        } else if (K < 0) {
+            const factor = Math.sinh(r * Math.sqrt(-K)) / (r * Math.sqrt(-K));
+            return {x: x * factor, y: y * factor};
+        }
+        return {x, y};
+    }
+
+    function drawCurvedLine(x1, y1, x2, y2, k) {
+        ctx.beginPath();
+        ctx.moveTo(project(x1, y1, k).x, project(x1, y1, k).y);
+        const segments = 20;
+        for (let i = 1; i <= segments; i++) {
+            const t = i / segments;
+            const pi = project(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, k);
+            ctx.lineTo(pi.x, pi.y);
+        }
+        ctx.stroke();
+    }
+
+    function drawScaleFactorChart() {
+        const { width, height } = scaleChartCanvas;
+        scaleChartCtx.fillStyle = state.isHighContrast ? '#000' : '#222';
+        scaleChartCtx.fillRect(0, 0, width, height);
+        if (state.history.length < 2) return;
+        const max_t = config.maxTime;
+        const max_a = Math.max(2, ...state.history.map(p => p.a));
+        scaleChartCtx.strokeStyle = state.isHighContrast ? '#FFF' : '#0F0';
+        scaleChartCtx.lineWidth = 2;
+        scaleChartCtx.beginPath();
+        state.history.forEach((point, i) => {
+            const x = (point.t / max_t) * width;
+            const y = height - (point.a / max_a) * height;
+            i === 0 ? scaleChartCtx.moveTo(x, y) : scaleChartCtx.lineTo(x, y);
+        });
+        scaleChartCtx.stroke();
+    }
+
+    function drawPieChart() {
+        const { width, height } = pieChartCanvas;
+        const radius = Math.min(width, height) / 2 - 10;
+        pieChartCtx.clearRect(0, 0, width, height);
+        pieChartCtx.save();
+        pieChartCtx.translate(width / 2, height / 2);
+        const matter_density = state.omega_m / (state.a**3);
+        const dark_energy_density = state.omega_l;
+        const total_density = matter_density + dark_energy_density;
+        const matter_angle = total_density === 0 ? 0 : (matter_density / total_density) * 2 * Math.PI;
+        pieChartCtx.fillStyle = total_density === 0 ? '#555' : (state.isHighContrast ? '#F00' : '#D9534F');
+        pieChartCtx.beginPath();
+        pieChartCtx.moveTo(0, 0);
+        pieChartCtx.arc(0, 0, radius, 0, total_density === 0 ? 2 * Math.PI : matter_angle);
+        pieChartCtx.closePath();
+        pieChartCtx.fill();
+        if (total_density > 0) {
+            pieChartCtx.fillStyle = state.isHighContrast ? '#00F' : '#428BCA';
+            pieChartCtx.beginPath();
+            pieChartCtx.moveTo(0, 0);
+            pieChartCtx.arc(0, 0, radius, matter_angle, 2 * Math.PI);
+            pieChartCtx.closePath();
+            pieChartCtx.fill();
+        }
+        pieChartCtx.restore();
+    }
+
+    // --- UI HANDLERS ---
+    function createSlider(id, label, min, max, step, value) {
+        const container = document.createElement('div');
+        container.className = 'slider-container';
+        const labelEl = document.createElement('label');
+        labelEl.htmlFor = id;
+        labelEl.innerHTML = `${label}: <span id="${id}-value">${value}</span>`;
+        const slider = document.createElement('input');
+        slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+        container.append(labelEl, slider);
+        return { container, slider, label: labelEl };
+    }
+
+    function createButton(id, text, onClick, { parent }) {
+        const button = document.createElement('button');
+        button.id = id; button.textContent = text; button.addEventListener('click', onClick);
+        if (parent) parent.appendChild(button);
+        return button;
+    }
+
+    function updateOmegaM(value) {
+        omegaMSlider.slider.value = value;
+        document.getElementById('omega_m-value').textContent = value;
+        state.omega_m = value;
+        updateCurvature();
+        reset();
+    }
+
+    function updateOmegaL(value) {
+        omegaLSlider.slider.value = value;
+        document.getElementById('omega_l-value').textContent = value;
+        state.omega_l = value;
+        updateCurvature();
+        reset();
+    }
+
+    function updateCurvature() { state.omega_k = 1 - state.omega_m - state.omega_l; }
+
+    function togglePlayPause() {
+        state.isRunning = !state.isRunning;
+        playPauseBtn.textContent = state.isRunning ? 'Pause (Space)' : 'Play (Space)';
+        logToDevConsole(state.isRunning ? 'Playback started.' : 'Playback paused.');
+    }
+
+    function step() { if (!state.isRunning) { update(); logToDevConsole('Stepped forward one frame.'); } }
+
+    function reset() {
+        logToDevConsole(`Resetting simulation with Ωm=${state.omega_m}, Ωl=${state.omega_l}`);
+        state.t = 0; state.a = 0.1; state.a_dot = 0;
+        state.history = [{t: 0, a: state.a}];
+        state.isRunning = false;
+        playPauseBtn.textContent = 'Play (Space)';
+        state.particles = [];
+        const num_particles = state.isPerfMode ? config.perfParticleCount : config.particleCount;
+        for (let i = 0; i < num_particles; i++) {
+            state.particles.push({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 });
+        }
+        draw();
+    }
+
+    function handlePresetClick(e) {
+        const preset = e.target.dataset.preset;
+        logToDevConsole(`Loading preset: ${preset}`);
+        if (preset === 'our-universe') { updateOmegaM(0.3); updateOmegaL(0.7); }
+        else if (preset === 'big-crunch') { updateOmegaM(2.0); updateOmegaL(0.0); }
+        else if (preset === 'empty') { updateOmegaM(0.0); updateOmegaL(0.0); }
+        reset();
+    }
+
+    function handleKeydown(e) {
+        if (document.activeElement.type === 'range') return; // Don't interfere with sliders
+        if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+        else if (e.code === 'ArrowRight') { e.preventDefault(); step(); }
+        else if (e.code === 'KeyR') { e.preventDefault(); reset(); }
+    }
+
+    function togglePerfMode(e) {
+        state.isPerfMode = e.target.checked;
+        logToDevConsole(`Performance mode ${state.isPerfMode ? 'enabled' : 'disabled'}.`);
+        reset();
+    }
+    function toggleContrastMode(e) {
+        state.isHighContrast = e.target.checked;
+        document.body.classList.toggle('high-contrast', state.isHighContrast);
+        logToDevConsole(`High contrast mode ${state.isHighContrast ? 'enabled' : 'disabled'}.`);
+        draw();
+    }
+
+    function exportPNG() {
+        logToDevConsole('Exporting canvas to PNG...');
+        const link = document.createElement('a');
+        link.download = `flrw-universe-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
+    function exportJSON() {
+        logToDevConsole('Exporting parameters to JSON...');
+        const data = JSON.stringify({ omega_m: state.omega_m, omega_l: state.omega_l }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `flrw-preset.json`;
+        link.click();
+    }
+
+    function sharePreset() {
+        const params = new URLSearchParams({ omega_m: state.omega_m, omega_l: state.omega_l }).toString();
+        const url = `${window.location.origin}${window.location.pathname}#${params}`;
+        navigator.clipboard.writeText(url).then(() => {
+            logToDevConsole('Shareable link copied to clipboard.');
+            alert('Shareable link copied to clipboard!');
+        }, () => {
+            logToDevConsole('Failed to copy shareable link.');
+        });
+    }
+
+    function parseURLHash() {
+        if (window.location.hash) {
+            logToDevConsole('URL hash found, attempting to parse parameters.');
+            const params = new URLSearchParams(window.location.hash.substring(1));
+            const omega_m = parseFloat(params.get('omega_m'));
+            const omega_l = parseFloat(params.get('omega_l'));
+            if (!isNaN(omega_m) && !isNaN(omega_l)) {
+                logToDevConsole(`Applying parameters from URL: Ωm=${omega_m}, Ωl=${omega_l}`);
+                updateOmegaM(omega_m);
+                updateOmegaL(omega_l);
+            } else {
+                logToDevConsole('Failed to parse valid parameters from URL hash.');
+            }
+        }
+    }
+
+    // --- START ---
+    setup();
+});
+    </script>
+</body>
+</html>
