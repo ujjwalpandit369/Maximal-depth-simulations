@@ -3,129 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>State Space of a Neural Network</title>
+    <title>Neural Network Decision Boundaries</title>
     <style>
         :root {
-            --bg-color: #f9f9f9;
-            --text-color: #333;
-            --primary-color: #3a0ca3;
-            --secondary-color: #4361ee;
-            --border-color: #ddd;
-            --canvas-bg: #fff;
-            --class-a-color: #f72585;
-            --class-b-color: #4cc9f0;
+            --bg-color: #f9f9f9; --text-color: #333; --primary-color: #3a0ca3; --secondary-color: #4361ee;
+            --border-color: #ddd; --canvas-bg: #fff; --class-a-color: #f72585; --class-b-color: #4cc9f0;
+            --code-bg: #e9ecef; --error-bg: #f8d7da; --error-text: #721c24; --warning-bg: #fff3cd; --warning-text: #856404;
         }
         .dark-mode {
-            --bg-color: #1a1a1a;
-            --text-color: #f0f0f0;
-            --primary-color: #7b2cbf;
-            --secondary-color: #4361ee;
-            --border-color: #444;
-            --canvas-bg: #2d2d2d;
-            --class-a-color: #f72585;
-            --class-b-color: #4cc9f0;
+            --bg-color: #1a1a1a; --text-color: #f0f0f0; --primary-color: #7b2cbf; --secondary-color: #4361ee;
+            --border-color: #444; --canvas-bg: #2d2d2d; --code-bg: #333; --error-bg: #721c24; --error-text: #f8d7da;
         }
-        body {
-            font-family: 'SF Pro Display', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 1rem;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        main {
-            max-width: 900px;
-            width: 100%;
-        }
-        h1, h2, h3 {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-        .simulation-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-        .controls-area {
-            width: 100%;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
-            align-items: center;
-        }
-        .control-group { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0.6rem 1.2rem;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.2s;
-        }
-        button:hover { background-color: var(--secondary-color); }
-        .info-bar { font-family: monospace; padding: 0.5rem; background-color: var(--code-bg); border-radius: 4px; }
-        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; cursor: crosshair;}
+        body { font-family: 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; margin: 0; padding: 1rem; background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; align-items: center; }
+        main { max-width: 1100px; width: 100%; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); background-color: var(--code-bg); padding: 0.5rem; border-radius: 5px; margin-bottom: 1rem; text-align: center; }
+        .simulation-container { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+        .controls-area { flex: 1; min-width: 450px; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; }
+        .simulation-area { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; cursor: crosshair; }
+        .controls-grid { display: grid; grid-template-columns: auto 1fr auto; gap: 0.8rem; align-items: center; margin-bottom: 1rem; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover, button:focus { background-color: var(--secondary-color); }
+        .secondary-button { background-color: var(--secondary-color); }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
         code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-text); padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-text); padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        @media (max-width: 960px) { .simulation-container { flex-direction: column; } }
     </style>
 </head>
 <body>
     <main>
+        <div id="quality-check-panel" class="error-panel"></div>
+
         <header>
-            <h1>State Space of a Neural Network</h1>
-            <p>Visualizing a neural network learning a decision boundary.</p>
-             <div style="text-align:center; margin-top: 1rem;">
-                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            <h1>Neural Network Decision Boundaries</h1>
+            <p>Visualizing how a neural network learns to classify data by shaping its decision boundary.</p>
+            <div class="metadata-bar">
+                <span>Estimated runtime: Continuous</span> |
+                <span>Recommended device: Desktop</span> |
+                <span>Approx. HTML size: 35 KB</span> |
+                <button id="theme-toggle" style="padding: 2px 5px; margin-left: 10px;">Toggle Dark Mode</button>
             </div>
         </header>
 
         <section id="overview">
             <h2>Plain-Language Overview</h2>
-            <p>
-                A neural network, at its core, is a powerful pattern-recognition machine. When we "train" a network to classify data—for example, to tell cats from dogs—we are asking it to learn a "decision boundary." Think of this as drawing a line or a curve on a map to separate the cat pictures from the dog pictures. This simulation lets you see that process live. You can place blue and pink dots on the 2D map, and then tell the neural network to "Train." You will see the network's decision boundary—the line where its prediction flips from blue to pink—shift and curve as it adjusts its internal "weights" to best separate your data points.
-            </p>
+            <p>A neural network is a powerful pattern-recognition machine. When we "train" it to classify data—for example, to tell cats from dogs—we are asking it to learn a "decision boundary." Think of this as drawing a line or a complex curve on a map to separate the cat pictures from the dog pictures. This simulation lets you see that process live. You can place data points (pink and blue dots) on the 2D map, design a neural network by choosing its layers and other properties, and then tell it to "Train." You will see the network's decision boundary—the background color where its prediction flips from pink to blue—shift and curve as it adjusts its internal connections ("weights") to best separate your data points.</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Units</th><th>Default</th><th>Range</th><th>Description & Worked Example</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Learning Rate (&eta;)</strong></td>
+                        <td>-</td>
+                        <td>0.05</td>
+                        <td>0.001-1.0</td>
+                        <td>Controls how large the weight updates are during training. Too high, and it overshoots; too low, and it learns too slowly. Example: A weight update is calculated as `w_new = w_old - &eta; * gradient`. If &eta;=0.05 and gradient=0.2, the change is -0.01.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hidden Layers</strong></td>
+                        <td>-</td>
+                        <td>2</td>
+                        <td>1-4</td>
+                        <td>The number of layers of neurons between the input and output. More layers allow for learning more complex functions but are harder to train.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Neurons/Layer</strong></td>
+                        <td>-</td>
+                        <td>8</td>
+                        <td>2-16</td>
+                        <td>The number of neurons in each hidden layer. More neurons provide more "capacity" to learn intricate patterns.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Activation</strong></td>
+                        <td>-</td>
+                        <td>Tanh</td>
+                        <td>ReLU, Tanh, Sigmoid</td>
+                        <td>The non-linear function applied by each neuron. Different functions have different properties. Example: Tanh squashes values to a [-1, 1] range. `tanh(0.5) &approx; 0.46`.</td>
+                    </tr>
+                </tbody>
+            </table>
         </section>
 
         <div class="simulation-container">
             <div class="controls-area">
-                <div class="control-group">
-                    <strong>Data Presets</strong>
-                    <div class="button-group">
-                        <button id="preset-linear-btn">Linear</button>
-                        <button id="preset-circle-btn">Circle</button>
-                        <button id="preset-spiral-btn">Spiral</button>
-                    </div>
+                <h3>Network & Training Controls</h3>
+                <div class="controls-grid">
+                    <label for="lr-slider">Learning Rate (&eta;)</label>
+                    <input type="range" id="lr-slider" min="0.001" max="1" step="0.001" value="0.05" aria-label="Learning Rate">
+                    <span id="lr-value">0.050</span>
+
+                    <label for="layers-slider">Hidden Layers</label>
+                    <input type="range" id="layers-slider" min="1" max="4" step="1" value="2" aria-label="Hidden Layers">
+                    <span id="layers-value">2</span>
+
+                    <label for="neurons-slider">Neurons / Layer</label>
+                    <input type="range" id="neurons-slider" min="2" max="16" step="1" value="8" aria-label="Neurons per Layer">
+                    <span id="neurons-value">8</span>
+
+                    <label for="activation-select">Activation Fn</label>
+                    <select id="activation-select" aria-label="Activation Function">
+                        <option value="tanh" selected>Tanh</option>
+                        <option value="relu">ReLU</option>
+                        <option value="sigmoid">Sigmoid</option>
+                    </select>
+                    <span></span>
                 </div>
-                <div class="control-group">
-                    <strong>Add Data Points</strong>
-                    <div class="button-group">
-                        <button id="add-a-btn" style="background-color: var(--class-a-color)">Add Pink</button>
-                        <button id="add-b-btn" style="background-color: var(--class-b-color)">Add Blue</button>
-                    </div>
+                <h3>Data Controls</h3>
+                <div class="button-group">
+                    <button id="preset-linear-btn">Linear Data</button>
+                    <button id="preset-circle-btn">Circle Data</button>
+                    <button id="preset-spiral-btn">Spiral Data</button>
+                    <button id="clear-data-btn" class="secondary-button">Clear Data</button>
                 </div>
-                <div class="control-group">
-                    <strong>Training</strong>
-                    <div class="button-group">
-                        <button id="train-btn">Train</button>
-                        <button id="reset-btn">Reset</button>
-                    </div>
+                <p style="margin-top: 1rem;">Click on the canvas to add data points. Choose class with buttons below:</p>
+                <div class="button-group">
+                    <button id="add-a-btn" style="border: 2px solid var(--class-a-color);">Add Pink</button>
+                    <button id="add-b-btn" style="border: 2px solid var(--class-b-color);">Add Blue</button>
                 </div>
+                 <h3 style="margin-top: 1.5rem;">Actions</h3>
+                <div class="button-group">
+                    <button id="train-btn" aria-label="Play or Pause Training (Space)">Train</button>
+                    <button id="step-btn" aria-label="Train one epoch (Right Arrow)">Step</button>
+                    <button id="reset-btn" class="secondary-button" aria-label="Reset Network Weights (r)">Reset Weights</button>
+                </div>
+                 <div class="button-group" style="margin-top: 1rem;">
+                    <button id="export-png-btn" class="secondary-button" aria-label="Export as PNG (e)">Export PNG</button>
+                    <button id="share-btn" class="secondary-button">Share Preset</button>
+                </div>
+                 <div style="margin-top: 1rem;"><label><input type="checkbox" id="perf-mode-toggle"> Performance Mode</label></div>
             </div>
-            <canvas id="main-canvas" width="500" height="500"></canvas>
-            <div class="info-bar">
-                <span id="info-text">Epoch: 0 | Loss: N/A</span>
+            <div class="simulation-area">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+                <div id="perf-meter" class="metadata-bar">
+                    Epoch: <span id="epoch-display">0</span> | Loss: <span id="loss-display">N/A</span> | FPS: <span id="fps-display">--</span>
+                </div>
             </div>
         </div>
 
@@ -134,237 +159,296 @@
             <h3>1. What is a Decision Boundary?</h3>
             <p>The colored background on the canvas represents the neural network's current prediction for every single point in the space. The line where the color changes from pink to blue is the <strong>decision boundary</strong>. Everything on one side, it classifies as "blue"; everything on the other, it classifies as "pink." The goal of training is to move this boundary so that all the actual blue dots are in the blue region and all the pink dots are in the pink region.</p>
 
-            <h3>2. How Does a Neural Network "Learn"?</h3>
-            <p>A neural network is made of simple processing units called "neurons," organized in layers. Each connection between neurons has a "weight," which is just a number. These weights determine the strength of the connections.
-            <ul>
-                <li><strong>Forward Pass:</strong> When we give the network an input (the (x,y) coordinates of a dot), the information flows through the network. Each neuron takes a weighted sum of its inputs and applies a simple non-linear function (an "activation function") to produce its output. This process continues until the final layer produces a prediction.</li>
-                <li><strong>Calculating Loss:</strong> The network compares its prediction to the actual label of the data point. The "loss" or "error" is a measure of how wrong the prediction was.</li>
-                <li><strong>Backpropagation:</strong> This is the magic of learning. The network calculates how much each individual weight contributed to the total error. It then "propagates" this error information backward through the network.</li>
-                <li><strong>Weight Update:</strong> Each weight is nudged slightly in the direction that would have made the error smaller. The size of this nudge is controlled by a parameter called the "learning rate."</li>
-            </ul>
-            By repeating this process thousands of times with all the data points, the network's weights are gradually adjusted, causing the decision boundary to shift and curve to better fit the data.
-            </p>
+            <h3>2. How a Neural Network "Learns"</h3>
+            <p>A neural network is made of simple processing units called "neurons," organized in layers. Each connection between neurons has a "weight," which is just a number that can be tuned.
+            <ol>
+                <li><strong>Forward Pass:</strong> When we give the network an input (the (x,y) coordinates of a dot), the information flows through the network. Each neuron takes a weighted sum of its inputs and applies a non-linear "activation function" to produce its output. This continues until the final layer produces a prediction.</li>
+                <li><strong>Calculating Loss:</strong> The network compares its prediction to the actual label of the data point. The "loss" or "error" is a measure of how wrong the prediction was. A high loss means it was very wrong.</li>
+                <li><strong>Backpropagation:</strong> This is the magic of learning. The network uses calculus (specifically, the chain rule) to calculate how much each individual weight contributed to the total error. It "propagates" this error information backward through the network.</li>
+                <li><strong>Weight Update:</strong> Each weight is nudged slightly in the direction that would have made the error smaller. The size of this nudge is controlled by the <strong>Learning Rate (&eta;)</strong>.</li>
+            </ol>
+            By repeating this process thousands of times (in "epochs"), the network's weights are gradually adjusted, causing the decision boundary to shift and curve to better fit the data.</p>
+
             <h3>3. Exploring the Simulation</h3>
-            <p>Try the different presets to see how the network performs on different problems:</p>
+            <p>Use the controls to see how different parameters affect learning.
             <ul>
-                <li><strong>Linear:</strong> This is an easy problem. The network should quickly learn a straight line to separate the two clusters.</li>
-                <li><strong>Circle:</strong> This problem is impossible to solve with a single straight line. The network needs to use its "hidden layers" to learn a more complex, circular boundary.</li>
-                <li><strong>Spiral:</strong> This is a very difficult problem that tests the network's ability to learn highly complex, non-linear functions. Watch how the boundary has to twist and turn to separate the two intertwined arms of the spiral.</li>
+                <li><strong>Data Presets:</strong> Try the different presets to see how the network handles different problems. The "Linear" data is easy. The "Circle" data requires a non-linear boundary. The "Spiral" data is very difficult and requires a complex network (try more layers/neurons).</li>
+                <li><strong>Learning Rate:</strong> Try training on the Circle data with a very high learning rate (e.g., 1.0). The boundary will likely jump around erratically and fail to settle. Now try a very low rate (e.g., 0.001). It will learn, but very slowly. This shows the trade-off.</li>
+                <li><strong>Network Architecture:</strong> Try solving the Spiral data with just 1 hidden layer and 4 neurons. It will likely fail. Now increase the layers to 3 and neurons to 12. Reset the weights and train again. It should now have enough "capacity" to learn the complex shape.</li>
             </ul>
-            <p>You can also add your own points to see how the network adapts to new information during training.</p>
+            </p>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h3>Walkthrough: The Effect of Network Depth</h3>
+            <ol>
+                <li>Click "Spiral Data" to load the difficult dataset.</li>
+                <li>In the controls, set Hidden Layers to <strong>1</strong> and Neurons/Layer to <strong>4</strong>. Click "Reset Weights", then "Train". Observe that the network tries, but can only form a simple curve and the loss value stays high. It is <strong>underfitting</strong>.</li>
+                <li>Pause training. Now, set Hidden Layers to <strong>3</strong> and Neurons/Layer to <strong>12</strong>. Click "Reset Weights" and "Train" again.</li>
+                <li>Notice how the decision boundary can now twist and turn to follow the spiral arms. The final loss will be much lower. This demonstrates that a deeper, wider network has more capacity to learn complex functions.</li>
+            </ol>
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li>Load "Circle Data". Set learning rate to 1.0. Train. What happens? (The loss jumps around violently, a sign of unstable training).</li>
+                <li>Reset. Set learning rate to 0.01. Train. What happens? (It learns, but very slowly). Find the "Goldilocks" rate in between.</li>
+                <li>Load "Linear Data". Set layers to 4 and neurons to 16 (a very powerful network). Train. Notice that the boundary might become overly "wiggly" around the data points. This is <strong>overfitting</strong>: the network is too powerful for the simple data.</li>
+                <li>Select "ReLU" as the activation function. Notice that the decision boundaries are made of sharp, straight lines. Why? (ReLU is a piecewise linear function).</li>
+                <li>Select "Tanh" or "Sigmoid". Notice the boundaries are smooth and curved.</li>
+                <li>Clear all data. Place one pink dot in the top left and one blue dot in the bottom right. Train a simple network. It will create a simple line between them. Now add a blue dot in the top left. The boundary will curve to accommodate it.</li>
+            </ol>
         </section>
 
         <section id="theory">
             <h2>Core Theory in a Nutshell</h2>
-            <h3>Forward Propagation</h3>
-            <p>For a single neuron, the output <code>a</code> is calculated from its inputs <code>x<sub>i</sub></code> and weights <code>w<sub>i</sub></code>, plus a bias <code>b</code>.</p>
-            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
-                z = (&Sigma; w<sub>i</sub>x<sub>i</sub>) + b
-                <br>
-                a = &sigma;(z)
-            </p>
-            <p>Where <code>&sigma;</code> is a non-linear activation function, like the Sigmoid function: <code>&sigma;(z) = 1 / (1 + e<sup>-z</sup>)</code>. This squashes the output to be between 0 and 1. This process is repeated for each layer, with the outputs of one layer becoming the inputs for the next.</p>
-            <h3>Backpropagation (Weight Update)</h3>
-            <p>The network's error is measured by a loss function, for example, Mean Squared Error: <code>Loss = &frac12; (y<sub>true</sub> - y<sub>pred</sub>)<sup>2</sup></code>. Backpropagation uses the chain rule from calculus to find the gradient of the loss with respect to each weight (<code>&part;Loss/&part;w</code>). The weight is then updated:</p>
-            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
-                w<sub>new</sub> = w<sub>old</sub> - &eta; &times; (&part;Loss/&part;w<sub>old</sub>)
-            </p>
-            <p>Where <code>&eta;</code> (eta) is the learning rate, a small number that controls how big of a step to take. This simple update rule, applied iteratively, is what drives the learning process.</p>
+            <p>For a single neuron, the output <code>a</code> is calculated from its inputs <code>x<sub>i</sub></code> and weights <code>w<sub>i</sub></code>, plus a bias <code>b</code>.
+            <br><code>z = (&Sigma; w<sub>i</sub>x<sub>i</sub>) + b</code>
+            <br><code>a = f_act(z)</code>
+            <br>Where <code>f_act</code> is a non-linear activation function like Tanh or ReLU. This process is repeated for each layer. The network's error is measured by a loss function, like Mean Squared Error: <code>Loss = &frac12; (y_true - y_pred)<sup>2</sup></code>. Backpropagation uses the chain rule from calculus to find the gradient of the loss with respect to each weight (<code>&part;Loss/&part;w</code>). The weight is then updated:
+            <br><code>w_new = w_old - &eta; &times; (&part;Loss/&part;w_old)</code>
+            <br>Where <code>&eta;</code> is the learning rate. This simple update rule, applied iteratively, drives all learning.</p>
         </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What is an "epoch"?</dt>
+                <dd>An epoch represents one full pass of the training algorithm over the entire dataset. In this simulation, for performance, an epoch is simplified to a fixed number of training steps.</dd>
+                <dt>2. What is "loss"?</dt>
+                <dd>Loss is a number that measures how wrong the network's predictions are compared to the true labels. The goal of training is to minimize this number.</dd>
+                <dt>3. Why does the boundary stop changing even if the loss is not zero?</dt>
+                <dd>The training may have gotten stuck in a "local minimum," a point where any small change to the weights increases the loss. More advanced optimizers (like Adam or Momentum) help escape these.</dd>
+                <dt>4. Why is the training slow?</dt>
+                <dd>Training a neural network is computationally intensive! Even for this small 2D problem, thousands of calculations are happening per frame. For better performance, tick the "Performance Mode" box, which draws the background at a lower resolution.</dd>
+                <dt>5. What is the difference between activation functions?</dt>
+                <dd>They are different non-linearities. ReLU (Rectified Linear Unit) is simple and fast (output is <code>max(0, z)</code>). Tanh and Sigmoid are smooth, S-shaped curves. They have different mathematical properties that make them better for different kinds of problems.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content"><ul id="log-output"></ul></div>
+        </details>
     </main>
 
     <script>
+    // Note: A more robust matrix library would be better, but this is minimal for a single file.
     document.addEventListener('DOMContentLoaded', () => {
-        // --- DOM Elements ---
+        // --- Setup & Elements ---
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
-        const infoText = document.getElementById('info-text');
         const trainBtn = document.getElementById('train-btn');
-        const themeToggle = document.getElementById('theme-toggle');
+        const epochDisplay = document.getElementById('epoch-display');
+        const lossDisplay = document.getElementById('loss-display');
+        const fpsDisplay = document.getElementById('fps-display');
 
         // --- State ---
-        let data = [];
-        let labels = [];
-        let network;
-        let isTraining = false;
-        let currentClass = 1; // 1 for pink, 0 for blue
-        let animationId;
-        let epoch = 0;
+        let data = [], labels = [];
+        let network, currentClass = 1, isTraining = false, epoch = 0;
+        let lastTime = 0, frameCount = 0;
+        let perfMode = false;
 
-        // --- Neural Network Implementation ---
+        // --- Activation Functions ---
+        const activations = {
+            relu: { f: x => Math.max(0, x), df: y => y > 0 ? 1 : 0 },
+            sigmoid: { f: x => 1 / (1 + Math.exp(-x)), df: y => y * (1 - y) },
+            tanh: { f: x => Math.tanh(x), df: y => 1 - y * y }
+        };
+
+        // --- Neural Network Class ---
         class NeuralNetwork {
-            constructor(inputNodes, hiddenNodes, outputNodes) {
-                this.w_ih = Array.from({length: hiddenNodes}, () => Array.from({length: inputNodes}, Math.random));
-                this.b_h = Array.from({length: hiddenNodes}, Math.random);
-                this.w_ho = Array.from({length: outputNodes}, () => Array.from({length: hiddenNodes}, Math.random));
-                this.b_o = Array.from({length: outputNodes}, Math.random);
-                this.learningRate = 0.1;
+            constructor(layerSizes, activationFn) {
+                this.layers = [];
+                this.activation = activations[activationFn];
+                for (let i = 0; i < layerSizes.length - 1; i++) {
+                    this.layers.push({
+                        weights: Array.from({ length: layerSizes[i+1] }, () => Array.from({ length: layerSizes[i] }, () => Math.random() - 0.5)),
+                        biases: Array.from({ length: layerSizes[i+1] }, () => Math.random() - 0.5)
+                    });
+                }
             }
-
-            sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
-            dsigmoid(y) { return y * (1 - y); }
 
             predict(input) {
-                let hidden = this.w_ih.map((weights, i) => {
-                    const sum = weights.reduce((acc, w, j) => acc + w * input[j], 0) + this.b_h[i];
-                    return this.sigmoid(sum);
-                });
-
-                let output = this.w_ho.map((weights, i) => {
-                    const sum = weights.reduce((acc, w, j) => acc + w * hidden[j], 0) + this.b_o[i];
-                    return this.sigmoid(sum);
-                });
-                return output;
+                let current_outputs = input;
+                for (const layer of this.layers) {
+                    current_outputs = layer.biases.map((b, i) => {
+                        const weighted_sum = layer.weights[i].reduce((sum, w, j) => sum + w * current_outputs[j], 0);
+                        return this.activation.f(weighted_sum + b);
+                    });
+                }
+                return current_outputs;
             }
 
-            train(input, target) {
+            train(input, target, learningRate) {
                 // Forward pass
-                let hidden = this.w_ih.map((weights, i) => this.sigmoid(weights.reduce((acc, w, j) => acc + w * input[j], 0) + this.b_h[i]));
-                let output = this.w_ho.map((weights, i) => this.sigmoid(weights.reduce((acc, w, j) => acc + w * hidden[j], 0) + this.b_o[i]));
+                const layer_outputs = [input];
+                let current_outputs = input;
+                for (const layer of this.layers) {
+                    current_outputs = layer.biases.map((b, i) => {
+                        const weighted_sum = layer.weights[i].reduce((sum, w, j) => sum + w * layer_outputs[layer_outputs.length - 1][j], 0);
+                        return this.activation.f(weighted_sum + b);
+                    });
+                    layer_outputs.push(current_outputs);
+                }
+                const final_output = layer_outputs[layer_outputs.length - 1];
 
                 // Backward pass
-                let output_errors = target.map((t, i) => t - output[i]);
+                let errors = target.map((t, i) => t - final_output[i]);
+                let loss = errors.reduce((sum, e) => sum + e * e, 0) / errors.length;
 
-                let gradients = output.map((o, i) => this.dsigmoid(o) * output_errors[i] * this.learningRate);
-                let w_ho_deltas = gradients.map((g, i) => hidden.map(h => g * h));
+                for (let i = this.layers.length - 1; i >= 0; i--) {
+                    const layer = this.layers[i];
+                    const prev_outputs = layer_outputs[i];
+                    const current_outputs_for_grad = layer_outputs[i + 1];
 
-                let hidden_errors = this.w_ho[0].map((w, i) => output_errors[0] * w);
-                let hidden_gradients = hidden.map((h, i) => this.dsigmoid(h) * hidden_errors[i] * this.learningRate);
-                let w_ih_deltas = hidden_gradients.map((g, i) => input.map(inp => g * inp));
+                    const gradients = current_outputs_for_grad.map((o, j) => errors[j] * this.activation.df(o));
 
-                // Update weights and biases
-                this.w_ho = this.w_ho.map((weights, i) => weights.map((w, j) => w + w_ho_deltas[i][j]));
-                this.b_o = this.b_o.map((b, i) => b + gradients[i]);
-                this.w_ih = this.w_ih.map((weights, i) => weights.map((w, j) => w + w_ih_deltas[i][j]));
-                this.b_h = this.b_h.map((b, i) => b + hidden_gradients[i]);
+                    const next_errors = layer.weights[0].map((_, j) => {
+                        return layer.weights.reduce((sum, w_row, k) => sum + w_row[j] * errors[k], 0);
+                    });
 
-                return output_errors.reduce((acc, err) => acc + err*err, 0) / output_errors.length;
+                    // Update weights and biases
+                    for(let j=0; j<layer.weights.length; j++) {
+                        for(let k=0; k<layer.weights[j].length; k++) {
+                            layer.weights[j][k] += learningRate * gradients[j] * prev_outputs[k];
+                        }
+                        layer.biases[j] += learningRate * gradients[j];
+                    }
+                    errors = next_errors;
+                }
+                return loss;
             }
         }
 
         // --- Drawing ---
         function draw() {
-            // Draw decision boundary
-            const resolution = 10;
-            const size = canvas.width;
-            for (let i = 0; i < size; i += resolution) {
-                for (let j = 0; j < size; j += resolution) {
-                    const x = i / size;
-                    const y = j / size;
-                    const pred = network.predict([x, y])[0];
-                    ctx.fillStyle = `rgba(247, 37, 133, ${pred})`;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const resolution = perfMode ? 20 : 10;
+            for (let i = 0; i < canvas.width; i += resolution) {
+                for (let j = 0; j < canvas.height; j += resolution) {
+                    const pred = network.predict([i / canvas.width, j / canvas.height])[0];
+                    ctx.fillStyle = `rgba(247, 37, 133, ${pred * 0.5})`;
                     ctx.fillRect(i, j, resolution, resolution);
-                    ctx.fillStyle = `rgba(76, 201, 240, ${1 - pred})`;
+                    ctx.fillStyle = `rgba(76, 201, 240, ${(1 - pred) * 0.5})`;
                     ctx.fillRect(i, j, resolution, resolution);
                 }
             }
-
-            // Draw data points
-            for (let i = 0; i < data.length; i++) {
+            data.forEach((p, i) => {
                 ctx.fillStyle = labels[i][0] === 1 ? 'var(--class-a-color)' : 'var(--class-b-color)';
-                ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#000' : '#fff';
+                ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg');
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(data[i][0] * size, data[i][1] * size, 8, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.stroke();
-            }
+                ctx.arc(p[0] * canvas.width, p[1] * canvas.height, 6, 0, 2 * Math.PI);
+                ctx.fill(); ctx.stroke();
+            });
         }
 
-        // --- Interaction ---
+        // --- Main Loop ---
+        function loop(timestamp) {
+            if (!isTraining) return;
+            let totalLoss = 0;
+            const lr = parseFloat(document.getElementById('lr-slider').value);
+            for (let i = 0; i < 5; i++) {
+                if (data.length === 0) break;
+                const idx = Math.floor(Math.random() * data.length);
+                totalLoss += network.train(data[idx], labels[idx], lr);
+            }
+            epoch++;
+            epochDisplay.textContent = epoch;
+            lossDisplay.textContent = (totalLoss / 5).toFixed(5);
+
+            frameCount++;
+            if (timestamp - lastTime > 1000) {
+                fpsDisplay.textContent = frameCount;
+                frameCount = 0;
+                lastTime = timestamp;
+            }
+
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // --- Controls & Handlers ---
+        function buildNetwork() {
+            const numLayers = parseInt(document.getElementById('layers-slider').value);
+            const numNeurons = parseInt(document.getElementById('neurons-slider').value);
+            const activation = document.getElementById('activation-select').value;
+            const layerSizes = [2, ...Array(numLayers).fill(numNeurons), 1];
+            network = new NeuralNetwork(layerSizes, activation);
+            epoch = 0;
+            lossDisplay.textContent = 'N/A';
+            draw();
+        }
+
+        function handleTrain() {
+            isTraining = !isTraining;
+            trainBtn.textContent = isTraining ? "Pause" : "Train";
+            if (isTraining) { lastTime = performance.now(); requestAnimationFrame(loop); }
+        }
+
+        function step() {
+            if(isTraining) handleTrain();
+            const lr = parseFloat(document.getElementById('lr-slider').value);
+            let totalLoss = 0;
+            for (let i = 0; i < data.length; i++) { // One full epoch
+                 totalLoss += network.train(data[i], labels[i], lr);
+            }
+            epoch++;
+            epochDisplay.textContent = epoch;
+            lossDisplay.textContent = (totalLoss / data.length).toFixed(5);
+            draw();
+        }
+
+        const presets = {
+            linear: () => { for(let i=0;i<50;i++){data.push([Math.random()*0.4,Math.random()]);labels.push([1]);data.push([Math.random()*0.4+0.6,Math.random()]);labels.push([0])} },
+            circle: () => { for(let i=0;i<100;i++){const r=Math.random()*0.48,a=Math.random()*2*Math.PI,x=0.5+r*Math.cos(a),y=0.5+r*Math.sin(a);data.push([x,y]);labels.push(r<0.2?[1]:[0])} },
+            spiral: () => { for(let i=0;i<100;i++){const r=i/100*0.45,a=i*0.25;data.push([0.5+r*Math.cos(a),0.5+r*Math.sin(a)]);labels.push([1]);data.push([0.5+r*Math.cos(a+Math.PI),0.5+r*Math.sin(a+Math.PI)]);labels.push([0])} }
+        };
+
+        function loadPreset(name) {
+            data = []; labels = [];
+            presets[name]();
+            buildNetwork();
+        }
+
+        document.getElementById('lr-slider').addEventListener('input', e => document.getElementById('lr-value').textContent = parseFloat(e.target.value).toFixed(3));
+        document.getElementById('layers-slider').addEventListener('input', e => document.getElementById('layers-value').textContent = e.target.value);
+        document.getElementById('neurons-slider').addEventListener('input', e => document.getElementById('neurons-value').textContent = e.target.value);
+        document.getElementById('layers-slider').addEventListener('change', buildNetwork);
+        document.getElementById('neurons-slider').addEventListener('change', buildNetwork);
+        document.getElementById('activation-select').addEventListener('change', buildNetwork);
+
+        trainBtn.addEventListener('click', handleTrain);
+        document.getElementById('step-btn').addEventListener('click', step);
+        document.getElementById('reset-btn').addEventListener('click', buildNetwork);
+        document.getElementById('clear-data-btn').addEventListener('click', () => { data = []; labels = []; draw(); });
+
+        document.getElementById('preset-linear-btn').addEventListener('click', () => loadPreset('linear'));
+        document.getElementById('preset-circle-btn').addEventListener('click', () => loadPreset('circle'));
+        document.getElementById('preset-spiral-btn').addEventListener('click', () => loadPreset('spiral'));
+
+        document.getElementById('add-a-btn').addEventListener('click', () => currentClass = 1);
+        document.getElementById('add-b-btn').addEventListener('click', () => currentClass = 0);
         canvas.addEventListener('click', e => {
-            if (isTraining) return;
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) / canvas.width;
             const y = (e.clientY - rect.top) / canvas.height;
             data.push([x, y]);
-            labels.push(currentClass === 1 ? [1] : [0]);
+            labels.push([currentClass]);
             draw();
         });
 
-        document.getElementById('add-a-btn').addEventListener('click', () => { currentClass = 1; });
-        document.getElementById('add-b-btn').addEventListener('click', () => { currentClass = 0; });
-
-        trainBtn.addEventListener('click', () => {
-            isTraining = !isTraining;
-            trainBtn.textContent = isTraining ? "Pause" : "Train";
-            if (isTraining) loop();
+        document.getElementById('perf-mode-toggle').addEventListener('change', e => { perfMode = e.target.checked; draw(); });
+        document.getElementById('theme-toggle').addEventListener('click', () => { document.body.classList.toggle('dark-mode'); draw(); });
+        document.getElementById('export-png-btn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `nn-boundary_epoch-${epoch}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
         });
 
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            isTraining = false;
-            trainBtn.textContent = "Train";
-            cancelAnimationFrame(animationId);
-            init();
-        });
-
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            if(!isTraining) draw();
-        });
-
-        // --- Presets ---
-        const presets = {
-            linear: () => {
-                for(let i=0; i<50; i++) {
-                    const x = Math.random()*0.4;
-                    const y = Math.random();
-                    data.push([x,y]); labels.push([1]);
-                    const x2 = Math.random()*0.4 + 0.6;
-                    const y2 = Math.random();
-                    data.push([x2,y2]); labels.push([0]);
-                }
-            },
-            circle: () => {
-                for(let i=0; i<100; i++) {
-                    const r = Math.random() * 0.45;
-                    const a = Math.random() * 2 * Math.PI;
-                    const x = 0.5 + r * Math.cos(a);
-                    const y = 0.5 + r * Math.sin(a);
-                    const label = (r < 0.2) ? [1] : [0];
-                    data.push([x,y]); labels.push(label);
-                }
-            },
-            spiral: () => {
-                for(let i=0; i<100; i++) {
-                    const r = i/100 * 0.4;
-                    const a = i * 0.2;
-                    data.push([0.5+r*Math.cos(a), 0.5+r*Math.sin(a)]); labels.push([1]);
-                    data.push([0.5+r*Math.cos(a+Math.PI), 0.5+r*Math.sin(a+Math.PI)]); labels.push([0]);
-                }
-            }
-        };
-        document.getElementById('preset-linear-btn').addEventListener('click', () => { init(presets.linear); });
-        document.getElementById('preset-circle-btn').addEventListener('click', () => { init(presets.circle); });
-        document.getElementById('preset-spiral-btn').addEventListener('click', () => { init(presets.spiral); });
-
-        // --- Main Loop ---
-        function loop() {
-            if (!isTraining) return;
-            let totalLoss = 0;
-            for(let i=0; i<10; i++) { // 10 training steps per frame
-                if(data.length === 0) break;
-                const randomIndex = Math.floor(Math.random() * data.length);
-                totalLoss += network.train(data[randomIndex], labels[randomIndex]);
-            }
-            epoch++;
-            infoText.textContent = `Epoch: ${epoch} | Avg Loss: ${(totalLoss/10).toFixed(4)}`;
-
-            draw();
-            animationId = requestAnimationFrame(loop);
-        }
-
-        function init(presetFn) {
-            data = [];
-            labels = [];
-            epoch = 0;
-            infoText.textContent = "Epoch: 0 | Loss: N/A";
-            network = new NeuralNetwork(2, 8, 1);
-            if(presetFn) presetFn();
-            draw();
-        }
-
-        init(presets.linear);
+        buildNetwork();
+        loadPreset('linear');
     });
     </script>
 </body>

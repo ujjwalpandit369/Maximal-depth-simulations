@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativistic Headlight Effect</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa; --text-color: #212529; --primary-color: #198754; --secondary-color: #6c757d;
+            --border-color: #dee2e6; --canvas-bg: #fff; --code-bg: #e9ecef; --accent-color: #ffc107;
+        }
+        .dark-mode {
+            --bg-color: #212529; --text-color: #f8f9fa; --primary-color: #20c997; --secondary-color: #adb5bd;
+            --border-color: #495057; --canvas-bg: #000; --code-bg: #343a40;
+        }
+        body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; line-height:1.6; margin:0; padding:1rem; background-color:var(--bg-color); color:var(--text-color); }
+        .container { max-width:900px; margin:auto; padding:1rem; }
+        h1,h2,h3 { border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-top:2rem; }
+        .simulation-container { border:1px solid var(--border-color); padding:1rem; border-radius:8px; text-align:center; }
+        canvas { background-color:var(--canvas-bg); width:100%; aspect-ratio:1/1; max-width:600px; margin:auto; display:block; }
+        .controls { padding:1rem; }
+        .control-group { max-width:500px; margin:auto; }
+        .info-box { padding:1rem; background:var(--code-bg); border-radius:5px; text-align:center; max-width:500px; margin:1rem auto; }
+        .info-box .value { font-size:1.2rem; font-weight:bold; font-family:monospace; color:var(--primary-color); }
+        code { background-color:var(--code-bg); padding:0.2rem 0.4rem; border-radius:3px; }
+        .dev-console { margin-top:2rem; border:1px solid var(--border-color); }
+        .dev-console summary { padding:0.5rem; font-weight:bold; cursor:pointer; background-color:var(--code-bg); }
+        #dev-log { padding:1rem; height:150px; overflow-y:scroll; background-color:var(--bg-color); color:var(--text-color); }
+        .error-panel { display:none; background-color: #198754; color:white; padding:1rem; border-radius:5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="error-panel" class="error-panel"></div>
+        <h1>Relativistic Headlight Effect</h1>
+        <p>An animation showing how light emission is beamed forward at high speeds.</p>
+        <div class="metadata-bar" style="text-align:center;margin:1rem 0;font-size:0.8rem;"><button id="theme-toggle">Toggle Dark Mode</button></div>
+
+        <section>
+            <h2>Plain-Language Overview</h2>
+            <p>Imagine a spaceship that glows, emitting light equally in all directions when at rest. Special relativity predicts that as the ship moves faster, its light will become concentrated in the forward direction. At very high speeds, it would appear to have bright forward-facing "headlights." This simulation visualizes this effect with a polar plot of light intensity that deforms from a circle into a focused forward lobe as you increase the velocity.</p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="controls">
+                <div class="control-group"><label for="velocity-slider">Spaceship Velocity (v/c): <span id="velocity-value">0.000</span></label><input type="range" id="velocity-slider" min="0" max="0.995" value="0" step="0.005"></div>
+            </div>
+            <div class="info-box"><h4>Forward Beaming Factor</h4><p style="font-size:0.9rem;margin:0.5rem;">Ratio of forward intensity to sideways intensity</p><div class="value" id="beaming-factor-value">1.00x</div></div>
+        </div>
+
+        <section>
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Glowing Spaceship</h3>
+            <p>The simulation shows a ship and a yellow shape representing the intensity of its emitted light. At zero velocity, the plot is a perfect circle, meaning light goes out equally in all directions.</p>
+            <h3>2. Full Speed Ahead!</h3>
+            <p>Use the slider to increase the ship's velocity (moving to the right). The light gets focused into a forward-facing "headlight." The "Forward Beaming Factor" shows how much brighter the forward emission is compared to the sideways emission. At 99% the speed of light, it's nearly 200 times brighter!</p>
+        </section>
+
+        <section>
+            <h2>Core Theory</h2>
+            <p>The observed intensity `I` at an angle `θ` relative to the direction of motion is given by the relativistic beaming formula: <code>I(θ) ∝ (1 - β²) / (1 - βcosθ)²</code> where `β = v/c`. The `(1 - βcosθ)²` term in the denominator becomes very small when θ is near 0 (the forward direction), causing the intensity to become very large.</p>
+        </section>
+
+        <details class="dev-console"><summary>Developer Console</summary><div id="dev-log"></div></details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Init ---
+    const requiredIds=['simulation-canvas','velocity-slider','velocity-value','beaming-factor-value','dev-log'];
+    if(requiredIds.some(id=>!document.getElementById(id))){document.getElementById('error-panel').textContent='ERROR: A UI element is missing.';document.getElementById('error-panel').style.display='block';return}
+    const devLog=document.getElementById('dev-log'),log=msg=>{devLog.innerHTML+=`<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`};log('Simulation initialized.');
+
+    // --- Canvas & State ---
+    const canvas=document.getElementById('simulation-canvas'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+    const velSlider=document.getElementById('velocity-slider'),velValue=document.getElementById('velocity-value'),beamingFactor=document.getElementById('beaming-factor-value');
+    let beta=0;
+
+    // --- Logic & Drawing ---
+    const getCssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const getIntensity=(b,theta)=>b>=1?0:(1-b*b)/((1-b*Math.cos(theta))**2);
+    function updateCalculations(){beta=parseFloat(velSlider.value);velValue.textContent=beta.toFixed(3);const fwdI=getIntensity(beta,0),trnI=getIntensity(beta,Math.PI/2);beamingFactor.textContent=`${(fwdI/trnI).toFixed(2)}x`;draw()}
+    function draw(){const center={x:w/2,y:h/2};ctx.clearRect(0,0,w,h);ctx.fillStyle=getCssVar('--text-color');ctx.beginPath();ctx.moveTo(center.x-20,center.y+15);ctx.lineTo(center.x+25,center.y);ctx.lineTo(center.x-20,center.y-15);ctx.closePath();ctx.fill();const maxI=getIntensity(beta,0),scale=(w/2.5)/maxI;ctx.beginPath();for(let i=0;i<=360;i++){const theta=i*Math.PI/180,intensity=getIntensity(beta,theta),radius=intensity*scale,x=center.x+radius*Math.cos(theta),y=center.y+radius*Math.sin(theta);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.closePath();const grad=ctx.createRadialGradient(center.x,center.y,0,center.x,center.y,w/2);grad.addColorStop(0,getCssVar('--accent-color'));grad.addColorStop(1,getCssVar('--primary-color'));ctx.fillStyle=grad;ctx.globalAlpha=0.7;ctx.fill();ctx.globalAlpha=1.0;ctx.strokeStyle=getCssVar('--accent-color');ctx.lineWidth=2;ctx.stroke()}
+
+    // --- Listeners ---
+    velSlider.addEventListener('input',updateCalculations);
+    document.getElementById('theme-toggle').addEventListener('click',()=>{document.body.classList.toggle('dark-mode');log("Theme toggled.");draw()});
+    const resize=()=>{canvas.width=canvas.parentElement.clientWidth;canvas.height=canvas.parentElement.clientWidth;draw();log("Canvas resized.")};
+    window.addEventListener('resize',resize);
+
+    resize();
+    updateCalculations();
+});
+</script>
+</body>
+</html>

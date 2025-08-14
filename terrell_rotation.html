@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terrell Rotation</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa; --text-color: #212529; --primary-color: #d63384; --secondary-color: #6c757d;
+            --border-color: #dee2e6; --canvas-bg: #000; --code-bg: #e9ecef; --accent-color: #fd7e14;
+        }
+        .dark-mode {
+            --bg-color: #212529; --text-color: #f8f9fa; --primary-color: #e673ad; --secondary-color: #adb5bd;
+            --border-color: #495057; --canvas-bg: #111; --code-bg: #343a40;
+        }
+        body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; line-height:1.6; margin:0; padding:1rem; background-color:var(--bg-color); color:var(--text-color); }
+        .container { max-width:900px; margin:auto; padding:1rem; }
+        h1,h2,h3 { border-bottom:2px solid var(--primary-color); padding-bottom:0.5rem; margin-top:2rem; }
+        .simulation-container { border:1px solid var(--border-color); padding:1rem; border-radius:8px; text-align:center; }
+        canvas { background-color:var(--canvas-bg); width:100%; aspect-ratio:16/9; max-width:800px; margin:auto; display:block; }
+        .controls { padding:1rem; display:flex; flex-wrap:wrap; justify-content:center; gap:1rem; align-items:center; }
+        .control-group { max-width:500px; margin:auto; }
+        .warning { background-color:#fff3cd; color:#856404; padding:1rem; border:1px solid #ffeeba; border-radius:5px; margin:1rem 0; }
+        code { background-color:var(--code-bg); padding:0.2rem 0.4rem; border-radius:3px; }
+        .dev-console { margin-top:2rem; border:1px solid var(--border-color); }
+        .dev-console summary { padding:0.5rem; font-weight:bold; cursor:pointer; background-color:var(--code-bg); }
+        #dev-log { padding:1rem; height:150px; overflow-y:scroll; background-color:var(--bg-color); color:var(--text-color); }
+        .error-panel { display:none; background-color:#d63384; color:white; padding:1rem; border-radius:5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="error-panel" class="error-panel"></div>
+        <h1>Terrell Rotation: Appearance of Fast-Moving Objects</h1>
+        <p>A simulation of what a 3D object looks like when moving past at relativistic speed.</p>
+        <div class="metadata-bar" style="text-align:center;margin:1rem 0;font-size:0.8rem;"><button id="theme-toggle">Toggle Dark Mode</button></div>
+
+        <section>
+            <h2>Plain-Language Overview</h2>
+            <p>You might expect a fast-moving cube to look flattened due to length contraction. However, because light from different parts of the cube takes different amounts of time to reach your eye, the visual appearance is different. The cube appears rotated, allowing you to see its back side even as it approaches. This is called <strong>Terrell-Penrose Rotation</strong>. This simulation visualizes this strange, counter-intuitive effect.</p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="controls">
+                <div class="control-group"><label for="velocity-slider">Cube Velocity (v/c): <span id="velocity-value">0.00</span></label><input type="range" id="velocity-slider" min="0" max="0.99" value="0.0" step="0.01"></div>
+                <button id="play-pause-btn">Play</button><button id="reset-btn">Reset</button>
+            </div>
+        </div>
+        <div class="warning"><strong>This is not a physical rotation!</strong> The cube moves in a straight line. Its "rotated" appearance is a visual illusion caused by length contraction and the finite speed of light.</div>
+
+        <section>
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Reality: A "Rotated" Cube</h3>
+            <p>Slide the velocity up to a high value, like <strong>0.90</strong>, and press "Play". Watch the cube as it approaches, passes, and recedes. It doesn't look like a flattened box; it looks rotated. You can even see its back face as it approaches.</p>
+            <h3>2. Why Does It Look Rotated?</h3>
+            <p>Your brain reconstructs the image based on light rays hitting your eye *at the same instant*. But these light rays were emitted from different parts of the cube *at different times*. The light from the back face was emitted when the cube was further away. This makes the back face appear smaller and shifted relative to the front, creating the illusion of rotation.</p>
+        </section>
+
+        <section>
+            <h2>Core Theory</h2>
+            <p>The visual appearance is governed by two effects: <strong>Lorentz Contraction</strong> (<code>L' = L / γ</code>) and the <strong>"retarded time" effect</strong>. An observer sees a vertex `P` at time `t_obs`, but the light was emitted earlier at `t_emit`. The apparent position is where the cube was at `t_emit`. The simulation calculates this apparent position for each vertex: <code>x_apparent = x_contracted - v * (distance / c)</code>. This correction, different for each vertex, warps the projected image, creating the rotation illusion.</p>
+        </section>
+
+        <details class="dev-console"><summary>Developer Console</summary><div id="dev-log"></div></details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Init ---
+    const requiredIds=['simulation-canvas','velocity-slider','play-pause-btn','reset-btn','dev-log'];
+    if(requiredIds.some(id=>!document.getElementById(id))){document.getElementById('error-panel').textContent='ERROR: A UI element is missing.';document.getElementById('error-panel').style.display='block';return}
+    const devLog=document.getElementById('dev-log'),log=msg=>{devLog.innerHTML+=`<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`};log('Simulation initialized.');
+
+    // --- Canvas & State ---
+    const canvas=document.getElementById('simulation-canvas'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+    const velSlider=document.getElementById('velocity-slider'),velValue=document.getElementById('velocity-value');
+    const playPauseBtn=document.getElementById('play-pause-btn');
+    let beta=0,cube_x_pos=-4,animFrameId,isPlaying=true;
+
+    // --- 3D Engine ---
+    const vertices=[{x:-.5,y:-.5,z:-.5},{x:.5,y:-.5,z:-.5},{x:.5,y:.5,z:-.5},{x:-.5,y:.5,z:-.5},{x:-.5,y:-.5,z:.5},{x:.5,y:-.5,z:.5},{x:.5,y:.5,z:.5},{x:-.5,y:.5,z:.5}];
+    const faces=[{v:[0,1,2,3],c:'rgba(255,0,0,0.7)'},{v:[5,4,7,6],c:'rgba(0,255,0,0.7)'},{v:[1,5,6,2],c:'rgba(0,0,255,0.7)'},{v:[4,0,3,7],c:'rgba(255,255,0,0.7)'},{v:[3,2,6,7],c:'rgba(255,0,255,0.7)'},{v:[4,5,1,0],c:'rgba(0,255,255,0.7)'}];
+    const camera={z:5};
+    const project=p3d=>{const p=camera.z/(camera.z-p3d.z);return{x:p3d.x*p,y:p3d.y*p}};
+
+    // --- Drawing ---
+    function draw(){ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2,h/2);const scale=h/4,gamma=1/Math.sqrt(1-beta*beta);let tV=vertices.map(v=>{let cX=v.x/gamma,rP={x:cX+cube_x_pos,y:v.y,z:v.z},dist=Math.hypot(rP.x,rP.y,rP.z),aX=rP.x-beta*dist;return{x:aX,y:rP.y,z:rP.z}});let pV=tV.map(v=>project(v));let sF=faces.map((f,i)=>{let z=f.v.reduce((s,vi)=>s+tV[vi].z,0)/4;return{i,z}}).sort((a,b)=>a.z-b.z);sF.forEach(fI=>{const f=faces[fI.i];ctx.beginPath();const s_v=pV[f.v[0]];ctx.moveTo(s_v.x*scale,s_v.y*scale);for(let i=1;i<f.v.length;i++)ctx.lineTo(pV[f.v[i]].x*scale,pV[f.v[i]].y*scale);ctx.closePath();ctx.fillStyle=f.c;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke()});ctx.restore()}
+
+    // --- Animation ---
+    function loop(){if(!isPlaying)return;cube_x_pos+=beta*0.05;if(cube_x_pos>4)cube_x_pos=-4;draw();animFrameId=requestAnimationFrame(loop)}
+    function reset(){cancelAnimationFrame(animFrameId);cube_x_pos=-4;beta=parseFloat(velSlider.value);velValue.textContent=beta.toFixed(2);if(isPlaying)loop();else draw();log(`Reset. v=${beta.toFixed(2)}c`)}
+
+    // --- Listeners ---
+    velSlider.addEventListener('input',()=>{beta=parseFloat(velSlider.value);velValue.textContent=beta.toFixed(2);if(cube_x_pos>3.9&&isPlaying)reset()});
+    playPauseBtn.addEventListener('click',()=>{isPlaying=!isPlaying;playPauseBtn.textContent=isPlaying?'Pause':'Play';if(isPlaying)loop();log(isPlaying?'Played':'Paused')});
+    document.getElementById('reset-btn').addEventListener('click',reset);
+    document.getElementById('theme-toggle').addEventListener('click',()=>{document.body.classList.toggle('dark-mode');draw()});
+    const resize=()=>{canvas.width=canvas.parentElement.clientWidth;canvas.height=canvas.parentElement.clientWidth*(9/16);draw()};
+    window.addEventListener('resize',resize);
+
+    resize();
+    reset();
+    loop();
+});
+</script>
+</body>
+</html>

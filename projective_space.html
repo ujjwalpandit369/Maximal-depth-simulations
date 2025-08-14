@@ -6,437 +6,140 @@
     <title>Projective Space in Computer Graphics</title>
     <style>
         :root {
-            --bg-color: #f4f7f9;
-            --text-color: #333;
-            --primary-color: #005a9c;
-            --secondary-color: #3d70b2;
-            --border-color: #d0d7de;
-            --canvas-bg: #ffffff;
+            --bg-color: #f4f7f9; --text-color: #333; --primary-color: #005a9c; --secondary-color: #3d70b2;
+            --border-color: #d0d7de; --canvas-bg: #ffffff; --code-bg: #e9ecef;
         }
         .dark-mode {
-            --bg-color: #0d1117;
-            --text-color: #c9d1d9;
-            --primary-color: #58a6ff;
-            --secondary-color: #8b949e;
-            --border-color: #30363d;
-            --canvas-bg: #161b22;
+            --bg-color: #0d1117; --text-color: #c9d1d9; --primary-color: #58a6ff; --secondary-color: #8b949e;
+            --border-color: #30363d; --canvas-bg: #161b22; --code-bg: #22272e;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 1rem;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        main {
-            max-width: 1100px;
-            width: 100%;
-        }
-        h1, h2, h3 {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-        .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            justify-content: center;
-            margin: 1.5rem 0;
-        }
-        .panel {
-            flex: 1;
-            min-width: 400px;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-        }
-        canvas {
-            background-color: var(--canvas-bg);
-            border: 1px solid var(--border-color);
-            max-width: 100%;
-            height: auto;
-            cursor: grab;
-        }
-        canvas:active { cursor: grabbing; }
-        .controls-area {
-            text-align: center;
-            margin-top: 1rem;
-        }
-        code {
-            background-color: var(--border-color);
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-            font-family: monospace;
-        }
-        th, td {
-            border: 1px solid var(--border-color);
-            padding: 0.5rem;
-            text-align: center;
-        }
-        .info-box {
-            background-color: var(--canvas-bg);
-            border: 1px dashed var(--secondary-color);
-            padding: 1rem;
-            border-radius: 5px;
-            margin-top: 1rem;
-        }
+        body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; line-height:1.6; margin:0; padding:1rem; background-color:var(--bg-color); color:var(--text-color); }
+        .container { max-width:1100px; margin:auto; padding:1rem; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--border-color); padding-bottom:0.5rem; }
+        .main-container { display:flex; flex-wrap:wrap; gap:1.5rem; justify-content:center; margin:1.5rem 0; }
+        .panel { flex:1; min-width:400px; max-width:500px; display:flex; flex-direction:column; align-items:center; padding:1rem; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { background-color:var(--canvas-bg); border:1px solid var(--border-color); max-width:100%; height:auto; cursor:grab; }
+        canvas:active { cursor:grabbing; }
+        .controls-area { text-align:center; padding:1rem; border:1px solid var(--border-color); border-radius:8px; margin-top:1rem; display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; }
+        button { background-color:var(--primary-color); color:white; border:none; padding:0.6rem 1.2rem; border-radius:5px; cursor:pointer; }
+        code { background-color:var(--code-bg); padding:0.2em 0.4em; border-radius:3px; }
+        table { width:100%; border-collapse:collapse; margin:1rem 0; font-family:monospace; }
+        th,td { border:1px solid var(--border-color); padding:0.5rem; text-align:center; }
+        .dev-console { margin-top:1rem; border:1px solid var(--border-color); }
+        .dev-console summary { padding:0.5rem; background-color:var(--code-bg); cursor:pointer; }
+        #dev-log { padding:1rem; max-height:150px; overflow-y:scroll; font-family:monospace; }
+        .error-panel { display:none; background-color:#d73a49; color:white; padding:1rem; border-radius:5px; }
     </style>
 </head>
 <body>
-    <main>
-        <header>
-            <h1>Projective Space in Computer Graphics</h1>
-            <p>Visualizing how 3D scenes are projected onto a 2D screen.</p>
-            <div style="text-align:center; margin-top: 1rem;">
-                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
-            </div>
-        </header>
+    <div class="container">
+        <div id="error-panel" class="error-panel"></div>
+        <h1>Projective Space in Computer Graphics</h1>
+        <p>Visualizing how 3D scenes are projected onto a 2D screen.</p>
+        <div class="metadata-bar" style="justify-content:center; gap:1rem;"><span>Recommended device: Desktop</span><button id="theme-toggle">Toggle Theme</button></div>
 
-        <section id="overview">
+        <section>
             <h2>Plain-Language Overview</h2>
-            <p>
-                How does a 3D video game world get flattened onto your 2D computer screen while still looking realistic? The secret lies in <strong>projective geometry</strong>, a branch of mathematics that became central to computer graphics. This simulation shows the two key views: on the left is the "real" 3D world, seen from the outside, with a cube and a camera. On the right is what the camera actually sees. By dragging the cube or the camera in the 3D world, you can instantly see how the perspective changes in the camera's view. This process mimics how a real camera works: objects farther away appear smaller. In graphics, this is achieved with a special mathematical tool called a <strong>projection matrix</strong>.
-            </p>
+            <p>How does a 3D video game world get flattened onto your 2D screen? The secret is <strong>projective geometry</strong>. This simulation shows the two key views: on the left is the "real" 3D world, with a cube and a camera. On the right is what the camera actually sees. By dragging the cube or the camera in the 3D world, you can instantly see how the perspective changes. This process mimics how a real camera works and is achieved with a mathematical tool called a <strong>projection matrix</strong>.</p>
         </section>
 
-        <div class="container">
-            <div class="panel">
-                <h3>3D World Space (God's-eye view)</h3>
-                <canvas id="scene-canvas" width="500" height="400"></canvas>
-                <p class="controls-area"><strong>Controls:</strong> Drag the Cube to move it. Drag the Camera to move it.</p>
-            </div>
-            <div class="panel">
-                <h3>2D Camera View (What the camera sees)</h3>
-                <canvas id="camera-canvas" width="500" height="400"></canvas>
-                <div class="info-box">
-                    <p>This view shows the result after applying the Model, View, and Projection matrices to the cube's vertices.</p>
-                </div>
-            </div>
+        <div class="main-container">
+            <div class="panel"><h3>3D World Space (God's-eye view)</h3><canvas id="scene-canvas" width="500" height="400"></canvas><p><strong>Controls:</strong> Drag the Cube or the Camera.</p></div>
+            <div class="panel"><h3>2D Camera View (What the camera sees)</h3><canvas id="camera-canvas" width="500" height="400"></canvas></div>
+        </div>
+        <div class="controls-area">
+            <button id="reset-btn">Reset Positions</button>
+            <div class="control-group"><label for="fov-slider">Field of View (FOV): <span id="fov-value">45</span>°</label><input type="range" id="fov-slider" min="10" max="120" value="45" step="1"></div>
+            <button id="export-png-btn">Export Views</button>
         </div>
 
-        <section id="beginners-guide">
+        <section>
             <h2>Beginner's Guide</h2>
-            <h3>1. The Two Worlds: World Space and Screen Space</h3>
-            <p>
-                This simulation shows two different "spaces":
-                <ul>
-                    <li><strong>World Space (Left Panel):</strong> This is a god's-eye view of the 3D universe where our objects live. We can see the cube's true 3D position and the camera's position and orientation. The pyramid shape extending from the camera is its <strong>view frustum</strong>—its field of view. Anything inside the frustum will be visible to the camera.</li>
-                    <li><strong>Screen Space (Right Panel):</strong> This is the final 2D image that the camera produces. It's the result of taking everything inside the view frustum and "projecting" it onto a flat plane. Notice how the side of the cube that is farther from the camera in the left panel appears smaller in the right panel. This is perspective!</li>
-                </ul>
-            </p>
+            <h3>1. The Two Worlds</h3>
+            <p>This simulation shows two spaces: <strong>World Space (Left)</strong> is a god's-eye view of the 3D universe. The pyramid shape is the camera's <strong>view frustum</strong>—its field of view. <strong>Screen Space (Right)</strong> is the final 2D image the camera produces by projecting everything in the frustum onto a flat plane. Notice how objects farther away on the left appear smaller on the right. That's perspective!</p>
             <h3>2. The Magic of Matrices</h3>
-            <p>
-                The entire transformation from a 3D model's coordinates to the final 2D screen coordinates is done with a series of multiplications by special 4x4 matrices. It's like a recipe with three main steps:
-                <ol>
-                    <li><strong>Model Matrix:</strong> Takes the cube's vertices from its local "drawing board" and moves, rotates, and scales it into the 3D world. This is what happens when you drag the cube.</li>
-                    <li><strong>View Matrix:</strong> This matrix does the opposite of moving the camera. Instead of moving the camera, it moves the entire world so that the camera is at the origin (0,0,0) looking down one axis. It's like the whole universe poses for the camera.</li>
-                    <li><strong>Projection Matrix:</strong> This is the most important matrix for perspective. It takes the 3D scene (now positioned in front of the camera) and squashes it into a 2D image, making distant objects smaller. It transforms the pyramid-shaped view frustum into a perfect cube called "clip space".</li>
-                </ol>
-            </p>
+            <p>The transformation from 3D to 2D is done with a series of 4x4 matrix multiplications. It's a recipe with three steps: <strong>Model Matrix</strong> (places the object in the world), <strong>View Matrix</strong> (moves the world so the camera is at the origin), and <strong>Projection Matrix</strong> (squashes the 3D scene into a 2D image with perspective).</p>
             <h3>3. Homogeneous Coordinates: The 4th Dimension</h3>
-            <p>
-                You might wonder why we use 4x4 matrices for 3D graphics. This is done by adding a 4th component, often called 'w', to our 3D coordinates (x, y, z), making them (x, y, z, w). This system is called <strong>homogeneous coordinates</strong>. It has a huge advantage: it allows a single matrix multiplication to perform not only rotation and scaling, but also translation (moving) and perspective projection. Without it, we would need to handle translation as a separate, more complicated step.
-            </p>
-            <p>
-                The `w` component is especially crucial for perspective. After being transformed by the projection matrix, a vertex's `w` value will no longer be 1. The final step to get the 2D screen position is the <strong>perspective divide</strong>: the x, y, and z coordinates are all divided by w. This single division is what makes objects farther away (which get a larger `w` value) shrink, creating the illusion of depth.
-            </p>
+            <p>We use 4D coordinates (x, y, z, w) to allow a single matrix to handle translation, rotation, scaling, AND perspective. The `w` component is key. After the projection matrix, `w` is no longer 1. The final step is the <strong>perspective divide</strong>: the x, y, and z coordinates are all divided by `w`. This division is what makes distant objects (which get a larger `w` value) shrink.</p>
         </section>
 
-        <section id="theory">
+        <section>
             <h2>Core Theory: The Transformation Pipeline</h2>
-            <p>The final position of a vertex on screen, <span style="font-weight:bold">V<sub>clip</sub></span>, is calculated from its original model position, <span style="font-weight:bold">V<sub>model</sub></span>, by multiplying it by three matrices.</p>
-            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
-                V<sub>clip</sub> = M<sub>projection</sub> &times; M<sub>view</sub> &times; M<sub>model</sub> &times; V<sub>model</sub>
-            </p>
-            <h3>The Projection Matrix (Simplified)</h3>
-            <p>A typical perspective projection matrix looks something like this. Here, <span style="font-style:italic">f</span> is the field of view, and <span style="font-style:italic">n</span> and <span style="font-style:italic">f</span> are the near and far clipping planes that define the frustum.</p>
-            <table>
-                <tr>
-                    <td>f/aspect</td><td>0</td><td>0</td><td>0</td>
-                </tr>
-                <tr>
-                    <td>0</td><td>f</td><td>0</td><td>0</td>
-                </tr>
-                <tr>
-                    <td>0</td><td>0</td><td>(n+f)/(n-f)</td><td>(2nf)/(n-f)</td>
-                </tr>
-                <tr>
-                    <td>0</td><td>0</td><td>-1</td><td>0</td>
-                </tr>
-            </table>
-            <p>
-                When a 3D vertex <code>(x, y, z, 1)</code> is multiplied by this, the new 4th component becomes <code>w' = -z</code>. After the perspective divide, the final screen coordinates will be inversely proportional to their original depth (<code>-z</code>), which is the mathematical basis for perspective.
-            </p>
+            <p>The final position of a vertex on screen, <strong>V<sub>clip</sub></strong>, is calculated from its original model position, <strong>V<sub>model</sub></strong>, by multiplying it by the Model, View, and Projection matrices.</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">V<sub>clip</sub> = M<sub>proj</sub> &times; M<sub>view</sub> &times; M<sub>model</sub> &times; V<sub>model</sub></p>
+            <p>When a 3D vertex <code>(x, y, z, 1)</code> is multiplied by a typical perspective projection matrix, its new 4th component becomes <code>w' = -z</code> (in a right-handed system). The perspective divide (dividing all components by `w'`) then makes the final screen coordinates inversely proportional to their original depth, creating the illusion of perspective.</p>
         </section>
-    </main>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const themeToggle = document.getElementById('theme-toggle');
-        const sceneCanvas = document.getElementById('scene-canvas');
-        const cameraCanvas = document.getElementById('camera-canvas');
-        const sceneCtx = sceneCanvas.getContext('2d');
-        const cameraCtx = cameraCanvas.getContext('2d');
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div id="dev-log"></div>
+        </details>
+    </div>
 
-        // --- Vector and Matrix Math Library ---
-        const Mat4 = {
-            create: () => [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
-            multiply: (a, b) => {
-                const out = Mat4.create();
-                for (let i = 0; i < 4; i++) {
-                    for (let j = 0; j < 4; j++) {
-                        out[i*4+j] = 0;
-                        for (let k = 0; k < 4; k++) {
-                            out[i*4+j] += a[i*4+k] * b[k*4+j];
-                        }
-                    }
-                }
-                return out;
-            },
-            transformVec4: (m, v) => {
-                const out = [0,0,0,0];
-                for(let i=0; i<4; i++) {
-                    for(let j=0; j<4; j++) {
-                        out[i] += m[j*4+i] * v[j];
-                    }
-                }
-                return out;
-            },
-            translation: (x,y,z) => [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1],
-            lookAt: (eye, center, up) => {
-                const z = Vec3.normalize(Vec3.subtract(eye, center));
-                const x = Vec3.normalize(Vec3.cross(up, z));
-                const y = Vec3.normalize(Vec3.cross(z, x));
-                return [
-                    x.x, y.x, z.x, 0,
-                    x.y, y.y, z.y, 0,
-                    x.z, y.z, z.z, 0,
-                    -Vec3.dot(x, eye), -Vec3.dot(y, eye), -Vec3.dot(z, eye), 1
-                ];
-            },
-            perspective: (fov, aspect, near, far) => {
-                const f = 1.0 / Math.tan(fov / 2);
-                const nf = 1 / (near - far);
-                return [
-                    f/aspect, 0, 0, 0,
-                    0, f, 0, 0,
-                    0, 0, (far+near)*nf, -1,
-                    0, 0, 2*far*near*nf, 0
-                ];
-            }
-        };
-        const Vec3 = {
-            create: (x=0,y=0,z=0) => ({x,y,z}),
-            subtract: (a,b) => ({x:a.x-b.x, y:a.y-b.y, z:a.z-b.z}),
-            cross: (a,b) => ({x: a.y*b.z-a.z*b.y, y: a.z*b.x-a.x*b.z, z: a.x*b.y-a.y*b.x}),
-            dot: (a,b) => a.x*b.x+a.y*b.y+a.z*b.z,
-            length: v => Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z),
-            normalize: v => {
-                const len = Vec3.length(v);
-                return len > 0 ? {x:v.x/len, y:v.y/len, z:v.z/len} : Vec3.create();
-            }
-        };
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Quality & Init ---
+    const requiredIds = ['scene-canvas', 'camera-canvas', 'reset-btn', 'fov-slider', 'export-png-btn', 'theme-toggle', 'dev-log'];
+    if (requiredIds.some(id => !document.getElementById(id))) {
+        document.getElementById('error-panel').textContent = 'ERROR: A required UI element is missing.';
+        document.getElementById('error-panel').style.display = 'block';
+        return;
+    }
+    const devLog = document.getElementById('dev-log');
+    const log = (message) => { devLog.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${message}</div>`; };
+    log('Simulation initialized.');
 
-        // --- Scene Objects ---
-        const cube = {
-            position: Vec3.create(0, 0, 0),
-            vertices: [
-                [-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1],
-                [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]
-            ],
-            edges: [
-                [0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4],
-                [0,4],[1,5],[2,6],[3,7]
-            ]
-        };
-        const camera = {
-            position: Vec3.create(0, 2, 5),
-            target: Vec3.create(0, 0, 0),
-            up: Vec3.create(0, 1, 0)
-        };
-        const sceneCamera = { // For the god's-eye view
-            position: Vec3.create(0, 6, 10),
-            target: Vec3.create(0, 0, 0)
-        };
+    // --- Canvas & State ---
+    const sceneCanvas = document.getElementById('scene-canvas'), sceneCtx = sceneCanvas.getContext('2d');
+    const cameraCanvas = document.getElementById('camera-canvas'), cameraCtx = cameraCanvas.getContext('2d');
+    const fovSlider = document.getElementById('fov-slider');
+    const fovValue = document.getElementById('fov-value');
 
-        // --- Rendering Logic ---
-        function drawScene() {
-            sceneCtx.fillStyle = document.body.classList.contains('dark-mode') ? '#161b22' : '#ffffff';
-            sceneCtx.fillRect(0, 0, sceneCanvas.width, sceneCanvas.height);
+    // --- Math Library (minified) ---
+    const Mat4={create:()=>[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1],multiply:(a,b)=>{const c=Mat4.create();for(let d=0;d<4;d++)for(let e=0;e<4;e++){c[4*d+e]=0;for(let f=0;f<4;f++)c[4*d+e]+=a[4*d+f]*b[4*f+e]}return c},transformVec4:(a,b)=>{const c=[0,0,0,0];for(let d=0;d<4;d++)for(let e=0;e<4;e++)c[d]+=a[4*e+d]*b[e];return c},translation:(a,b,c)=>[1,0,0,0,0,1,0,0,0,0,1,0,a,b,c,1],lookAt:(a,b,c)=>{const d=Vec3.normalize(Vec3.subtract(a,b)),e=Vec3.normalize(Vec3.cross(c,d)),f=Vec3.normalize(Vec3.cross(d,e));return[e.x,f.x,d.x,0,e.y,f.y,d.y,0,e.z,f.z,d.z,0,-Vec3.dot(e,a),-Vec3.dot(f,a),-Vec3.dot(d,a),1]},perspective:(a,b,c,d)=>{const e=1/Math.tan(a/2),f=1/(c-d);return[e/b,0,0,0,0,e,0,0,0,0,(d+c)*f,-1,0,0,2*d*c*f,0]}};
+    const Vec3={create:(a=0,b=0,c=0)=>({x:a,y:b,z:c}),subtract:(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:a.z-b.z}),cross:(a,b)=>({x:a.y*b.z-a.z*b.y,y:a.z*b.x-a.x*b.z,z:a.x*b.y-a.y*b.x}),dot:(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z,length:a=>Math.hypot(a.x,a.y,a.z),normalize:a=>{const b=Vec3.length(a);return b>0?{x:a.x/b,y:a.y/b,z:a.z/b}:Vec3.create()}};
 
-            const viewMatrix = Mat4.lookAt(sceneCamera.position, sceneCamera.target, camera.up);
-            const projMatrix = Mat4.perspective(Math.PI / 4, sceneCanvas.width / sceneCanvas.height, 0.1, 100);
+    // --- Scene Objects ---
+    const cube={position:Vec3.create(0,0,0),vertices:[[-.5,-.5,-.5],[.5,-.5,-.5],[.5,.5,-.5],[-.5,.5,-.5],[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]],edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]};
+    let camera={position:Vec3.create(0,1.5,4),target:Vec3.create(0,0,0),up:Vec3.create(0,1,0),fov:Math.PI/4};
+    const sceneCamera={position:Vec3.create(0,6,10),target:Vec3.create(0,0,0)};
+    let dragging=null,lastMousePos=null;
 
-            // Draw objects
-            drawGrid(viewMatrix, projMatrix, sceneCtx);
-            drawCube(cube.position, viewMatrix, projMatrix, sceneCtx, '#333');
-            drawCamera(camera.position, camera.target, viewMatrix, projMatrix, sceneCtx);
-            drawFrustum(camera, viewMatrix, projMatrix, sceneCtx);
-        }
+    // --- Rendering Logic ---
+    function projectAndDraw(vertices,edges,modelMatrix,viewMatrix,projMatrix,ctx,color,isCameraView){const mvp=Mat4.multiply(projMatrix,Mat4.multiply(viewMatrix,modelMatrix));const p=vertices.map(v=>{const t=Mat4.transformVec4(mvp,[v[0],v[1],v[2],1]);if(t[3]!==0){t[0]/=t[3];t[1]/=t[3]}return{x:(t[0]+1)*ctx.canvas.width/2,y:(-t[1]+1)*ctx.canvas.height/2,w:t[3]}});ctx.strokeStyle=document.body.classList.contains('dark-mode')?'#c9d1d9':color;ctx.lineWidth=isCameraView?4:2;edges.forEach(e=>{const p1=p[e[0]],p2=p[e[1]];if(p1.w>0&&p2.w>0){ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke()}})}
+    function drawGrid(view,proj,ctx){const g={v:[],e:[]};for(let i=-5;i<=5;i++){g.v.push([i,0,-5],[i,0,5],[-5,0,i],[5,0,i]);g.e.push([g.v.length-4,g.v.length-3],[g.v.length-2,g.v.length-1])}projectAndDraw(g.v,g.e,Mat4.create(),view,proj,ctx,'#d0d7de')}
+    function drawFrustum(cam,view,proj,ctx){const fov=cam.fov,asp=cameraCanvas.width/cameraCanvas.height,n=.1,f=4,nH=2*Math.tan(fov/2)*n,nW=nH*asp,fH=2*Math.tan(fov/2)*f,fW=fH*asp;const v=[[-nW/2,-nH/2,-n],[nW/2,-nH/2,-n],[nW/2,nH/2,-n],[-nW/2,nH/2,-n],[-fW/2,-fH/2,-f],[fW/2,-fH/2,-f],[fW/2,fH/2,-f],[-fW/2,fH/2,-f]];const e=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];const z=Vec3.normalize(Vec3.subtract(cam.position,cam.target)),x=Vec3.normalize(Vec3.cross(cam.up,z)),y=Vec3.normalize(Vec3.cross(z,x));const rot=[x.x,x.y,x.z,0,y.x,y.y,y.z,0,z.x,z.y,z.z,0,0,0,0,1];const model=Mat4.multiply(Mat4.translation(cam.position.x,cam.position.y,cam.position.z),rot);projectAndDraw(v,e,model,view,proj,ctx,document.body.classList.contains('dark-mode')?'#58a6ff':'#005a9c')}
 
-        function drawCameraView() {
-            cameraCtx.fillStyle = document.body.classList.contains('dark-mode') ? '#161b22' : '#ffffff';
-            cameraCtx.fillRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+    function render(){
+        const bgColor=document.body.classList.contains('dark-mode')?'#161b22':'#ffffff';
+        sceneCtx.fillStyle=bgColor;sceneCtx.fillRect(0,0,sceneCanvas.width,sceneCanvas.height);
+        cameraCtx.fillStyle=bgColor;cameraCtx.fillRect(0,0,cameraCanvas.width,cameraCanvas.height);
 
-            const viewMatrix = Mat4.lookAt(camera.position, camera.target, camera.up);
-            const projMatrix = Mat4.perspective(Math.PI / 4, cameraCanvas.width / cameraCanvas.height, 0.1, 100);
+        const sceneView=Mat4.lookAt(sceneCamera.position,sceneCamera.target,camera.up);
+        const sceneProj=Mat4.perspective(Math.PI/4,sceneCanvas.width/sceneCanvas.height,.1,100);
+        drawGrid(sceneView,sceneProj,sceneCtx);
+        projectAndDraw(cube.vertices,cube.edges,Mat4.translation(cube.position.x,cube.position.y,cube.position.z),sceneView,sceneProj,sceneCtx,'#333');
+        drawFrustum(camera,sceneView,sceneProj,sceneCtx);
 
-            drawCube(cube.position, viewMatrix, projMatrix, cameraCtx, '#005a9c', true);
-        }
+        const camView=Mat4.lookAt(camera.position,camera.target,camera.up);
+        const camProj=Mat4.perspective(camera.fov,cameraCanvas.width/cameraCanvas.height,.1,100);
+        projectAndDraw(cube.vertices,cube.edges,Mat4.translation(cube.position.x,cube.position.y,cube.position.z),camView,camProj,cameraCtx,'#005a9c',true);
+    }
 
-        function projectAndDraw(vertices, edges, modelMatrix, viewMatrix, projMatrix, ctx, color, isCameraView) {
-            const mvp = Mat4.multiply(projMatrix, Mat4.multiply(viewMatrix, modelMatrix));
-            const projected = vertices.map(v => {
-                const v4 = [v[0], v[1], v[2], 1];
-                const transformed = Mat4.transformVec4(mvp, v4);
-                if (transformed[3] !== 0) { // Perspective divide
-                    transformed[0] /= transformed[3];
-                    transformed[1] /= transformed[3];
-                }
-                return {
-                    x: (transformed[0] + 1) * ctx.canvas.width / 2,
-                    y: (-transformed[1] + 1) * ctx.canvas.height / 2,
-                    w: transformed[3]
-                };
-            });
+    // --- Interaction ---
+    function resetPositions(){cube.position=Vec3.create(0,0,0);camera.position=Vec3.create(0,1.5,4);fovSlider.value=45;camera.fov=Math.PI/4;fovValue.textContent="45";render();log("Positions reset.")}
+    sceneCanvas.addEventListener('mousedown',e=>{const r=sceneCanvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const c=projectAndDraw(cube.vertices,[],Mat4.translation(cube.position.x,cube.position.y,cube.position.z),Mat4.lookAt(sceneCamera.position,sceneCamera.target,camera.up),Mat4.perspective(Math.PI/4,sceneCanvas.width/sceneCanvas.height,.1,100),sceneCtx,'#000');const cubeDist=0;dragging=cubeDist<50?'cube':'camera';lastMousePos={x,y};sceneCanvas.style.cursor='grabbing'});
+    window.addEventListener('mouseup',()=>{dragging=null;sceneCanvas.style.cursor='grab'});
+    sceneCanvas.addEventListener('mousemove',e=>{if(!dragging)return;const r=sceneCanvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,dx=(x-lastMousePos.x)*.05,dz=(y-lastMousePos.y)*.05;lastMousePos={x,y};if(dragging==='cube'){cube.position.x+=dx;cube.position.z+=dz}else{camera.position.x+=dx;camera.position.z+=dz}render()});
 
-            ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#c9d1d9' : color;
-            ctx.lineWidth = isCameraView ? 4 : 2;
-            edges.forEach(edge => {
-                const p1 = projected[edge[0]];
-                const p2 = projected[edge[1]];
-                // Basic frustum culling
-                if (p1.w > 0 && p2.w > 0) {
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                }
-            });
-        }
+    // --- Buttons ---
+    document.getElementById('theme-toggle').addEventListener('click',()=>{document.body.classList.toggle('dark-mode');render();log("Theme toggled.")});
+    document.getElementById('reset-btn').addEventListener('click',resetPositions);
+    fovSlider.addEventListener('input', e => { const val = parseInt(e.target.value); camera.fov = val * Math.PI / 180; fovValue.textContent = val; render(); });
+    document.getElementById('export-png-btn').addEventListener('click',()=>{const link=document.createElement('a');link.download='projection_views.png';const tempCanvas=document.createElement('canvas');tempCanvas.width=sceneCanvas.width+cameraCanvas.width;tempCanvas.height=Math.max(sceneCanvas.height,cameraCanvas.height);const tempCtx=tempCanvas.getContext('2d');tempCtx.drawImage(sceneCanvas,0,0);tempCtx.drawImage(cameraCanvas,sceneCanvas.width,0);link.href=tempCanvas.toDataURL();link.click();log("Exported views as PNG.")});
 
-        function drawCube(pos, view, proj, ctx, color, isCameraView=false) {
-            const modelMatrix = Mat4.translation(pos.x, pos.y, pos.z);
-            projectAndDraw(cube.vertices, cube.edges, modelMatrix, view, proj, ctx, color, isCameraView);
-        }
-
-        function drawGrid(view, proj, ctx) {
-             const grid = { vertices: [], edges: [] };
-             for(let i = -5; i <= 5; i++) {
-                 grid.vertices.push([i, 0, -5], [i, 0, 5], [-5, 0, i], [5, 0, i]);
-                 grid.edges.push([grid.vertices.length-4, grid.vertices.length-3], [grid.vertices.length-2, grid.vertices.length-1]);
-             }
-             projectAndDraw(grid.vertices, grid.edges, Mat4.create(), view, proj, ctx, '#d0d7de');
-        }
-
-        function drawCamera(pos, target, view, proj, ctx) {
-            const camVertices = [[-0.2, -0.2, 0.2], [0.2, -0.2, 0.2], [0.2, 0.2, 0.2], [-0.2, 0.2, 0.2], [0, 0, -0.3]];
-            const camEdges = [[0,1],[1,2],[2,3],[3,0], [0,4],[1,4],[2,4],[3,4]];
-            const lookAtMatrix = Mat4.lookAt(pos, target, Vec3.create(0,1,0));
-
-            // We need to invert the lookAt to get the camera's orientation in the world
-            // This is complex, so we'll just use a translation matrix for the position
-            const modelMatrix = Mat4.translation(pos.x, pos.y, pos.z);
-            projectAndDraw(camVertices, camEdges, modelMatrix, view, proj, ctx, '#dc3545');
-        }
-
-        function drawFrustum(cam, view, proj, ctx) {
-            const fov = Math.PI/4;
-            const aspect = cameraCanvas.width/cameraCanvas.height;
-            const near = 0.1, far = 4;
-            const nearHeight = 2 * Math.tan(fov/2) * near;
-            const nearWidth = nearHeight * aspect;
-            const farHeight = 2 * Math.tan(fov/2) * far;
-            const farWidth = farHeight * aspect;
-
-            const nc = Vec3.subtract(cam.position, Vec3.normalize(Vec3.subtract(cam.position, cam.target)));
-
-            // This is a simplified frustum visualization
-            const frustumVertices = [
-                [-nearWidth/2, -nearHeight/2, -near], [nearWidth/2, -nearHeight/2, -near],
-                [nearWidth/2, nearHeight/2, -near], [-nearWidth/2, nearHeight/2, -near],
-                [-farWidth/2, -farHeight/2, -far], [farWidth/2, -farHeight/2, -far],
-                [farWidth/2, farHeight/2, -far], [-farWidth/2, farHeight/2, -far]
-            ];
-            const frustumEdges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
-
-            // Build rotation matrix to orient the frustum
-            const z = Vec3.normalize(Vec3.subtract(cam.position, cam.target));
-            const x = Vec3.normalize(Vec3.cross(cam.up, z));
-            const y = Vec3.normalize(Vec3.cross(z, x));
-            const rot = [x.x,x.y,x.z,0, y.x,y.y,y.z,0, z.x,z.y,z.z,0, 0,0,0,1];
-            const modelMatrix = Mat4.multiply(Mat4.translation(cam.position.x, cam.position.y, cam.position.z), rot);
-
-            projectAndDraw(frustumVertices, frustumEdges, Mat4.create(), view, proj, ctx, '#007bff');
-        }
-
-        function render() {
-            drawScene();
-            drawCameraView();
-        }
-
-        // --- Interaction ---
-        let dragging = null;
-        let lastMousePos = null;
-        sceneCanvas.addEventListener('mousedown', e => {
-            const rect = sceneCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            // Simple hit detection
-            const cubeDist = Math.hypot(x - sceneCanvas.width/2, y - sceneCanvas.height/2);
-            const camDist = Math.hypot(x - sceneCanvas.width/2 - camera.position.x*20, y - sceneCanvas.height/2 - camera.position.y*20);
-
-            if (cubeDist < 50) dragging = 'cube';
-            else dragging = 'camera'; // Default to camera
-
-            lastMousePos = {x, y};
-            sceneCanvas.style.cursor = 'grabbing';
-        });
-        window.addEventListener('mouseup', () => {
-            dragging = null;
-            sceneCanvas.style.cursor = 'grab';
-        });
-        sceneCanvas.addEventListener('mousemove', e => {
-            if (!dragging) return;
-            const rect = sceneCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const dx = (x - lastMousePos.x) * 0.05;
-            const dz = (y - lastMousePos.y) * 0.05;
-            lastMousePos = {x, y};
-
-            if (dragging === 'cube') {
-                cube.position.x += dx;
-                cube.position.z += dz;
-            } else if (dragging === 'camera') {
-                camera.position.x += dx;
-                camera.position.z += dz;
-            }
-            render();
-        });
-
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            render();
-        });
-
-        render();
-    });
-    </script>
+    render();
+});
+</script>
 </body>
 </html>

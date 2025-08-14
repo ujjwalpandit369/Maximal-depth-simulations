@@ -13,6 +13,13 @@
             --accent-color: #e0b1cb;
             --border-color: #e0e0e0;
             --canvas-bg: #fff;
+            --code-bg: #f2f2f2;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
         }
         .dark-mode {
             --bg-color: #231942;
@@ -22,10 +29,17 @@
             --accent-color: #e0b1cb;
             --border-color: #5e548e;
             --canvas-bg: #1a142c;
+            --code-bg: #333;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
+            --success-bg: #155724;
+            --success-text: #d4edda;
+            --warning-bg: #856404;
+            --warning-text: #fff3cd;
         }
         body {
-            font-family: 'Times New Roman', Times, serif;
-            line-height: 1.8;
+            font-family: 'Garamond', 'Times New Roman', serif;
+            line-height: 1.7;
             margin: 0;
             padding: 1rem;
             background-color: var(--bg-color);
@@ -42,40 +56,34 @@
             color: var(--primary-color);
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 0.5rem;
-            font-family: 'Garamond', serif;
+        }
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            background-color: var(--code-bg);
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            text-align: center;
         }
         .simulation-container {
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-wrap: wrap;
             gap: 1rem;
-            margin: 1.5rem 0;
+            margin-bottom: 1rem;
+        }
+        .controls-area, .simulation-area {
+            flex: 1;
+            min-width: 300px;
             padding: 1rem;
             border: 1px solid var(--border-color);
             border-radius: 8px;
         }
-        .controls-area {
-            width: 100%;
+        .simulation-area {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
+            flex-direction: column;
             align-items: center;
-        }
-        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-        button {
-            background-color: transparent;
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 0.6rem 1.2rem;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s, color 0.2s;
-        }
-        button:hover, button.active {
-            background-color: var(--primary-color);
-            color: var(--canvas-bg);
+            gap: 1rem;
         }
         canvas {
             background-color: var(--canvas-bg);
@@ -84,129 +92,295 @@
             cursor: grab;
         }
         canvas:active { cursor: grabbing; }
-        .slider-container { display: flex; align-items: center; gap: 1rem; color: var(--secondary-color); font-weight: bold; }
-        input[type="range"] { width: 200px; }
-        .warning { background-color: var(--accent-color); color: var(--bg-color); padding: 1rem; border-radius: 5px; margin-bottom: 1rem; }
-        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; font-family: 'Courier New', Courier, monospace; }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.8rem;
+            align-items: center;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover, button:focus { background-color: #4a417a; }
+        .dark-mode button:hover, .dark-mode button:focus { background-color: #8675a9; }
+        .secondary-button { background-color: var(--secondary-color); }
+        .secondary-button:hover, .secondary-button:focus { background-color: #8a7aa6; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-text); padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-text); padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; background-color: var(--bg-color); max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
     <main>
+        <div id="quality-check-panel" class="error-panel">
+            <strong>Quality Check Failed!</strong>
+            <p>Some parts of the simulation might not work as expected. Please report the bug using the developer console below.</p>
+            <ul id="quality-check-errors"></ul>
+        </div>
+
         <header>
             <h1>A Conceptual Look at Fibre Bundles</h1>
             <p>Visualizing the "global twist" that distinguishes different geometric spaces.</p>
-            <div style="text-align:center; margin-top: 1rem;">
-                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal; border-radius: 5px;">Toggle Dark Mode</button>
+            <div class="metadata-bar">
+                <span>Estimated runtime: Continuous</span> |
+                <span>Recommended device: Desktop/Mobile</span> |
+                <span>Approx. HTML size: 25 KB</span> |
+                <button id="theme-toggle" style="padding: 2px 5px; margin-left: 10px;">Toggle Dark Mode</button>
             </div>
         </header>
 
         <section id="overview">
             <h2>Plain-Language Overview</h2>
-            <div class="warning">
-                <strong>Note:</strong> Fibre bundles are a deep topic in advanced geometry. This simulation is a conceptual sketch, not a formal definition.
+            <div class="warning-box">
+                <strong>Note:</strong> Fibre bundles are a deep topic in advanced geometry. This simulation is a conceptual sketch, not a formal definition, designed to build intuition.
             </div>
             <p>
-                Imagine you want to build a complex shape. A fibre bundle is like a recipe for doing so. It tells you to start with a "base" shape (like a circle) and attach a "fibre" (like a line segment) to every single point on the base. If you attach the fibres straight up everywhere, you get a simple shape, like a cylinder. But what if you give the fibres a slight, continuous twist as you move around the base? You might find that after one full trip, the fibre comes back upside-down. You've just created a <strong>Möbius strip</strong>!
-            </p>
-            <p>
-                A fibre bundle is a space that <em>locally</em> looks simple (over a small patch, it's just `base × fibre`), but it can have a surprising <em>global</em> structure. This simulation lets you see this in action by moving a fibre around a circular base for both a cylinder and a Möbius strip.
+                Imagine you want to build a complex shape. A fibre bundle is like a recipe. It tells you to start with a "base" shape (like a circle) and attach a "fibre" (like a line segment) to every single point on the base. If you attach the fibres straight up everywhere, you get a simple shape, like a cylinder. But what if you give the fibres a slight, continuous twist as you move around the base? You might find that after one full trip, the fibre comes back upside-down. You've just created a <strong>Möbius strip</strong>! A fibre bundle is a space that <em>locally</em> looks simple (over a small patch, it's just `base × fibre`), but it can have a surprising <em>global</em> structure. This simulation lets you see this in action by moving a fibre around a circular base.
             </p>
         </section>
-
-        <div class="simulation-container">
-            <div class="controls-area">
-                <div class="button-group">
-                    <button id="cylinder-btn" class="active">Cylinder (Trivial Bundle)</button>
-                    <button id="mobius-btn">Möbius Strip (Twisted Bundle)</button>
-                </div>
-                <div class="slider-container">
-                    <span>0°</span>
-                    <input type="range" id="angle-slider" min="0" max="360" step="1" value="0" title="Scrub through the animation">
-                    <span>360°</span>
-                </div>
-                <button id="animate-btn">Animate</button>
-            </div>
-            <canvas id="main-canvas" width="600" height="400"></canvas>
-        </div>
 
         <section id="beginners-guide">
             <h2>Beginner's Guide</h2>
             <h3>1. The Ingredients: Base and Fibre</h3>
             <p>Every fibre bundle is made of two simpler spaces:</p>
             <ul>
-                <li><strong>The Base Space (B):</strong> This is the foundation. In our simulation, the base space is the <strong>black circle</strong> lying flat.</li>
+                <li><strong>The Base Space (B):</strong> This is the foundation. In our simulation, the base space is the <strong>black circle</strong> lying flat. It's the path our fibre will travel along.</li>
                 <li><strong>The Fibre (F):</strong> This is the object we attach to every point of the base. In our simulation, it's the <strong>vertical line segment</strong> (colored red on top and blue on bottom to show its orientation).</li>
             </ul>
-            <p>The final, larger space you create is called the <strong>Total Space (E)</strong>. The core idea of a fibre bundle is that if you zoom in on any tiny piece of it, it just looks like a little patch of the base space multiplied by the fibre. The magic and complexity come from how these local pieces are "glued" together globally.</p>
+            <p>The final, larger space you create is called the <strong>Total Space (E)</strong>. The core idea of a fibre bundle is that if you zoom in on any tiny piece of it, it just looks like a little patch of the base space multiplied by the fibre. The magic and complexity come from how these local pieces are "glued" together globally. Think of it like building a model airplane: you have many simple, flat plastic pieces (local patches) that, when glued together according to a specific plan (the "transition functions"), create a complex, curved aircraft (the total space).</p>
 
             <h3>2. The Cylinder: A "Trivial" Bundle</h3>
-            <p>Select the <strong>Cylinder</strong> model. This is the simplest kind of fibre bundle, called a "trivial" bundle. As you move the slider or press "Animate," you'll see the fibre travel around the circular base. Notice that it always stays perfectly upright. The red end remains on top, and the blue end remains on the bottom. After a full 360-degree trip, it returns to its exact starting orientation. The total space formed by all possible fibres is a familiar cylinder. In this case, the total space E is simply the product of the base and the fibre: <code>E = B × F</code>.</p>
+            <p>Click the "Cylinder" preset button. This is the simplest kind of fibre bundle, called a "trivial" bundle because it has no global twist. Press "Play". You'll see the fibre travel around the circular base. Notice that it always stays perfectly upright. The red end remains on top, and the blue end remains on the bottom. After a full 360-degree trip, it returns to its exact starting orientation. The total space formed by all possible fibres is a familiar cylinder. In this case, the total space E is simply the product of the base and the fibre: <code>E = B × F</code>. It's "globally untwisted."</p>
 
-            <h3>3. The Möbius Strip: A "Twisted" Bundle</h3>
-            <p>Now, select the <strong>Möbius Strip</strong> model. At first, nothing seems different. As you move the slider just a little, the fibre still looks upright. This is what we mean when we say a bundle is "locally trivial." But watch what happens over the full 360-degree trip. The fibre is undergoing a slow, continuous half-twist. By the time it gets back to the start, it's upside-down! The blue end is now on top, and the red end is on the bottom. To get back to its original state, it would need to travel around the circle a second time.</p>
-            <p>This "global twist" means the total space is not a simple product. You can't separate the base and the fibre globally without cutting. This is a "non-trivial" bundle, and the resulting shape is the famous one-sided Möbius strip.</p>
+            <h3>3. The Möbius Strip: A "Non-Trivial" Bundle</h3>
+            <p>Now, click the "Möbius Strip" preset. At first, nothing seems different. If you press "Step" to move just a little, the fibre still looks upright. This is what we mean when we say a bundle is "locally trivial." But watch what happens over the full 360-degree trip when you press "Play". The fibre is undergoing a slow, continuous half-twist (180 degrees). By the time it gets back to the start, it's upside-down! The blue end is now on top, and the red end is on the bottom. This global twist means the total space is not a simple product. You can't separate the base and the fibre globally without cutting. This is a "non-trivial" bundle, and the resulting shape is the famous one-sided Möbius strip.</p>
+
+            <h3>4. The Double Twist: Back to Trivial?</h3>
+            <p>Click the "Double Twist" preset. This is similar to the Möbius strip, but the fibre performs a full 360-degree twist as it goes around the base. Watch it carefully. It twists, but when it returns to the starting point after one trip, its orientation is back to normal (red on top). This might seem non-trivial, but from the perspective of fibre bundle theory, because the fibre comes back to its original state after one loop, this bundle is still "trivial" or "isomorphic" to the cylinder. It's like a twisted-up phone cord that is still, fundamentally, just a cord connected at both ends. The Möbius twist is special because it fundamentally changes the topology (you need two trips to get back to start).</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <p>This simulation is conceptual, so its parameters are choices about the bundle's structure rather than numeric sliders.</p>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Options</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Bundle Type</strong></td>
+                        <td>Cylinder, Möbius Strip, Double Twist</td>
+                        <td>Determines the total twist applied to the fibre over one loop around the base. This defines the global structure of the bundle.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Angle</strong></td>
+                        <td>0° to 360°</td>
+                        <td>Manually controls the position of the fibre on the circular base. You can scrub this slider to see the twist at any point.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <div class="simulation-container">
+            <div class="controls-area">
+                <h3>Controls</h3>
+                <div class="controls-grid">
+                    <label for="angle-slider">Angle</label>
+                    <input type="range" id="angle-slider" min="0" max="360" step="1" value="0" aria-label="Angle Slider">
+                </div>
+                <div class="button-group">
+                    <button id="play-pause-btn" aria-label="Play or Pause Animation (Space)">Play</button>
+                    <button id="step-btn" aria-label="Advance one step (Right Arrow)">Step</button>
+                    <button id="reset-btn" class="secondary-button" aria-label="Reset Animation (r)">Reset</button>
+                </div>
+                <h3>Presets</h3>
+                <div class="button-group">
+                    <button id="preset-cylinder">Cylinder (0° Twist)</button>
+                    <button id="preset-mobius">Möbius Strip (180° Twist)</button>
+                    <button id="preset-double">Double Twist (360° Twist)</button>
+                </div>
+                 <h3>Options</h3>
+                <div class="button-group">
+                    <button id="export-png-btn" class="secondary-button" aria-label="Export as PNG (e)">Export PNG</button>
+                    <button id="share-btn" class="secondary-button">Share View</button>
+                </div>
+            </div>
+            <div class="simulation-area">
+                <canvas id="main-canvas" width="500" height="400"></canvas>
+                <div id="perf-meter" class="metadata-bar">
+                    FPS: <span id="fps-display">--</span> | Angle: <span id="angle-display">0°</span>
+                </div>
+            </div>
+        </div>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h3>Walkthrough: From Cylinder to Möbius</h3>
+            <p>This walkthrough helps you see the exact effect of the global twist.</p>
+            <ol>
+                <li>Click the "Cylinder" preset and press "Reset" to ensure the fibre is at 0°. Note its orientation: red on top.</li>
+                <li>Press the "Step" button a few times. The fibre moves, but stays upright.</li>
+                <li>Now, click the "Möbius Strip" preset. The fibre is still at 0° and looks the same. This shows that the bundles are <em>locally identical</em>.</li>
+                <li>Press "Play" and watch the fibre complete one full loop. It arrives back at 0° but is now upside-down (blue on top). This difference, which is only visible after a full "global" loop, is the essence of a non-trivial bundle.</li>
+            </ol>
+
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li>Select the "Möbius Strip". Drag the Angle slider to 180°. What is the fibre's orientation? (It should be horizontal).</li>
+                <li>Select the "Double Twist". Drag the Angle slider to 180°. What is its orientation? (It's upside-down, blue on top). Why is this different from the Möbius strip at the same angle? (The twist is applied twice as fast).</li>
+                <li>Run the "Möbius Strip" animation. Pause it at exactly 90°. The fibre appears to be leaning inwards. Use your mouse to drag the camera view around to see its 3D orientation.</li>
+                <li>Reset the view. Rapidly switch between the "Cylinder" and "Double Twist" presets. Notice that while the animation is different, the start and end states (at 0°/360°) are identical for both.</li>
+                <li>Press 'r' to reset, then spacebar to play. Press the right arrow key to pause and step. Use 'e' to export a picture of the half-twisted Möbius strip.</li>
+            </ol>
+        </section>
+
+        <section id="theory">
+            <h2>A Glimpse of the Theory</h2>
+            <p>A fibre bundle is a structure (E, B, &pi;, F) where E is the total space, B is the base space, F is the fibre, and &pi;: E &rarr; B is a continuous surjective map called the projection.</p>
+            <p><code>&pi;<sup>-1</sup>(b) &cong; F for all b &isin; B</code></p>
+            <p><strong>Plain English:</strong> The projection map (&pi;) takes any point in the total space (e.g., a point on the surface of the Möbius strip) and tells you which point on the base circle it "sits above". The set of all points that project to the same base point `b` is the fibre `F` over that point.</p>
+            <p>The "twist" is formalized by <strong>transition functions</strong>. Imagine covering the base circle with two overlapping patches, U<sub>A</sub> and U<sub>B</sub>. On each patch, the bundle looks like a simple product (U<sub>A</sub> &times; F). On the overlap (U<sub>A</sub> &cap; U<sub>B</sub>), there must be a "gluing map" or transition function that tells you how to identify the fibres from patch A with the fibres from patch B.
+            <br><code>t<sub>AB</sub>: F &rarr; F</code>
+            <br>For the cylinder, this map is the identity (no change). For the Möbius strip, this map is a rotation, which accumulates to a 180° flip as you traverse the whole circle.
+            </p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <ul>
+                <li><strong>Generalizations:</strong> The base space and fibre can be much more complex. The base could be a sphere and the fibre could be a circle, creating a "Hopf Fibration". Or the fibre could be a group (Lie Group), creating a "Principal Bundle" which is the mathematical foundation of modern gauge theories in physics.</li>
+                <li><strong>Connection to Physics:</strong> In gauge theory (like electromagnetism or the Standard Model), the base space is spacetime, and the fibre is an "internal" symmetry space (e.g., the group U(1) for E&M). A particle moving in spacetime traces a path on the base. The "phase" of its wavefunction lives in the fibre. The global structure of this bundle can lead to real physical effects, like the Aharonov-Bohm effect or the existence of magnetic monopoles.</li>
+                <li><strong>Extension Idea:</strong> To extend this simulation, one could visualize the "unrolling" of the bundle. Imagine cutting the Möbius strip and laying it flat: it would be a rectangle, but the arrows on one end would be inverted relative to the other. Visualizing this "cut" view would directly show the effect of the transition function.</li>
+            </ul>
         </section>
 
         <section id="analogies">
             <h2>Analogies & Intuition</h2>
             <h3>1. The Belt Analogy (Physical)</h3>
-            <p>This is the classic way to understand the Möbius strip.
-                <ul>
-                    <li><strong>Cylinder:</strong> Take a belt and buckle it normally. The inside remains the inside, and the outside remains the outside. This is a trivial bundle.</li>
-                    <li><strong>Möbius Strip:</strong> Take the belt, but before buckling it, give one end a 180-degree (half) twist. Now buckle it. If you trace your finger along the "center line" of the belt, you'll find you cover both the original "inside" and "outside" before returning to your starting point. It has only one side! This is our non-trivial bundle.</li>
-                </ul>
-            </p>
-            <h3>2. Combing Hair on a Sphere (The Hairy Ball Theorem)</h3>
-            <p>
-                Imagine a furry ball (a sphere). The surface of the sphere is the base space, and the hairs are the fibres. The "Hairy Ball Theorem" states that it's impossible to comb all the hairs flat without creating a cowlick (a point where a hair must stick straight up). This means the "tangent bundle" of a sphere (the space of all possible tangent vectors/hairs) is non-trivial. You can't create a smooth, non-zero vector field everywhere. A donut (a torus), on the other hand, *can* be combed flat. Its tangent bundle is trivial. This shows how the global shape of the base space can force twists in the bundle built on top of it.
-            </p>
+            <p>This is the classic way to understand the Möbius strip. A normal belt buckled is a cylinder (trivial bundle). A belt with a half-twist before buckling is a Möbius strip (non-trivial bundle). Its limitation is that it only intuits one specific example, but it's a powerful one.</p>
+
+            <h3>2. The Hairy Ball Theorem (Visualization)</h3>
+            <p>Imagine a furry ball (a sphere). The sphere is the base space, and the hairs are the fibres (tangent vectors). The "Hairy Ball Theorem" states it's impossible to comb all the hairs flat without a cowlick. This means the tangent bundle of a sphere is non-trivial. A donut (a torus), however, *can* be combed flat. This shows how the base space's topology can force a twist in the bundle.</p>
+
+            <h3>3. The Parking Garage Analogy (Computational/Structural)</h3>
+            <p>Think of a multi-story parking garage built around a central, circular ramp. The circular ramp is the base space. The different levels (Level 1, Level 2...) are the fibre. A trivial bundle (a cylinder) is a garage where going 360° up the ramp takes you from Level 1, Spot A to Level 2, Spot A, directly above where you started. A non-trivial bundle is like a weird Escher-like garage. As you drive 360° up the ramp, the lane markings twist and guide you so that you end up on the *other side* of the garage, perhaps in a spot that is "upside-down" relative to your start (e.g., you now have to reverse into spots). The local instructions (stay in your lane) are simple, but they lead to a globally surprising result. The limitation is that "upside-down" is metaphorical, but it captures the idea of orientation change.</p>
         </section>
 
-        <section id="theory">
-            <h2>A Glimpse of the Theory</h2>
-            <p>
-                A fibre bundle is formally a set of spaces and maps. The total space is <code>E</code>, the base space is <code>B</code>, and the projection map <code>&pi;: E &rarr; B</code> takes any point in the total space and tells you which point in the base it "sits above." The inverse image of a point <code>b</code> in the base, <code>&pi;<sup>-1</sup>(b)</code>, is the fibre <code>F</code> over that point.
-            </p>
-            <p>
-                The "local triviality" condition states that for any point in the base <code>B</code>, there is a small neighborhood <code>U</code> around it such that the part of the bundle over <code>U</code>, written <code>&pi;<sup>-1</sup>(U)</code>, is "isomorphic" (can be smoothly mapped) to the simple product <code>U &times; F</code>.
-            </p>
-            <p>
-                The twist is encoded in <strong>transition functions</strong>. When two such local trivializations (<code>U<sub>i</sub></code> and <code>U<sub>j</sub></code>) overlap, the transition function describes how the fibre coordinates must be transformed as you move from one patch to the other. For the Möbius strip, this function includes a rotation, which accumulates to a full 180-degree flip over the whole circle.
-            </p>
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What am I actually looking at?</dt>
+                <dd>You are seeing a 3D visualization of a fibre (the colored line) moving along a path (the base circle). The key thing to watch is the fibre's orientation (which color is on top) as it moves.</dd>
+                <dt>2. Why are the Cylinder and Double Twist bundles both "trivial"?</dt>
+                <dd>In topology, two shapes are often considered the same if one can be smoothly deformed into the other. A doubly twisted band can be "untwisted" without cutting it, just like a tangled rope can be straightened. A Möbius strip cannot be untwisted into a cylinder without cutting it, so it's fundamentally different.</dd>
+                <dt>3. Is the fibre rotating or is the whole object rotating?</dt>
+                <dd>You can rotate the whole camera view by clicking and dragging on the canvas. The animation itself, however, shows the fibre moving along the circular path while also twisting on its own axis relative to the path.</dd>
+                <dt>4. What does "Export PNG" do?</dt>
+                <dd>It saves a snapshot of the current canvas view as a PNG image file to your computer.</dd>
+                <dt>5. The animation is not playing or the canvas is blank.</dt>
+                <dd>This can happen on older browsers. Please try: 1) Reloading the page. 2) Pressing the "Reset" button. 3) If it persists, open the developer console (F12), copy any red error messages, and report the bug.</dd>
+                <dt>6. What are the keyboard shortcuts?</dt>
+                <dd>Spacebar = Play/Pause, Right Arrow = Step, 'r' = Reset, 'e' = Export PNG.</dd>
+            </dl>
         </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <ul id="log-output"></ul>
+            </div>
+        </details>
     </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality & Element Checks ---
+        const requiredElementIds = ['main-canvas', 'angle-slider', 'play-pause-btn', 'step-btn', 'reset-btn', 'preset-cylinder', 'preset-mobius', 'export-png-btn', 'share-btn'];
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const qualityCheckErrors = document.getElementById('quality-check-errors');
+        let qualityCheckPassed = true;
+        requiredElementIds.forEach(id => {
+            if (!document.getElementById(id)) {
+                qualityCheckPassed = false;
+                const li = document.createElement('li');
+                li.textContent = `Required element not found: #${id}`;
+                qualityCheckErrors.appendChild(li);
+            }
+        });
+        if (!qualityCheckPassed) { qualityCheckPanel.style.display = 'block'; }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        function log(message) {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        }
+        window.onerror = (message, source, lineno, colno, error) => {
+            log(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+        };
+        log('Simulation script loaded.');
+
+        // --- DOM Elements ---
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
         const angleSlider = document.getElementById('angle-slider');
-        const cylinderBtn = document.getElementById('cylinder-btn');
-        const mobiusBtn = document.getElementById('mobius-btn');
-        const animateBtn = document.getElementById('animate-btn');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const presetCylinderBtn = document.getElementById('preset-cylinder');
+        const presetMobiusBtn = document.getElementById('preset-mobius');
+        const presetDoubleBtn = document.getElementById('preset-double');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const shareBtn = document.getElementById('share-btn');
         const themeToggle = document.getElementById('theme-toggle');
+        const fpsDisplay = document.getElementById('fps-display');
+        const angleDisplay = document.getElementById('angle-display');
 
+        // --- Simulation State ---
         let angle = 0; // The angle on the base circle (0 to 360)
-        let model = 'cylinder';
+        let totalTwist = 0; // 0 for cylinder, 180 for mobius, 360 for double
         let camAngle = { x: 0.5, y: -0.5 };
-        let animationId;
+        let isPlaying = false;
+        let animationFrameId;
+
+        // --- Performance Monitoring ---
+        let frameCount = 0;
+        let lastTime = performance.now();
 
         // --- 3D Math ---
-        const project = (p, canvas) => {
+        const project = (p) => {
             const size = canvas.width;
             const scale = size * 0.3;
             let {x, y, z} = p;
 
-            // Rotate around Y axis (mouse drag)
-            const cosY = Math.cos(camAngle.y);
-            const sinY = Math.sin(camAngle.y);
+            const cosY = Math.cos(camAngle.y); const sinY = Math.sin(camAngle.y);
             let tempX = x * cosY - z * sinY;
             let tempZ = x * sinY + z * cosY;
             x = tempX; z = tempZ;
 
-            // Rotate around X axis (mouse drag)
-            const cosX = Math.cos(camAngle.x);
-            const sinX = Math.sin(camAngle.x);
+            const cosX = Math.cos(camAngle.x); const sinX = Math.sin(camAngle.x);
             let tempY = y * cosX - z * sinX;
             tempZ = y * sinX + z * cosX;
             y = tempY; z = tempZ;
@@ -221,19 +395,19 @@
 
         // --- Drawing ---
         function draw() {
-            ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#1a142c' : '#fff';
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg');
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const baseRadius = 1.5;
             const fibreHeight = 0.5;
 
             // Draw base circle
-            ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#f4f4f4' : '#333';
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
             ctx.lineWidth = 2;
             ctx.beginPath();
-            for (let i = 0; i <= 360; i++) {
+            for (let i = 0; i <= 360; i += 5) {
                 const a = i * Math.PI / 180;
-                const p = project({ x: baseRadius * Math.cos(a), y: 0, z: baseRadius * Math.sin(a) }, canvas);
+                const p = project({ x: baseRadius * Math.cos(a), y: 0, z: baseRadius * Math.sin(a) });
                 if (i === 0) ctx.moveTo(p.x, p.y);
                 else ctx.lineTo(p.x, p.y);
             }
@@ -247,98 +421,153 @@
             let p_top = { x: 0, y: fibreHeight, z: 0 };
             let p_bot = { x: 0, y: -fibreHeight, z: 0 };
 
-            if (model === 'mobius') {
-                const twistAngle = baseAngleRad / 2; // The Mobius half-twist
-                const cosT = Math.cos(twistAngle);
-                const sinT = Math.sin(twistAngle);
-                p_top = { x: p_top.x * cosT - p_top.y * sinT, y: p_top.x * sinT + p_top.y * cosT, z: 0 };
-                p_bot = { x: p_bot.x * cosT - p_bot.y * sinT, y: p_bot.x * sinT + p_bot.y * cosT, z: 0 };
-            }
+            const twistAngle = baseAngleRad * (totalTwist / 360);
+            const cosT = Math.cos(twistAngle);
+            const sinT = Math.sin(twistAngle);
+            p_top = { x: p_top.x * cosT - p_top.y * sinT, y: p_top.x * sinT + p_top.y * cosT, z: 0 };
+            p_bot = { x: p_bot.x * cosT - p_bot.y * sinT, y: p_bot.x * sinT + p_bot.y * cosT, z: 0 };
 
-            // Rotate fibre to align with tangent of circle
             const tangentAngle = baseAngleRad + Math.PI / 2;
-            const cosTan = Math.cos(tangentAngle);
-            const sinTan = Math.sin(tangentAngle);
-            const rotate = (p) => ({
-                x: p.x * cosTan - p.z * sinTan,
-                y: p.y,
-                z: p.x * sinTan + p.z * cosTan
-            });
-            p_top = rotate(p_top);
-            p_bot = rotate(p_bot);
+            const cosTan = Math.cos(tangentAngle); const sinTan = Math.sin(tangentAngle);
+            const rotate = p => ({ x: p.x * cosTan - p.z * sinTan, y: p.y, z: p.x * sinTan + p.z * cosTan });
+            p_top = rotate(p_top); p_bot = rotate(p_bot);
 
-            // Translate fibre to position on base circle
-            const translate = (p) => ({x: p.x + base_x, y: p.y, z: p.z + base_z});
-            p_top = translate(p_top);
-            p_bot = translate(p_bot);
+            const translate = p => ({x: p.x + base_x, y: p.y, z: p.z + base_z});
+            p_top = translate(p_top); p_bot = translate(p_bot);
 
-            const p_top_proj = project(p_top, canvas);
-            const p_bot_proj = project(p_bot, canvas);
+            const p_top_proj = project(p_top);
+            const p_bot_proj = project(p_bot);
 
-            // Draw bottom half (blue)
-            ctx.strokeStyle = '#3a86ff';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
+            ctx.beginPath(); // Bottom half (blue)
+            ctx.strokeStyle = '#3a86ff'; ctx.lineWidth = 5;
             ctx.moveTo(p_bot_proj.x, p_bot_proj.y);
             ctx.lineTo((p_bot_proj.x + p_top_proj.x)/2, (p_bot_proj.y + p_top_proj.y)/2);
             ctx.stroke();
 
-            // Draw top half (red)
-            ctx.strokeStyle = '#d90429';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
+            ctx.beginPath(); // Top half (red)
+            ctx.strokeStyle = '#d90429'; ctx.lineWidth = 5;
             ctx.moveTo((p_bot_proj.x + p_top_proj.x)/2, (p_bot_proj.y + p_top_proj.y)/2);
             ctx.lineTo(p_top_proj.x, p_top_proj.y);
             ctx.stroke();
+
+            updatePerfMeter();
         }
 
-        // --- Interaction ---
+        function updatePerfMeter() {
+            const now = performance.now();
+            frameCount++;
+            if (now - lastTime >= 1000) {
+                fpsDisplay.textContent = frameCount;
+                lastTime = now;
+                frameCount = 0;
+            }
+            angleDisplay.textContent = `${Math.round(angle)}°`;
+        }
+
+        // --- Main Loop ---
+        function loop(time) {
+            if (!isPlaying) return;
+
+            let newAngle = angle + 0.5; // Controls speed
+            if (newAngle > 360) newAngle = 0;
+            angle = newAngle;
+            angleSlider.value = angle;
+
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        // --- Event Handlers ---
+        function handlePlayPause() {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+            if (isPlaying) {
+                lastTime = performance.now();
+                loop();
+                log('Animation started.');
+            } else {
+                cancelAnimationFrame(animationFrameId);
+                log('Animation paused.');
+            }
+        }
+
+        function resetAnimation() {
+            isPlaying = false;
+            playPauseBtn.textContent = 'Play';
+            cancelAnimationFrame(animationFrameId);
+            angle = 0;
+            angleSlider.value = 0;
+            draw();
+            log('Animation reset.');
+        }
+
+        playPauseBtn.addEventListener('click', handlePlayPause);
+        stepBtn.addEventListener('click', () => {
+            if (isPlaying) handlePlayPause();
+            angle = (angle + 2) % 360;
+            angleSlider.value = angle;
+            draw();
+            log('Stepped animation.');
+        });
+        resetBtn.addEventListener('click', resetAnimation);
         angleSlider.addEventListener('input', e => {
+            if (isPlaying) handlePlayPause();
             angle = parseInt(e.target.value, 10);
             draw();
         });
 
-        cylinderBtn.addEventListener('click', () => {
-            model = 'cylinder';
-            cylinderBtn.classList.add('active');
-            mobiusBtn.classList.remove('active');
-            draw();
+        // --- Presets ---
+        function applyPreset(twist) {
+            totalTwist = twist;
+            resetAnimation();
+            log(`Applied preset: ${twist}° twist.`);
+        }
+        presetCylinderBtn.addEventListener('click', () => applyPreset(0));
+        presetMobiusBtn.addEventListener('click', () => applyPreset(180));
+        presetDoubleBtn.addEventListener('click', () => applyPreset(360));
+
+        // --- Export & Share ---
+        exportPngBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `fibre-bundle_twist-${totalTwist}_angle-${Math.round(angle)}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            log('Exported PNG.');
         });
-        mobiusBtn.addEventListener('click', () => {
-            model = 'mobius';
-            mobiusBtn.classList.add('active');
-            cylinderBtn.classList.remove('active');
-            draw();
+
+        shareBtn.addEventListener('click', async () => {
+             const params = { twist: totalTwist, angle: Math.round(angle) };
+             const urlFragment = `#params=${encodeURIComponent(JSON.stringify(params))}`;
+             try {
+                await navigator.clipboard.writeText(location.origin + location.pathname + urlFragment);
+                alert('Shareable link copied to clipboard!');
+             } catch(err) {
+                alert('Failed to copy link.');
+             }
         });
 
-        animateBtn.addEventListener('click', () => {
-            cancelAnimationFrame(animationId);
-            let startTime = null;
-            const duration = 3000; // 3 seconds for a full loop
-
-            const frame = (time) => {
-                if (!startTime) startTime = time;
-                const elapsed = time - startTime;
-                let progress = elapsed / duration;
-                if (progress > 1) progress = 1;
-
-                angle = progress * 360;
-                angleSlider.value = angle;
-                draw();
-
-                if (progress < 1) {
-                    animationId = requestAnimationFrame(frame);
+        function loadParamsFromURL() {
+            if (location.hash.startsWith('#params=')) {
+                try {
+                    const jsonString = decodeURIComponent(location.hash.substring(8));
+                    const params = JSON.parse(jsonString);
+                    if (params.twist !== undefined) applyPreset(params.twist);
+                    if (params.angle !== undefined) {
+                        angle = params.angle;
+                        angleSlider.value = angle;
+                    }
+                    draw();
+                    log('Loaded parameters from URL.');
+                } catch (e) {
+                    log(`Error loading params from URL: ${e.message}`);
                 }
-            };
-            animationId = requestAnimationFrame(frame);
-        });
+            }
+        }
 
+        // --- Mouse Drag for Camera ---
         let isDragging = false;
         let lastMouse = {x:0, y:0};
-        canvas.addEventListener('mousedown', e => {
-            isDragging = true;
-            lastMouse = {x: e.clientX, y: e.clientY};
-        });
+        canvas.addEventListener('mousedown', e => { isDragging = true; lastMouse = {x: e.clientX, y: e.clientY}; });
         window.addEventListener('mouseup', () => { isDragging = false; });
         window.addEventListener('mousemove', e => {
             if (!isDragging) return;
@@ -350,12 +579,28 @@
             draw();
         });
 
+        // --- Keyboard Shortcuts ---
+        window.addEventListener('keydown', e => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            const keyMap = {' ': handlePlayPause, 'ArrowRight': () => stepBtn.click(), 'r': resetAnimation, 'e': () => exportPngBtn.click()};
+            if (keyMap[e.key]) {
+                e.preventDefault();
+                keyMap[e.key]();
+            }
+        });
+
+        // --- Theme ---
         themeToggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
+            log(`Theme toggled.`);
             draw();
         });
 
+        // --- Final Setup ---
+        applyPreset(0);
+        loadParamsFromURL();
         draw();
+        log('Simulation ready.');
     });
     </script>
 </body>

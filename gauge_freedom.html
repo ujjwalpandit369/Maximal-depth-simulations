@@ -12,7 +12,11 @@
             --secondary-color: #9a8c98;
             --border-color: #c9ada7;
             --canvas-bg: #fff;
-            --accent-color: #22223b;
+            --code-bg: #e9ecef;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
         }
         .dark-mode {
             --bg-color: #22223b;
@@ -21,7 +25,11 @@
             --secondary-color: #c9ada7;
             --border-color: #4a4e69;
             --canvas-bg: #1a1a2b;
-            --accent-color: #f2e9e4;
+            --code-bg: #333;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
+            --warning-bg: #856404;
+            --warning-text: #fff3cd;
         }
         body {
             font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
@@ -42,179 +50,294 @@
             color: var(--primary-color);
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 0.5rem;
-            font-family: 'Optima', sans-serif;
         }
-        .container {
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            background-color: var(--code-bg);
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .simulation-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 1.5rem;
+            gap: 1rem;
+            margin-bottom: 1rem;
             justify-content: center;
-            margin: 1.5rem 0;
         }
-        .panel {
-            flex: 1;
-            min-width: 350px;
-            max-width: 450px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        .controls-area {
+            flex-basis: 100%;
             padding: 1rem;
             border: 1px solid var(--border-color);
             border-radius: 8px;
+        }
+        .simulation-panel {
+            flex: 1;
+            min-width: 350px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-align: center;
         }
         canvas {
             background-color: var(--canvas-bg);
             border: 1px solid var(--border-color);
             max-width: 100%;
-            height: auto;
         }
-        .controls-area {
-            text-align: center;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-top: 1rem;
-            width: 100%;
-        }
-        .button-group {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 1rem;
-        }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
         button {
             background-color: var(--primary-color);
             color: white;
-            border: 1px solid var(--secondary-color);
-            padding: 0.6rem 1.2rem;
+            border: none;
+            padding: 0.5rem 1rem;
             border-radius: 5px;
             cursor: pointer;
-            font-weight: bold;
             transition: background-color 0.2s;
         }
-        button.active {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-            border-color: var(--accent-color);
+        button.active, button:hover, button:focus { background-color: var(--secondary-color); }
+        .secondary-button { background-color: var(--secondary-color); }
+        .secondary-button:hover, .secondary-button:focus { background-color: #827685; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: 'Courier New', monospace; }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-text); padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-text); padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; background-color: var(--bg-color); max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        @media (max-width: 768px) {
+            body { padding: 0.5rem; }
         }
-        button:hover:not(.active) { background-color: var(--secondary-color); }
-        .info { font-size: 0.9rem; color: var(--secondary-color); }
-        strong { color: var(--accent-color); font-weight: bold; }
-        code { font-family: 'Courier New', Courier, monospace; background: var(--border-color); padding: 2px 5px; border-radius: 3px; }
-        .math { font-style: italic; }
     </style>
 </head>
 <body>
     <main>
+        <div id="quality-check-panel" class="error-panel">
+            <strong>Quality Check Failed!</strong>
+            <p>Some parts of the simulation might not work as expected. Please report the bug using the developer console below.</p>
+            <ul id="quality-check-errors"></ul>
+        </div>
+
         <header>
             <h1>Gauge Freedom in Electromagnetism</h1>
-            <p>Demonstrating how different potentials can describe the same physical fields.</p>
-             <div style="text-align:center; margin-top: 1rem;">
-                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            <p>Demonstrating how different mathematical descriptions can yield the same physical reality.</p>
+            <div class="metadata-bar">
+                <span>Estimated runtime: Static</span> |
+                <span>Recommended device: Desktop/Mobile</span> |
+                <span>Approx. HTML size: 25 KB</span> |
+                <button id="theme-toggle" style="padding: 2px 5px; margin-left: 10px;">Toggle Dark Mode</button>
             </div>
         </header>
 
         <section id="overview">
             <h2>Plain-Language Overview</h2>
-            <p>
-                In physics, some quantities are "real" and directly measurable, like the magnetic field (<strong>B</strong>) that makes a compass needle turn. Other quantities, like the magnetic vector potential (<strong>A</strong>), are mathematical tools used in our equations because they make calculations easier. <strong>Gauge freedom</strong> is a profound and powerful idea that says we have flexibility in choosing our mathematical tools without changing physical reality.
-            </p>
-            <p>
-                This simulation shows a constant, uniform magnetic field on the left—this is the "physical reality" that never changes. On the right, it shows the vector potential that creates this field. By selecting different "gauges," you can see that we can use wildly different vector potentials (the swirling "Symmetric Gauge" or the straight-flowing "Landau Gauge") which all produce the <strong>exact same magnetic field</strong>. This "freedom" to choose our mathematical description is a cornerstone of modern physics.
-            </p>
+            <p>In physics, some quantities are "real" and directly measurable, like the magnetic field (<strong>B</strong>) that makes a compass needle turn. Other quantities, like the magnetic vector potential (<strong>A</strong>), are powerful mathematical tools used in our equations because they make calculations easier. <strong>Gauge freedom</strong> is a profound idea that says we have flexibility in choosing our mathematical tools without changing physical reality. This simulation shows a constant, uniform magnetic field on the left—this is the "physical reality" that never changes. On the right, it shows the vector potential that creates this field. By selecting different "gauges," you can see that we can use wildly different vector potentials (the swirling "Symmetric Gauge" or the straight-flowing "Landau Gauge") which all produce the <strong>exact same magnetic field</strong>. This freedom to choose our mathematical description is a cornerstone of modern physics.</p>
         </section>
 
-        <div class="controls-area">
-            <h3>Select a Gauge Choice for the Vector Potential A</h3>
-            <div class="button-group" id="gauge-buttons">
-                <button class="active" data-gauge="symmetric">Symmetric Gauge</button>
-                <button data-gauge="landau_y">Landau Gauge (A<sub>y</sub>)</button>
-                <button data-gauge="landau_x">Landau Gauge (A<sub>x</sub>)</button>
-            </div>
-        </div>
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <p>The main parameter in this simulation is the choice of gauge for the vector potential <strong>A</strong>.</p>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Options</th><th>Default</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Gauge Choice</strong></td>
+                        <td>Symmetric, Landau (Y), Landau (X)</td>
+                        <td>Symmetric</td>
+                        <td>Selects the mathematical form of the vector potential <strong>A</strong> used to generate the magnetic field <strong>B</strong>. While <strong>A</strong> looks different in each gauge, the resulting <strong>B</strong> field is identical.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
 
-        <div class="container">
-            <div class="panel">
+        <div class="simulation-container">
+            <div class="controls-area">
+                <h3>Controls</h3>
+                <p>Select a gauge to see the corresponding vector potential. Observe that the B-field never changes.</p>
+                <div class="button-group">
+                    <button id="preset-symmetric" class="active" aria-label="Select Symmetric Gauge (1)">Symmetric Gauge</button>
+                    <button id="preset-landau-y" aria-label="Select Landau Y Gauge (2)">Landau Gauge (A<sub>y</sub>)</button>
+                    <button id="preset-landau-x" aria-label="Select Landau X Gauge (3)">Landau Gauge (A<sub>x</sub>)</button>
+                </div>
+                <div class="button-group" style="margin-top: 1rem;">
+                    <button id="export-png-btn" class="secondary-button" aria-label="Export as PNG (e)">Export PNG</button>
+                    <button id="share-btn" class="secondary-button">Share View</button>
+                </div>
+            </div>
+
+            <div class="simulation-panel">
                 <h3>Physical Magnetic Field (B)</h3>
                 <canvas id="b-field-canvas" width="400" height="400"></canvas>
-                <p class="info">A uniform magnetic field pointing <strong>out of the page</strong>. This is the physical reality and <strong>does not change</strong>.</p>
+                <p>A uniform magnetic field pointing <strong>out of the page</strong>. This is the physical reality and <strong>does not change</strong>.</p>
             </div>
-            <div class="panel">
+            <div class="simulation-panel">
                 <h3>Mathematical Vector Potential (A)</h3>
                 <canvas id="a-field-canvas" width="400" height="400"></canvas>
-                <p class="info">The vector potential that generates the B-field. This is a mathematical tool and <strong>changes with the gauge</strong>.</p>
+                <p>The vector potential that generates the B-field. This is a mathematical tool and <strong>changes with the gauge</strong>.</p>
             </div>
         </div>
 
         <section id="beginners-guide">
-            <h2>Beginner's Guide</h2>
-            <h3>1. The Physical Field vs. The Mathematical Potential</h3>
-            <p>
-                Think of a topographic map of a hill. The <strong>slope</strong> of the hill at any point is a physical reality—it determines how a ball will roll. The <strong>altitude</strong> written on the map, however, is a mathematical tool. We could add 100 meters to every altitude number on the map; this would change our mathematical description, but it wouldn't change the physical shape or slope of the hill at all.
-            </p>
-            <p>
-                In our simulation:
-                <ul>
-                    <li>The <strong>Magnetic Field B</strong> (left panel) is like the slope of the hill. It's the "real" thing that exerts forces.</li>
-                    <li>The <strong>Vector Potential A</strong> (right panel) is like the altitude. It's a mathematical field we use to calculate B.</li>
-                </ul>
-                Gauge freedom is the principle that we can change A in certain ways without affecting B at all, just like we can change the altitude numbers without changing the slopes.
-            </p>
-            <h3>2. The "Curl": From Potential to Field</h3>
-            <p>
-                How do we get the "slope" (B) from the "altitude" (A)? The mathematical operation is called the <strong>curl</strong>, written as <code>B = &nabla; &times; A</code>. Conceptually, the curl of a vector field at a point measures how much the field "circulates" or "swirls" around that point.
-            </p>
-            <p>
-                Look at the <strong>Symmetric Gauge</strong>. The vector potential A clearly swirls around the center. This circulation is constant everywhere, giving rise to a uniform magnetic field B. Now look at the <strong>Landau Gauge</strong>. The arrows are all straight! How can this produce a circulating B field? Because the arrows get stronger as you move to the right, a tiny paddlewheel placed in this field would be pushed harder on one side than the other, causing it to spin. The curl cleverly detects this "hidden" circulation, and the result is the exact same uniform B field.
-            </p>
+            <h2>Beginner's Guide (~700 words)</h2>
+            <h3>1. Physical Reality vs. Mathematical Description</h3>
+            <p>Let's start with a simple analogy: a hill. The steepness of the hill at any given point is a physical reality. If you place a ball there, it will roll in a specific direction with a specific acceleration. This is measurable and real. Now, think about a topographic map of that hill. The map has lines of constant altitude (e.g., 100m, 110m, 120m). These numbers are a mathematical description. What if we decided to measure altitude not from sea level, but from the bottom of the hill? All our numbers would change (e.g., 0m, 10m, 20m), but the physical shape of the hill—its steepness at every point—would remain identical. The ball would roll in exactly the same way.</p>
+            <p>This is the core of gauge freedom.
+            <ul>
+                <li>The <strong>Magnetic Field B</strong> (left panel) is like the hill's steepness. It's the physical quantity that exerts forces on charged particles.</li>
+                <li>The <strong>Vector Potential A</strong> (right panel) is like the set of altitude numbers on our map. It's a mathematical helper field we use to calculate B.</li>
+            </ul>
+            Gauge freedom tells us that we can change our mathematical description (A) in specific, prescribed ways without altering the physical reality (B) one bit.</p>
+
+            <h3>2. From Potential to Field: The "Curl"</h3>
+            <p>How do we get the "steepness" (B) from the "altitude map" (A)? The mathematical operation is called the <strong>curl</strong>, written as <code>B = &nabla; &times; A</code>. You don't need to know the exact formula, but you can think of it as a "microscopic paddlewheel test." Imagine placing a tiny, imaginary paddlewheel into the vector potential field shown on the right. The curl measures how much that paddlewheel would spin.
+            <ul>
+                <li>In the <strong>Symmetric Gauge</strong>, the vectors are visibly swirling. It's easy to see that a paddlewheel placed anywhere would be forced to rotate, indicating a non-zero curl (and thus a magnetic field).</li>
+                <li>In the <strong>Landau Gauge</strong>, the vectors are all parallel! It looks like there's no rotation. But look closer: the arrows get longer as you move away from the center. If you place a paddlewheel in this flow, the arrows on one side of the wheel will be stronger than on the other side. This difference in force will cause the paddlewheel to spin!</li>
+            </ul>
+            The curl is a clever way of detecting this "hidden" rotation that comes from changes in vector length, not just direction. Amazingly, the amount of spin it detects is identical for all chosen gauges, resulting in the same uniform B-field every time.</p>
+
             <h3>3. What is a "Gauge Transformation"?</h3>
-            <p>
-                A gauge transformation is the specific "trick" we can use to change A without changing B. It involves adding a special kind of vector field—the <strong>gradient</strong> of any scalar function—to A. A gradient field is one that never has any circulation (its curl is always zero).
-            </p>
-            <p>
-                So, if we have a potential <code>A</code> that works, we can create a new one <code>A' = A + &nabla;f</code> (where <code>f</code> is any smooth function). When we take the curl to find the physical B-field, we get <code>B' = &nabla; &times; A' = &nabla; &times; A + &nabla; &times; (&nabla;f)</code>. Since the curl of a gradient is always zero, the last term vanishes, and we are left with <code>B' = B</code>. The physics remains unchanged! Switching between the gauges in the simulation is a direct example of performing a gauge transformation.
-            </p>
+            <p>A gauge transformation is the specific "trick" we use to change A without changing B. It involves adding a special kind of "non-rotating" field to A. This special field is called the <strong>gradient</strong> of a scalar function (let's call it <code>f</code>). A gradient field is like the slope on a perfectly smooth, bowl-shaped hill—it always points straight up or down and has no "swirl" or "eddies." Its curl is always zero.</p>
+            <p>So, if we have a potential <code>A</code> that works, we can create a new one <code>A' = A + &nabla;f</code>. When we calculate the new B-field, the extra term just disappears: <code>B' = &nabla; &times; A' = &nabla; &times; (A + &nabla;f) = (&nabla; &times; A) + (&nabla; &times; &nabla;f)</code>. Because the curl of any gradient is mathematically guaranteed to be zero, the second part vanishes, leaving <code>B' = B</code>. The physics is unchanged! Switching between the Symmetric and Landau gauges in the simulation is a perfect example of applying a specific gauge transformation.</p>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h3>Walkthrough: The Invariant B-Field</h3>
+            <ol>
+                <li>Start with the default "Symmetric Gauge". Observe the swirling pattern in the Vector Potential <strong>A</strong> on the right. Note the uniform grid of dots representing the Magnetic Field <strong>B</strong> on the left.</li>
+                <li>Click the "Landau Gauge (A<sub>y</sub>)" button. The <strong>A</strong> field on the right changes dramatically into a set of vertical, parallel vectors that get stronger from left to right.</li>
+                <li><strong>Crucially, observe the B-field on the left. It has not changed at all.</strong> This is the central lesson of the simulation.</li>
+                <li>Click "Landau Gauge (A<sub>x</sub>)". The <strong>A</strong> field changes again, this time to horizontal vectors. The <strong>B</strong> field remains stubbornly the same.</li>
+            </ol>
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li>Select the "Symmetric Gauge". Mentally place a tiny paddlewheel at the very center of the <strong>A</strong> field. The vectors around it are all of equal length and form a circle. It would clearly spin.</li>
+                <li>Now select "Landau Gauge (A<sub>y</sub>)". Place your mental paddlewheel on the central vertical axis (x=0). Here, the vectors above and below it are identical. The paddlewheel would not spin. This corresponds to the fact that the curl along this line is zero.</li>
+                <li>In the "Landau Gauge (A<sub>y</sub>)", move your mental paddlewheel to the right (x > 0). The vectors on the right side of the wheel are now stronger than on the left, causing it to spin. This shows how the curl can be non-zero even in a parallel flow.</li>
+                <li>Press '1', '2', '3' on your keyboard to switch between the gauges. It's a fast way to confirm the B-field's invariance.</li>
+                <li>Press 'e' to export a PNG. This saves an image of both fields side-by-side, perfect for notes or presentations.</li>
+            </ol>
         </section>
 
         <section id="theory">
             <h2>The Mathematics of Gauge Freedom</h2>
-            <p>
-                For a uniform magnetic field <code><strong>B</strong> = B<sub>0</sub><strong>ẑ</strong></code> (pointing out of the page), the relationship to the vector potential <strong>A</strong> is given by the curl operator:
-            </p>
-            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
-                &part;A<sub>y</sub>/&part;x - &part;A<sub>x</sub>/&part;y = B<sub>0</sub>
-            </p>
-            <p>
-                There are infinite solutions for A<sub>x</sub> and A<sub>y</sub> that satisfy this equation. Each solution is a different "gauge choice." The simulation shows three common ones:
-            </p>
+            <p>For a uniform magnetic field <code><strong>B</strong> = B<sub>0</sub><strong>ẑ</strong></code> (pointing out of the page), the relationship to the vector potential <strong>A</strong> is given by the curl operator: <code><strong>B</strong> = &nabla; &times; <strong>A</strong></code>. In 2D coordinates, this simplifies to:</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">&part;A<sub>y</sub>/&part;x - &part;A<sub>x</sub>/&part;y = B<sub>0</sub></p>
+            <p>There are infinite solutions for A<sub>x</sub> and A<sub>y</sub> that satisfy this equation. Each solution is a different "gauge choice." The simulation shows three common ones:</p>
             <ul>
                 <li><strong>Symmetric Gauge:</strong> <code><strong>A</strong> = (-B<sub>0</sub>y/2, B<sub>0</sub>x/2, 0)</code>. Here, &part;A<sub>y</sub>/&part;x = B<sub>0</sub>/2 and &part;A<sub>x</sub>/&part;y = -B<sub>0</sub>/2. So, B<sub>0</sub>/2 - (-B<sub>0</sub>/2) = B<sub>0</sub>.</li>
                 <li><strong>Landau Gauge (on A<sub>y</sub>):</strong> <code><strong>A</strong> = (0, B<sub>0</sub>x, 0)</code>. Here, &part;A<sub>y</sub>/&part;x = B<sub>0</sub> and &part;A<sub>x</sub>/&part;y = 0. So, B<sub>0</sub> - 0 = B<sub>0</sub>.</li>
                 <li><strong>Landau Gauge (on A<sub>x</sub>):</strong> <code><strong>A</strong> = (-B<sub>0</sub>y, 0, 0)</code>. Here, &part;A<sub>y</sub>/&part;x = 0 and &part;A<sub>x</sub>/&part;y = -B<sub>0</sub>. So, 0 - (-B<sub>0</sub>) = B<sub>0</sub>.</li>
             </ul>
-            <p>A <strong>gauge transformation</strong> allows us to move between these descriptions. For example, to get from the Symmetric gauge to the Landau gauge (on A<sub>y</sub>), we can add the gradient of the scalar function <code>f(x,y) = B<sub>0</sub>xy/2</code>. The gradient is <code>&nabla;f = (B<sub>0</sub>y/2, B<sub>0</sub>x/2, 0)</code>.
-            <br><code><strong>A'</strong> = <strong>A</strong><sub>symmetric</sub> + &nabla;f = (-B<sub>0</sub>y/2, B<sub>0</sub>x/2, 0) + (B<sub>0</sub>y/2, B<sub>0</sub>x/2, 0) = (0, B<sub>0</sub>x, 0)</code>, which is exactly the Landau gauge potential.</p>
+            <p>A <strong>gauge transformation</strong> allows us to move between these descriptions by adding the gradient of a scalar function <code>f</code>, <code>&nabla;f</code>. To get from the Symmetric gauge to the Landau gauge (on A<sub>y</sub>), we can choose <code>f(x,y) = B<sub>0</sub>xy/2</code>. The gradient is <code>&nabla;f = (&part;f/&part;x, &part;f/&part;y) = (B<sub>0</sub>y/2, B<sub>0</sub>x/2)</code>.
+            <br><code><strong>A'</strong> = <strong>A</strong><sub>symmetric</sub> + &nabla;f = (-B<sub>0</sub>y/2, B<sub>0</sub>x/2) + (B<sub>0</sub>y/2, B<sub>0</sub>x/2) = (0, B<sub>0</sub>x)</code>, which is exactly the Landau gauge potential.</p>
         </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <ul>
+                <li><strong>Why Choose a Gauge?</strong> While all gauges are physically equivalent, some are more mathematically convenient for certain problems. The Landau gauge is useful for quantum mechanics problems in a magnetic field, as it preserves translational symmetry in one direction, simplifying the Schrödinger equation. The Symmetric gauge is useful for problems with rotational symmetry around a central point.</li>
+                <li><strong>Aharonov-Bohm Effect:</strong> Gauge freedom might seem like a purely mathematical trick, but it has profound physical consequences. The Aharonov-Bohm effect shows that a charged particle can be physically affected by the vector potential <strong>A</strong> even in a region where the magnetic field <strong>B</strong> is zero! This demonstrates that the potential is in some sense more fundamental than the field.</li>
+                <li><strong>General Relativity & Yang-Mills:</strong> Gauge theory is a central concept in modern physics. General Relativity can be formulated as a gauge theory of spacetime symmetries. The Standard Model of particle physics is a "Yang-Mills" gauge theory, where the potentials are more complex (matrix-valued) and describe the fundamental forces (electroweak and strong nuclear forces).</li>
+            </ul>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h3>1. The Altitude Map Analogy (Visualization)</h3>
+            <p>As described in the beginner's guide, the vector potential <strong>A</strong> is like the altitude numbers on a map, while the physical field <strong>B</strong> is like the real, unchanging slope of the land. You can change your reference for altitude (sea level, ground level) without changing how a ball rolls down the hill. This analogy is powerful for understanding the potential/field relationship but doesn't fully capture the "curl" concept.</p>
+            <h3>2. The Bookkeeping Analogy (Computational)</h3>
+            <p>Imagine you and a friend are tracking a company's finances. You both have access to all transactions. The company's final profit is the "physical reality." You might choose to log income first, then expenses. Your friend might log them in chronological order. At any point during the day, your running tallies ("potentials") will be different. But at the end of the day, after all transactions are logged, you must both arrive at the exact same final profit ("physical field"). The different methods of bookkeeping are your "gauge choices." They are different procedures that lead to the same invariant result.</p>
+            <h3>3. The Flowing River Analogy (Physical)</h3>
+            <p>Imagine a wide, deep river. The vector potential <strong>A</strong> is the water velocity at every point. The magnetic field <strong>B</strong> is the rotation of a small stick tossed into the water.
+            <ul>
+                <li><strong>Symmetric Gauge:</strong> This is like a large, slow whirlpool. A stick placed anywhere will spin.</li>
+                <li><strong>Landau Gauge:</strong> This is like a straight channel of water where the current is faster near one bank than the other. If you place a stick in the middle, the end closer to the fast bank will be pushed harder, causing the stick to spin. Even though the water is flowing "straight," it has a "curl" because its speed changes sideways.</li>
+            </ul>
+            This analogy is excellent for giving a physical intuition for the curl operator. Its limitation is that water is a real substance, whereas the vector potential is a more abstract mathematical field.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. So is the vector potential A "real" or not?</dt>
+                <dd>This is a deep question! The fact that you can change it via a gauge transformation suggests it's not uniquely real. However, the Aharonov-Bohm effect shows it has real physical consequences. Most physicists treat it as a fundamental part of the mathematical structure of the universe, even if it's not directly measurable in the same way as a field.</dd>
+                <dt>2. Why does the B-field just look like dots?</dt>
+                <dd>The dots represent the tips of vector arrows pointing directly out of the screen towards you. This is a standard way to visualize a uniform field in 2D.</dd>
+                <dt>3. What does "Landau Gauge (A<sub>y</sub>)" mean?</dt>
+                <dd>It means we've made a gauge choice where the vector potential <strong>A</strong> has only a y-component (A<sub>y</sub>), and its value depends on the x-coordinate. A<sub>x</sub> is zero everywhere.</dd>
+                <dt>4. Can I see the gauge transformation function f?</dt>
+                <dd>The simulation applies the transformation directly but doesn't visualize the scalar field <code>f</code> itself. The theory section shows the mathematical form of <code>f</code> needed to transform from the Symmetric to the Landau gauge.</dd>
+                <dt>5. The canvas is blank or not updating.</dt>
+                <dd>This simulation is static and should load instantly. If it's blank, your browser might not support the canvas element. Try reloading the page or using a modern browser like Chrome or Firefox.</dd>
+                <dt>6. What are the keyboard shortcuts?</dt>
+                <dd>'1' for Symmetric Gauge, '2' for Landau (Y), '3' for Landau (X), and 'e' to export the current view as a PNG image.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content"><ul id="log-output"></ul></div>
+        </details>
     </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const themeToggle = document.getElementById('theme-toggle');
+        // --- Quality & Element Checks ---
+        const requiredElementIds = ['b-field-canvas', 'a-field-canvas', 'preset-symmetric', 'preset-landau-y', 'preset-landau-x', 'export-png-btn', 'share-btn', 'theme-toggle'];
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const qualityCheckErrors = document.getElementById('quality-check-errors');
+        let qualityCheckPassed = true;
+        requiredElementIds.forEach(id => {
+            if (!document.getElementById(id)) {
+                qualityCheckPassed = false;
+                const li = document.createElement('li');
+                li.textContent = `Required element not found: #${id}`;
+                qualityCheckErrors.appendChild(li);
+            }
+        });
+        if (!qualityCheckPassed) { qualityCheckPanel.style.display = 'block'; }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        function log(message) {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        }
+        window.onerror = (message, source, lineno, colno, error) => {
+            log(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+        };
+        log('Simulation script loaded.');
+
+        // --- DOM Elements ---
         const bFieldCanvas = document.getElementById('b-field-canvas');
         const aFieldCanvas = document.getElementById('a-field-canvas');
         const bCtx = bFieldCanvas.getContext('2d');
         const aCtx = aFieldCanvas.getContext('2d');
-        const gaugeButtons = document.getElementById('gauge-buttons');
+        const themeToggle = document.getElementById('theme-toggle');
+        const presetSymmetricBtn = document.getElementById('preset-symmetric');
+        const presetLandauYBtn = document.getElementById('preset-landau-y');
+        const presetLandauXBtn = document.getElementById('preset-landau-x');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const shareBtn = document.getElementById('share-btn');
 
-        const B0 = 1.0; // Strength of the magnetic field
+        // --- State ---
+        const B0 = 1.0;
         let currentGauge = 'symmetric';
 
         function getColors() {
             const isDark = document.body.classList.contains('dark-mode');
             return {
-                bg: isDark ? '#1a1a2b' : '#fff',
-                stroke: isDark ? '#f2e9e4' : '#22223b',
-                dot: isDark ? '#9a8c98' : '#4a4e69',
+                bg: getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg'),
+                stroke: getComputedStyle(document.documentElement).getPropertyValue('--text-color'),
+                dot: getComputedStyle(document.documentElement).getPropertyValue('--primary-color'),
             };
         }
 
@@ -233,10 +356,11 @@
                     const x = (i + 0.5) * spacing;
                     const y = (j + 0.5) * spacing;
                     bCtx.beginPath();
-                    bCtx.arc(x, y, 2, 0, 2 * Math.PI);
+                    bCtx.arc(x, y, size / 200, 0, 2 * Math.PI);
                     bCtx.fill();
                 }
             }
+            log('B-field drawn.');
         }
 
         function drawAField() {
@@ -255,10 +379,8 @@
                 for (let j = 0; j < gridSize; j++) {
                     const canvas_x = (i + 0.5) * spacing;
                     const canvas_y = (j + 0.5) * spacing;
-
-                    // Map canvas coords to a centered coordinate system
-                    const x = (canvas_x - size / 2) / (size/2);
-                    const y = (canvas_y - size / 2) / (size/2);
+                    const x = (canvas_x - size / 2) / (size / 4); // Map to smaller scale for better visuals
+                    const y = (canvas_y - size / 2) / (size / 4);
 
                     let ax = 0, ay = 0;
                     if (currentGauge === 'symmetric') {
@@ -271,20 +393,18 @@
                         ax = B0 * y;
                         ay = 0;
                     }
-
                     drawArrow(aCtx, canvas_x, canvas_y, ax, ay);
                 }
             }
+            log(`A-field drawn for ${currentGauge} gauge.`);
         }
 
         function drawArrow(ctx, fromx, fromy, vx, vy) {
             const scale = 20;
             const tox = fromx + vx * scale;
-            const toy = fromy + vy * scale;
-
+            const toy = fromy - vy * scale; // Invert Y for canvas coordinates
             const headlen = 5;
             const angle = Math.atan2(toy - fromy, tox - fromx);
-
             ctx.beginPath();
             ctx.moveTo(fromx, fromy);
             ctx.lineTo(tox, toy);
@@ -299,24 +419,98 @@
             drawAField();
         }
 
-        gaugeButtons.addEventListener('click', e => {
-            if (e.target.tagName === 'BUTTON') {
-                const newGauge = e.target.dataset.gauge;
-                if (newGauge !== currentGauge) {
-                    currentGauge = newGauge;
-                    gaugeButtons.querySelector('.active').classList.remove('active');
-                    e.target.classList.add('active');
-                    drawAField();
-                }
-            }
-        });
+        function setActiveButton(activeBtn) {
+            [presetSymmetricBtn, presetLandauYBtn, presetLandauXBtn].forEach(btn => {
+                btn.classList.remove('active');
+            });
+            activeBtn.classList.add('active');
+        }
+
+        function setGauge(gauge) {
+            currentGauge = gauge;
+            const btnMap = {
+                'symmetric': presetSymmetricBtn,
+                'landau_y': presetLandauYBtn,
+                'landau_x': presetLandauXBtn,
+            };
+            setActiveButton(btnMap[gauge]);
+            drawAField();
+        }
+
+        presetSymmetricBtn.addEventListener('click', () => setGauge('symmetric'));
+        presetLandauYBtn.addEventListener('click', () => setGauge('landau_y'));
+        presetLandauXBtn.addEventListener('click', () => setGauge('landau_x'));
 
         themeToggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
+            log('Theme toggled.');
             drawAll();
         });
 
+        exportPngBtn.addEventListener('click', () => {
+            const compositeCanvas = document.createElement('canvas');
+            compositeCanvas.width = bFieldCanvas.width + aFieldCanvas.width;
+            compositeCanvas.height = bFieldCanvas.height;
+            const ctx = compositeCanvas.getContext('2d');
+
+            const { bg } = getColors();
+            ctx.fillStyle = bg;
+            ctx.fillRect(0,0,compositeCanvas.width, compositeCanvas.height);
+            ctx.drawImage(bFieldCanvas, 0, 0);
+            ctx.drawImage(aFieldCanvas, bFieldCanvas.width, 0);
+
+            const link = document.createElement('a');
+            link.download = `gauge-freedom_${currentGauge}.png`;
+            link.href = compositeCanvas.toDataURL();
+            link.click();
+            log('Exported PNG.');
+        });
+
+        shareBtn.addEventListener('click', async () => {
+             const params = { gauge: currentGauge };
+             const urlFragment = `#params=${encodeURIComponent(JSON.stringify(params))}`;
+             try {
+                await navigator.clipboard.writeText(location.origin + location.pathname + urlFragment);
+                alert('Shareable link copied to clipboard!');
+             } catch(err) {
+                alert('Failed to copy link.');
+             }
+        });
+
+        function loadParamsFromURL() {
+            if (location.hash.startsWith('#params=')) {
+                try {
+                    const jsonString = decodeURIComponent(location.hash.substring(8));
+                    const params = JSON.parse(jsonString);
+                    if (params.gauge && ['symmetric', 'landau_y', 'landau_x'].includes(params.gauge)) {
+                        setGauge(params.gauge);
+                        log('Loaded parameters from URL.');
+                    }
+                } catch (e) {
+                    log(`Error loading params from URL: ${e.message}`);
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            const keyMap = {
+                '1': () => setGauge('symmetric'),
+                '2': () => setGauge('landau_y'),
+                '3': () => setGauge('landau_x'),
+                'e': () => exportPngBtn.click(),
+            };
+            if(keyMap[e.key]) {
+                e.preventDefault();
+                keyMap[e.key]();
+            }
+        });
+
+        // Initial Draw
+        loadParamsFromURL();
         drawAll();
+        setActiveButton(document.getElementById(`preset-${currentGauge}`));
+        log('Simulation ready.');
     });
     </script>
 </body>
