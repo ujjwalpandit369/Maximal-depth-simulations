@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Geothermal Gradient Simulation</title>
+    <style>
+        :root {
+            --bg-color: #fefcfb;
+            --text-color: #333;
+            --primary-color: #e67e22; /* Earthy orange */
+            --secondary-color: #7f8c8d;
+            --border-color: #ddd;
+            --canvas-bg: #fff;
+            --control-bg: #fdf3e6;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1c1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #f39c12;
+            --secondary-color: #95a5a6;
+            --border-color: #555;
+            --canvas-bg: #111;
+            --control-bg: #4a3c30;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .plots-column { display: grid; grid-template-rows: auto auto; gap: 15px; }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        canvas { display: block; width: 100%; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .info-box { padding: 15px; background-color: var(--control-bg); border-radius: 5px; text-align: center; }
+        .info-box h4 { margin: 0 0 5px 0; }
+        .info-value { font-size: 1.5em; font-weight: bold; color: var(--primary-color); }
+        code, .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>The Geothermal Gradient</h1>
+            <p class="subtitle">An interactive simulation of temperature increase with depth inside the Earth.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    The deeper you go into the Earth, the hotter it gets. This steady increase in temperature with depth is known as the <strong>geothermal gradient</strong>. It's the reason we have volcanoes and geothermal energy. This phenomenon is driven by two main engines: the immense heat flowing outwards from the Earth's primordial core and mantle, and the heat generated right here in the crust by the slow radioactive decay of elements like uranium and potassium. This simulation lets you probe a virtual borehole into the crust, allowing you to drag a thermometer to different depths and see the temperature rise. By adjusting the heat from the mantle and the crust's own radioactivity, you can see exactly how these two heat sources combine to shape the temperature profile beneath our feet.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <p><small>Drag the thermometer probe in the borehole visualization to measure the temperature at different depths.</small></p>
+                    <div class="control-group">
+                        <label for="surface-temp-slider">Surface Temperature: <output id="surface-temp-output">15</output> °C</label>
+                        <input type="range" id="surface-temp-slider" min="-20" max="40" step="1" value="15" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="heat-prod-slider">Crustal Heat Production (A): <output id="heat-prod-output">1.0</output> μW/m³</label>
+                        <input type="range" id="heat-prod-slider" min="0" max="3" step="0.1" value="1.0" style="width:100%;">
+                    </div>
+                    <div class="control-group">
+                        <label for="mantle-flow-slider">Mantle Heat Flow (qₘ): <output id="mantle-flow-output">30</output> mW/m²</label>
+                        <input type="range" id="mantle-flow-slider" min="10" max="100" step="1" value="30" style="width:100%;">
+                    </div>
+                    <div class="info-box">
+                        <h4>Probe Reading</h4>
+                        <p>Depth: <span class="info-value" id="depth-display">0.0 km</span></p>
+                        <p>Temperature: <span class="info-value" id="temp-display">15 °C</span></p>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="plots-column">
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Borehole Cross-Section</div>
+                        <canvas id="main-canvas" height="500"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Temperature vs. Depth Profile</div>
+                        <canvas id="plot-canvas" height="500"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — The Earth's Inner Heat</h2>
+
+                <h4>Step 1: A Hot Planet</h4>
+                <p>The Earth's core is incredibly hot, over 5,000 °C. This heat, left over from the planet's formation 4.5 billion years ago, constantly flows outwards towards the surface. This is the first major source of the Earth's internal heat.</p>
+
+                <h4>Step 2: A Radioactive Blanket</h4>
+                <p>The second heat source is much closer to home. The rocks that make up the Earth's crust contain small amounts of radioactive elements like Uranium, Thorium, and Potassium. As these unstable elements decay over millions of years, they release energy in the form of heat, gently warming the crust from within. It's like being wrapped in a very, very slightly heated blanket.</p>
+
+                <h4>Step 3: The Geothermal Gradient</h4>
+                <p>These two heat sources—the flow from the mantle below and the production within the crust—combine to create the geothermal gradient. This is the rate at which temperature increases with depth. On average, it's about <strong>25 °C per kilometer</strong> of depth.</p>
+
+                <h4>Step 4: Using the Simulation</h4>
+                <p>This simulation lets you explore this phenomenon:
+                    <ul>
+                        <li>The <strong>left canvas</strong> shows a borehole drilled into the crust. You can click and drag the thermometer probe up and down.</li>
+                        <li>The <strong>right canvas</strong> plots the Temperature vs. Depth profile. As you drag the probe, a red dot will trace out the temperature profile on the graph.</li>
+                        <li>The <strong>sliders</strong> let you change the conditions. Try increasing the "Mantle Heat Flow" and see how it makes the whole profile hotter. Now try increasing the "Crustal Heat Production" and notice how it makes the temperature curve bend, becoming steeper near the surface.</li>
+                    </ul>
+                </p>
+
+                <p><strong>Everyday Analogy: A Heated Comforter.</strong> Imagine you have a thick comforter on your bed on a cold night. Underneath the comforter is a heating pad. The heating pad is the "Mantle Heat Flow." The comforter itself is made of a special material that generates its own warmth (like an electric blanket). This is the "Crustal Heat Production." If you stick a thermometer into the comforter, you'll find it gets warmer the deeper you go. It's warmed both by the heating pad below and by the heat being generated within its own fibers. The geothermal gradient is the measurement of how much warmer it gets for every inch you push the thermometer deeper.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Heat Equation</h2>
+                <p>The temperature profile `T` as a function of depth `z` is determined by the steady-state heat conduction equation. For a 1D problem with an internal heat source, the equation is:</p>
+                <p><code class="mono">k * (d²T/dz²) + A = 0</code></p>
+                <p>Where `k` is the thermal conductivity of the rock (assumed constant, ~2.5 W/m·K), and `A` is the volumetric heat production from radioactivity (which you control with a slider).</p>
+
+                <h4>The Solution</h4>
+                <p>Solving this differential equation gives us the temperature `T` at any depth `z`:</p>
+                <p><code class="mono">T(z) = T_surface + (q_m / k) * z + (A / (2k)) * z²</code></p>
+                <p><strong>Plain English Translation:</strong>
+                    <ul>
+                        <li><code>T_surface</code>: The starting temperature at the surface (z=0), which you set.</li>
+                        <li><code>(q_m / k) * z</code>: This is the linear part of the temperature increase. It's caused by the constant heat flow from the mantle, `q_m`. A higher mantle heat flow leads to a steeper linear increase.</li>
+                        <li><code>(A / (2k)) * z²</code>: This is the quadratic (curved) part. It's caused by the internal heat production, `A`. This term makes the temperature profile a parabola, curving upwards.</li>
+                    </ul>
+                </p>
+
+                <h4>The Gradient (dT/dz)</h4>
+                <p>The geothermal gradient itself is the derivative of the temperature with respect to depth:</p>
+                <p><code class="mono">dT/dz = q_m / k + (A / k) * z</code></p>
+                <p>This tells us that the gradient is not actually constant. It increases linearly with depth `z`. This is because at any given depth, the heat flowing past that point includes all the heat generated in the rock *above* it, plus the heat coming from the mantle. Therefore, the total heat flow increases as you get closer to the surface, making the gradient steeper.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class GeothermalSim {
+    constructor() {
+        this.mainCanvas = document.getElementById('main-canvas');
+        this.mainCtx = this.mainCanvas.getContext('2d');
+        this.plotCanvas = document.getElementById('plot-canvas');
+        this.plotCtx = this.plotCanvas.getContext('2d');
+
+        this.params = {
+            surfaceTemp: 15, // °C
+            heatProd: 1.0,   // μW/m³
+            mantleFlow: 30,  // mW/m²
+            thermalConductivity: 2.5, // W/m·K
+            maxDepth: 10000, // m
+        };
+
+        this.probeDepth = 0; // m
+
+        this.initControls();
+        this.draw();
+
+        this.initDrag();
+    }
+
+    initControls() {
+        const sliders = ['surface-temp', 'heat-prod', 'mantle-flow'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', () => {
+                this.updateParams();
+                this.draw();
+            });
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+             this.draw();
+        });
+
+        this.updateParams(); // Initial call
+    }
+
+    updateParams() {
+        this.params.surfaceTemp = parseFloat(document.getElementById('surface-temp-slider').value);
+        this.params.heatProd = parseFloat(document.getElementById('heat-prod-slider').value);
+        this.params.mantleFlow = parseFloat(document.getElementById('mantle-flow-slider').value);
+
+        document.getElementById('surface-temp-output').textContent = this.params.surfaceTemp.toFixed(0);
+        document.getElementById('heat-prod-output').textContent = this.params.heatProd.toFixed(1);
+        document.getElementById('mantle-flow-output').textContent = this.params.mantleFlow.toFixed(0);
+    }
+
+    initDrag() {
+        let isDragging = false;
+        const eventHandler = (e) => {
+            const rect = this.mainCanvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            this.probeDepth = (y / this.mainCanvas.height) * this.params.maxDepth;
+            this.probeDepth = Math.max(0, Math.min(this.params.maxDepth, this.probeDepth));
+            this.draw();
+            e.preventDefault();
+        };
+
+        this.mainCanvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            eventHandler(e);
+        });
+        this.mainCanvas.addEventListener('mousemove', e => {
+            if (isDragging) eventHandler(e);
+        });
+        this.mainCanvas.addEventListener('mouseup', () => isDragging = false);
+        this.mainCanvas.addEventListener('mouseleave', () => isDragging = false);
+    }
+
+    calculateTemp(depth_m) {
+        const T_s = this.params.surfaceTemp;
+        const q_m = this.params.mantleFlow / 1000; // W/m²
+        const A = this.params.heatProd / 1e6;     // W/m³
+        const k = this.params.thermalConductivity;
+
+        const temp = T_s + (q_m / k) * depth_m + (A / (2*k)) * Math.pow(depth_m, 2);
+        return temp;
+    }
+
+    draw() {
+        this.drawBorehole();
+        this.drawPlot();
+        this.updateInfoBox();
+    }
+
+    updateInfoBox() {
+        const temp = this.calculateTemp(this.probeDepth);
+        document.getElementById('depth-display').textContent = `${(this.probeDepth / 1000).toFixed(1)} km`;
+        document.getElementById('temp-display').textContent = `${temp.toFixed(0)} °C`;
+    }
+
+    drawBorehole() {
+        const ctx = this.mainCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        // Background gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim());
+        const endColor = getComputedStyle(document.body).style.getPropertyValue('--primary-color') || '#e67e22';
+        bgGrad.addColorStop(1, endColor);
+        ctx.fillStyle = bgGrad;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(0, 0, w, h);
+        ctx.globalAlpha = 1.0;
+
+        // Borehole
+        ctx.fillStyle = '#333';
+        ctx.fillRect(w/2 - 10, 0, 20, h);
+
+        // Probe
+        const probeY = (this.probeDepth / this.params.maxDepth) * h;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+        ctx.fillRect(w/2 - 20, probeY - 10, 40, 20);
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.strokeRect(w/2 - 20, probeY - 10, 40, 20);
+
+        // Cable
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(w/2, 0);
+        ctx.lineTo(w/2, probeY);
+        ctx.stroke();
+    }
+
+    drawPlot() {
+        const ctx = this.plotCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0, 0, w, h);
+
+        const maxTemp = this.calculateTemp(this.params.maxDepth);
+
+        // Draw axes
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.strokeStyle = textColor;
+        ctx.fillStyle = textColor;
+        ctx.lineWidth = 1;
+        ctx.font = '12px sans-serif';
+        ctx.beginPath();
+        ctx.moveTo(40, 10);
+        ctx.lineTo(40, h - 20); // Y axis (Depth)
+        ctx.moveTo(40, h - 20);
+        ctx.lineTo(w - 10, h - 20); // X axis (Temp)
+        ctx.stroke();
+        ctx.fillText("Depth (km)", 0, 20);
+        ctx.fillText("Temperature (°C)", w/2 - 40, h - 5);
+
+        // Ticks
+        for(let d=0; d<=this.params.maxDepth/1000; d+=2) {
+            const y = 10 + (d*1000 / this.params.maxDepth) * (h - 30);
+            ctx.fillText(d, 15, y+3);
+            ctx.beginPath(); ctx.moveTo(35, y); ctx.lineTo(40, y); ctx.stroke();
+        }
+        for(let t=0; t<=maxTemp; t+=Math.round(maxTemp/4)) {
+            const x = 40 + (t / maxTemp) * (w - 50);
+            ctx.fillText(Math.round(t), x-10, h-5);
+            ctx.beginPath(); ctx.moveTo(x, h-20); ctx.lineTo(x, h-25); ctx.stroke();
+        }
+
+        // Draw temperature profile
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let z_m = 0; z_m <= this.params.maxDepth; z_m += 100) {
+            const temp = this.calculateTemp(z_m);
+            const x = 40 + (temp / maxTemp) * (w - 50);
+            const y = 10 + (z_m / this.params.maxDepth) * (h - 30);
+            if (z_m === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Draw probe position on plot
+        const probeTemp = this.calculateTemp(this.probeDepth);
+        const probePlotX = 40 + (probeTemp / maxTemp) * (w - 50);
+        const probePlotY = 10 + (this.probeDepth / this.params.maxDepth) * (h - 30);
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(probePlotX, probePlotY, 5, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new GeothermalSim();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electroporation: Pores in a Cell Membrane</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #6f42c1; /* Purple */
+            --secondary-color: #6c757d;
+            --accent-color: #007bff; /* Blue for water */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #f1f3f5;
+            --lipid-head-color: #fd7e14;
+            --lipid-tail-color: #ffc107;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --primary-color: #a26eff;
+            --secondary-color: #8b949e;
+            --accent-color: #58a6ff;
+            --border-color: #30363d;
+            --canvas-bg: #161b22;
+            --control-bg: #21262d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 1.5; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .status-box { padding: 15px; background-color: var(--control-bg); border-radius: 5px; text-align: center; }
+        .status-box h4 { margin: 0 0 5px 0; }
+        .status-text { font-size: 1.2em; font-weight: bold; color: var(--primary-color); }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #eee; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Electroporation Simulation</h1>
+            <p class="subtitle">Visualizing how an electric field creates temporary pores in a cell membrane.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    A cell's membrane is a remarkable barrier, carefully controlling what gets in and out. But what if we need to deliver a drug or a piece of DNA inside? Electroporation is a clever technique that applies a brief, intense electric field to the cell. This field creates a voltage across the membrane that is so strong it destabilizes the orderly arrangement of lipid molecules, causing them to temporarily rearrange and open up small, water-filled pores. This simulation provides a conceptual animation of this process, allowing you to control the electric field strength and watch as the virtual cell membrane goes from a stable barrier to a porous gateway, revealing the biophysical mechanism that is crucial for many modern biotechnologies.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="control-group">
+                        <label for="efield-slider">Electric Field Strength: <output id="efield-output">0</output> kV/cm</label>
+                        <input type="range" id="efield-slider" min="0" max="15" step="0.1" value="0" style="width:100%;">
+                        <small>Increase the field to see its effect on the membrane.</small>
+                    </div>
+                    <div class="button-group">
+                        <button id="reset-btn">Reset Membrane</button>
+                    </div>
+                    <div class="status-box">
+                        <h4>Membrane Status</h4>
+                        <div id="status-text" class="status-text">Stable</div>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — Punching Holes with Electricity</h2>
+
+                <h4>Step 1: The Cell's "Skin" - The Lipid Bilayer</h4>
+                <p>The animation shows a close-up of a cell membrane. It's made of two layers of molecules called lipids—a "bilayer." Each lipid has:
+                    <ul>
+                        <li>A round, orange <strong>head</strong> that is "hydrophilic" (it likes water).</li>
+                        <li>Two yellow, wavy <strong>tails</strong> that are "hydrophobic" (they hate water).</li>
+                    </ul>
+                    They arrange themselves naturally with the water-loving heads facing outwards (towards the water inside and outside the cell) and the water-hating tails tucked away on the inside. This forms a stable, oily barrier that most things can't cross.
+                </p>
+
+                <h4>Step 2: Applying an Electric Field</h4>
+                <p>An electric field is an invisible force that pushes on charged particles. When we apply an external field (represented by the purple arrows), it pulls on the slightly charged parts of the water molecules and the lipid heads.</p>
+
+                <h4>Step 3: Stress and Strain</h4>
+                <p>As you increase the "Electric Field Strength" slider, two things happen:
+                    <ol>
+                        <li>The membrane gets squeezed. The electric field pushes the two sides of the membrane closer together.</li>
+                        <li>A voltage builds up across the membrane. This puts the entire structure under immense electrical stress.</li>
+                    </ol>
+                </p>
+
+                <h4>Step 4: Pore Formation - The Breaking Point</h4>
+                <p>
+                If the electric field is strong enough, the stress becomes too much to bear. It becomes more energetically favorable for the membrane to break than to stay intact. You'll see the animation show a dramatic rearrangement:
+                <ul>
+                    <li>A few lipid heads are pulled from the surface into the oily interior. This is highly unstable at first.</li>
+                    <li>This initial defect quickly expands as other lipid heads rush in to line the hole, trying to shield their oily tails from the water.</li>
+                    <li>The result is a stable, water-filled pore that now connects the outside and inside of the cell. The "Membrane Status" will change to "Porous!"</li>
+                </ul>
+                In a real experiment, molecules like drugs (represented by the small blue dots) could now diffuse through this temporary opening.
+                </p>
+
+                <h4>Step 5: Healing the Wound</h4>
+                <p>If you reduce the electric field back to zero, the forces holding the pore open disappear. The membrane is no longer under stress, and its most stable state is a complete bilayer. The pore will "heal" itself, and the membrane will become a barrier once again. This transient nature is what makes electroporation such a useful tool in biology.</p>
+
+                <p><strong>Everyday Analogy: A Crowd Forming an Aisle.</strong> Imagine a very dense, tightly packed crowd of people (the lipids). You (a drug molecule) want to get through. If two very strong people (the electric field) push from opposite sides of the crowd, they can force an aisle to open up. People in the crowd will turn to face the new aisle (the lipid heads lining the pore). This allows you to walk through. When the pushing stops, the crowd naturally closes the gap again.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Biophysics of Membrane Breakdown</h2>
+
+                <h4>1. Induced Transmembrane Voltage (TMV)</h4>
+                <p>An external electric field `E` induces a voltage `ΔΨ` across the cell membrane. The maximum voltage is at the "poles" of the cell (the parts aligned with the field). The formula is:</p>
+                <p><code>ΔΨ = f * E * r * cos(θ)</code></p>
+                <ul>
+                    <li><code>f</code>: A factor, usually around 1.5 for a spherical cell.</li>
+                    <li><code>E</code>: The external electric field strength.</li>
+                    <li><code>r</code>: The radius of the cell.</li>
+                    <li><code>θ</code>: The angle from the direction of the field.</li>
+                </ul>
+                <p>Electroporation occurs when this induced TMV exceeds a critical threshold, typically <strong>0.5 - 1.0 Volts</strong>. This is a huge voltage drop over the tiny thickness of a cell membrane (~5 nm), corresponding to a massive local electric field of millions of volts per meter.</p>
+
+                <h4>2. The Energy Landscape of Pore Formation</h4>
+                <p>We can think of this process in terms of energy. Creating a pore has an "energy cost" because it involves disrupting the stable bilayer.
+                <ul>
+                    <li><strong>Without a field:</strong> The energy cost to create a pore is very high. The membrane is stable.</li>
+                    <li><strong>With a field:</strong> The electric field adds electrical energy to the system. This energy term depends on the voltage and the membrane's capacitance. The presence of the field dramatically <strong>lowers the energy barrier</strong> required to form a pore.</li>
+                </ul>
+                At a critical field strength, the energy of a "porated" membrane becomes lower than the energy of an "intact but highly stressed" membrane, and the transition happens spontaneously.
+                </p>
+
+                <h4>3. Hydrophilic Pores</h4>
+                <p>The simulation shows the formation of a "hydrophilic" pore. This is a key step for stability. An initial defect would be a simple crack, exposing the hydrophobic (oily) lipid tails to water. This is extremely energetically unfavorable. The system rapidly minimizes its energy by having the hydrophilic (water-loving) lipid heads bend around to line the pore, shielding the tails from the water. This creates a relatively stable structure that can persist as long as the field is applied.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class ElectroporationSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            eField: 0, // kV/cm
+            poreThreshold: 8.0, // Critical field strength for pore formation
+            numLipids: 40,
+        };
+
+        this.lipids = [];
+        this.state = {
+            isPorous: false,
+            poreSize: 0,
+            poreCenter: 0,
+        };
+
+        this.initControls();
+        this.resizeCanvas();
+        this.reset();
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    resizeCanvas() {
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper.clientWidth;
+        this.canvas.height = wrapper.clientHeight;
+        this.reset();
+    }
+
+    initControls() {
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+        document.getElementById('efield-slider').addEventListener('input', e => {
+            this.params.eField = parseFloat(e.target.value);
+            document.getElementById('efield-output').textContent = this.params.eField.toFixed(1);
+        });
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+    }
+
+    reset() {
+        this.lipids = [];
+        this.state.isPorous = false;
+        this.state.poreSize = 0;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const lipidWidth = w / this.params.numLipids;
+
+        for (let i = 0; i < this.params.numLipids; i++) {
+            const x = (i + 0.5) * lipidWidth;
+            // Top layer
+            this.lipids.push({ x, y: h * 0.4, vx: 0, vy: 0, layer: 0, angle: 0 });
+            // Bottom layer
+            this.lipids.push({ x, y: h * 0.6, vx: 0, vy: 0, layer: 1, angle: Math.PI });
+        }
+
+        if (!this.animationFrameId) this.loop();
+    }
+
+    loop() {
+        this.update();
+        this.draw();
+        this.animationFrameId = requestAnimationFrame(() => this.loop());
+    }
+
+    update() {
+        const { eField, poreThreshold } = this.params;
+        const h = this.canvas.height;
+
+        // Pore formation logic
+        if (eField > poreThreshold && !this.state.isPorous) {
+            this.state.isPorous = true;
+            this.state.poreCenter = this.canvas.width / 2;
+        } else if (eField < poreThreshold * 0.8 && this.state.isPorous) {
+             this.state.isPorous = false;
+        }
+
+        // Update pore size
+        if (this.state.isPorous) {
+            const targetPoreSize = (eField - poreThreshold) * 15;
+            this.state.poreSize = this.state.poreSize * 0.9 + targetPoreSize * 0.1;
+        } else {
+            this.state.poreSize *= 0.9;
+        }
+
+        // Update lipid positions and orientations based on physics
+        const compression = eField / 50;
+        this.lipids.forEach(lipid => {
+            let targetY, targetX = lipid.x;
+            const targetAngle = lipid.layer === 0 ? 0 : Math.PI;
+
+            if (lipid.layer === 0) {
+                targetY = h * (0.5 - 0.1 * (1 - compression));
+            } else {
+                targetY = h * (0.5 + 0.1 * (1 - compression));
+            }
+
+            // Repel from pore
+            if (this.state.poreSize > 1) {
+                const dist = lipid.x - this.state.poreCenter;
+                if (Math.abs(dist) < this.state.poreSize * 2) {
+                    const repelForce = (this.state.poreSize*2 - Math.abs(dist)) * 0.1;
+                    targetX += Math.sign(dist) * repelForce;
+                }
+            }
+
+            // Simple physics
+            lipid.x += (targetX - lipid.x) * 0.1;
+            lipid.y += (targetY - lipid.y) * 0.1;
+            lipid.angle += (targetAngle - lipid.angle) * 0.1;
+        });
+
+        // Update status text
+        let status = "Stable";
+        if(eField > poreThreshold * 0.5) status = "Stressed";
+        if(this.state.isPorous) status = "Porous!";
+        document.getElementById('status-text').textContent = status;
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw electric field lines
+        const eColor = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+        ctx.strokeStyle = eColor;
+        ctx.lineWidth = 1 + (this.params.eField / 15) * 4;
+        ctx.globalAlpha = this.params.eField / 15;
+        for (let y = 0; y < h; y += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // Draw lipids
+        const headColor = getComputedStyle(document.body).style.getPropertyValue('--lipid-head-color') || '#fd7e14';
+        const tailColor = getComputedStyle(document.body).style.getPropertyValue('--lipid-tail-color') || '#ffc107';
+        const headRadius = 8;
+        const tailLength = 20;
+
+        this.lipids.forEach(lipid => {
+            if (this.state.poreSize > 1 && Math.abs(lipid.x - this.state.poreCenter) < this.state.poreSize) {
+                // This lipid is part of the pore wall
+                const dist = lipid.x - this.state.poreCenter;
+                const angle = Math.atan2(lipid.layer === 0 ? -1 : 1, dist) + Math.PI/2;
+                this.drawLipid(lipid.x, h/2, angle, headRadius, tailLength, headColor, tailColor);
+            } else {
+                 this.drawLipid(lipid.x, lipid.y, lipid.angle, headRadius, tailLength, headColor, tailColor);
+            }
+        });
+
+        // Draw some drug molecules passing through
+        if(this.state.isPorous) {
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
+            for(let i=0; i<5; i++) {
+                const x = this.state.poreCenter + (Math.random() - 0.5) * this.state.poreSize;
+                const y = (Math.random() * 0.8 + 0.1) * h;
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+
+    drawLipid(x, y, angle, headRadius, tailLength, headColor, tailColor) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.rotate(angle);
+
+        // Draw tails
+        this.ctx.strokeStyle = tailColor;
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 0);
+        this.ctx.lineTo(0, tailLength);
+        this.ctx.moveTo(0, 0);
+        this.ctx.lineTo(5, tailLength * 0.8); // slight bend
+        this.ctx.stroke();
+
+        // Draw head
+        this.ctx.fillStyle = headColor;
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, headRadius, 0, 2 * Math.PI);
+        this.ctx.fill();
+
+        this.ctx.restore();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new ElectroporationSim();
+});
+</script>
+</body>
+</html>

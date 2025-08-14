@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epidemic Spreading on a Network (SIR Model)</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #c82333; /* Red for epidemic */
+            --secondary-color: #6c757d;
+            --susceptible-color: #007bff;
+            --infected-color: #dc3545;
+            --recovered-color: #28a745;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #fdf5f5;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --primary-color: #f85149;
+            --secondary-color: #8b949e;
+            --susceptible-color: #58a6ff;
+            --infected-color: #ff7b72;
+            --recovered-color: #3fb950;
+            --border-color: #30363d;
+            --canvas-bg: #161b22;
+            --control-bg: #2a1c1d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .plots-column { display: grid; grid-template-rows: auto auto; gap: 15px; }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 1.5; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .legend { display: flex; justify-content: space-around; padding: 10px; }
+        .legend-item { display: flex; align-items: center; }
+        .legend-color { width: 15px; height: 15px; border-radius: 50%; margin-right: 5px; }
+        code, .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Epidemic Spreading on a Network (SIR Model)</h1>
+            <p class="subtitle">How social structure shapes the destiny of a disease.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    How a disease spreads through a population depends critically on "who knows whom"—the underlying structure of the social network. This simulation explores this idea using the classic <strong>Susceptible, Infected, Recovered (SIR)</strong> model of an epidemic. You can unleash a virus into three different types of networks: a highly ordered "Regular" network, a completely "Random" one, and a realistic "Scale-Free" network that contains highly connected "hubs." By watching the disease spread and observing the resulting epidemic curve, you can see firsthand how network structure is just as important as the disease's infectiousness, and why hubs in a scale-free network can act as super-spreaders that lead to explosive, widespread outbreaks.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="reset-btn">New Network & Reset</button>
+                    </div>
+                    <p><small>After resetting, click a node on the network to start the infection.</small></p>
+                    <div class="control-group">
+                        <label for="network-type">Network Topology</label>
+                        <select id="network-type" style="width:100%; padding: 5px;">
+                            <option value="scale-free">Scale-Free</option>
+                            <option value="random">Random</option>
+                            <option value="regular">Regular</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <h4>Epidemic Parameters</h4>
+                    <div class="control-group">
+                        <label for="beta-slider">Infection Prob. (<span class="mono">β</span>): <output id="beta-output">0.1</output></label>
+                        <input type="range" id="beta-slider" min="0.01" max="1" step="0.01" value="0.1" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="gamma-slider">Recovery Rate (<span class="mono">γ</span>): <output id="gamma-output">0.02</output></label>
+                        <input type="range" id="gamma-slider" min="0.01" max="0.1" step="0.005" value="0.02" style="width:100%;">
+                    </div>
+                    <div class="control-group">
+                        <strong>Reproduction No. (R₀ ≈ β/γ): <span id="r0-display">5.0</span></strong>
+                    </div>
+                    <hr>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-color" style="background:var(--susceptible-color)"></div>Susceptible</div>
+                        <div class="legend-item"><div class="legend-color" style="background:var(--infected-color)"></div>Infected</div>
+                        <div class="legend-item"><div class="legend-color" style="background:var(--recovered-color)"></div>Recovered</div>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="plots-column">
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Population Network</div>
+                        <canvas id="network-canvas"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Epidemic Curve</div>
+                        <canvas id="plot-canvas" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — How a Sickness Spreads</h2>
+
+                <h4>Step 1: The S-I-R Model</h4>
+                <p>This simulation uses a famous model in epidemiology. Every person (a node in the network) can be in one of three states:</p>
+                <ul>
+                    <li><strong style="color:var(--susceptible-color);">Susceptible (S):</strong> Healthy, but can get sick. Initially, almost everyone is in this state.</li>
+                    <li><strong style="color:var(--infected-color);">Infected (I):</strong> Sick and contagious. They can pass the disease to their susceptible neighbors.</li>
+                    <li><strong style="color:var(--recovered-color);">Recovered (R):</strong> No longer sick, no longer contagious, and now immune.</li>
+                </ul>
+                <p>The disease spreads when an Infected node is connected to a Susceptible node. The recovery process is a random chance for any Infected person to get better at each time step.</p>
+
+                <h4>Step 2: The Importance of Network Structure</h4>
+                <p>The key idea here is that not all societies are structured the same. Use the "Network Topology" dropdown to explore three different types:</p>
+                <ul>
+                    <li><strong>Regular Network:</strong> A highly ordered world where everyone has the same number of local neighbors. Think of people sitting in a grid. An infection spreads slowly and predictably, like a wave moving through the network.</li>
+                    <li><strong>Random Network:</strong> Connections are wired randomly. This creates "shortcuts" in the network, allowing the disease to jump to distant parts of the population much more quickly than in a regular network.</li>
+                    <li><strong>Scale-Free Network:</strong> This is the most realistic model for many real-world social networks. Most people have only a few connections, but a handful of "hubs" are extremely well-connected. Think of celebrities, major airports, or popular websites.</li>
+                </ul>
+
+                <h4>Step 3: Hubs as Super-Spreaders</h4>
+                <p>
+                Select the "Scale-Free" network and reset the simulation. You will see a few nodes that have many more connections than others. These are the hubs. Now, try to start an infection by clicking on a regular, low-connected node. The epidemic might be small and die out.
+                <br><br>
+                Reset again, but this time, start the infection by clicking on one of the major hubs. The result is dramatically different. The hub instantly exposes the disease to a huge fraction of the network, causing an explosive, widespread epidemic. This demonstrates why scale-free networks are so fragile and why identifying and protecting hubs is a critical strategy in public health.
+                </p>
+
+                <h4>Step 4: The Epidemic Curve</h4>
+                <p>The bottom plot shows the number of people in each state over time. The red curve for "Infected" is the famous "epidemic curve." A key goal of public health is to "flatten the curve"—to slow the spread so that the peak number of infected people at any one time is lower, preventing hospitals from being overwhelmed. Try adjusting the Infection Probability slider to see how it affects the shape and height of this curve.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Mathematics of Epidemics and Networks</h2>
+
+                <h4>1. The Agent-Based SIR Model</h4>
+                <p>This simulation is an "agent-based" model. At each time step, we iterate through the rules for each agent (node):</p>
+                <ol>
+                    <li>For each <strong>Infected</strong> node:
+                        <ul>
+                            <li>It has a chance `γ` (gamma) to recover, changing its state to Recovered.</li>
+                            <li>For each of its neighbors that is <strong>Susceptible</strong>, it has a chance `β` (beta) to pass on the infection, changing the neighbor's state to Infected.</li>
+                        </ul>
+                    </li>
+                </ol>
+                <p>This process is repeated until there are no more Infected nodes.</p>
+
+                <h4>2. The Basic Reproduction Number (R₀)</h4>
+                <p>In simple "well-mixed" models, the most important number is the Basic Reproduction Number, `R₀` (R-naught). It represents the average number of people an infected person will pass the disease to in a fully susceptible population. It's estimated by:</p>
+                <p><code class="mono">R₀ ≈ β / γ</code></p>
+                <p>If `R₀ > 1`, the epidemic will grow. If `R₀ < 1`, it will die out. While this is a simplification for network models (the average number of connections also matters), it's a very useful guide. A higher `β` or lower `γ` leads to a higher `R₀` and a more severe epidemic.</p>
+
+                <h4>3. Network Generation Algorithms</h4>
+                <ul>
+                    <li><strong>Regular (Ring Lattice):</strong> Nodes are arranged in a circle, and each node is connected to its `k` nearest neighbors on each side.</li>
+                    <li><strong>Random (Erdős-Rényi):</strong> Start with `N` nodes. For every possible pair of nodes, create an edge between them with a fixed probability `p`.</li>
+                    <li><strong>Scale-Free (Barabási-Albert):</strong> This uses "preferential attachment." Start with a small, connected network. Then, add new nodes one at a time. Each new node creates a fixed number of edges to existing nodes. The probability of connecting to an existing node is proportional to the number of connections that node already has. This "rich get richer" mechanism naturally creates the hubs.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+<script>
+class SIRSim {
+    constructor() {
+        this.networkCanvas = document.getElementById('network-canvas');
+        this.netCtx = this.networkCanvas.getContext('2d');
+        this.plotCanvas = document.getElementById('plot-canvas');
+        this.plotCtx = this.plotCanvas.getContext('2d');
+
+        this.params = {
+            beta: 0.1, gamma: 0.02,
+            networkType: 'scale-free',
+            numNodes: 100,
+        };
+
+        this.nodes = [];
+        this.edges = [];
+        this.history = [];
+        this.isRunning = false;
+
+        this.initControls();
+        this.resizeCanvases();
+        this.reset();
+
+        window.addEventListener('resize', () => this.resizeCanvases());
+    }
+
+    resizeCanvases() {
+        ['network-canvas', 'plot-canvas'].forEach(id => {
+            const canvas = document.getElementById(id);
+            const wrapper = canvas.parentElement;
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+        });
+    }
+
+    initControls() {
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+        document.getElementById('network-type').addEventListener('change', e => {
+            this.params.networkType = e.target.value;
+            this.reset();
+        });
+
+        const sliders = { beta: 0.1, gamma: 0.02 };
+        for (const p in sliders) {
+            document.getElementById(`${p}-slider`).addEventListener('input', e => {
+                this.params[p] = parseFloat(e.target.value);
+                document.getElementById(`${p}-output`).textContent = this.params[p].toFixed(2);
+                this.updateR0();
+            });
+        }
+        this.updateR0();
+
+        this.networkCanvas.addEventListener('click', e => {
+            if (this.isRunning) return;
+            const rect = this.networkCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            let closestNode = null;
+            let minDist = Infinity;
+            this.nodes.forEach(node => {
+                const d = Math.sqrt((x-node.x)**2 + (y-node.y)**2);
+                if (d < minDist) {
+                    minDist = d;
+                    closestNode = node;
+                }
+            });
+
+            if (closestNode && minDist < 20) {
+                closestNode.state = 'I';
+                this.isRunning = true;
+                this.loop();
+            }
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+    }
+
+    updateR0() {
+        const r0 = this.params.beta / this.params.gamma;
+        document.getElementById('r0-display').textContent = r0.toFixed(1);
+    }
+
+    reset() {
+        this.isRunning = false;
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+
+        this.createNetwork();
+        this.history = [];
+        this.draw();
+    }
+
+    createNetwork() {
+        const { numNodes, networkType } = this.params;
+        this.nodes = [];
+        this.edges = [];
+        const w = this.networkCanvas.width;
+        const h = this.networkCanvas.height;
+
+        for (let i = 0; i < numNodes; i++) {
+            this.nodes.push({
+                id: i, state: 'S',
+                x: Math.random() * w, y: Math.random() * h,
+                vx: 0, vy: 0, degree: 0
+            });
+        }
+
+        if (networkType === 'regular') {
+            const k = 4; // Each node connected to k neighbors
+            for (let i = 0; i < numNodes; i++) {
+                for (let j = 1; j <= k / 2; j++) {
+                    const neighbor = (i + j) % numNodes;
+                    this.edges.push({ source: i, target: neighbor });
+                    this.nodes[i].degree++;
+                    this.nodes[neighbor].degree++;
+                }
+            }
+        } else if (networkType === 'random') {
+            const p = 0.05; // Connection probability
+            for (let i = 0; i < numNodes; i++) {
+                for (let j = i + 1; j < numNodes; j++) {
+                    if (Math.random() < p) {
+                        this.edges.push({ source: i, target: j });
+                        this.nodes[i].degree++;
+                        this.nodes[j].degree++;
+                    }
+                }
+            }
+        } else { // scale-free
+            const m = 2; // New nodes connect to m existing nodes
+            const initialNodes = m + 1;
+            for (let i = 0; i < initialNodes; i++) {
+                for (let j = i + 1; j < initialNodes; j++) {
+                    this.edges.push({ source: i, target: j });
+                    this.nodes[i].degree++;
+                    this.nodes[j].degree++;
+                }
+            }
+            for (let i = initialNodes; i < numNodes; i++) {
+                const totalDegree = this.edges.length * 2;
+                for (let j = 0; j < m; j++) {
+                    let target = -1;
+                    while (target === -1) {
+                        const r = Math.random();
+                        let cumulativeProb = 0;
+                        for (let k = 0; k < i; k++) {
+                            cumulativeProb += this.nodes[k].degree / totalDegree;
+                            if (r < cumulativeProb) {
+                                target = k;
+                                break;
+                            }
+                        }
+                    }
+                    if (target !== -1 && !this.edges.some(e => (e.source === i && e.target === target) || (e.source === target && e.target === i))) {
+                        this.edges.push({ source: i, target });
+                        this.nodes[i].degree++;
+                        this.nodes[target].degree++;
+                    }
+                }
+            }
+        }
+    }
+
+    loop() {
+        if (!this.isRunning) return;
+        this.update();
+        this.draw();
+        this.animationFrameId = requestAnimationFrame(() => this.loop());
+    }
+
+    update() {
+        // SIR model update
+        const newInfections = [];
+        const infectedNodes = this.nodes.filter(n => n.state === 'I');
+
+        infectedNodes.forEach(node => {
+            // Recovery
+            if (Math.random() < this.params.gamma) {
+                node.state = 'R';
+            }
+            // Infection
+            this.edges.forEach(edge => {
+                if (edge.source === node.id || edge.target === node.id) {
+                    const neighborId = edge.source === node.id ? edge.target : edge.source;
+                    const neighbor = this.nodes[neighborId];
+                    if (neighbor.state === 'S' && Math.random() < this.params.beta) {
+                        newInfections.push(neighbor);
+                    }
+                }
+            });
+        });
+
+        newInfections.forEach(node => node.state = 'I');
+
+        // Force-directed layout update
+        this.nodes.forEach(n1 => {
+            n1.vx *= 0.9; n1.vy *= 0.9; // Damping
+            this.nodes.forEach(n2 => {
+                if (n1 === n2) return;
+                const dx = n2.x - n1.x;
+                const dy = n2.y - n1.y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                if (d > 0) {
+                    const force = -500 / (d*d); // Repulsion
+                    n1.vx += force * dx / d;
+                    n1.vy += force * dy / d;
+                }
+            });
+        });
+
+        this.edges.forEach(edge => {
+            const n1 = this.nodes[edge.source];
+            const n2 = this.nodes[edge.target];
+            const dx = n2.x - n1.x;
+            const dy = n2.y - n1.y;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            const force = 0.01 * (d - 100); // Spring
+            n1.vx += force * dx / d; n1.vy += force * dy / d;
+            n2.vx -= force * dx / d; n2.vy -= force * dy / d;
+        });
+
+        this.nodes.forEach(n => { n.x += n.vx; n.y += n.vy; });
+
+        // Record history for plot
+        const counts = { S: 0, I: 0, R: 0 };
+        this.nodes.forEach(n => counts[n.state]++);
+        this.history.push(counts);
+        if (this.history.length > 500) this.history.shift();
+
+        if (counts.I === 0) this.isRunning = false;
+    }
+
+    draw() {
+        this.drawNetwork();
+        this.drawPlot();
+    }
+
+    drawNetwork() {
+        const ctx = this.netCtx;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border-color').trim();
+        ctx.lineWidth = 0.5;
+        this.edges.forEach(edge => {
+            const n1 = this.nodes[edge.source];
+            const n2 = this.nodes[edge.target];
+            ctx.beginPath();
+            ctx.moveTo(n1.x, n1.y);
+            ctx.lineTo(n2.x, n2.y);
+            ctx.stroke();
+        });
+
+        const colors = {
+            S: getComputedStyle(document.body).style.getPropertyValue('--susceptible-color') || '#007bff',
+            I: getComputedStyle(document.body).style.getPropertyValue('--infected-color') || '#dc3545',
+            R: getComputedStyle(document.body).style.getPropertyValue('--recovered-color') || '#28a745'
+        };
+        this.nodes.forEach(node => {
+            ctx.fillStyle = colors[node.state];
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 5, 0, 2*Math.PI);
+            ctx.fill();
+        });
+    }
+
+    drawPlot() {
+        const ctx = this.plotCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0,0,w,h);
+
+        if (this.history.length === 0) return;
+
+        const colors = {
+            S: getComputedStyle(document.body).style.getPropertyValue('--susceptible-color') || '#007bff',
+            I: getComputedStyle(document.body).style.getPropertyValue('--infected-color') || '#dc3545',
+            R: getComputedStyle(document.body).style.getPropertyValue('--recovered-color') || '#28a745'
+        };
+
+        ['S', 'I', 'R'].forEach(state => {
+            ctx.strokeStyle = colors[state];
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            this.history.forEach((counts, t) => {
+                const x = (t / (this.history.length - 1)) * w;
+                const y = h - (counts[state] / this.params.numNodes) * h;
+                if (t === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new SIRSim();
+});
+</script>
+</body>
+</html>

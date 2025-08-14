@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earthquake Magnitude: Richter vs. Moment Magnitude</title>
+    <style>
+        :root {
+            --bg-color: #faf8f5;
+            --text-color: #333;
+            --primary-color: #b94b00; /* Earthy orange */
+            --secondary-color: #7c6a5d;
+            --accent-color: #007bff;
+            --border-color: #ddd;
+            --canvas-bg: #fff;
+            --control-bg: #f1e9e1;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1c1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #d86a23;
+            --secondary-color: #a49182;
+            --accent-color: #58a6ff;
+            --border-color: #555;
+            --canvas-bg: #111;
+            --control-bg: #4a3c30;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .magnitude-display { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: center; margin-top: 20px; }
+        .magnitude-box { padding: 15px; border-radius: 8px; border: 2px solid var(--border-color); }
+        .magnitude-box h4 { margin-top: 0; }
+        .magnitude-value { font-size: 2.5em; font-weight: bold; color: var(--primary-color); }
+        #mw-box.saturated { border-color: var(--accent-color); }
+        #mw-box.saturated .magnitude-value { color: var(--accent-color); }
+        #ml-box.saturated { border-color: var(--secondary-color); animation: pulse-border 1s infinite; }
+        @keyframes pulse-border { 0% { box-shadow: 0 0 0 0 var(--secondary-color); } 70% { box-shadow: 0 0 0 10px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+        code, .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Earthquake Magnitude: Richter vs. Moment Magnitude</h1>
+            <p class="subtitle">An interactive comparison of how we measure the size of earthquakes.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    When we hear about an earthquake's size, we often think of the "Richter scale." While groundbreaking, this scale, based on the maximum shaking recorded by a seismograph, has a critical flaw: it "saturates," or hits a ceiling, for the largest earthquakes, failing to distinguish a massive quake from a truly catastrophic one. Modern seismology now uses the more physically robust <strong>Moment Magnitude Scale (Mw)</strong>, which measures the total energy released based on the physical properties of the fault rupture—its area, how much it slipped, and the rock's stiffness. This simulation lets you define an earthquake by these physical parameters and see how both scales report its magnitude, clearly demonstrating why the Moment Magnitude scale is essential for accurately measuring the planet's most powerful seismic events.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Fault Parameters</h3>
+                    <div class="control-group">
+                        <label for="area-slider">Fault Area (A): <output id="area-output">1000</output> km²</label>
+                        <input type="range" id="area-slider" min="1" max="5" step="0.01" value="3" style="width:100%;">
+                        <small>Logarithmic scale. Area of the fault plane that ruptured.</small>
+                    </div>
+                     <div class="control-group">
+                        <label for="slip-slider">Average Slip (D): <output id="slip-output">1.0</output> m</label>
+                        <input type="range" id="slip-slider" min="0" max="3" step="0.01" value="1" style="width:100%;">
+                         <small>Logarithmic scale. How far the two sides of the fault moved.</small>
+                    </div>
+                    <div class="control-group">
+                        <label for="rigidity-slider">Rock Rigidity (μ): <output id="rigidity-output">30</output> GPa</label>
+                        <input type="range" id="rigidity-slider" min="10" max="70" step="1" value="30" style="width:100%;">
+                        <small>The stiffness of the rock around the fault.</small>
+                    </div>
+                    <div class="magnitude-display">
+                        <div class="magnitude-box" id="ml-box">
+                            <h4>Local Magnitude (M<small>L</small>)</h4>
+                            <div class="magnitude-value" id="ml-value">--</div>
+                            <small>(Richter-type)</small>
+                        </div>
+                        <div class="magnitude-box" id="mw-box">
+                            <h4>Moment Magnitude (M<small>w</small>)</h4>
+                            <div class="magnitude-value" id="mw-value">--</div>
+                             <small>(Modern standard)</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — Measuring an Earthquake's Power</h2>
+
+                <h4>Step 1: What Causes an Earthquake?</h4>
+                <p>An earthquake is a sudden slip along a fault, which is a fracture between two blocks of rock. In the animation, you can see these two blocks. The earthquake happens on the plane between them. The size of this earthquake depends on three physical things you can control with the sliders:</p>
+                <ul>
+                    <li><strong>Fault Area:</strong> How large is the surface of the fault that actually slipped? A bigger area means a bigger quake.</li>
+                    <li><strong>Average Slip:</strong> How far did the blocks of rock move past each other? A slip of a few meters is a huge earthquake.</li>
+                    <li><strong>Rock Rigidity:</strong> How stiff is the rock? Stiffer rock can store more strain energy before it breaks, leading to a more powerful earthquake.</li>
+                </ul>
+
+                <h4>Step 2: The Old Way - The Richter Scale (Local Magnitude, M<small>L</small>)</h4>
+                <p>The Richter scale was a clever way to estimate size based on the aftermath: the shaking. It measures the maximum amplitude (how high the wiggles are) on a seismograph recording. Think of it like judging the power of a cannon by how loud the "bang" is. For small to medium cannons, a bigger cannon makes a bigger bang. This works well for a while.</p>
+
+                <h4>Step 3: The Problem of "Saturation"</h4>
+                <p>
+                Now, use the sliders to make the Fault Area and Average Slip very large. Watch the two magnitude displays. You will see the Local Magnitude (M<small>L</small>) get "stuck" around 8.0-8.5, even as the physical parameters get bigger. This is <strong>saturation</strong>.
+                <br><br>
+                <strong>Analogy: A Stereo System.</strong> Imagine judging a stereo's power by its volume knob. This works fine until you turn the knob past a certain point. The speakers are now at their maximum output. Turning the knob even further doesn't make the music any louder. The volume has "saturated." The Richter scale is like that volume knob. For the biggest earthquakes on Earth, the ground can only shake so much at any one point, so the seismograph reading hits a limit. The M<small>L</small> scale can't tell the difference between an earthquake that is rupturing a 200 km long fault and one that is rupturing an 800 km long fault.
+                </p>
+
+                <h4>Step 4: The Modern Way - The Moment Magnitude Scale (M<small>w</small>)</h4>
+                <p>To solve the saturation problem, scientists developed the Moment Magnitude Scale. Instead of measuring the effect (shaking), it calculates the cause. It uses the three physical parameters you control (Area, Slip, Rigidity) to calculate the <strong>Seismic Moment (M₀)</strong>, a direct measure of the total energy released.
+                <br>
+                The Moment Magnitude (M<small>w</small>) is then calculated from this Seismic Moment. As you can see in the simulation, no matter how large you make the fault parameters, the M<small>w</small> value continues to increase. It never saturates. This is why it's the standard for measuring medium to large earthquakes today.
+                </p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Magnitude Equations</h2>
+                <p>The two scales are calculated in fundamentally different ways.</p>
+
+                <h4>1. Seismic Moment (M₀)</h4>
+                <p>This is the physical foundation of the modern scale. It is a measure of the total work done by the fault slip. The formula is a simple multiplication:</p>
+                <p><code class="mono">M₀ = μ * A * D</code></p>
+                <ul>
+                    <li><code>M₀</code>: Seismic Moment, in Newton-meters (N·m).</li>
+                    <li><code>μ</code> (mu): Rock Rigidity, in Pascals (N/m²). You set this in GigaPascals (GPa).</li>
+                    <li><code>A</code>: Fault Area, in square meters (m²). You set this in square kilometers (km²).</li>
+                    <li><code>D</code>: Average Slip, in meters (m).</li>
+                </ul>
+                <p><strong>Example:</strong> For a fault with Area = 1000 km² (10⁹ m²), Slip = 2 m, and Rigidity = 30 GPa (30×10⁹ N/m²):
+                <br><code>M₀ = (30 × 10⁹ N/m²) * (10⁹ m²) * (2 m) = 6 × 10¹⁹ N·m</code></p>
+
+
+                <h4>2. Moment Magnitude (M<small>w</small>)</h4>
+                <p>The Moment Magnitude is calculated directly from the Seismic Moment. The formula is logarithmic:</p>
+                <p><code class="mono">M<small>w</small> = (2/3) * log₁₀(M₀) - 6.0</code></p>
+                <p>The constants `2/3` and `-6.0` are chosen so that the M<small>w</small> scale roughly matches the older Richter and other magnitude scales in their non-saturated range.
+                <br><strong>Example (continued):</strong>
+                <br><code>M<small>w</small> = (2/3) * log₁₀(6 × 10¹⁹) - 6.0</code>
+                <br><code>M<small>w</small> = (2/3) * (19.78) - 6.0 = 13.18 - 6.0 = 7.18</code>
+                </p>
+
+                <h4>3. Local Magnitude (M<small>L</small>) - Simulating Saturation</h4>
+                <p>The original Richter scale is <code>M<small>L</small> = log₁₀(Amplitude) + Correction</code>. Since we don't have a real seismogram, we simulate its behavior based on the physical energy. We know M<small>L</small> should be similar to M<small>w</small> for smaller quakes but should saturate for larger ones. This simulation uses a formula to model this behavior:</p>
+                <p><code class="mono">M<small>L</small> = 8.5 - 4.0 * exp(-0.8 * M<small>w</small>)</code></p>
+                <p>This formula is a simple mathematical model, not a physical law. It ensures that when M<small>w</small> is small, M<small>L</small> is close to M<small>w</small>, but as M<small>w</small> becomes very large, the exponential term goes to zero and M<small>L</small> approaches a maximum value of 8.5.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class EarthquakeSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            area_log: 3, // log10(km^2)
+            slip_log: 0, // log10(m)
+            rigidity: 30, // GPa
+        };
+
+        this.initControls();
+        this.update();
+        this.draw();
+    }
+
+    initControls() {
+        const sliders = ['area', 'slip', 'rigidity'];
+        sliders.forEach(p => {
+            const slider = document.getElementById(`${p}-slider`);
+            slider.addEventListener('input', e => {
+                if (p === 'rigidity') {
+                    this.params.rigidity = parseFloat(e.target.value);
+                } else {
+                    this.params[`${p}_log`] = parseFloat(e.target.value);
+                }
+                this.update();
+                this.draw();
+            });
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+             this.draw();
+        });
+    }
+
+    update() {
+        const area_km2 = Math.pow(10, this.params.area_log);
+        const slip_m = Math.pow(10, this.params.slip_log);
+        const rigidity_gpa = this.params.rigidity;
+
+        document.getElementById('area-output').textContent = area_km2.toLocaleString(undefined, {maximumFractionDigits: 0});
+        document.getElementById('slip-output').textContent = slip_m.toFixed(1);
+        document.getElementById('rigidity-output').textContent = rigidity_gpa;
+
+        // Calculate Seismic Moment (M0)
+        const rigidity_pa = rigidity_gpa * 1e9;
+        const area_m2 = area_km2 * 1e6;
+        const M0 = rigidity_pa * area_m2 * slip_m;
+
+        // Calculate Moment Magnitude (Mw)
+        let Mw = (2/3) * (Math.log10(M0)) - 6.0;
+        if (!isFinite(Mw) || Mw < 0) Mw = 0;
+
+        // Simulate Local Magnitude (ML) with saturation
+        let Ml = 8.5 - 4.0 * Math.exp(-0.8 * Mw);
+        if (!isFinite(Ml) || Ml < 0) Ml = 0;
+
+        document.getElementById('mw-value').textContent = Mw.toFixed(1);
+        document.getElementById('ml-value').textContent = Ml.toFixed(1);
+
+        // Update saturation visuals
+        const mlBox = document.getElementById('ml-box');
+        if (Mw > 7.5 && Ml < Mw - 0.2) {
+             mlBox.classList.add('saturated');
+             mlBox.title = "Saturation: Local Magnitude is underestimating the true size of this large earthquake.";
+        } else {
+             mlBox.classList.remove('saturated');
+             mlBox.title = "";
+        }
+    }
+
+    draw() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        this.ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        this.ctx.fillRect(0, 0, w, h);
+
+        const area = Math.pow(10, this.params.area_log);
+        const slip = Math.pow(10, this.params.slip_log);
+
+        const fault_w = Math.min(w * 0.8, w * 0.1 * Math.sqrt(area)/10);
+        const fault_h = Math.min(h * 0.8, h * 0.1 * Math.sqrt(area)/10);
+        const slip_dist = Math.min(w * 0.2, 5 + slip * 5);
+
+        const perspect = 0.3;
+        const offset_x = w * 0.1;
+        const offset_y = h * 0.2;
+
+        // Draw back block
+        this.ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--secondary-color').trim();
+        this.ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        this.ctx.lineWidth = 1;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(offset_x, offset_y + fault_h);
+        this.ctx.lineTo(offset_x, offset_y);
+        this.ctx.lineTo(offset_x + fault_w, offset_y);
+        this.ctx.lineTo(offset_x + fault_w + perspect * 50, offset_y - perspect * 50);
+        this.ctx.lineTo(offset_x + perspect * 50, offset_y - perspect * 50);
+        this.ctx.lineTo(offset_x + perspect * 50, offset_y + fault_h - perspect * 50);
+        this.ctx.lineTo(offset_x, offset_y + fault_h);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Draw front block
+        const front_offset_x = offset_x + slip_dist;
+        this.ctx.beginPath();
+        this.ctx.moveTo(front_offset_x, offset_y + fault_h);
+        this.ctx.lineTo(front_offset_x + fault_w, offset_y + fault_h);
+        this.ctx.lineTo(front_offset_x + fault_w, offset_y);
+        this.ctx.lineTo(front_offset_x, offset_y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(front_offset_x + fault_w, offset_y);
+        this.ctx.lineTo(front_offset_x + fault_w + perspect*50, offset_y-perspect*50);
+        this.ctx.lineTo(front_offset_x + fault_w + perspect*50, offset_y+fault_h-perspect*50);
+        this.ctx.lineTo(front_offset_x + fault_w, offset_y + fault_h);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Draw fault plane
+        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(offset_x, offset_y);
+        this.ctx.lineTo(offset_x + fault_w, offset_y);
+        this.ctx.lineTo(offset_x + fault_w, offset_y + fault_h);
+        this.ctx.lineTo(offset_x, offset_y + fault_h);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new EarthquakeSim();
+});
+</script>
+</body>
+</html>

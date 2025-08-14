@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lévy Flight Foraging Simulation</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #34a853; /* Green for nature/food */
+            --secondary-color: #6c757d;
+            --brownian-color: #4285f4;
+            --levy-color: #ea4335;
+            --border-color: #ddd;
+            --canvas-bg: #fff;
+            --control-bg: #e8f5e9;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #57c474;
+            --secondary-color: #a49182;
+            --brownian-color: #8ab4f8;
+            --levy-color: #f28b82;
+            --border-color: #555;
+            --canvas-bg: #111;
+            --control-bg: #2e3c30;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 1; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .scoreboard { padding: 15px; background-color: var(--control-bg); border-radius: 5px; text-align: center; }
+        .scoreboard h4 { margin-top: 0; }
+        .score { font-size: 1.5em; font-weight: bold; }
+        .brownian-score { color: var(--brownian-color); }
+        .levy-score { color: var(--levy-color); }
+        code, .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Lévy Flight Foraging Simulation</h1>
+            <p class="subtitle">Comparing random search strategies for finding sparse resources.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    When an animal forages for food that is rare and scattered, what is the best way to search? A simple random walk, known as Brownian motion, involves many small, aimless steps that are good for covering a local patch but terrible for exploring a large area. The <strong>Lévy Flight Foraging Hypothesis</strong> proposes a more efficient strategy observed in nature: a random walk composed of many short, intensive search steps, punctuated by occasional, long-distance "flights" to entirely new regions. This simulation directly compares these two strategies, releasing a "Brownian" searcher and a "Lévy" searcher into an environment with sparse food. You can watch their paths and see which one is more successful, demonstrating why the Lévy flight is considered a potentially optimal strategy for navigating such landscapes.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="start-btn">Start / Pause</button>
+                        <button id="reset-btn">Reset Simulation</button>
+                    </div>
+                    <div class="scoreboard">
+                        <h4>Food Found</h4>
+                        <span class="score brownian-score" id="brownian-score">0</span>
+                        <span class="score"> vs </span>
+                        <span class="score levy-score" id="levy-score">0</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="food-slider">Food Patch Count: <output id="food-output">50</output></label>
+                        <input type="range" id="food-slider" min="10" max="200" step="10" value="50" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="alpha-slider">Lévy Flight Exponent (<span class="mono">α</span>): <output id="alpha-output">1.5</output></label>
+                        <input type="range" id="alpha-slider" min="1.01" max="3.0" step="0.01" value="1.5" style="width:100%;">
+                        <small>Lower α = more long flights. (α ≤ 2 is Lévy)</small>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — How to Search for a Needle in a Haystack</h2>
+
+                <h4>Step 1: The Problem - Sparse Resources</h4>
+                <p>Imagine you are an albatross searching for fish in the vast ocean. The fish are grouped in small, scattered schools. If you search one area and find nothing, how long should you keep searching there before giving up and flying somewhere else? And how far should you fly? This is the fundamental problem of searching for sparse resources.</p>
+
+                <h4>Step 2: Strategy 1 - Brownian Motion (The Meticulous Searcher)</h4>
+                <p>The blue searcher in our simulation uses Brownian motion. This is a classic random walk where each step is small and in a random direction. Look at its path: it's a dense, tangled mess. This strategy is excellent for exploring a small area very thoroughly. If it stumbles upon a region with a few food patches, it will likely find them all. However, it is extremely slow to move to a new, unexplored region of the map. It gets "stuck" in one place for a long time.</p>
+
+                <h4>Step 3: Strategy 2 - Lévy Flight (The Explorer)</h4>
+                <p>The red searcher uses a Lévy flight. This is a much more interesting random walk. Most of its steps are also small and random, just like the Brownian searcher. But, critically, it has a small chance of taking an enormous step—a long, straight "flight" to a distant, random location.
+                <br><br>
+                Look at its path: you can see dense clusters of searching (the short steps) connected by long, straight lines (the flights). This strategy elegantly solves the search problem. The short steps allow for a thorough search of a local area, while the long flights prevent it from getting stuck and ensure the entire landscape is explored over time.
+                </p>
+
+                <h4>Step 4: Who Wins?</h4>
+                <p>
+                Watch the scoreboard. In most cases, especially when food is sparse, the Lévy searcher will find significantly more food patches than the Brownian one in the same amount of time. It doesn't waste time in the large empty spaces between food patches. This efficiency is why scientists believe many animals, from insects to sharks to humans, have evolved foraging patterns that resemble Lévy flights.
+                </p>
+
+                <p><strong>Everyday Analogy: Shopping for a Rare Item.</strong> Imagine you are looking for a rare comic book. The Brownian strategy is to visit every single store in your current neighborhood. You might get lucky, but if it's not there, you've wasted a lot of time. The Lévy flight strategy is to visit a few stores in your neighborhood (short steps), then decide the neighborhood is a bust and take the subway to a completely different part of the city (a long flight) and search the stores there. You are much more likely to find the rare item by exploring new areas instead of exhaustively searching one that has already proven fruitless.
+                </p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Mathematics of Random Walks</h2>
+
+                <h4>1. Brownian Motion</h4>
+                <p>In a Brownian random walk, the length of each step is drawn from a probability distribution with a finite variance, like a Gaussian (Normal) distribution. The key consequence is that the average distance a Brownian walker travels from its starting point grows with the <strong>square root of time</strong> (<code>Distance ∝ √t</code>). This slow growth is why it's inefficient for large-scale exploration.</p>
+
+                <h4>2. Lévy Flights and Heavy-Tailed Distributions</h4>
+                <p>A Lévy flight is a random walk where the step lengths are not drawn from a distribution like the Gaussian. Instead, they are drawn from a "heavy-tailed" distribution, typically a form of the Pareto distribution. The probability `P(l)` of taking a step of length `l` is given by:</p>
+                <p><code class="mono">P(l) ≈ l<sup>-μ</sup></code>  (for large l)</p>
+                <p>In this simulation, we use the exponent `α`, which is related to `μ`. The crucial range for a true Lévy flight is <strong>1 < α ≤ 2</strong>.
+                <ul>
+                    <li>When `α > 2`, the distribution has a finite variance, and the walk behaves like Brownian motion over long times.</li>
+                    <li>When `α ≤ 2`, the distribution has an <strong>infinite variance</strong>. This is the mathematical signature of a Lévy flight. It means that while extremely long steps are rare, they are probable enough that there is no meaningful "average" step size—the possibility of a huge jump always exists and significantly affects the outcome.</li>
+                </ul>
+                </p>
+
+                <h4>How to Generate Lévy-Distributed Steps</h4>
+                <p>We can generate a random step length `l` that follows the desired distribution using the technique of inverse transform sampling. For a given `α` and a minimum step length `l_min`, the formula is:</p>
+                <p><code>l = l_min * (1 - U)<sup>-1/(α-1)</sup></code></p>
+                <p>Where `U` is a random number drawn from a uniform distribution between 0 and 1. Notice how if `U` happens to be very close to 1, the term `(1-U)` becomes very small, and raising it to a negative power results in an enormous step length `l`—this is how the long flights are generated. The `α` parameter in the exponent controls how frequently this happens.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class Searcher {
+    constructor(x, y, type, params) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.params = params;
+        this.path = [{x, y}];
+        this.score = 0;
+    }
+
+    move() {
+        let stepLength;
+        if (this.type === 'brownian') {
+            stepLength = Math.random() * 5; // Simple uniform distribution for step size
+        } else { // levy
+            const minStep = 1;
+            const u = Math.random();
+            // Inverse transform sampling for Pareto distribution
+            stepLength = minStep * Math.pow(1 - u, -1 / (this.params.alpha - 1));
+        }
+
+        const angle = Math.random() * 2 * Math.PI;
+        this.x += Math.cos(angle) * stepLength;
+        this.y += Math.sin(angle) * stepLength;
+
+        // Keep a short history of the path
+        this.path.push({ x: this.x, y: this.y });
+        if (this.path.length > 200) {
+            this.path.shift();
+        }
+    }
+
+    checkFood(foodPatches, foodRadius) {
+        for (let i = foodPatches.length - 1; i >= 0; i--) {
+            const food = foodPatches[i];
+            const d = Math.sqrt((this.x - food.x)**2 + (this.y - food.y)**2);
+            if (d < foodRadius) {
+                this.score++;
+                foodPatches.splice(i, 1); // Remove food once found
+                return true;
+            }
+        }
+        return false;
+    }
+
+    edges(width, height) {
+        if (this.x > width) this.x = 0;
+        if (this.x < 0) this.x = width;
+        if (this.y > height) this.y = 0;
+        if (this.y < 0) this.y = height;
+    }
+}
+
+class LevyFlightSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            foodCount: 50,
+            alpha: 1.5,
+        };
+
+        this.searchers = [];
+        this.food = [];
+        this.isRunning = false;
+
+        this.initControls();
+        this.resizeCanvas();
+        this.reset();
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    resizeCanvas() {
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper.clientWidth;
+        this.canvas.height = wrapper.clientHeight;
+        this.reset();
+    }
+
+    initControls() {
+        document.getElementById('start-btn').addEventListener('click', () => this.togglePause());
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+
+        document.getElementById('food-slider').addEventListener('input', e => {
+            this.params.foodCount = parseInt(e.target.value);
+            document.getElementById('food-output').textContent = this.params.foodCount;
+            this.reset();
+        });
+        document.getElementById('alpha-slider').addEventListener('input', e => {
+            this.params.alpha = parseFloat(e.target.value);
+            document.getElementById('alpha-output').textContent = this.params.alpha.toFixed(2);
+             // No need to reset, the levy searcher will just use the new alpha
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+    }
+
+    togglePause() {
+        this.isRunning = !this.isRunning;
+        document.getElementById('start-btn').textContent = this.isRunning ? "Pause" : "Resume";
+        if (this.isRunning) this.loop();
+    }
+
+    reset() {
+        this.isRunning = false;
+        document.getElementById('start-btn').textContent = "Start";
+
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        this.searchers = [
+            new Searcher(w / 2 - 50, h / 2, 'brownian', this.params),
+            new Searcher(w / 2 + 50, h / 2, 'levy', this.params)
+        ];
+
+        this.food = [];
+        for (let i = 0; i < this.params.foodCount; i++) {
+            this.food.push({ x: Math.random() * w, y: Math.random() * h });
+        }
+
+        this.draw();
+        this.updateScores();
+    }
+
+    loop() {
+        if (!this.isRunning) return;
+
+        for (let i = 0; i < 5; i++) { // Run multiple steps per frame for speed
+            this.update();
+        }
+        this.draw();
+
+        requestAnimationFrame(() => this.loop());
+    }
+
+    update() {
+        this.searchers.forEach(s => {
+            s.move();
+            s.edges(this.canvas.width, this.canvas.height);
+            if (s.checkFood(this.food, 10)) {
+                this.updateScores();
+            }
+        });
+    }
+
+    updateScores() {
+        document.getElementById('brownian-score').textContent = this.searchers[0].score;
+        document.getElementById('levy-score').textContent = this.searchers[1].score;
+    }
+
+    draw() {
+        this.ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw food
+        this.ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+        this.food.forEach(f => {
+            this.ctx.beginPath();
+            this.ctx.arc(f.x, f.y, 5, 0, 2 * Math.PI);
+            this.ctx.fill();
+        });
+
+        // Draw searchers and paths
+        const brownianColor = getComputedStyle(document.body).style.getPropertyValue('--brownian-color') || '#4285f4';
+        const levyColor = getComputedStyle(document.body).style.getPropertyValue('--levy-color') || '#ea4335';
+
+        this.drawSearcher(this.searchers[0], brownianColor);
+        this.drawSearcher(this.searchers[1], levyColor);
+    }
+
+    drawSearcher(searcher, color) {
+        // Draw path
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 1;
+        this.ctx.globalAlpha = 0.5;
+        this.ctx.beginPath();
+        searcher.path.forEach((p, i) => {
+            if (i === 0) this.ctx.moveTo(p.x, p.y);
+            else this.ctx.lineTo(p.x, p.y);
+        });
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
+
+        // Draw searcher
+        this.ctx.fillStyle = color;
+        this.ctx.beginPath();
+        this.ctx.arc(searcher.x, searcher.y, 8, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new LevyFlightSim();
+});
+</script>
+</body>
+</html>
