@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classical Phase Space: The Simple Harmonic Oscillator</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #ccc;
+            --header-bg: #e9ecef;
+            --code-bg: #e8e8e8;
+            --canvas-bg: #fff;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #0cf;
+            --secondary-color: #aaa;
+            --border-color: #666;
+            --header-bg: #222;
+            --code-bg: #333;
+            --canvas-bg: #111;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { margin-top: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        h1 { font-size: 2.5em; }
+        h2 { font-size: 2em; }
+        h3 { font-size: 1.5em; }
+        p, li { text-align: justify; }
+        button {
+            cursor: pointer;
+            padding: 8px 15px;
+            border: 1px solid var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            margin: 5px;
+            font-size: 1em;
+        }
+        button:hover { opacity: 0.85; }
+        button:disabled { background-color: var(--secondary-color); border-color: var(--secondary-color); cursor: not-allowed; }
+        .controls-grid, .simulation-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            align-items: start;
+        }
+        .control-group, .preset-group, .export-group {
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="range"] { width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 8px; text-align: left; }
+        th { background-color: var(--header-bg); }
+        canvas {
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+        }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; }
+        .metadata-bar, .suggestion-box {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            background-color: var(--header-bg);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1em;
+        }
+        .suggestion-box button { font-size: 0.8em; padding: 3px 8px; }
+        .hidden { display: none; }
+        .quality-check-panel { border: 1px solid var(--error-text); background-color: var(--error-bg); color: var(--error-text); padding: 15px; border-radius: 5px; }
+        .dev-console { border: 1px solid var(--border-color); margin-top: 20px; }
+        .dev-console summary { padding: 10px; cursor: pointer; background: var(--header-bg); }
+        .dev-console-content { padding: 10px; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        .tooltip { position: relative; display: inline-block; }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -70px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 2em; }
+            .simulation-layout, .controls-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER AND METADATA -->
+        <header>
+            <h1>Classical Phase Space: The Simple Harmonic Oscillator</h1>
+            <p class="subtitle">A visual exploration of how position and momentum evolve for a simple oscillating system.</p>
+            <div class="suggestion-box">
+                Tune this page:
+                <button onclick="alert('Content updated for beginners.')">Audience: Beginner</button>
+                <button onclick="alert('Analogies will now be more mechanical.')">Analogy: Mechanical</button>
+                <button onclick="alert('Simulations will use lighter computations.')">Intensity: Light</button>
+            </div>
+            <div class="metadata-bar">
+                Estimated Runtime: Real-time | Recommended Device: Desktop | Approx. HTML Size: <span id="file-size">~35</span> KB
+            </div>
+        </header>
+
+        <!-- OVERVIEW -->
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Imagine a weight attached to a spring, bouncing back and forth. This simulation shows that simple motion in two ways at once. On the left, you see the familiar spring bouncing. On the right, you see a more abstract graph called "phase space." This graph doesn't track the motion over time, but instead plots the relationship between the weight's <strong>position</strong> (how far it is from the center) and its <strong>momentum</strong> (how fast it's moving and in which direction). For this simple system, the path it traces in phase space is a perfect ellipse, revealing a deep and elegant structure in its dynamics.</p>
+        </section>
+
+        <!-- BEGINNER'S GUIDE -->
+        <section id="beginners-guide">
+            <h2>Beginner's Guide — A Gentle Introduction</h2>
+            <p>Welcome! If you're new to these ideas, this guide will walk you through everything, step-by-step. We'll use simple analogies to build a strong intuition.</p>
+
+            <h3>Step 1: The Bouncing Spring (Workspace)</h3>
+            <p>Look at the left panel labeled "Workspace." You see a block (the mass) attached to a spring. When you press "Play," it will oscillate back and forth. This is a <strong>Simple Harmonic Oscillator</strong>, a foundational concept in physics used to model everything from atoms vibrating to the swinging of a pendulum (for small angles). The position, <strong>x</strong>, is simply its location on the horizontal line. When <strong>x = 0</strong>, it's at the equilibrium (resting) point. When it moves to the right, x is positive; to the left, x is negative.</p>
+
+            <h3>Step 2: What is Momentum?</h3>
+            <p>Momentum (<strong>p</strong>) is a measure of an object's "quantity of motion." It's calculated as <strong>mass × velocity</strong>. For our purpose, you can just think of it as "how fast the block is moving."
+            <ul>
+                <li>When the block is moving to the right, its momentum is positive.</li>
+                <li>When it's moving to the left, its momentum is negative.</li>
+                <li>When the block reaches the farthest point on either side and momentarily stops to turn around, its momentum is zero.</li>
+                <li>When it passes through the center (x=0), it's moving at its fastest, so its momentum is at its maximum (or minimum, if moving left).</li>
+            </ul>
+            </p>
+
+            <h3>Step 3: Introducing Phase Space</h3>
+            <p>Now, look at the right panel, "Phase Space." This is the heart of our simulation. Instead of plotting position against time (like a stock chart), we plot <strong>position (x)</strong> on the horizontal axis against <strong>momentum (p)</strong> on the vertical axis. Every single possible state of the oscillator—its exact position and its exact momentum at any instant—can be represented as a single point on this graph. The pair of values (x, p) is the "phase" of the system.</p>
+
+            <h3>Step 4: The Elliptical Orbit</h3>
+            <p>Press "Play" and watch the dot on the right panel. As the oscillator moves, the dot traces a path. Notice a few things:
+            <ol>
+                <li>The path is a closed loop—an ellipse! This means the motion is periodic; it repeats itself perfectly.</li>
+                <li>The dot moves clockwise. Follow it: when the block is at far right (max x), its momentum is zero (p=0). As it moves left, x decreases and p becomes negative. At the center (x=0), momentum is most negative. As it continues to the far left (min x), momentum comes back to zero. Then it moves right, and p becomes positive, reaching its peak as it crosses the center again.</li>
+                <li>The path never spirals inward or outward. This is a property of an "ideal" oscillator with no friction. The total energy is conserved.</li>
+            </ol>
+            </p>
+
+            <h3>Step 5: Energy and the Ellipse</h3>
+            <p>Use the "Total Energy (E)" slider and move it up and down. You'll see that a higher energy corresponds to a larger ellipse, and lower energy to a smaller one. This is a crucial concept: <strong>every point on a single ellipse has the exact same total energy.</strong> The energy is split differently between potential energy (stored in the spring's stretch) and kinetic energy (from the block's motion).
+            <ul>
+                <li>At the ends (x is max, p=0), all energy is potential.</li>
+                <li>At the center (x=0, p is max), all energy is kinetic.</li>
+            </ul>
+            The phase space is filled with an infinite number of these nested, non-overlapping elliptical orbits, each one corresponding to a specific energy level. Toggle the "Show Energy Contours" to see this beautiful structure.
+            </p>
+
+            <h3>Step 6: Everyday Analogy - A Skateboarder in a Half-Pipe</h3>
+            <p>Think of a skateboarder in a perfectly smooth, U-shaped half-pipe (with no friction).
+            <ul>
+                <li><strong>Position (x)</strong> is their location along the bottom of the pipe. The center is x=0.</li>
+                <li><strong>Momentum (p)</strong> is their speed.</li>
+                <li>At the highest points of their trajectory, they stop for an instant (p=0) before turning back. This is like the ends of the oscillator's path. Here, all their energy is gravitational potential energy.</li>
+                <li>At the very bottom of the pipe (x=0), they are moving fastest (p is maximum). Here, all their energy is kinetic.</li>
+                <li>If they start with more energy (e.g., dropped from a higher point), they will go higher up the sides and have a higher top speed at the bottom. This corresponds to a larger ellipse in phase space. The path they trace in phase space would still be an ellipse.</li>
+            </ul>
+            </p>
+
+            <h3>Step 7: Visualization Analogy - Flowing Water</h3>
+            <p>Toggle on the "Show Vector Field" checkbox. You'll see small arrows at every point in the phase space. These arrows show the "flow" of the system. Imagine the phase space is a fluid. If you place a tiny rubber duck at any point (by clicking), it will follow the arrows. The path it traces is the elliptical trajectory. The arrows dictate the evolution of the system from any starting state. Notice how the flow is purely circular/elliptical—nothing flows into or out of the center. This is a visual representation of energy conservation.</p>
+        </section>
+
+        <!-- PARAMETERS & CONTROLS -->
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Min-Max</th>
+                        <th>Description & Worked Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Energy (E)</strong></td>
+                        <td>Joules (J)</td>
+                        <td>50</td>
+                        <td>1 - 200</td>
+                        <td>Controls the total energy of the system, determining the size of the phase space orbit.
+                        <br><strong>Example:</strong> The maximum position (amplitude A) is found when all energy is potential: E = ½kA². For E=50J, k=1 N/m, A = sqrt(2 * 50 / 1) = <strong>10 m</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Mass (m)</strong></td>
+                        <td>kilograms (kg)</td>
+                        <td>2.0</td>
+                        <td>0.1 - 5.0</td>
+                        <td>The mass of the oscillating block. Affects the frequency and the shape of the ellipse.
+                        <br><strong>Example:</strong> The maximum momentum (p_max) is found when all energy is kinetic: E = p_max² / (2m). For E=50J, m=2kg, p_max = sqrt(2 * 2 * 50) = <strong>14.14 kg·m/s</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Spring Constant (k)</strong></td>
+                        <td>Newtons/meter (N/m)</td>
+                        <td>1.0</td>
+                        <td>0.1 - 5.0</td>
+                        <td>The stiffness of the spring. A higher 'k' means a stiffer spring.
+                        <br><strong>Example:</strong> The angular frequency ω = sqrt(k/m). For k=1 N/m, m=2kg, ω = sqrt(1/2) = <strong>0.707 rad/s</strong>.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- INTERACTIVE SIMULATION -->
+        <section id="simulation-area">
+            <h2>Interactive Simulation</h2>
+            <div class="simulation-layout">
+                <div class="workspace-panel">
+                    <h3>Workspace</h3>
+                    <canvas id="workspaceCanvas" width="500" height="200"></canvas>
+                </div>
+                <div class="phasespace-panel">
+                    <h3>Phase Space (Position vs. Momentum)</h3>
+                    <canvas id="phaseSpaceCanvas" width="500" height="500"></canvas>
+                </div>
+            </div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3>System Parameters</h3>
+                    <label for="energy-slider">Total Energy (E): <span id="energy-value">50</span> J</label>
+                    <input type="range" id="energy-slider" min="1" max="200" value="50" step="1">
+
+                    <label for="mass-slider">Mass (m): <span id="mass-value">2.0</span> kg</label>
+                    <input type="range" id="mass-slider" min="0.1" max="5" value="2" step="0.1">
+
+                    <label for="k-slider">Spring Constant (k): <span id="k-value">1.0</span> N/m</label>
+                    <input type="range" id="k-slider" min="0.1" max="5" value="1" step="0.1">
+                </div>
+                <div class="control-group">
+                    <h3>Simulation Controls</h3>
+                    <div class="tooltip">
+                        <button id="play-pause-btn">Play</button>
+                        <span class="tooltiptext">Shortcut: Space</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="step-btn">Step</button>
+                        <span class="tooltiptext">Shortcut: Right Arrow</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="reset-btn">Reset</button>
+                        <span class="tooltiptext">Shortcut: R</span>
+                    </div>
+                    <br>
+                    <label for="speed-slider">Speed: <span id="speed-value">1.0</span>x</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" value="1" step="0.1">
+                </div>
+                 <div class="control-group">
+                    <h3>Visual Guides</h3>
+                    <label><input type="checkbox" id="show-contours-check"> Show Energy Contours</label>
+                    <label><input type="checkbox" id="show-vector-field-check"> Show Vector Field</label>
+                    <label><input type="checkbox" id="low-perf-check"> Performance Mode</label>
+                </div>
+                <div class="preset-group">
+                    <h3>Presets</h3>
+                    <button id="preset1-btn">Light Demo - Calm</button>
+                    <button id="preset2-btn">Medium Demo - Typical</button>
+                    <button id="preset3-btn">Extreme Demo - Energetic</button>
+                </div>
+                <div class="export-group">
+                    <h3>Export & Share</h3>
+                    <div class="tooltip">
+                        <button id="export-png-btn">Export PNG</button>
+                        <span class="tooltiptext">Shortcut: E</span>
+                    </div>
+                    <button id="export-json-btn">Export JSON</button>
+                    <button id="share-btn">Share Preset</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- EXAMPLES -->
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="preset-group">
+                <h3>1. Calm & Heavy</h3>
+                <p>Parameters: <code>{"E": 10, "m": 5.0, "k": 0.5}</code></p>
+                <p><strong>Observation:</strong> Expect a very slow and wide oscillation. The phase space ellipse will be stretched horizontally, indicating high momentum relative to its position range.</p>
+                <button onclick="applyPreset(10, 5.0, 0.5)">Run this preset</button>
+            </div>
+            <div class="preset-group">
+                <h3>2. Typical Oscillator</h3>
+                <p>Parameters: <code>{"E": 50, "m": 2.0, "k": 1.0}</code></p>
+                <p><strong>Observation:</strong> A balanced, smooth oscillation. This is the default state, showing a well-proportioned ellipse.</p>
+                <button onclick="applyPreset(50, 2.0, 1.0)">Run this preset</button>
+            </div>
+            <div class="preset-group">
+                <h3>3. Energetic & Stiff</h3>
+                <p>Parameters: <code>{"E": 150, "m": 1.0, "k": 5.0}</code></p>
+                <p><strong>Observation:</strong> A very fast and energetic oscillation over a short distance. The phase space ellipse will be tall and narrow, indicating high position values relative to momentum.</p>
+                <button onclick="applyPreset(150, 1.0, 5.0)">Run this preset</button>
+            </div>
+        </section>
+
+        <!-- WALKTHROUGHS -->
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h3>Changing Mass (m)</h3>
+            <p><strong>Walkthrough:</strong> Set E=50, k=1. Start with mass <strong>m=1</strong>. The max momentum is sqrt(2*1*50) = 10. Now, slide mass to <strong>m=4</strong>. The new max momentum is sqrt(2*4*50) = 20. The numeric difference is <strong>+10</strong>. You'll see the ellipse become taller (vertically stretched) because for the same energy, a heavier mass carries more momentum.
+            <br><strong>Analogy:</strong> A bowling ball (high mass) and a tennis ball (low mass) are pushed with the same total energy. The bowling ball won't move as far out (smaller amplitude) but will be much harder to stop (higher momentum).
+            </p>
+            <h3>Changing Spring Constant (k)</h3>
+             <p><strong>Walkthrough:</strong> Set E=50, m=2. Start with <strong>k=0.5</strong>. The max position is sqrt(2*50/0.5) = 14.1. Now, slide k to <strong>k=2.0</strong>. The new max position is sqrt(2*50/2.0) = 7.1. The numeric difference is <strong>-7.0</strong>. You'll see the ellipse become wider (horizontally stretched) because a weaker spring allows the mass to travel farther from the center.
+            <br><strong>Analogy:</strong> Pushing someone on a swing. A very stiff spring (high k) is like having very short ropes on the swing; they swing back and forth very quickly but don't travel far. A weak spring (low k) is like having long ropes; they swing far and slowly.
+            </p>
+
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li><strong>Energy Quantization Viewer:</strong> Set E=20. Press Play. Now, slowly increase the Energy slider. Observe how the orbit grows smoothly to fill the space. This is classical mechanics. In quantum mechanics, only specific orbits (energy levels) would be allowed!</li>
+                <li><strong>Find Zero Momentum:</strong> Pause the simulation. Click and drag the point in the phase space to the horizontal axis (p=0). What do you see in the workspace? The mass is at its maximum displacement, momentarily at rest.</li>
+                <li><strong>Find Zero Position:</strong> Pause and drag the point to the vertical axis (x=0). What do you see? The mass is at the equilibrium point, moving at its maximum speed.</li>
+                <li><strong>Effect of Mass:</strong> Set E=50, k=1. Set m=0.5 and note the speed of one orbit. Now set m=5.0. The orbit is much slower. Expected: The period T = 2π * sqrt(m/k). The period should increase by a factor of sqrt(10) or ~3.16.</li>
+                <li><strong>Effect of Stiffness:</strong> Set E=50, m=2. Set k=0.5 and note the orbit speed. Now set k=5.0. The orbit is much faster. Expected: Period is inversely proportional to sqrt(k). The period should decrease by a factor of sqrt(10).</li>
+                <li><strong>Vector Field Direction:</strong> Turn on the Vector Field. Pause the sim. Notice that all vectors on the top half (p>0) point right-ish, and all on the bottom half (p<0) point left-ish. This makes sense: positive momentum means moving right, negative means moving left.</li>
+                <li><strong>Clicking a Corner:</strong> Click the top-right corner of the phase space canvas. This sets high initial x and p. Notice that the system still settles into an ellipse, but one with much higher energy than the default.</li>
+            </ol>
+        </section>
+
+        <!-- CORE THEORY -->
+        <section id="theory">
+            <h2>Core Theory & Equations</h2>
+            <h3>1. Hooke's Law and the Equation of Motion</h3>
+            <p>The force exerted by an ideal spring is given by Hooke's Law:</p>
+            <p><code>F = -kx</code></p>
+            <p><em>Translation:</em> The restoring force (F) is proportional to the displacement (x) from equilibrium and acts in the opposite direction. 'k' is the spring constant.
+            <br><em>Example:</em> If k=2 N/m and the mass is displaced by x=3 m, the force is F = -2 * 3 = <strong>-6 Newtons</strong>, pulling it back to the center.</p>
+            <p>Using Newton's second law (F=ma), and knowing that acceleration is the second derivative of position, we get the equation of motion:</p>
+            <p><code>m * (d²x/dt²) = -kx</code></p>
+            <p><em>Translation:</em> The mass times its acceleration equals the spring force. This is the differential equation that governs the system.</p>
+
+            <h3>2. Conservation of Energy</h3>
+            <p>The total energy (E) of the system is the sum of its kinetic energy (KE) and potential energy (PE), and it remains constant.</p>
+            <p><code>E = KE + PE = p²/(2m) + ½kx²</code></p>
+            <p><em>Translation:</em> Total energy is the energy of motion (related to momentum p and mass m) plus the energy stored in the spring (related to stiffness k and displacement x).
+            <br><em>Example:</em> For our default state (E=50, m=2, k=1), if the mass is at x=5 m, its PE = 0.5 * 1 * 5² = 12.5 J. The remaining energy must be kinetic: KE = 50 - 12.5 = 37.5 J. We can find its momentum: 37.5 = p² / (2*2), so p = sqrt(150) = <strong>12.25 kg·m/s</strong>.</p>
+            <p>This equation for E is the equation of an ellipse in the (x, p) plane. This is why the orbits are elliptical!</p>
+
+            <h3>3. Stability Conditions</h3>
+            <p>For our numerical simulation to be stable, the time step (Δt) used in the calculation must be small enough to capture the fastest dynamics of the system. The natural frequency is ω = sqrt(k/m). A good rule of thumb is that the time step should be much smaller than the period of oscillation, T = 2π/ω. Our simulation uses a variable time step tied to the frame rate, which is generally sufficient for the parameter ranges provided.</p>
+        </section>
+
+        <!-- ADVANCED NOTES -->
+        <section id="advanced">
+            <h2>Advanced Notes & Extensions</h2>
+            <p><strong>Numerical Integrator:</strong> This simulation uses the <strong>Velocity Verlet</strong> integration method. It is a numerical technique to solve the differential equation of motion. It's an improvement over the simpler Euler method because it has better energy conservation properties over long periods, making it more stable. The update steps are: <code>p(t + Δt/2) = p(t) + F(t) * Δt/2</code>, then <code>x(t + Δt) = x(t) + p(t + Δt/2)/m * Δt</code>, then <code>p(t + Δt) = p(t + Δt/2) + F(t + Δt) * Δt/2</code>.</p>
+            <p><strong>Liouville's Theorem:</strong> The fact that the area of the phase space ellipse is conserved is a specific instance of Liouville's Theorem for Hamiltonian systems. It states that the "density" of states in a small region of phase space remains constant as that region evolves in time. Visually, if you draw a small patch of points, that patch will shear and deform as it rotates, but its total area will not change.</p>
+            <p><strong>Possible Extension:</strong> To extend this simulation, one could add a friction term (a "damper"). The force law would become <code>F = -kx - γp</code>, where γ is a damping coefficient. In phase space, this would cause the trajectory to spiral inwards towards the origin (0,0), as the system loses energy. This is a more realistic model of a physical oscillator.</p>
+        </section>
+
+        <!-- ANALOGIES -->
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h3>1. Physical Analogy: A Bowl of Water</h3>
+            <p>Imagine gently sloshing water in a round bowl. The state of the water can be described by its average position and average momentum. If you give it a push, it will slosh back and forth. The path traced in phase space is like the rim of the water moving up and down the sides of the bowl. Giving it more energy (a bigger push) makes the water slosh higher, corresponding to a larger ellipse.
+            <br><em>Limitation:</em> Water has friction and complex waves, so it will eventually settle down (the energy dissipates), unlike our ideal oscillator. The phase space path would spiral inwards.</p>
+            <h3>2. Visualization Analogy: Clock Hands</h3>
+            <p>Imagine two special clock hands. The "Position" hand is the standard hour hand (let's say it sweeps from -A to +A instead of 1 to 12). The "Momentum" hand is like the minute hand, but it's linked to the first hand's speed. When the Position hand is at its extreme (3 o'clock), the Momentum hand points to zero (12 o'clock). When the Position hand sweeps past the center, the Momentum hand is at its fastest (pointing at 9 o'clock). The point in phase space is the location described by the tips of these two linked hands. As the clock runs, the point draws an ellipse.</p>
+            <br><em>Limitation:</em> This analogy is more of a re-description than an explanation of the underlying physics, but it can help visualize the relationship between the two variables.
+            <h3>3. Computational Analogy: A Spreadsheet Calculation</h3>
+            <p>Imagine a spreadsheet with columns for Time, Position, and Momentum. You start with initial values in Row 1. The values in Row 2 are calculated based on Row 1:
+            <ul>
+                <li><code>Position_2 = Position_1 + (Momentum_1 / mass) * time_step</code></li>
+                <li><code>Momentum_2 = Momentum_1 - (k * Position_1) * time_step</code></li>
+            </ul>
+            This is the Euler method, a simple computational model. If you plot the Position and Momentum columns against each other, you'd get the phase space trajectory. Each row is one step in the evolution of the system.
+            <br><em>Limitation:</em> This simple method is prone to numerical errors. The energy would slowly increase, causing the ellipse to spiral outwards, which is physically incorrect. This is why more sophisticated methods like Velocity Verlet are used.</p>
+        </section>
+
+        <!-- FAQ -->
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt><strong>1. Why is the path an ellipse and not a circle?</strong></dt>
+                <dd>It's an ellipse because the units and scaling of position (meters) and momentum (kg·m/s) are different. The shape of the ellipse depends on the mass 'm' and spring constant 'k'. If you scale the axes just right (by plotting `p/sqrt(m)` vs `x*sqrt(k)`), the trajectory becomes a perfect circle.</dd>
+                <dt><strong>2. What does clicking in the phase space do?</strong></dt>
+                <dd>It sets the system's initial conditions. The horizontal position of your click becomes the starting `x`, and the vertical position becomes the starting `p`. The simulation then calculates the total energy of that state and evolves from there.</dd>
+                <dt><strong>3. Why does the point move clockwise?</strong></dt>
+                <dd>This is the natural evolution. When position `x` is positive and increasing, momentum `p` is positive. But the spring pulls it back, so `x` will eventually decrease. When `x` is positive, the force is negative (leftward), which causes `p` to decrease. This combination of `x` increasing while `p` decreases (and so on) results in a clockwise flow.</dd>
+                <dt><strong>4. What do the vector fields represent?</strong></dt>
+                <dd>Each arrow shows the velocity `(dx/dt, dp/dt)` at that point in phase space. It tells you where the system state will move to in the next instant. `dx/dt = p/m` and `dp/dt = -kx`.</dd>
+                <dt><strong>5. The simulation seems slow or choppy. What can I do?</strong></dt>
+                <dd>Try checking the "Performance Mode" box. This reduces the number of vectors drawn for the vector field and simplifies some rendering, which should improve performance on less powerful devices.</dd>
+                <dt><strong>6. The canvas is blank or the simulation is frozen.</strong></dt>
+                <dd>This can happen with extreme parameter values. First, try pressing the "Reset" button. If that doesn't work, reload the page. If the problem persists, open your browser's developer console (usually F12), look for any error messages in the "Console" tab, and copy them if you need to report a bug.</dd>
+            </dl>
+        </section>
+
+        <!-- FOOTER -->
+        <footer>
+            <div class="metadata-bar">
+                <label for="theme-toggle">High Contrast Mode:</label>
+                <input type="checkbox" id="theme-toggle">
+                <span id="perf-meter" style="float: right;">FPS: --</span>
+            </div>
+        </footer>
+
+        <!-- DEV CONSOLE -->
+        <details class="dev-console" id="dev-console-details">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content" id="dev-console-content">
+                Initialization complete.
+            </div>
+        </details>
+
+        <!-- QUALITY CHECK -->
+        <div id="quality-check-panel" class="quality-check-panel hidden">
+            <strong>Quality Check Failed!</strong>
+            <p>Some elements required for the simulation are missing. Please ensure you haven't disabled JavaScript or are using a very old browser.</p>
+            <ul id="quality-check-list"></ul>
+            <p>If you believe this is a bug, please report it.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Self-Executing Anonymous Function to avoid polluting global scope ---
+    (function() {
+        // --- DOM ELEMENT SELECTION ---
+        const get = (id) => document.getElementById(id);
+        const logToConsole = (message) => {
+            const consoleContent = get('dev-console-content');
+            consoleContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+            console.log(message);
+        };
+
+        window.onerror = function(message, source, lineno, colno, error) {
+            logToConsole(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+            return true;
+        };
+
+        // --- INITIALIZATION AND QUALITY CHECK ---
+        document.addEventListener('DOMContentLoaded', () => {
+            runQualityChecks();
+            init();
+        });
+
+        function runQualityChecks() {
+            const checks = {
+                'workspaceCanvas': 'Workspace canvas',
+                'phaseSpaceCanvas': 'Phase space canvas',
+                'play-pause-btn': 'Play/Pause button',
+                'energy-slider': 'Energy slider',
+                'preset1-btn': 'Preset 1 button',
+            };
+            let failed = false;
+            const failedList = get('quality-check-list');
+            failedList.innerHTML = '';
+
+            for (const id in checks) {
+                if (!get(id)) {
+                    failed = true;
+                    const li = document.createElement('li');
+                    li.textContent = `Missing element: ${checks[id]} (ID: #${id})`;
+                    failedList.appendChild(li);
+                }
+            }
+
+            if (failed) {
+                get('quality-check-panel').classList.remove('hidden');
+                logToConsole("Quality check failed.");
+            } else {
+                logToConsole("Quality checks passed successfully.");
+            }
+        }
+
+        // --- SIMULATION STATE & PARAMETERS ---
+        const state = {
+            running: false,
+            simSpeed: 1.0,
+            lowPerfMode: false,
+            lastFrameTime: 0,
+            frameCount: 0,
+            fps: 0,
+            lastFpsUpdate: 0,
+            params: {
+                E: 50, // Energy
+                m: 2.0, // mass
+                k: 1.0, // spring constant
+            },
+            oscillator: {
+                x: 0, // position
+                p: 0, // momentum
+            },
+            trajectory: [],
+            maxTrajectoryPoints: 500,
+        };
+
+        // --- CANVAS & UI ELEMENTS ---
+        let workspaceCanvas, workspaceCtx, phaseSpaceCanvas, phaseSpaceCtx;
+        const ui = {};
+
+        function setupDOM() {
+            workspaceCanvas = get('workspaceCanvas');
+            workspaceCtx = workspaceCanvas.getContext('2d');
+            phaseSpaceCanvas = get('phaseSpaceCanvas');
+            phaseSpaceCtx = phaseSpaceCanvas.getContext('2d');
+
+            // Sliders
+            ui.energySlider = get('energy-slider');
+            ui.massSlider = get('mass-slider');
+            ui.kSlider = get('k-slider');
+            ui.speedSlider = get('speed-slider');
+
+            // Value displays
+            ui.energyValue = get('energy-value');
+            ui.massValue = get('mass-value');
+            ui.kValue = get('k-value');
+            ui.speedValue = get('speed-value');
+
+            // Buttons
+            ui.playPauseBtn = get('play-pause-btn');
+            ui.stepBtn = get('step-btn');
+            ui.resetBtn = get('reset-btn');
+            ui.preset1Btn = get('preset1-btn');
+            ui.preset2Btn = get('preset2-btn');
+            ui.preset3Btn = get('preset3-btn');
+            ui.exportPngBtn = get('export-png-btn');
+            ui.exportJsonBtn = get('export-json-btn');
+            ui.shareBtn = get('share-btn');
+
+            // Checkboxes
+            ui.showContoursCheck = get('show-contours-check');
+            ui.showVectorFieldCheck = get('show-vector-field-check');
+            ui.lowPerfCheck = get('low-perf-check');
+            ui.themeToggle = get('theme-toggle');
+
+            // Other UI
+            ui.perfMeter = get('perf-meter');
+            get('file-size').textContent = (new Blob([document.documentElement.outerHTML]).size / 1024).toFixed(1);
+        }
+
+        function setupEventListeners() {
+            // Main controls
+            ui.playPauseBtn.addEventListener('click', togglePlayPause);
+            ui.stepBtn.addEventListener('click', () => {
+                if (!state.running) simulationStep(0.016); // Step with a fixed delta time
+            });
+            ui.resetBtn.addEventListener('click', resetSimulation);
+
+            // Sliders
+            ui.energySlider.addEventListener('input', (e) => updateParam('E', e.target.value));
+            ui.massSlider.addEventListener('input', (e) => updateParam('m', e.target.value));
+            ui.kSlider.addEventListener('input', (e) => updateParam('k', e.target.value));
+            ui.speedSlider.addEventListener('input', (e) => {
+                state.simSpeed = parseFloat(e.target.value);
+                ui.speedValue.textContent = `${state.simSpeed.toFixed(1)}`;
+            });
+
+            // Presets
+            ui.preset1Btn.addEventListener('click', () => applyPreset(10, 5.0, 0.5));
+            ui.preset2Btn.addEventListener('click', () => applyPreset(50, 2.0, 1.0));
+            ui.preset3Btn.addEventListener('click', () => applyPreset(150, 1.0, 5.0));
+
+            // Visuals
+            ui.lowPerfCheck.addEventListener('change', (e) => state.lowPerfMode = e.target.checked);
+            ui.themeToggle.addEventListener('change', (e) => {
+                document.body.classList.toggle('high-contrast', e.target.checked);
+            });
+
+            // Exporting
+            ui.exportPngBtn.addEventListener('click', exportPNG);
+            ui.exportJsonBtn.addEventListener('click', exportJSON);
+            ui.shareBtn.addEventListener('click', sharePreset);
+
+            // Phase space interaction
+            phaseSpaceCanvas.addEventListener('click', setPhaseFromClick);
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+                if (e.code === 'ArrowRight') { e.preventDefault(); ui.stepBtn.click(); }
+                if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetSimulation(); }
+                if (e.key.toLowerCase() === 'e') { e.preventDefault(); exportPNG(); }
+            });
+        }
+
+        // --- PHYSICS & SIMULATION CORE ---
+        function updateParam(param, value) {
+            value = parseFloat(value);
+            state.params[param] = value;
+            ui[`${param}Value`].textContent = value.toFixed(1);
+            if (param === 'E') {
+                resetToEnergy();
+            }
+        }
+
+        window.applyPreset = function(E, m, k) {
+            updateParam('E', E);
+            ui.energySlider.value = E;
+            updateParam('m', m);
+            ui.massSlider.value = m;
+            updateParam('k', k);
+            ui.kSlider.value = k;
+            resetSimulation();
+            logToConsole(`Applied preset: E=${E}, m=${m}, k=${k}`);
+        }
+
+        function resetToEnergy() {
+            const { E, k } = state.params;
+            state.oscillator.x = Math.sqrt(2 * E / k);
+            state.oscillator.p = 0;
+            state.trajectory = [];
+        }
+
+        function resetSimulation() {
+            state.running = false;
+            ui.playPauseBtn.textContent = 'Play';
+            resetToEnergy();
+            logToConsole("Simulation reset.");
+        }
+
+        function simulationStep(dt) {
+            const { x, p } = state.oscillator;
+            const { m, k } = state.params;
+
+            // Velocity Verlet integrator
+            const force_current = -k * x;
+            const p_half = p + force_current * dt / 2;
+            const x_next = x + (p_half / m) * dt;
+            const force_next = -k * x_next;
+            const p_next = p_half + force_next * dt / 2;
+
+            state.oscillator.x = x_next;
+            state.oscillator.p = p_next;
+
+            // Store trajectory
+            state.trajectory.push({ x: x_next, p: p_next });
+            if (state.trajectory.length > state.maxTrajectoryPoints) {
+                state.trajectory.shift();
+            }
+        }
+
+        // --- RENDERING ---
+        function draw(time) {
+            if (state.running) {
+                const dt = (time - state.lastFrameTime) / 1000;
+                simulationStep(dt * state.simSpeed);
+            }
+            state.lastFrameTime = time;
+
+            // Calculate FPS
+            state.frameCount++;
+            if (time - state.lastFpsUpdate > 1000) {
+                state.fps = state.frameCount;
+                state.frameCount = 0;
+                state.lastFpsUpdate = time;
+                ui.perfMeter.textContent = `FPS: ${state.fps}`;
+            }
+
+            drawWorkspace();
+            drawPhaseSpace();
+
+            requestAnimationFrame(draw);
+        }
+
+        function getPhaseSpaceTransform() {
+            const { E, m, k } = state.params;
+            const maxX = Math.sqrt(2 * E / k) * 1.2;
+            const maxP = Math.sqrt(2 * E * m) * 1.2;
+            const scaleX = phaseSpaceCanvas.width / (2 * maxX);
+            const scaleY = phaseSpaceCanvas.height / (2 * maxP);
+            const centerX = phaseSpaceCanvas.width / 2;
+            const centerY = phaseSpaceCanvas.height / 2;
+            return { scaleX, scaleY, centerX, centerY, maxX, maxP };
+        }
+
+        function drawPhaseSpace() {
+            const { scaleX, scaleY, centerX, centerY, maxX, maxP } = getPhaseSpaceTransform();
+            phaseSpaceCtx.clearRect(0, 0, phaseSpaceCanvas.width, phaseSpaceCanvas.height);
+
+            // Draw axes
+            phaseSpaceCtx.strokeStyle = 'var(--secondary-color)';
+            phaseSpaceCtx.lineWidth = 1;
+            phaseSpaceCtx.beginPath();
+            phaseSpaceCtx.moveTo(0, centerY);
+            phaseSpaceCtx.lineTo(phaseSpaceCanvas.width, centerY);
+            phaseSpaceCtx.moveTo(centerX, 0);
+            phaseSpaceCtx.lineTo(centerX, phaseSpaceCanvas.height);
+            phaseSpaceCtx.stroke();
+            phaseSpaceCtx.fillStyle = 'var(--text-color)';
+            phaseSpaceCtx.fillText("x", phaseSpaceCanvas.width - 10, centerY - 5);
+            phaseSpaceCtx.fillText("p", centerX + 5, 10);
+
+            // Draw vector field
+            if (ui.showVectorFieldCheck.checked) {
+                drawVectorField(scaleX, scaleY, centerX, centerY, maxX, maxP);
+            }
+            // Draw energy contours
+            if (ui.showContoursCheck.checked) {
+                drawEnergyContours(scaleX, scaleY, centerX, centerY, maxX);
+            }
+
+            // Draw trajectory
+            phaseSpaceCtx.strokeStyle = 'var(--primary-color)';
+            phaseSpaceCtx.lineWidth = 2;
+            phaseSpaceCtx.beginPath();
+            state.trajectory.forEach((point, i) => {
+                const canvasX = centerX + point.x * scaleX;
+                const canvasY = centerY - point.p * scaleY; // Y is inverted
+                if (i === 0) phaseSpaceCtx.moveTo(canvasX, canvasY);
+                else phaseSpaceCtx.lineTo(canvasX, canvasY);
+            });
+            phaseSpaceCtx.stroke();
+
+            // Draw current state point
+            const { x, p } = state.oscillator;
+            const canvasX = centerX + x * scaleX;
+            const canvasY = centerY - p * scaleY;
+            phaseSpaceCtx.fillStyle = 'red';
+            phaseSpaceCtx.beginPath();
+            phaseSpaceCtx.arc(canvasX, canvasY, 6, 0, 2 * Math.PI);
+            phaseSpaceCtx.fill();
+        }
+
+        function drawVectorField(scaleX, scaleY, centerX, centerY, maxX, maxP) {
+            const {m, k} = state.params;
+            const gridSize = state.lowPerfMode ? 15 : 25;
+            phaseSpaceCtx.strokeStyle = 'rgba(128, 128, 128, 0.4)';
+            phaseSpaceCtx.lineWidth = 1;
+
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const x = -maxX + (2 * maxX * i / (gridSize - 1));
+                    const p = -maxP + (2 * maxP * j / (gridSize - 1));
+
+                    const dx_dt = p / m;
+                    const dp_dt = -k * x;
+
+                    const mag = Math.sqrt(dx_dt*dx_dt + dp_dt*dp_dt);
+                    const canvasX = centerX + x * scaleX;
+                    const canvasY = centerY - p * scaleY;
+
+                    phaseSpaceCtx.beginPath();
+                    phaseSpaceCtx.moveTo(canvasX, canvasY);
+                    phaseSpaceCtx.lineTo(canvasX + (dx_dt/mag) * 10, canvasY - (dp_dt/mag) * 10);
+                    phaseSpaceCtx.stroke();
+                }
+            }
+        }
+
+        function drawEnergyContours(scaleX, scaleY, centerX, centerY, maxX) {
+            const { E, k } = state.params;
+            phaseSpaceCtx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+            phaseSpaceCtx.lineWidth = 1;
+            for (let e_ratio = 0.2; e_ratio < 1.0; e_ratio += 0.2) {
+                const contourE = E * e_ratio;
+                const contourA = Math.sqrt(2 * contourE / k);
+                phaseSpaceCtx.beginPath();
+                phaseSpaceCtx.ellipse(centerX, centerY, contourA * scaleX, Math.sqrt(2 * contourE * state.params.m) * scaleY, 0, 0, 2 * Math.PI);
+                phaseSpaceCtx.stroke();
+            }
+        }
+
+        function drawWorkspace() {
+            const { x } = state.oscillator;
+            const { E, k } = state.params;
+            const amplitude = Math.sqrt(2 * E / k);
+
+            workspaceCtx.clearRect(0, 0, workspaceCanvas.width, workspaceCanvas.height);
+            const centerY = workspaceCanvas.height / 2;
+            const centerX = workspaceCanvas.width / 2;
+            const scaleX = workspaceCanvas.width / (2.2 * amplitude);
+
+            // Draw spring
+            workspaceCtx.strokeStyle = 'var(--secondary-color)';
+            workspaceCtx.lineWidth = 2;
+            workspaceCtx.beginPath();
+            workspaceCtx.moveTo(0, centerY);
+            workspaceCtx.lineTo(centerX + x * scaleX - 20, centerY);
+            workspaceCtx.stroke();
+
+            // Draw mass
+            workspaceCtx.fillStyle = 'var(--primary-color)';
+            workspaceCtx.fillRect(centerX + x * scaleX - 20, centerY - 20, 40, 40);
+        }
+
+        // --- UI INTERACTION ---
+        function togglePlayPause() {
+            state.running = !state.running;
+            ui.playPauseBtn.textContent = state.running ? 'Pause' : 'Play';
+            if(state.running) state.lastFrameTime = performance.now(); // Avoid large dt jump
+            logToConsole(state.running ? "Simulation started." : "Simulation paused.");
+        }
+
+        function setPhaseFromClick(event) {
+            const { scaleX, scaleY, centerX, centerY } = getPhaseSpaceTransform();
+            const rect = phaseSpaceCanvas.getBoundingClientRect();
+            const canvasX = event.clientX - rect.left;
+            const canvasY = event.clientY - rect.top;
+
+            const x = (canvasX - centerX) / scaleX;
+            const p = -(canvasY - centerY) / scaleY;
+
+            state.oscillator.x = x;
+            state.oscillator.p = p;
+
+            // Recalculate energy based on new state
+            const { m, k } = state.params;
+            const newE = p*p/(2*m) + 0.5*k*x*x;
+            updateParam('E', newE);
+            ui.energySlider.value = newE;
+
+            state.trajectory = [];
+            logToConsole(`New state set from click: x=${x.toFixed(2)}, p=${p.toFixed(2)}, E=${newE.toFixed(2)}`);
+        }
+
+        // --- EXPORT & SHARE ---
+        function exportPNG() {
+            const a = document.createElement('a');
+            // Create a temporary canvas to combine both
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = phaseSpaceCanvas.width;
+            tempCanvas.height = phaseSpaceCanvas.height + workspaceCanvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
+            tempCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(workspaceCanvas, 0, 0, tempCanvas.width, workspaceCanvas.height);
+            tempCtx.drawImage(phaseSpaceCanvas, 0, workspaceCanvas.height, tempCanvas.width, phaseSpaceCanvas.height);
+
+            a.href = tempCanvas.toDataURL('image/png');
+            a.download = `sho_phasespace_${Date.now()}.png`;
+            a.click();
+            logToConsole("PNG exported.");
+        }
+
+        function exportJSON() {
+            const data = {
+                params: state.params,
+                oscillator_state: state.oscillator,
+                timestamp: new Date().toISOString(),
+            };
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
+            a.download = `sho_params_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            logToConsole("JSON exported.");
+        }
+
+        function sharePreset() {
+            const data = { p: state.params };
+            const jsonString = JSON.stringify(data);
+            const url = `${window.location.href.split('#')[0]}#preset=${btoa(jsonString)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Shareable link copied to clipboard!');
+                logToConsole("Share link copied.");
+            }, () => {
+                alert('Failed to copy link.');
+                logToConsole("Failed to copy share link.");
+            });
+        }
+
+        function loadPresetFromURL() {
+            if(window.location.hash.startsWith('#preset=')) {
+                try {
+                    const encoded = window.location.hash.substring(8);
+                    const decoded = atob(encoded);
+                    const data = JSON.parse(decoded);
+                    if (data.p) {
+                        applyPreset(data.p.E, data.p.m, data.p.k);
+                        logToConsole("Loaded preset from URL.");
+                    }
+                } catch (e) {
+                    logToConsole("Failed to load preset from URL hash.");
+                    console.error(e);
+                }
+            }
+        }
+
+        // --- MAIN INITIALIZATION FUNCTION ---
+        function init() {
+            logToConsole("Initializing simulation...");
+            setupDOM();
+            setupEventListeners();
+            resetSimulation();
+            loadPresetFromURL();
+            requestAnimationFrame(draw);
+            logToConsole("Initialization complete. Ready to run.");
+        }
+
+    })();
+    </script>
+</body>
+</html>
