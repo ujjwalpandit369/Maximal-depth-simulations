@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physical vs. Simple Pendulum Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #16a085;
+            --accent-color-dark: #117a65;
+            --code-bg: #e2e8f0;
+            --simple-color: #2980b9;
+            --physical-color: #c0392b;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #1abc9c;
+            --accent-color-dark: #16a085;
+            --code-bg: #2d3748;
+            --simple-color: #5dade2;
+            --physical-color: #e74c3c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; display: flex; justify-content: center; align-items: center; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+        }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+        .simple-label { color: var(--simple-color); font-weight: bold; }
+        .physical-label { color: var(--physical-color); font-weight: bold; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid var(--accent-color);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Physical Pendulum vs. Simple Pendulum</h1>
+            <p class="subtitle">An animation comparing how mass distribution affects the period of oscillation.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop/Mobile</span>
+                <span><strong>Approx. HTML Size:</strong> 210 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>A pendulum's swing is one of the most classic images in physics. But not all pendulums are created equal. A "simple pendulum" is an idealized model with a heavy bob on a weightless string. A "physical pendulum" is any real, rigid object that can swing, like a meter stick or a baseball bat. This simulation compares these two types side-by-side. You'll see a simple pendulum and a solid rod of the exact same length released from the same angle. Which one do you think swings faster? The result might surprise you, and it reveals a deep concept about how an object's shape and mass distribution determine its motion.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Why Shape Matters</h2>
+
+            <h3>Step 1: The Simple Pendulum</h3>
+            <p>The <span class="simple-label">blue pendulum</span> on the left is a **simple pendulum**. This is the version you learn about first in physics class. It's an idealization where we assume all the mass is concentrated in a single point (the "bob") at the end of a completely massless string or rod of length L. For small swings, its period—the time it takes to complete one full back-and-forth swing—depends only on its length and the strength of gravity.</p>
+
+            <h3>Step 2: The Physical Pendulum</h3>
+            <p>The <span class="physical-label">red pendulum</span> on the right is a **physical pendulum**. This represents any real-world object that can swing. In this case, it's a solid, uniform rod, also of length L. Unlike the simple pendulum, its mass is not concentrated at the end; it's distributed evenly along its entire length. The small 'x' marks its center of mass, which is at the middle of the rod (L/2).</p>
+
+            <h3>Step 3: The Race</h3>
+            <p>Click the **"Release from small angle"** button. Both pendulums are released from the same starting angle at the same time. Watch them swing. You'll immediately notice that the **physical pendulum (the rod) swings faster** and completes a full cycle in less time than the simple pendulum. The timers in the readout panel below will confirm this measurement.</p>
+
+            <h3>Step 4: Why is the Rod Faster?</h3>
+            <p>This seems counterintuitive to many people. The reason lies in a concept called **moment of inertia (I)**, which is the rotational equivalent of mass. It's a measure of an object's "rotational laziness," or how hard it is to get it to spin or swing.
+            <ul>
+                <li>For the simple pendulum, all the mass is at the very end, as far as possible from the pivot. This gives it a large moment of inertia.</li>
+                <li>For the rod, the mass is distributed all along its length. On average, its mass is closer to the pivot than the simple pendulum's mass. This gives it a smaller moment of inertia.</li>
+            </ul>
+            Because the rod has less "rotational laziness" for the same length, gravity can make it swing more quickly. Its period is shorter.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Side-by-side animation of two pendulums"></canvas>
+                <div id="readout">
+                    <h4>Theoretical Periods</h4>
+                    <p><span class="simple-label">Simple:</span> T = <span id="t-simple-val">0.00</span> s</p>
+                    <p><span class="physical-label">Physical (Rod):</span> T = <span id="t-physical-val">0.00</span> s</p>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="release-btn">Release from small angle</button>
+                </div>
+                <div class="control-group">
+                    <label for="length-slider">Length (L): <span id="length-label">1.0</span> m</label>
+                    <input type="range" id="length-slider" min="0.2" max="2.0" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="gravity-slider">Gravity (g): <span id="gravity-label">9.8</span> m/s²</label>
+                    <input type="range" id="gravity-slider" min="1" max="25" value="9.8" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Period of a Pendulum</h2>
+
+            <h3>1. The Simple Pendulum</h3>
+            <p>For small angles of oscillation, the period <code>T</code> of a simple pendulum depends only on its length <code>L</code> and the acceleration due to gravity <code>g</code>.</p>
+            <p><code>T<sub>simple</sub> = 2&pi; &radic;(L/g)</code></p>
+
+            <h3>2. The Physical Pendulum</h3>
+            <p>The period of any physical pendulum is given by a more general formula:</p>
+            <p><code>T<sub>physical</sub> = 2&pi; &radic;(I / mgd)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>I</code> is the moment of inertia of the object about the pivot point.</li>
+                <li><code>m</code> is the total mass of the object.</li>
+                <li><code>d</code> is the distance from the pivot to the object's center of mass.</li>
+            </ul>
+            </p>
+
+            <h3>3. Applying to a Uniform Rod</h3>
+            <p>For a uniform rod of length <code>L</code> and mass <code>m</code> pivoted at one end:
+            <ul>
+                <li>The center of mass is at its geometric center: <code>d = L/2</code>.</li>
+                <li>The moment of inertia about one end is <code>I = (1/3)mL²</code>.</li>
+            </ul>
+            Substituting these into the general formula gives:
+            <br>
+            <code>T<sub>rod</sub> = 2&pi; &radic;((1/3)mL² / (mg(L/2)))</code>
+            <br>
+            After simplifying by canceling `m` and `L`:
+            <br>
+            <code><strong>T<sub>rod</sub> = 2&pi; &radic;((2/3)L / g)</strong></code>
+            </p>
+            <p>Comparing this to the simple pendulum's formula, you can see that the rod's period is shorter by a factor of &radic;(2/3) &approx; 0.816.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const lengthSlider = document.getElementById('length-slider');
+        const lengthLabel = document.getElementById('length-label');
+        const gravitySlider = document.getElementById('gravity-slider');
+        const gravityLabel = document.getElementById('gravity-label');
+        const releaseBtn = document.getElementById('release-btn');
+        const tSimpleVal = document.getElementById('t-simple-val');
+        const tPhysicalVal = document.getElementById('t-physical-val');
+
+        // --- Simulation State ---
+        let simParams = { L: 1.0, g: 9.8 };
+        let pendulums = {
+            simple: { angle: 0, omega: 0, T: 0 },
+            physical: { angle: 0, omega: 0, T: 0 }
+        };
+        let isRunning = false;
+        const initialAngle = 15 * Math.PI / 180;
+
+        function calculatePeriods() {
+            const { L, g } = simParams;
+            pendulums.simple.T = 2 * Math.PI * Math.sqrt(L / g);
+            pendulums.physical.T = 2 * Math.PI * Math.sqrt((2/3) * L / g);
+            tSimpleVal.textContent = pendulums.simple.T.toFixed(2);
+            tPhysicalVal.textContent = pendulums.physical.T.toFixed(2);
+        }
+
+        function release() {
+            isRunning = true;
+            pendulums.simple.angle = initialAngle;
+            pendulums.physical.angle = initialAngle;
+            pendulums.simple.omega = 0;
+            pendulums.physical.omega = 0;
+        }
+
+        function update() {
+            if (!isRunning) return;
+
+            const dt = 0.016;
+            const { L, g } = simParams;
+
+            // Simple pendulum: a = -(g/L) * sin(theta)
+            let accel_s = -(g/L) * Math.sin(pendulums.simple.angle);
+            pendulums.simple.omega += accel_s * dt;
+            pendulums.simple.angle += pendulums.simple.omega * dt;
+
+            // Physical pendulum (rod): a = -(mgd/I) * sin(theta) = -(1.5g/L) * sin(theta)
+            let accel_p = -(1.5 * g / L) * Math.sin(pendulums.physical.angle);
+            pendulums.physical.omega += accel_p * dt;
+            pendulums.physical.angle += pendulums.physical.omega * dt;
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const pivot = { x: canvas.width/2, y: 50 };
+            const l_pixels = simParams.L * 150;
+
+            // Draw simple pendulum
+            const simple_x = pivot.x - l_pixels * Math.sin(pendulums.simple.angle);
+            const simple_y = pivot.y + l_pixels * Math.cos(pendulums.simple.angle);
+            ctx.strokeStyle = 'var(--simple-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pivot.x, pivot.y);
+            ctx.lineTo(simple_x, simple_y);
+            ctx.stroke();
+            ctx.fillStyle = 'var(--simple-color)';
+            ctx.beginPath();
+            ctx.arc(simple_x, simple_y, 15, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Draw physical pendulum
+            const physical_x = pivot.x + l_pixels * Math.sin(pendulums.physical.angle);
+            const physical_y = pivot.y + l_pixels * Math.cos(pendulums.physical.angle);
+            ctx.strokeStyle = 'var(--physical-color)';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(pivot.x, pivot.y);
+            ctx.lineTo(physical_x, physical_y);
+            ctx.stroke();
+            // Center of mass marker
+            const com_x = pivot.x + (l_pixels/2) * Math.sin(pendulums.physical.angle);
+            const com_y = pivot.y + (l_pixels/2) * Math.cos(pendulums.physical.angle);
+            ctx.fillStyle = isDark ? '#ecf0f1' : '#1a202c';
+            ctx.beginPath();
+            ctx.arc(com_x, com_y, 4, 0, 2*Math.PI);
+            ctx.fill();
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        const updateParams = () => {
+             simParams.L = parseFloat(lengthSlider.value);
+             lengthLabel.textContent = simParams.L.toFixed(1);
+             simParams.g = parseFloat(gravitySlider.value);
+             gravityLabel.textContent = simParams.g.toFixed(1);
+             calculatePeriods();
+        };
+        lengthSlider.addEventListener('input', updateParams);
+        gravitySlider.addEventListener('input', updateParams);
+
+        releaseBtn.addEventListener('click', release);
+
+        // --- Init ---
+        updateParams();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

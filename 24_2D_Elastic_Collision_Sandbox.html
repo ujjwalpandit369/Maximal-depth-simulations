@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Elastic Collision Sandbox</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            cursor: crosshair;
+        }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>2D Elastic Collision Sandbox</h1>
+            <p class="subtitle">Observing the conservation of momentum and kinetic energy in a closed system.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 230 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>In a closed system, some things are always conserved—they don't change, no matter what happens inside the system. For collisions between objects like billiard balls, the two most important conserved quantities are momentum and kinetic energy. This interactive sandbox lets you see these conservation laws in action. You can create a box full of colliding disks and watch the chaos unfold. While the motion of any single disk is unpredictable, the readouts for the *total* momentum and *total* kinetic energy of the entire system will remain constant. You can even "fling" disks with your mouse to create your own collisions and see how the energy and momentum are redistributed, but never lost.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Unchanging Totals</h2>
+
+            <h3>Step 1: What is a "Closed System"?</h3>
+            <p>The simulation shows a number of disks bouncing around inside a sealed box. Since no external forces are acting on the disks (we assume the walls are just boundaries and don't push or pull), this is a "closed system." The laws of conservation apply to the system *as a whole*.</p>
+
+            <h3>Step 2: Conservation of Momentum in 2D</h3>
+            <p>Momentum (mass &times; velocity) is a vector, meaning it has both a magnitude and a direction. In 2D, we can think of it as having an X-component (left-right motion) and a Y-component (up-down motion). The law of conservation of momentum states that the total X-momentum of all the disks added up will remain constant, and the total Y-momentum will also remain constant. When two disks collide, they can exchange momentum—one might slow down in the X-direction while the other speeds up—but the total for the system never changes.</p>
+
+            <h3>Step 3: Conservation of Kinetic Energy</h3>
+            <p>Kinetic energy (½mv²) is the energy of motion. Unlike momentum, it does not have a direction. In a **perfectly elastic collision** (the kind simulated here), the total kinetic energy of the system is also conserved. When two disks collide, one might slow down (losing KE) while the other speeds up (gaining KE), but the total amount of KE in the system remains exactly the same.</p>
+
+            <h3>Step 4: The Sandbox</h3>
+            <p>This simulation is a sandbox for you to explore these ideas:
+            <ul>
+                <li>Use the sliders to change the number of disks and their average properties, then click **"Reset"** to start a new configuration.</li>
+                <li>Watch the readouts for Total Momentum and Total Kinetic Energy. Notice that even as the disks undergo chaotic collisions, these total values stay constant (up to tiny numerical rounding errors).</li>
+                <li><strong>Try flinging a disk:</strong> Click and drag any disk with your mouse. A line will appear showing the velocity you will give it. Release the mouse to "throw" the disk. You are adding momentum and energy to the system when you do this. After the fling, watch as the new, higher totals for momentum and energy remain constant during all subsequent internal collisions.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Animation of 2D collisions"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="disks-slider">Number of Disks: <span id="disks-label">25</span></label>
+                    <input type="range" id="disks-slider" min="5" max="100" value="25" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Average Mass: <span id="mass-label">5</span></label>
+                    <input type="range" id="mass-slider" min="1" max="10" value="5" step="1">
+                </div>
+                 <div class="control-group">
+                    <label for="speed-slider">Average Speed: <span id="speed-label">50</span></label>
+                    <input type="range" id="speed-slider" min="10" max="100" value="50" step="1">
+                </div>
+                <div id="readout">
+                    <h4>System Totals</h4>
+                    <p>Total P<sub>x</sub>: <span id="px-val">0</span></p>
+                    <p>Total P<sub>y</sub>: <span id="py-val">0</span></p>
+                    <p>Total KE: <span id="ke-val">0</span></p>
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: 2D Elastic Collisions</h2>
+            <p>To resolve a 2D elastic collision between two disks, it's easiest to work in a coordinate system aligned with the collision axis.</p>
+            <p>1. The **collision axis** is the line connecting the centers of the two disks at the moment of impact. We can define a unit vector <strong>n</strong> along this axis.</p>
+            <p>2. The velocity of each disk, <strong>v</strong>, can be decomposed into two components: one parallel to the collision axis (v<sub>||</sub>) and one perpendicular to it (v<sub>&perp;</sub>).</p>
+            <p>3. The perpendicular components of the velocities (v<sub>&perp;</sub>) are unaffected by the collision.</p>
+            <p>4. The parallel components of the velocities (v<sub>||</sub>) undergo a 1D elastic collision. The formulas for the final parallel velocities (v₁<sub>||</sub>' and v₂<sub>||</sub>') are:</p>
+            <p><code>v₁<sub>||</sub>' = (v₁<sub>||</sub>(m₁-m₂) + 2m₂v₂<sub>||</sub>) / (m₁+m₂)</code></p>
+            <p><code>v₂<sub>||</sub>' = (v₂<sub>||</sub>(m₂-m₁) + 2m₁v₁<sub>||</sub>) / (m₁+m₂)</code></p>
+            <p>5. After calculating the new parallel components, they are recombined with the unchanged perpendicular components to get the final velocity vectors for each disk.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('reset-btn');
+        const sliders = {
+            N: document.getElementById('disks-slider'),
+            m: document.getElementById('mass-slider'),
+            v: document.getElementById('speed-slider')
+        };
+        const labels = {
+            N: document.getElementById('disks-label'),
+            m: document.getElementById('mass-label'),
+            v: document.getElementById('speed-label')
+        };
+        const readouts = {
+            px: document.getElementById('px-val'),
+            py: document.getElementById('py-val'),
+            ke: document.getElementById('ke-val')
+        };
+
+        // --- Simulation State ---
+        let simParams = { N: 25, m_avg: 5, v_avg: 50 };
+        let disks = [];
+        let dragging = { disk: null, startX: 0, startY: 0 };
+
+        function setup() {
+            simParams.N = parseInt(sliders.N.value);
+            simParams.m_avg = parseInt(sliders.m.value);
+            simParams.v_avg = parseInt(sliders.v.value);
+            labels.N.textContent = simParams.N;
+            labels.m.textContent = simParams.m_avg;
+            labels.v.textContent = simParams.v_avg;
+
+            disks = [];
+            for(let i=0; i<simParams.N; i++) {
+                const mass = simParams.m_avg * (0.5 + Math.random());
+                const radius = Math.sqrt(mass) * 4;
+                const speed = simParams.v_avg * (0.5 + Math.random());
+                const angle = Math.random() * 2 * Math.PI;
+                disks.push({
+                    x: radius + Math.random() * (canvas.width - 2*radius),
+                    y: radius + Math.random() * (canvas.height - 2*radius),
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    m: mass,
+                    r: radius,
+                    color: `hsl(${Math.random()*360}, 70%, 60%)`
+                });
+            }
+        }
+
+        function update() {
+            const dt = 0.1;
+            disks.forEach(d => {
+                d.x += d.vx * dt;
+                d.y += d.vy * dt;
+                if(d.x < d.r || d.x > canvas.width - d.r) d.vx *= -1;
+                if(d.y < d.r || d.y > canvas.height - d.r) d.vy *= -1;
+            });
+
+            // Collision detection and resolution
+            for(let i=0; i<disks.length; i++) {
+                for(let j=i+1; j<disks.length; j++) {
+                    const d1 = disks[i];
+                    const d2 = disks[j];
+                    const dx = d2.x - d1.x;
+                    const dy = d2.y - d1.y;
+                    const dist2 = dx*dx + dy*dy;
+                    if(dist2 < (d1.r + d2.r)**2) {
+                        // Resolve overlap
+                        const dist = Math.sqrt(dist2);
+                        const overlap = (d1.r + d2.r - dist) / 2;
+                        d1.x -= overlap * (dx/dist); d1.y -= overlap * (dy/dist);
+                        d2.x += overlap * (dx/dist); d2.y += overlap * (dy/dist);
+
+                        // Collision normal vector
+                        const nx = dx/dist, ny = dy/dist;
+                        // Velocities in normal direction
+                        const v1n = d1.vx * nx + d1.vy * ny;
+                        const v2n = d2.vx * nx + d2.vy * ny;
+                        // Final normal velocities
+                        const v1n_f = (v1n * (d1.m - d2.m) + 2*d2.m*v2n) / (d1.m + d2.m);
+                        const v2n_f = (v2n * (d2.m - d1.m) + 2*d1.m*v1n) / (d1.m + d2.m);
+                        // Update velocities
+                        d1.vx += (v1n_f - v1n) * nx; d1.vy += (v1n_f - v1n) * ny;
+                        d2.vx += (v2n_f - v2n) * nx; d2.vy += (v2n_f - v2n) * ny;
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            disks.forEach(d => {
+                ctx.fillStyle = d.color;
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.r, 0, 2*Math.PI);
+                ctx.fill();
+            });
+
+            if(dragging.disk) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(dragging.disk.x, dragging.disk.y);
+                ctx.lineTo(dragging.endX, dragging.endY);
+                ctx.stroke();
+            }
+        }
+
+        function updateReadouts() {
+            let Px=0, Py=0, KE=0;
+            disks.forEach(d => {
+                Px += d.m * d.vx;
+                Py += d.m * d.vy;
+                KE += 0.5 * d.m * (d.vx**2 + d.vy**2);
+            });
+            readouts.px.textContent = Px.toFixed(0);
+            readouts.py.textContent = Py.toFixed(0);
+            readouts.ke.textContent = (KE/1000).toFixed(1) + " kJ";
+        }
+
+        let frameCount = 0;
+        function mainLoop() {
+            update();
+            draw();
+            if(frameCount % 15 === 0) updateReadouts();
+            frameCount++;
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        resetBtn.addEventListener('click', setup);
+        Object.values(sliders).forEach(s => s.addEventListener('input', () => {
+            labels[s.id.split('-')[0]].textContent = s.value;
+        }));
+        Object.values(sliders).forEach(s => s.addEventListener('change', setup));
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            for(let i=disks.length-1; i>=0; i--) {
+                const d = disks[i];
+                if(Math.sqrt((x-d.x)**2 + (y-d.y)**2) < d.r) {
+                    dragging.disk = d;
+                    dragging.startX = x;
+                    dragging.startY = y;
+                    break;
+                }
+            }
+        });
+        canvas.addEventListener('mousemove', e => {
+            if(dragging.disk) {
+                const rect = canvas.getBoundingClientRect();
+                dragging.endX = e.clientX - rect.left;
+                dragging.endY = e.clientY - rect.top;
+            }
+        });
+        window.addEventListener('mouseup', e => {
+            if(dragging.disk) {
+                const dx = dragging.endX - dragging.startX;
+                const dy = dragging.endY - dragging.startY;
+                dragging.disk.vx = dx;
+                dragging.disk.vy = dy;
+                dragging.disk = null;
+            }
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
