@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Space of All Possible Grammars</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f7f9fc; color: #333; }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2 { text-align: center; border-bottom: 1px solid #e1e4e8; padding-bottom: 0.5em; }
+        .main-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 20px; }
+        .sidebar { border-right: 1px solid #e1e4e8; padding-right: 20px; }
+        .grammar-rules, .generated-sentence { background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #e1e4e8; margin-bottom: 20px; }
+        .grammar-rules pre { white-space: pre-wrap; font-size: 1.1em; }
+        .generated-sentence p { font-size: 1.4em; font-weight: bold; text-align: center; color: #0366d6; }
+        canvas { border: 1px solid #e1e4e8; background-color: #fff; width: 100%; height: auto; aspect-ratio: 4 / 3; }
+        .controls { text-align: center; margin-top: 20px; }
+        button { cursor: pointer; padding: 10px 25px; font-size: 1.2em; border: 1px solid #28a745; background-color: #28a745; color: white; border-radius: 5px; }
+        button:hover { background-color: #218838; }
+        .dev-console, .quality-check-panel { margin-top: 20px; border: 1px solid #e1e4e8; border-radius: 5px; text-align: left; }
+        .dev-console summary { cursor: pointer; padding: 10px; background-color: #f6f8fa; }
+        .dev-console-content { padding: 10px; max-height: 150px; overflow-y: auto; font-family: monospace; }
+        .quality-check-panel { padding: 15px; background-color: #f8d7da; color: #721c24; display: none; }
+        .high-contrast { background-color: #0d1117; color: #c9d1d9; }
+        .high-contrast .grammar-rules, .high-contrast .generated-sentence, .high-contrast canvas { background: #161b22; border-color: #30363d; }
+        .high-contrast h1, .high-contrast h2 { border-color: #30363d; }
+        .tooltip { position: relative; display: inline-block; }
+        .tooltip .tooltiptext { visibility: hidden; width: 140px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -70px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        @media (max-width: 900px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .sidebar { border-right: none; padding-right: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Space of All Possible Grammars</h1>
+            <p class="subtitle">A simulation that generates sentences from a simple formal grammar.</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="sidebar">
+                <div class="grammar-rules">
+                    <h2>Grammar Rules</h2>
+                    <pre id="grammar-display"></pre>
+                </div>
+                <div class="generated-sentence">
+                    <h2>Generated Sentence</h2>
+                    <p id="sentence-display">Click "Generate" to start.</p>
+                </div>
+                 <div class="controls">
+                    <div class="tooltip">
+                        <button id="generate-btn">Generate Sentence</button>
+                        <span class="tooltiptext">Shortcut: G</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="export-btn" style="background-color: #0366d6;">Export PNG</button>
+                        <span class="tooltiptext">Shortcut: E</span>
+                    </div>
+                    <br>
+                    <label style="margin-top: 15px;"><input type="checkbox" id="theme-toggle"> High Contrast Mode</label>
+                </div>
+            </div>
+            <div class="canvas-container">
+                <h2>Parse Tree</h2>
+                <canvas id="treeCanvas" width="800" height="600"></canvas>
+            </div>
+        </div>
+
+        <section>
+            <h2>How It Works</h2>
+            <p>This simulation uses a <strong>Context-Free Grammar</strong>, a set of rules used to generate valid sentences in a formal language. The process starts with the 'S' (Sentence) symbol.</p>
+            <ol>
+                <li>The generator picks a random rule for 'S', for example, `S -> NP VP` (a sentence is a Noun Phrase followed by a Verb Phrase).</li>
+                <li>It then looks at the new symbols, 'NP' and 'VP'. For each, it picks another random rule. For example, `NP -> Det N` (a Noun Phrase is a Determiner followed by a Noun).</li>
+                <li>This process repeats recursively until only terminal symbols (the actual words, shown in quotes) are left.</li>
+                <li>The <strong>Parse Tree</strong> on the right visualizes this hierarchical structure, showing how the sentence is built from its grammatical components. Every sentence that can be produced by these rules is part of the "language" defined by this grammar.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>Advanced Notes & FAQ</h2>
+            <dl>
+                <dt><strong>What kind of grammar is this?</strong></dt>
+                <dd>This is a Context-Free Grammar (CFG). It's "context-free" because the rules for expanding a symbol (like `NP`) don't depend on the symbols around it. This is powerful enough to describe the structure of most programming languages and many aspects of natural language, but it can't capture all linguistic phenomena.</dd>
+                <dt><strong>Is the generated language infinite?</strong></dt>
+                <dd>Yes. Because the grammar contains recursion (e.g., an `NP` can be part of a `VP`, which can in turn contain another `NP`), the grammar can generate sentences of arbitrary length. The space of all possible sentences is infinite, even though the set of rules is finite.</dd>
+                 <dt><strong>What is the Chomsky Hierarchy?</strong></dt>
+                <dd>In linguistics and computer science, the Chomsky Hierarchy is a classification of formal grammars. Context-Free Grammars (Type 2) are more powerful than Regular Grammars (Type 3, used for regular expressions) but less powerful than Context-Sensitive Grammars (Type 1) and Unrestricted Grammars (Type 0, equivalent to a Turing machine).</dd>
+            </dl>
+        </section>
+        <div id="quality-check-panel" class="quality-check-panel"></div>
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content" id="dev-console-content"></div>
+        </details>
+    </div>
+
+    <script>
+    (function() {
+        // --- Setup ---
+        const get = (id) => document.getElementById(id);
+        const logToConsole = (message) => {
+            const consoleContent = get('dev-console-content');
+            if (consoleContent) consoleContent.innerHTML += `<div>${message}</div>`;
+        };
+        const runQualityChecks = () => {
+            const panel = get('quality-check-panel');
+            if (!get('treeCanvas') || !get('generate-btn')) {
+                panel.style.display = 'block';
+                panel.textContent = 'Error: Critical canvas or button element is missing.';
+                return false;
+            }
+            return true;
+        };
+
+        const grammarDisplay = get('grammar-display');
+        const sentenceDisplay = get('sentence-display');
+        const generateBtn = get('generate-btn');
+        const canvas = get('treeCanvas');
+        const ctx = canvas.getContext('2d');
+        const exportBtn = get('export-btn');
+        const themeToggle = get('theme-toggle');
+
+        // --- Grammar Definition ---
+        const grammar = {
+            'S': [['NP', 'VP']],
+            'NP': [['Det', 'N'], ['Det', 'Adj', 'N']],
+            'VP': [['V', 'NP'], ['V', 'Adv']],
+            'Det': [['"the"'], ['"a"']],
+            'N': [['"cat"'], ['"dog"'], ['"bird"'], ['"man"']],
+            'Adj': [['"big"'], ['"small"'], ['"red"']],
+            'V': [['"chased"'], ['"ate"'], ['"saw"']],
+            'Adv': [['"quickly"'], ['"slowly"'], ['"happily"']]
+        };
+
+        function displayGrammar() {
+            let text = '';
+            for (const key in grammar) {
+                const rules = grammar[key].map(rule => rule.join(' ')).join(' | ');
+                text += `${key} -> ${rules}\n`;
+            }
+            grammarDisplay.textContent = text;
+        }
+
+        // --- Generation Engine ---
+        let treeRoot;
+
+        function generate() {
+            treeRoot = { symbol: 'S', children: [] };
+            const sentence = expand(treeRoot);
+            sentenceDisplay.textContent = sentence.join(' ') + '.';
+            layoutTree(treeRoot);
+            drawTree();
+        }
+
+        function expand(node) {
+            const symbol = node.symbol;
+            if (!grammar[symbol]) { // Terminal symbol
+                return [symbol.replace(/"/g, '')];
+            }
+
+            const rules = grammar[symbol];
+            const chosenRule = rules[Math.floor(Math.random() * rules.length)];
+
+            let sentence = [];
+            for (const s of chosenRule) {
+                const childNode = { symbol: s, children: [], parent: node };
+                node.children.push(childNode);
+                sentence = sentence.concat(expand(childNode));
+            }
+            return sentence;
+        }
+
+        // --- Tree Layout and Drawing ---
+        let nodePositions = new Map();
+        let nextX;
+
+        function layoutTree(node, depth = 0) {
+            if (depth === 0) { // Initial call
+                nodePositions.clear();
+                nextX = 20;
+            }
+
+            for (const child of node.children) {
+                layoutTree(child, depth + 1);
+            }
+
+            let x;
+            if (node.children.length === 0) { // Leaf node
+                x = nextX;
+                nextX += 60;
+            } else { // Internal node
+                const firstChildPos = nodePositions.get(node.children[0]);
+                const lastChildPos = nodePositions.get(node.children[node.children.length - 1]);
+                x = (firstChildPos.x + lastChildPos.x) / 2;
+            }
+            nodePositions.set(node, { x: x, y: 50 + depth * 80 });
+        }
+
+        function drawTree() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+
+            for (const [node, pos] of nodePositions.entries()) {
+                // Draw lines to children
+                ctx.strokeStyle = '#aaa';
+                ctx.lineWidth = 1;
+                for (const child of node.children) {
+                    const childPos = nodePositions.get(child);
+                    ctx.beginPath();
+                    ctx.moveTo(pos.x, pos.y + 10);
+                    ctx.lineTo(childPos.x, childPos.y - 10);
+                    ctx.stroke();
+                }
+            }
+
+            for (const [node, pos] of nodePositions.entries()) {
+                // Draw nodes
+                const text = node.symbol.replace(/"/g, '');
+                const isTerminal = !grammar[node.symbol];
+                ctx.fillStyle = isTerminal ? '#28a745' : '#0366d6';
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 20, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.fillText(text, pos.x, pos.y + 6);
+            }
+        }
+
+        // --- Init ---
+        function init() {
+            if(!runQualityChecks()) return;
+            logToConsole("Initializing Grammar Generator.");
+
+            generateBtn.addEventListener('click', () => {
+                logToConsole("New sentence generated.");
+                generate();
+            });
+            exportBtn.addEventListener('click', () => {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = `parse_tree_${Date.now()}.png`;
+                a.click();
+                logToConsole("PNG exported.");
+            });
+            themeToggle.addEventListener('change', () => {
+                document.body.classList.toggle('high-contrast');
+                drawTree(); // Redraw with new theme colors
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'g') {
+                    e.preventDefault();
+                    generateBtn.click();
+                }
+                if (e.key.toLowerCase() === 'e') {
+                    e.preventDefault();
+                    exportBtn.click();
+                }
+            });
+
+            displayGrammar();
+            generate();
+            logToConsole("Initial sentence generated.");
+        }
+        init();
+    })();
+    </script>
+</body>
+</html>
