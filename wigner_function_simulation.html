@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Physics: The Wigner Function</title>
+    <style>
+        /* --- General Styles & Resets --- */
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #4a148c; /* Purple for quantum theme */
+            --primary-text: #ffffff;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #ffffff;
+            --code-bg: #e9ecef;
+            --link-color: #6a1b9a;
+            --header-bg: #e9ecef;
+            --slider-track: #dee2e6;
+            --slider-thumb: #4a148c;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #fdd835; /* Yellow for high-contrast quantum */
+            --primary-text: #000000;
+            --secondary-color: #aaaaaa;
+            --border-color: #ffffff;
+            --canvas-bg: #111111;
+            --code-bg: #333333;
+            --link-color: #fdd835;
+            --header-bg: #1a1a1a;
+            --slider-track: #555555;
+            --slider-thumb: #fdd835;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* --- Layout --- */
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        header { background-color: var(--header-bg); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        .main-layout { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        .simulation-column { flex: 2; min-width: 400px; }
+        .controls-column { flex: 1; min-width: 300px; }
+
+        @media (max-width: 800px) {
+            .main-layout { flex-direction: column; }
+        }
+
+        /* --- Typography & Content --- */
+        h1, h2, h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+        h1 { font-size: 2.5rem; color: var(--primary-color); }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        h3 { font-size: 1.5rem; }
+        a { color: var(--link-color); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background-color: var(--code-bg); padding: 1em; border-radius: 5px; overflow-x: auto; }
+
+        /* --- UI Elements --- */
+        button { background-color: var(--primary-color); color: var(--primary-text); border: none; padding: 0.5em 1em; border-radius: 5px; cursor: pointer; font-size: 1rem; transition: opacity 0.2s; }
+        button:hover { opacity: 0.85; }
+        button.secondary { background-color: var(--secondary-color); }
+        .controls-group { border: 1px solid var(--border-color); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        /* --- Simulation Canvas --- */
+        #simulationCanvas { width: 100%; height: auto; aspect-ratio: 1 / 1; background-color: var(--canvas-bg); border: 1px solid var(--border-color); border-radius: 8px; }
+
+        /* --- Tables --- */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        th, td { border: 1px solid var(--border-color); padding: 0.5rem; text-align: left; }
+        th { background-color: var(--header-bg); }
+
+        /* --- Helper Classes --- */
+        .hidden { display: none; }
+        .error-panel { background-color: #ffcccc; color: #cc0000; border: 1px solid #cc0000; padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+        .dev-console { background-color: #333; color: #eee; padding: 1rem; margin-top: 1rem; border-radius: 8px; }
+        .dev-console summary { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Wigner Function in Phase Space</h1>
+            <p>A "quasi-probability" distribution of a quantum state.</p>
+            <div id="metadata-bar">
+                <small>Est. Runtime: Real-time | Recommended Device: Desktop | Approx. Size: 40KB</small>
+                <button id="theme-toggle" class="secondary" style="float: right;">High Contrast</button>
+            </div>
+        </header>
+
+        <div id="quality-check-panel" class="error-panel hidden">
+            <h3>Quality Check Failed</h3>
+            <p>Some parts of the simulation may not work as expected. Please report the bug with the details from the developer console below.</p>
+            <ul id="quality-check-list"></ul>
+        </div>
+
+        <div id="suggestion-box" class="suggestion-box">
+             <p style="margin:0;">Tune simulation:
+                <button class="secondary" data-audience="beginner">Beginner</button>
+                <button class="secondary" data-audience="intermediate">Intermediate</button>
+                <button class="secondary" data-audience="advanced">Advanced</button>
+            </p>
+        </div>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <section id="simulation-area">
+                    <h2>Phase Space Visualization</h2>
+                    <canvas id="simulationCanvas" width="500" height="500"></canvas>
+                    <div id="sim-performance-meter">
+                        <span>FPS: --</span> | <span>Grid Size: --</span> | <span>Calc. Time: --ms</span>
+                    </div>
+                </section>
+
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>The Wigner function is a powerful tool in quantum mechanics that provides a way to represent quantum states in "phase space." While classical particles have a definite position and momentum, the uncertainty principle forbids this for quantum particles. The Wigner function acts as a substitute, creating a "quasi-probability distribution" that shows where a particle is *most likely* to be found in terms of both position and momentum. Its most striking feature is that it can have <strong>negative values</strong>, which have no classical analog and are a tell-tale signature of quantum interference.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide to Quantum Phase Space</h2>
+                    <p>Welcome to a visual tour of quantum states! This simulation might look abstract, but it gets to the heart of what makes quantum mechanics so different from our everyday world. Let's break it down.</p>
+
+                    <h3>Step 1: What is "Phase Space"?</h3>
+                    <p>Imagine a simple classical object, like a billiard ball rolling on a table. At any instant, you can describe its state completely by knowing two things: its <strong>position (x)</strong> and its <strong>momentum (p)</strong> (which is just mass times velocity). Phase space is a conceptual graph where you plot position on the horizontal axis and momentum on the vertical axis. The complete state of the billiard ball at any moment is just a single, sharp point on this graph.</p>
+
+                    <h3>Step 2: The Quantum Roadblock: The Uncertainty Principle</h3>
+                    <p>Here's where quantum mechanics changes the game. Heisenberg's Uncertainty Principle states that it is fundamentally impossible to know both the exact position and the exact momentum of a particle at the same time. The more precisely you measure one, the less precisely you know the other. </p>
+                    <p>This means a quantum particle can <strong>never</strong> be represented as a single point in phase space! A point would imply we know both x and p exactly, which nature forbids. So, how do we visualize a quantum state? We need a "distribution" or a "smudge" that covers an area of phase space, representing our uncertainty.</p>
+
+                    <h3>Step 3: The Wigner Function - A "Sort of" Probability Map</h3>
+                    <p>The Wigner function is the closest quantum mechanics gets to a phase space probability map. It's a distribution that tells you about the particle's state in both position and momentum. The "brighter" regions (red in this visualization) are where you are most likely to find the particle. The darker regions are where you are less likely to find it.</p>
+                    <p>But there's a catch, and it's a big one. Notice the blue areas? Those represent <strong>negative values</strong>. This is impossible for a true probability—you can't have a -20% chance of finding something! This is why it's called a "quasi-probability" distribution. These negative regions are not just a mathematical curiosity; they are a profound sign of quantum weirdness. They are a direct visualization of <strong>quantum interference</strong>, an effect you see in the famous double-slit experiment.</p>
+
+                    <h3>Step 4: Exploring the Quantum Zoo</h3>
+                    <p>Use the buttons to select different quantum states and see what their phase space "portraits" look like.</p>
+                    <ul>
+                        <li><strong>Coherent State:</strong> This is the most "classical-like" state. It's a simple Gaussian blob, representing the minimum possible uncertainty allowed by quantum mechanics. It has no negative values.</li>
+                        <li><strong>Fock State:</strong> This is a state with a definite number of energy quanta (e.g., exactly <em>n</em> photons). Notice the concentric rings and the negative dip in the center for n=1. That negativity is a clear sign of its non-classical nature.</li>
+                        <li><strong>Squeezed State:</strong> This is a special state where the uncertainty has been "squeezed" in one direction (e.g., position) at the cost of being "stretched" in the other (momentum), while still obeying the uncertainty principle.</li>
+                        <li><strong>Cat State:</strong> This is the famous "Schrödinger's Cat" state, representing a superposition of two distinct coherent states. Notice the two blobs for the two states, but critically, see the interference fringes that appear between them. These rapidly oscillating positive and negative values are the very essence of quantum superposition made visible.</li>
+                    </ul>
+                </section>
+
+                <section id="parameters-explained">
+                    <h2>Parameters Explained</h2>
+                    <p>Different parameters become available depending on the selected quantum state.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>State(s)</th>
+                                <th>Default</th>
+                                <th>Range</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Alpha (Re)</strong></td>
+                                <td>Coherent, Cat</td>
+                                <td>1.5</td>
+                                <td>-3 to 3</td>
+                                <td>Controls the displacement along the position (x) axis.</td>
+                            </tr>
+                             <tr>
+                                <td><strong>Alpha (Im)</strong></td>
+                                <td>Coherent</td>
+                                <td>0</td>
+                                <td>-3 to 3</td>
+                                <td>Controls the displacement along the momentum (p) axis.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>n</strong></td>
+                                <td>Fock</td>
+                                <td>1</td>
+                                <td>0 to 10</td>
+                                <td>The energy level of the state. Higher 'n' creates more rings.</td>
+                            </tr>
+                             <tr>
+                                <td><strong>Squeezing (r)</strong></td>
+                                <td>Squeezed</td>
+                                <td>1.0</td>
+                                <td>-2 to 2</td>
+                                <td>Controls the squeezing. r > 0 squeezes momentum, r < 0 squeezes position.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Grid Resolution</strong></td>
+                                <td>All</td>
+                                <td>128</td>
+                                <td>32 to 256</td>
+                                <td>The resolution of the calculation grid. Higher is smoother but much slower.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="walkthroughs">
+                    <h2>Worked Walkthroughs</h2>
+                    <p>Let's explore how the parameters change the view of the quantum state.</p>
+                    <h3>Walkthrough 1: Displacing the Coherent State</h3>
+                    <ol>
+                        <li>Select the <strong>Coherent</strong> state. The default shows a Gaussian blob centered at (x, p) corresponding to α = 1.5.</li>
+                        <li>Set the <strong>Alpha (Im)</strong> slider to 1.5 and click Recalculate. The blob moves up in the phase space, centered on a point corresponding to α = 1.5 + 1.5i. The state has gained momentum.</li>
+                        <li>Set <strong>Alpha (Re)</strong> to 0 and <strong>Alpha (Im)</strong> to 0. The blob is now centered at the origin. This is the "vacuum state."</li>
+                    </ol>
+                    <h3>Walkthrough 2: Exciting the Fock State</h3>
+                     <ol>
+                        <li>Select the <strong>Fock</strong> state. With n=0, it looks identical to the vacuum state.</li>
+                        <li>Set <strong>n</strong> to 1. A ring appears with a blue (negative) region in the middle. This negativity is a key quantum feature.</li>
+                        <li>Set <strong>n</strong> to 4. The state now has four rings, and the central region is positive again. The sign of the center alternates with `(-1)ⁿ`.</li>
+                    </ol>
+                </section>
+
+                <section id="micro-experiments">
+                    <h2>Micro-Experiments</h2>
+                    <ol>
+                        <li><strong>Confirm the Vacuum:</strong> Show that the Coherent state with α=0 is identical to the Fock state with n=0.</li>
+                        <li><strong>Cat Interference:</strong> Select the Cat state. Set Alpha (Re) to 1.0. You'll see two blobs with weak interference. Now increase Alpha to 2.5. The interference fringes in the middle become much more rapid and pronounced.</li>
+                        <li><strong>Squeezing Direction:</strong> Select the Squeezed state. Set Squeezing (r) to a large positive value (e.g., 1.5). The blob is stretched horizontally (position). Now set r to a large negative value (e.g., -1.5). The blob is stretched vertically (momentum).</li>
+                        <li><strong>Kill the Cat:</strong> In the Cat state, slowly decrease Alpha (Re) from 2.0 to 0. Watch the two blobs merge and the interference fringes disappear, leaving you with the vacuum state.</li>
+                    </ol>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory: The Wigner Formulas</h2>
+                    <p>The following formulas (with ħ=1) are used to calculate the plots. Here, <code>x</code> is position and <code>p</code> is momentum.</p>
+
+                    <h3>Coherent State |α⟩</h3>
+                    <p><code>W(x,p) = (1/π) * exp(-2 * ((x-x₀)² + (p-p₀)²))</code> where <code>x₀ = sqrt(2)Re(α)</code> and <code>p₀ = sqrt(2)Im(α)</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> This is a simple 2D Gaussian (a bell curve) centered at the point (x₀, p₀) defined by the complex number α. It has no negative values.</li>
+                    </ul>
+
+                    <h3>Fock State |n⟩</h3>
+                    <p><code>W(x,p) = ((-1)ⁿ/π) * Lₙ(2(x²+p²)) * exp(-(x²+p²))</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> This formula has three parts: a sign flip <code>(-1)ⁿ</code>, a decaying exponential that makes it go to zero far from the origin, and the Laguerre polynomial <code>Lₙ</code> which creates the characteristic rings. The negative values come from the interplay of these two terms.</li>
+                    </ul>
+
+                    <h3>Squeezed Vacuum State</h3>
+                    <p><code>W(x,p) = (1/π) * exp(-2 * (x²e⁻²ʳ + p²e²ʳ))</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> This is another Gaussian, but the position (x) and momentum (p) components are scaled differently by the squeezing parameter <code>r</code>. If <code>r</code> is positive, the <code>p²</code> term is magnified, "squeezing" the distribution along the momentum axis, which causes it to stretch along the position axis.</li>
+                    </ul>
+
+                    <h3>Schrödinger Cat State (|α⟩ + |-α⟩)</h3>
+                    <p><code>W_cat ∝ W(x, p, α) + W(x, p, -α) + 2 * cos(4(p*x₀ - x*p₀)) * exp(-2(x²+p²))</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> The formula is the sum of two separate coherent state blobs (one for |α⟩ and one for |-α⟩) plus a third "interference" term. This interference term is a cosine wave, creating ripples right in the middle of phase space, between the two blobs. These ripples are the source of the rapid positive-to-negative oscillations.</li>
+                    </ul>
+                </section>
+
+                <section id="advanced-notes">
+                    <h2>Advanced Notes & Extensions</h2>
+                    <ul>
+                        <li><strong>Marginal Distributions:</strong> A key property of the Wigner function is that if you integrate it along the p-axis, you recover the correct position probability distribution: ∫W(x,p)dp = |ψ(x)|². Similarly, integrating along the x-axis gives the momentum distribution: ∫W(x,p)dx = |ψ(p)|². The negative parts always integrate out perfectly.</li>
+                        <li><strong>Numerical Precision:</strong> Calculating the Laguerre polynomials for high 'n' can be numerically unstable. This implementation uses a standard recurrence relation which is suitable for the values of 'n' in this simulation.</li>
+                        <li><strong>Possible Extensions:</strong>
+                            <ol>
+                                <li><strong>Time Evolution:</strong> For a given Hamiltonian (e.g., a harmonic oscillator), the Wigner function has a simple time evolution. An advanced simulation could show the distribution rotating in phase space over time.</li>
+                                <li><strong>Other States:</strong> Implement the Wigner function for other interesting quantum states, like a thermal state.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </section>
+
+                <section id="analogies">
+                    <h2>Analogies & Intuition</h2>
+                    <h3>1. The Topographic Map</h3>
+                    <p>Think of the Wigner function as a topographic map of a landscape. The red regions are mountains (high probability) and the light areas are flat plains (low probability). The blue regions are the weird part: they are like "negative mountains" or deep trenches, representing the negative quasi-probability that is a hallmark of quantum interference.</p>
+                    <p><strong>Limitation:</strong> A real landscape is static. A quantum state is dynamic, and this "map" can change and evolve.</p>
+
+                    <h3>2. The Weather Radar</h3>
+                    <p>Another analogy is a weather radar map. Red and yellow areas show intense storm activity (high probability of finding the particle), while green shows light rain. The blue areas would be like "anti-storms" that cancel out the rain where they overlap with red areas. This helps visualize how the negative and positive parts can combine to produce the true, non-negative probabilities when measured.</p>
+                    <p><strong>Limitation:</strong> Weather is a classical phenomenon. The "anti-storm" is purely a quantum concept representing interference.</p>
+                </section>
+
+                <section id="faq">
+                    <h2>FAQ & Troubleshooting</h2>
+                     <dl>
+                        <dt>Why is the plot pixelated or blocky?</dt>
+                        <dd>The simulation calculates the Wigner function on a grid and colors each cell, creating a heatmap. For a smoother plot, increase the <strong>Grid Resolution</strong> slider and click "Recalculate." Be warned, a 256x256 grid requires over four times as many calculations as a 128x128 grid and may be slow.</dd>
+
+                        <dt>What do the colors mean?</dt>
+                        <dd>This is a diverging colormap. <strong>Bright Red</strong> areas are regions of high positive quasi-probability. <strong>Bright Blue</strong> areas are regions of high negative quasi-probability. White/pale areas are near zero.</dd>
+
+                        <dt>Can probability actually be negative?</dt>
+                        <dd>No, true probability cannot. The Wigner function is a "quasi-probability" distribution. The negative values are a key feature and a definitive sign of quantum interference. If you were to integrate the Wigner function over any full slice of position or momentum, the negative parts would always cancel out to give a proper, non-negative probability, as required by the rules of quantum mechanics.</dd>
+
+                        <dt>Why does the Fock state look like rings?</dt>
+                        <dd>A Fock state |n⟩ has a well-defined energy but is uncertain in its phase. This "ring" structure in phase space is a visual representation of that trade-off. The state has a high likelihood of being found at a certain radius from the origin (related to its energy) but could be anywhere along that ring.</dd>
+
+                        <dt>The calculation is slow or my browser hangs.</dt>
+                        <dd>Calculating the plot is computationally intensive. Keep the <strong>Grid Resolution</strong> at or below 128 for real-time adjustments. If you want a high-resolution plot, be prepared to wait a few seconds for the calculation to complete after clicking "Recalculate."</dd>
+                    </dl>
+                </section>
+            </div>
+
+            <div class="controls-column">
+                <div class="controls-group">
+                    <h3>Select Quantum State</h3>
+                    <div id="state-buttons-container">
+                        <!-- State selection buttons will be added here by JS -->
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>State Parameters</h3>
+                    <div id="sliders-container">
+                        <!-- Sliders will be added here by JS based on the selected state -->
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Simulation Controls</h3>
+                    <button id="recalculate-btn" aria-label="Recalculate Plot">Recalculate</button>
+                    <button id="reset-btn" aria-label="Reset Parameters">Reset</button>
+                    <br>
+                    <label for="grid-size-slider">Grid Resolution:</label>
+                    <input type="range" id="grid-size-slider" min="32" max="256" step="16" value="128" aria-label="Grid Resolution">
+                </div>
+
+                <div class="controls-group">
+                    <h3>Export</h3>
+                    <button id="export-png-btn" aria-label="Export PNG">Export PNG</button>
+                    <button id="export-json-btn">Export JSON</button>
+                    <button id="share-preset-btn">Share Preset</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <details id="dev-console" class="dev-console">
+                <summary>Developer Console</summary>
+                <pre id="dev-log">Initializing...</pre>
+            </details>
+        </footer>
+    </div>
+
+    <script>
+        // --- Core Wigner Function Calculation Logic ---
+
+        const Wigner = {
+            HBAR: 1, // Using natural units where h-bar is 1
+
+            // Memoized factorial for performance
+            _factorial: [1],
+            factorial(n) {
+                if (n < 0) return NaN;
+                if (this._factorial[n] !== undefined) return this._factorial[n];
+                for (let i = this._factorial.length; i <= n; i++) {
+                    this._factorial[i] = this._factorial[i - 1] * i;
+                }
+                return this._factorial[n];
+            },
+
+            // Associated Laguerre polynomials L_n^k(x)
+            // For Wigner functions, we need the simple Laguerre polynomial L_n(x) which is L_n^0(x)
+            laguerre(n, x) {
+                if (n === 0) return 1;
+                if (n === 1) return 1 - x;
+
+                let L_n_minus_2 = 1;
+                let L_n_minus_1 = 1 - x;
+                let L_n = 0;
+
+                for (let i = 2; i <= n; i++) {
+                    L_n = ((2 * i - 1 - x) * L_n_minus_1 - (i - 1) * L_n_minus_2) / i;
+                    L_n_minus_2 = L_n_minus_1;
+                    L_n_minus_1 = L_n;
+                }
+                return L_n;
+            },
+
+            // W(x, p) for a Coherent State |alpha>
+            // alpha is a complex number, alpha = alpha_re + i * alpha_im
+            coherent(x, p, { alpha_re = 1, alpha_im = 0 }) {
+                const x0 = Math.sqrt(2 * this.HBAR) * alpha_re;
+                const p0 = Math.sqrt(2 * this.HBAR) * alpha_im;
+                const term = (x - x0) ** 2 + (p - p0) ** 2;
+                return (1 / (Math.PI * this.HBAR)) * Math.exp(-2 * term / this.HBAR);
+            },
+
+            // W(x, p) for a Fock State |n>
+            fock(x, p, { n = 1 }) {
+                const prefactor = (-1) ** n / (Math.PI * this.HBAR);
+                const energy_term = 2 * (x ** 2 + p ** 2) / this.HBAR;
+                const laguerre_val = this.laguerre(n, 2 * energy_term);
+                return prefactor * Math.exp(-energy_term / 2) * laguerre_val;
+            },
+
+            // W(x, p) for a Squeezed Coherent State
+            squeezed(x, p, { alpha_re = 0, alpha_im = 0, r = 1, phi = 0 }) {
+                // For simplicity, we implement a squeezed vacuum state (alpha=0)
+                // and assume squeezing along the x-axis (phi=0)
+                const x0 = Math.sqrt(2 * this.HBAR) * alpha_re;
+                const p0 = Math.sqrt(2 * this.HBAR) * alpha_im;
+
+                const term1 = (x - x0)**2 * Math.exp(2 * r);
+                const term2 = (p - p0)**2 * Math.exp(-2 * r);
+
+                return (1 / (Math.PI * this.HBAR)) * Math.exp(-2 * (term1 + term2) / this.HBAR);
+            },
+
+            // W(x, p) for a Schrodinger Cat State (|alpha> + |-alpha>)/sqrt(2)
+            cat(x, p, { alpha_re = 2.0, alpha_im = 0 }) {
+                // This is the sum of two coherent states plus an interference term
+                const W_plus_alpha = this.coherent(x, p, { alpha_re, alpha_im });
+                const W_minus_alpha = this.coherent(x, p, { alpha_re: -alpha_re, alpha_im: -alpha_im });
+
+                // Interference term
+                const x_alpha = Math.sqrt(2 * this.HBAR) * alpha_re;
+                const p_alpha = Math.sqrt(2 * this.HBAR) * alpha_im;
+                const cos_term = Math.cos(4 * (p * x_alpha - x * p_alpha) / this.HBAR);
+                const W_int = 2 * Math.exp(-2 * (x**2 + p**2) / this.HBAR) * cos_term / (Math.PI * this.HBAR);
+
+                // Normalization factor
+                const norm = 2 * (1 + Math.exp(-2 * (alpha_re**2 + alpha_im**2)));
+
+                return (W_plus_alpha + W_minus_alpha + W_int) / norm;
+            }
+        };
+
+        // --- Canvas Rendering Logic ---
+
+        const App = {
+            canvas: null,
+            ctx: null,
+            gridSize: 128,
+            phaseSpaceRange: 5.0, // Will plot from -5 to +5
+
+            initialParams: null, // To store a deep copy for reset
+            currentState: 'coherent',
+            currentParams: {
+                coherent: { alpha_re: 1.5, alpha_im: 0 },
+                fock: { n: 1 },
+                squeezed: { r: 1.0 },
+                cat: { alpha_re: 2.0 }
+            },
+
+            init() {
+                // Store a deep copy of the initial parameters for the reset function
+                this.initialParams = JSON.parse(JSON.stringify(this.currentParams));
+                this.canvas = document.getElementById('simulationCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                Utils.log("App initialized.");
+                this.drawWignerPlot();
+            },
+
+            // Maps a value from -1 to 1 to a color
+            getColor(value) {
+                // Simple Blue -> White -> Red colormap
+                if (value > 0) {
+                    const r = 255;
+                    const gb = 255 - Math.floor(255 * value);
+                    return `rgb(${r},${gb},${gb})`;
+                } else {
+                    const b = 255;
+                    const rg = 255 + Math.floor(255 * value);
+                    return `rgb(${rg},${rg},${b})`;
+                }
+            },
+
+            drawWignerPlot() {
+                Utils.log(`Calculating Wigner function for '${this.currentState}' state with grid size ${this.gridSize}...`);
+                const startTime = performance.now();
+
+                const wignerData = [];
+                let maxVal = -Infinity;
+                let minVal = Infinity;
+
+                // 1. Calculate Wigner function values for each grid point
+                for (let i = 0; i < this.gridSize; i++) {
+                    wignerData[i] = [];
+                    const x = (i / (this.gridSize - 1)) * 2 * this.phaseSpaceRange - this.phaseSpaceRange;
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const p = (j / (this.gridSize - 1)) * 2 * this.phaseSpaceRange - this.phaseSpaceRange;
+
+                        const params = this.currentParams[this.currentState];
+                        const value = Wigner[this.currentState](x, p, params);
+
+                        wignerData[i][j] = value;
+                        if (value > maxVal) maxVal = value;
+                        if (value < minVal) minVal = value;
+                    }
+                }
+
+                // 2. Render the data to the canvas
+                const normalization = Math.max(Math.abs(maxVal), Math.abs(minVal));
+                const cellWidth = this.canvas.width / this.gridSize;
+                const cellHeight = this.canvas.height / this.gridSize;
+
+                for (let i = 0; i < this.gridSize; i++) {
+                    for (let j = 0; j < this.gridSize; j++) {
+                        const value = wignerData[i][j];
+                        const normalizedValue = value / normalization;
+                        this.ctx.fillStyle = this.getColor(normalizedValue);
+                        // We draw (i, gridSize - 1 - j) because canvas y-coord is inverted
+                        this.ctx.fillRect(i * cellWidth, (this.gridSize - 1 - j) * cellHeight, cellWidth + 1, cellHeight + 1);
+                    }
+                }
+
+                const endTime = performance.now();
+                const calcTime = endTime - startTime;
+                Utils.updatePerfMeter(calcTime);
+                Utils.log(`Finished drawing. Range: [${minVal.toFixed(4)}, ${maxVal.toFixed(4)}]. Calculation took ${calcTime.toFixed(1)} ms.`);
+            },
+
+            resetParams() {
+                this.currentParams = JSON.parse(JSON.stringify(this.initialParams));
+            },
+
+            exportPNG() {
+                Utils.log('Exporting canvas to PNG...');
+                const link = document.createElement('a');
+                link.download = `wigner_${this.currentState}_${Date.now()}.png`;
+                link.href = this.canvas.toDataURL('image/png');
+                link.click();
+            },
+
+            exportJSON() {
+                Utils.log('Exporting parameters to JSON...');
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.currentParams[this.currentState], null, 2));
+                const link = document.createElement('a');
+                link.href = dataStr;
+                link.download = `wigner_params_${this.currentState}.json`;
+                link.click();
+            },
+
+            sharePreset() {
+                const dataToShare = {
+                    state: this.currentState,
+                    params: this.currentParams[this.currentState]
+                };
+                const jsonString = JSON.stringify(dataToShare);
+                const url = window.location.origin + window.location.pathname + '#params=' + encodeURIComponent(jsonString);
+                navigator.clipboard.writeText(url).then(() => {
+                    Utils.log('Shareable preset URL copied to clipboard.');
+                    // You could add a temporary "Copied!" message on the button here
+                }, (err) => {
+                    Utils.log(`Error copying URL: ${err}`);
+                });
+            },
+
+            loadPresetFromURL() {
+                if (window.location.hash.startsWith('#params=')) {
+                    try {
+                        const encodedJson = window.location.hash.substring(8);
+                        const decodedJson = decodeURIComponent(encodedJson);
+                        const urlData = JSON.parse(decodedJson);
+                        Utils.log('Found parameters in URL, applying them.');
+
+                        if (urlData.state && this.currentParams[urlData.state]) {
+                            this.currentState = urlData.state;
+                            for (const key in urlData.params) {
+                                if (key in this.currentParams[this.currentState]) {
+                                    this.currentParams[this.currentState][key] = urlData.params[key];
+                                }
+                            }
+                        }
+                    } catch(e) {
+                        Utils.log(`Error parsing params from URL: ${e.message}`);
+                    }
+                }
+            }
+        };
+
+        // --- UI Control Logic ---
+
+        const UI = {
+            init() {
+                this.createStateButtons();
+                this.updateSliders();
+                this.addEventListeners();
+                App.loadPresetFromURL(); // Load params after UI is ready
+            },
+
+            addEventListeners() {
+                document.getElementById('recalculate-btn').addEventListener('click', () => App.drawWignerPlot());
+                document.getElementById('reset-btn').addEventListener('click', () => this.resetParams());
+                document.getElementById('grid-size-slider').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value, 10);
+                    App.gridSize = value;
+                    const label = document.querySelector('label[for="grid-size-slider"]');
+                    if(label) label.innerHTML = `Grid Resolution: <strong>${value}</strong>`;
+                });
+
+                document.getElementById('export-png-btn').addEventListener('click', () => App.exportPNG());
+                document.getElementById('export-json-btn').addEventListener('click', () => App.exportJSON());
+                document.getElementById('share-preset-btn').addEventListener('click', () => App.sharePreset());
+
+                document.getElementById('theme-toggle').addEventListener('click', () => {
+                    document.body.classList.toggle('high-contrast');
+                    Utils.log(`Toggled high contrast mode.`);
+                    App.drawWignerPlot(); // Redraw with new colors
+                });
+            },
+
+            resetParams() {
+                Utils.log('Resetting parameters to default.');
+                App.resetParams();
+                this.updateSliders();
+                App.drawWignerPlot();
+            },
+
+            createStateButtons() {
+                const container = document.getElementById('state-buttons-container');
+                const states = ['coherent', 'fock', 'squeezed', 'cat'];
+                states.forEach(state => {
+                    const button = document.createElement('button');
+                    button.textContent = state.charAt(0).toUpperCase() + state.slice(1); // Capitalize
+                    button.classList.add('secondary');
+                    button.addEventListener('click', () => {
+                        App.currentState = state;
+                        this.updateSliders();
+                        App.drawWignerPlot();
+                    });
+                    container.appendChild(button);
+                });
+            },
+
+            updateSliders() {
+                const container = document.getElementById('sliders-container');
+                container.innerHTML = ''; // Clear old sliders
+                const stateParams = App.currentParams[App.currentState];
+
+                const sliderConfigs = {
+                    coherent: [
+                        { key: 'alpha_re', name: 'Alpha (Re)', min: -3, max: 3, step: 0.1 },
+                        { key: 'alpha_im', name: 'Alpha (Im)', min: -3, max: 3, step: 0.1 }
+                    ],
+                    fock: [
+                        { key: 'n', name: 'n', min: 0, max: 10, step: 1 }
+                    ],
+                    squeezed: [
+                        { key: 'r', name: 'Squeezing (r)', min: -2, max: 2, step: 0.1 }
+                    ],
+                    cat: [
+                        { key: 'alpha_re', name: 'Alpha (Re)', min: 0, max: 3, step: 0.1 }
+                    ]
+                };
+
+                const configs = sliderConfigs[App.currentState];
+                if (!configs) return;
+
+                configs.forEach(config => {
+                    const value = stateParams[config.key];
+
+                    const sliderDiv = document.createElement('div');
+                    sliderDiv.classList.add('slider-container');
+
+                    const label = document.createElement('label');
+                    label.textContent = `${config.name}: `;
+                    const valueSpan = document.createElement('span');
+                    valueSpan.textContent = value;
+                    label.appendChild(valueSpan);
+
+                    const slider = document.createElement('input');
+                    slider.type = 'range';
+                    slider.min = config.min;
+                    slider.max = config.max;
+                    slider.step = config.step;
+                    slider.value = value;
+
+                    slider.addEventListener('input', (e) => {
+                        stateParams[config.key] = parseFloat(e.target.value);
+                        valueSpan.textContent = e.target.value;
+                    });
+                    sliderDiv.appendChild(label);
+                    sliderDiv.appendChild(slider);
+                    container.appendChild(sliderDiv);
+                });
+            },
+
+            exportPNG() {
+                const link = document.createElement('a');
+                link.download = `wigner_${App.currentState}_${Date.now()}.png`;
+                link.href = App.canvas.toDataURL('image/png');
+                link.click();
+            }
+        };
+
+        // --- Final Features: Logging, Quality Checks, Performance ---
+
+        const Utils = {
+            devLog: document.getElementById('dev-log'),
+
+            log(message) {
+                const time = new Date().toLocaleTimeString();
+                this.devLog.textContent = `[${time}] ${message}\n` + this.devLog.textContent;
+            },
+
+            runQualityChecks() {
+                const checks = {
+                    'Simulation canvas': document.getElementById('simulationCanvas'),
+                    'Recalculate button': document.getElementById('recalculate-btn'),
+                    'State buttons container': document.getElementById('state-buttons-container'),
+                    'Wigner logic object': typeof Wigner === 'object',
+                    'App object': typeof App === 'object'
+                };
+
+                const errorList = document.getElementById('quality-check-list');
+                const errorPanel = document.getElementById('quality-check-panel');
+                let failed = false;
+
+                for(const name in checks) {
+                    if (!checks[name]) {
+                        failed = true;
+                        const item = document.createElement('li');
+                        item.textContent = `Check failed: ${name}`;
+                        errorList.appendChild(item);
+                    }
+                }
+
+                if(failed) {
+                    errorPanel.classList.remove('hidden');
+                    this.log('CRITICAL: One or more quality checks failed.');
+                } else {
+                    this.log('All quality checks passed.');
+                }
+            },
+
+            updatePerfMeter(calcTime) {
+                const perfMeter = document.getElementById('sim-performance-meter');
+                perfMeter.innerHTML = `<span>Grid: ${App.gridSize}x${App.gridSize}</span> | <span>Calc. Time: ${calcTime.toFixed(1)}ms</span>`;
+            }
+        };
+
+        // --- App Initialization ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Utils.log("DOM content loaded. Initializing...");
+            Utils.runQualityChecks();
+            App.init();
+            UI.init();
+        });
+    </script>
+</body>
+</html>
