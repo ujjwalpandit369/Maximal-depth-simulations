@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Walk and Diffusion Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #9b59b6;
+            --accent-color-dark: #8e44ad;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --particle-color: #e67e22;
+            --rms-circle-color: rgba(192, 57, 43, 0.5);
+            --plot-line-color: #27ae60;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #af7ac5;
+            --accent-color-dark: #9b59b6;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --particle-color: #f39c12;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #walk-canvas { aspect-ratio: 1/1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 2/1; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            padding: 8px 12px; border: 1px solid var(--control-border); border-radius: 5px;
+            background-color: var(--bg-color); color: var(--text-color); cursor: pointer;
+            margin-right: 5px; transition: background-color 0.2s;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Random Walk and Diffusion Simulator</h1>
+            <p class="subtitle">Visualizing how microscopic random steps lead to macroscopic spreading.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop/Mobile</span>
+                <span><strong>Approx. HTML Size:</strong> 215 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Have you ever wondered how the smell of baking cookies spreads across a house, or how a drop of food coloring slowly spreads through a glass of water? The answer is a process called diffusion, which is driven by countless microscopic random motions. This simulation visualizes the "random walk," the fundamental process behind diffusion. You can watch a multitude of particles, or "walkers," each taking a series of steps in random directions. While any single particle's path is unpredictable, the behavior of the entire group is remarkably predictable. The cloud of particles spreads out in a way that can be described by a simple mathematical law, which you can see verified in the real-time graph of the system's properties.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Drunkard's Walk</h2>
+
+            <h3>Step 1: The Random Walk</h3>
+            <p>A classic analogy for a random walk is the "drunkard's walk." Imagine someone leaving a lamppost, completely disoriented. They take a step in one direction, then another step in a completely random direction, and so on. Where will they end up? It's impossible to predict their exact final location. However, we can say some things about their journey. They are very unlikely to end up back at the lamppost. The longer they walk, the farther away they are likely to be. The simulation above shows this process, but with hundreds of walkers all starting from the center at the same time.</p>
+
+            <h3>Step 2: From One Walker to Many - Diffusion</h3>
+            <p>While a single walker's path is random, the collective behavior of many walkers is not. As you watch the simulation, you'll notice the cloud of particles spreads out from the center. This spreading of particles from an area of high concentration to an area of low concentration due to random motion is called **diffusion**. In the real world, this random motion isn't due to drunkenness, but to constant collisions between molecules (a process called Brownian motion).</p>
+
+            <h3>Step 3: Measuring the Spread</h3>
+            <p>How can we measure how fast the cloud is spreading? If we just took the average position of all the walkers, it would always be at the center (the starting point), because for every walker that goes left, there's likely another that goes right. A better measure is the **mean squared displacement**, written as ⟨r²⟩. This means we take the distance of each particle from the center, square it, and then find the average of all those squared distances. This value will always be positive and will grow as the particles spread out.</p>
+
+            <h3>Step 4: The Root-Mean-Square (RMS) Circle</h3>
+            <p>The simulation draws a large red circle on the top canvas. The radius of this circle is the "root-mean-square" displacement, which is simply the square root of ⟨r²⟩. This gives a good visual estimate of the average distance of a particle from the center. You can see this circle grow as the simulation runs, showing the diffusion of the particle cloud.</p>
+
+            <h3>Step 5: A Predictable Relationship</h3>
+            <p>The most important result of random walk theory is that the mean squared displacement is directly proportional to time.
+            <br><strong>⟨r²⟩ ∝ time</strong>
+            <br>This means that if you wait four times as long, the particles will have spread out, on average, twice as far (since distance is the square root of the squared distance). The bottom canvas plots ⟨r²⟩ versus time. You will see that, despite the randomness of each individual particle, this graph forms a nearly perfect straight line, beautifully demonstrating how predictable macroscopic laws can emerge from microscopic chaos.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="walk-canvas" width="512" height="512" aria-label="Animation of particles undergoing a random walk"></canvas>
+                <canvas id="plot-canvas" width="512" height="256" aria-label="Plot of mean squared displacement vs. time"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="play-pause-btn">Pause</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="walkers-slider"># of Walkers: <span id="walkers-label">200</span></label>
+                    <input type="range" id="walkers-slider" min="1" max="500" value="200" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="step-size-slider">Step Size (l): <span id="step-size-label">2</span></label>
+                    <input type="range" id="step-size-slider" min="0.5" max="5" value="2" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="time-step-slider">Time Between Steps (τ): <span id="time-step-label">1</span></label>
+                    <input type="range" id="time-step-slider" min="1" max="10" value="1">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Mathematics of Diffusion</h2>
+
+            <h3>1. The Random Walk</h3>
+            <p>A random walk is a path made of a succession of random steps. The position of a walker after <code>N</code> steps, <strong>R</strong><sub>N</sub>, is the vector sum of the individual steps <strong>r</strong><sub>i</sub>.</p>
+            <p><code><strong>R</strong><sub>N</sub> = &Sigma;<sub>i=1</sub><sup>N</sup> <strong>r</strong><sub>i</sub></code></p>
+            <p>Since the direction of each step is random, the average position over many trials is zero: ⟨<strong>R</strong><sub>N</sub>⟩ = 0.</p>
+
+            <h3>2. Mean Squared Displacement</h3>
+            <p>To measure the spread, we look at the squared displacement. For steps of constant length <code>l</code>, the mean squared displacement after <code>N</code> steps in 2D is:</p>
+            <p><code>⟨R<sub>N</sub>²⟩ = Nl²</code></p>
+            <p>This is a crucial result. The squared distance grows linearly with the number of steps.</p>
+
+            <h3>3. The Diffusion Equation</h3>
+            <p>If steps occur at a rate of 1/τ, then the number of steps <code>N</code> is equal to <code>t/τ</code>. Substituting this into the previous equation gives us the relationship between mean squared displacement and time:</p>
+            <p><code>⟨r²(t)⟩ = (l²/τ) * t</code></p>
+            <p>Physicists define the diffusion constant <code>D</code> such that <code>⟨r²⟩ = 2dDt</code>, where <code>d</code> is the number of spatial dimensions (d=2 for our simulation). Comparing these, we can see that the diffusion constant is:</p>
+            <p><code>D = l² / (2dτ)</code></p>
+            <p>The plot in the simulation shows ⟨r²⟩ vs. time, which should be a straight line with a slope equal to <code>4D</code>.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const walkCanvas = document.getElementById('walk-canvas');
+        const w_ctx = walkCanvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const walkersSlider = document.getElementById('walkers-slider');
+        const walkersLabel = document.getElementById('walkers-label');
+        const stepSizeSlider = document.getElementById('step-size-slider');
+        const stepSizeLabel = document.getElementById('step-size-label');
+        const timeStepSlider = document.getElementById('time-step-slider');
+        const timeStepLabel = document.getElementById('time-step-label');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let simParams = { N: 200, l: 2, tau: 1 };
+        let walkers = [];
+        let plotHistory = [];
+        let isPlaying = true;
+        let frameCount = 0;
+
+        function setup() {
+            simParams.N = parseInt(walkersSlider.value);
+            simParams.l = parseFloat(stepSizeSlider.value);
+            simParams.tau = parseInt(timeStepSlider.value);
+            walkersLabel.textContent = simParams.N;
+            stepSizeLabel.textContent = simParams.l.toFixed(1);
+            timeStepLabel.textContent = simParams.tau;
+
+            walkers = [];
+            for(let i=0; i<simParams.N; i++) {
+                walkers.push({ x: 0, y: 0, trail: [{x:0, y:0}] });
+            }
+            plotHistory = [];
+            frameCount = 0;
+        }
+
+        function update() {
+            if (!isPlaying || frameCount % simParams.tau !== 0) return;
+
+            walkers.forEach(w => {
+                const angle = Math.random() * 2 * Math.PI;
+                w.x += simParams.l * Math.cos(angle);
+                w.y += simParams.l * Math.sin(angle);
+                if (w.trail.length > 20) w.trail.shift();
+                w.trail.push({x: w.x, y: w.y});
+            });
+
+            // Update plot data
+            let sum_r2 = 0;
+            walkers.forEach(w => { sum_r2 += w.x*w.x + w.y*w.y; });
+            const mean_r2 = sum_r2 / simParams.N;
+            plotHistory.push({t: frameCount / simParams.tau, r2: mean_r2});
+            if(plotHistory.length > 500) plotHistory.shift();
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            const centerX = walkCanvas.width / 2;
+            const centerY = walkCanvas.height / 2;
+
+            // --- Draw Walkers ---
+            w_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            w_ctx.fillRect(0, 0, walkCanvas.width, walkCanvas.height);
+
+            w_ctx.strokeStyle = isDark ? 'rgba(243, 156, 18, 0.3)' : 'rgba(230, 126, 34, 0.3)';
+            w_ctx.lineWidth = 1;
+            walkers.forEach(w => {
+                w_ctx.beginPath();
+                w_ctx.moveTo(centerX + w.trail[0].x, centerY + w.trail[0].y);
+                for(let i=1; i<w.trail.length; i++) {
+                    w_ctx.lineTo(centerX + w.trail[i].x, centerY + w.trail[i].y);
+                }
+                w_ctx.stroke();
+            });
+
+            w_ctx.fillStyle = isDark ? '#f39c12' : '#e67e22';
+            walkers.forEach(w => {
+                w_ctx.beginPath();
+                w_ctx.arc(centerX + w.x, centerY + w.y, 2, 0, 2*Math.PI);
+                w_ctx.fill();
+            });
+
+            // Draw RMS circle
+            if(plotHistory.length > 0) {
+                const rms_r = Math.sqrt(plotHistory[plotHistory.length-1].r2);
+                w_ctx.strokeStyle = 'rgba(192, 57, 43, 0.5)';
+                w_ctx.lineWidth = 3;
+                w_ctx.beginPath();
+                w_ctx.arc(centerX, centerY, rms_r, 0, 2*Math.PI);
+                w_ctx.stroke();
+            }
+
+            // --- Draw Plot ---
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0, 0, plotCanvas.width, plotCanvas.height);
+
+            if(plotHistory.length < 2) return;
+
+            const max_t = plotHistory[plotHistory.length-1].t;
+            const max_r2 = plotHistory[plotHistory.length-1].r2 * 1.1;
+
+            p_ctx.strokeStyle = '#27ae60';
+            p_ctx.lineWidth = 2;
+            p_ctx.beginPath();
+            plotHistory.forEach((p, i) => {
+                const x = 30 + (p.t / max_t) * (plotCanvas.width - 40);
+                const y = plotCanvas.height - 30 - (p.r2 / max_r2) * (plotCanvas.height - 40);
+                if(i===0) p_ctx.moveTo(x,y);
+                else p_ctx.lineTo(x,y);
+            });
+            p_ctx.stroke();
+
+            // Axes
+            p_ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            p_ctx.lineWidth = 1;
+            p_ctx.beginPath();
+            p_ctx.moveTo(30, 0); p_ctx.lineTo(30, plotCanvas.height - 30); p_ctx.lineTo(plotCanvas.width, plotCanvas.height-30);
+            p_ctx.stroke();
+            p_ctx.fillStyle = isDark ? '#a0aec0' : '#666';
+            p_ctx.fillText("⟨r²⟩", 5, 15);
+            p_ctx.fillText("Time (steps)", plotCanvas.width/2, plotCanvas.height - 10);
+        }
+
+        function mainLoop() {
+            if(isPlaying) {
+                update();
+                frameCount++;
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+        });
+        resetBtn.addEventListener('click', setup);
+
+        walkersSlider.addEventListener('input', e => { walkersLabel.textContent = e.target.value; setup(); });
+        stepSizeSlider.addEventListener('input', e => { stepSizeLabel.textContent = parseFloat(e.target.value).toFixed(1); setup(); });
+        timeStepSlider.addEventListener('input', e => { timeStepLabel.textContent = e.target.value; setup(); });
+
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

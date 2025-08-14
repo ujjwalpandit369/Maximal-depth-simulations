@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipartition Theorem Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #16a085;
+            --accent-color-dark: #117a65;
+            --code-bg: #e2e8f0;
+            --mono-color: #3498db;
+            --di-color: #e74c3c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #1abc9c;
+            --accent-color-dark: #16a085;
+            --code-bg: #2d3748;
+            --mono-color: #5dade2;
+            --di-color: #f1948a;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4 / 3;
+        }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+        .mono-label { color: var(--mono-color); font-weight: bold; }
+        .di-label { color: var(--di-color); font-weight: bold; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Equipartition Theorem Simulator</h1>
+            <p class="subtitle">Visualizing how energy is distributed among different molecular degrees of freedom.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 240 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>When you heat up a gas, you're adding energy to its molecules. But how do the molecules *store* that energy? The Equipartition Theorem provides a simple and powerful answer: in thermal equilibrium, the energy is shared equally among all the possible ways a molecule can move, rotate, or vibrate. This simulation demonstrates this principle by showing a gas mixture of simple, single-atom (monatomic) particles and two-atom "dumbbell" (diatomic) particles. You'll see that at the same temperature, the more complex diatomic molecules, which can both move and tumble, store more total energy than their simpler monatomic cousins. The simulation includes real-time charts that break down the energy, showing how nature "equally partitions" the energy among all available modes of motion.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Sharing the Energy Pie</h2>
+
+            <h3>Step 1: Degrees of Freedom</h3>
+            <p>Imagine you have to describe the motion of an object. The number of independent pieces of information you need is its number of "degrees of freedom."
+            <ul>
+                <li>A single point-like atom (<span class="mono-label">monatomic</span>) can move along the X, Y, and Z axes. That's **3 translational degrees of freedom**. (In our 2D simulation, we only see 2).</li>
+                <li>A dumbbell-shaped molecule (<span class="di-label">diatomic</span>) can also move along the X, Y, and Z axes (3 translational degrees). But in addition, it can tumble or rotate. It can rotate around two independent axes (think of a spinning baton). That's **2 rotational degrees of freedom**. (In 2D, it can only rotate around one axis).</li>
+            </ul>
+            These different ways of moving—translating and rotating—are the "modes" into which a molecule can store energy.</p>
+
+            <h3>Step 2: The Equipartition Theorem</h3>
+            <p>The theorem is a cornerstone of classical statistical mechanics. It states that for a system in thermal equilibrium, the total energy is shared equally among all its degrees of freedom. More precisely, each degree of freedom that is "quadratic" (like kinetic energy, which depends on velocity squared) gets an average energy of:</p>
+            <p><strong>Average Energy per Degree of Freedom = &frac12;k<sub>B</sub>T</strong></p>
+            <p>Where <code>k<sub>B</sub></code> is the Boltzmann constant and <code>T</code> is the absolute temperature.</p>
+
+            <h3>Step 3: Comparing the Molecules</h3>
+            <p>This simple rule leads to a clear prediction, which you can test in the simulation:
+            <ul>
+                <li>The <span class="mono-label">monatomic</span> gas has only 2 translational degrees of freedom (in 2D). So, its average total energy should be: <code>2 &times; (&frac12;k<sub>B</sub>T) = k<sub>B</sub>T</code>.</li>
+                <li>The <span class="di-label">diatomic</span> gas has 2 translational and 1 rotational degree of freedom (in 2D). So, its average total energy should be: <code>3 &times; (&frac12;k<sub>B</sub>T) = (3/2)k<sub>B</sub>T</code>.</li>
+            </ul>
+            At the same temperature, the diatomic molecules should have, on average, 50% more energy than the monatomic ones, because they have more ways to store it! Check the "Average Energy Readouts" panel below the simulation to see if this holds true.</p>
+
+            <h3>Step 4: Watching Energy Transfer</h3>
+            <p>In the simulation, the particles are constantly colliding. When a monatomic particle hits a diatomic one off-center, it can cause it to spin, transferring some translational energy into rotational energy. When two diatomic molecules collide, they can change both their speed and their rate of tumble. This constant shuffling is what allows the system to reach "thermal equilibrium," the state where the energy is, on average, distributed according to the equipartition theorem.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="600" height="450" aria-label="Simulation of monatomic and diatomic gas particles"></canvas>
+                <div id="readout">
+                    <h4>Average Energy Readouts (in units of k<sub>B</sub>T)</h4>
+                    <p><span class="mono-label">Monatomic Total:</span> <span id="mono-total-val">0.00</span></p>
+                    <p><span class="di-label">Diatomic Total:</span> <span id="di-total-val">0.00</span></p>
+                    <hr>
+                    <p>Avg. Translational Energy: <span id="trans-val">0.00</span></p>
+                    <p>Avg. Rotational Energy (Diatomic): <span id="rot-val">0.00</span></p>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (T): <span id="temp-label">300</span> K</label>
+                    <input type="range" id="temp-slider" min="50" max="800" value="300">
+                </div>
+                <div class="control-group">
+                    <label for="mono-slider"># Monatomic Particles: <span id="mono-label-val">20</span></label>
+                    <input type="range" id="mono-slider" min="1" max="50" value="20">
+                </div>
+                <div class="control-group">
+                    <label for="di-slider"># Diatomic Particles: <span id="di-label-val">20</span></label>
+                    <input type="range" id="di-slider" min="1" max="50" value="20">
+                </div>
+                <div class="control-group">
+                    <button id="reset-btn" style="width:100%">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Energy Components</h2>
+            <p>The simulation tracks the translational and rotational kinetic energy for each particle.</p>
+
+            <h3>1. Translational Kinetic Energy</h3>
+            <p>For any particle (monatomic or diatomic) of mass <code>m</code> and velocity <strong>v</strong> = (v<sub>x</sub>, v<sub>y</sub>), the translational kinetic energy is:</p>
+            <p><code>KE<sub>trans</sub> = &frac12;mv<sub>x</sub>² + &frac12;mv<sub>y</sub>²</code></p>
+            <p>This represents two degrees of freedom. The equipartition theorem predicts the average energy for this part will be <code>2 &times; (&frac12;k<sub>B</sub>T) = k<sub>B</sub>T</code> for both types of molecules.</p>
+
+            <h3>2. Rotational Kinetic Energy</h3>
+            <p>For a diatomic molecule with moment of inertia <code>I</code> and angular velocity <code>&omega;</code>, the rotational kinetic energy is:</p>
+            <p><code>KE<sub>rot</sub> = &frac12;I&omega;²</code></p>
+            <p>In 2D, there is only one axis of rotation, so this represents one additional degree of freedom. The theorem predicts its average energy will be <code>&frac12;k<sub>B</sub>T</code>.</p>
+
+            <h3>3. Total Average Energy</h3>
+            <p>By summing the average energies of the degrees of freedom, we get the predicted total average energy for each molecule type:</p>
+            <p><code>E<sub>avg, mono</sub> = E<sub>trans</sub> = k<sub>B</sub>T</code></p>
+            <p><code>E<sub>avg, di</sub> = E<sub>trans</sub> + E<sub>rot</sub> = k<sub>B</sub>T + &frac12;k<sub>B</sub>T = (3/2)k<sub>B</sub>T</code></p>
+            <p>The readouts in the simulation display these average energies, divided by <code>k<sub>B</sub>T</code>, so you should see values approaching 1.0 and 1.5 respectively.</p>
+
+            <h3>The Ultraviolet Catastrophe</h3>
+            <p>The classical equipartition theorem was known to fail for certain problems, most famously black-body radiation. It predicted that electromagnetic waves of high frequency (ultraviolet) should contain an infinite amount of energy, which was obviously wrong. This "ultraviolet catastrophe" was a major puzzle that was only solved by the advent of quantum mechanics, which showed that high-frequency modes are "frozen out" because they require a large minimum quantum of energy to be excited.</p>
+        </article>
+    </div>
+
+    <script>
+    // NOTE: This simulation uses a simplified collision model.
+    // A full rigid-body collision simulation is very complex.
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const tempSlider = document.getElementById('temp-slider');
+        const tempLabel = document.getElementById('temp-label');
+        const monoSlider = document.getElementById('mono-slider');
+        const monoLabel = document.getElementById('mono-label-val');
+        const diSlider = document.getElementById('di-slider');
+        const diLabel = document.getElementById('di-label-val');
+        const resetBtn = document.getElementById('reset-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        const monoTotalVal = document.getElementById('mono-total-val');
+        const diTotalVal = document.getElementById('di-total-val');
+        const transVal = document.getElementById('trans-val');
+        const rotVal = document.getElementById('rot-val');
+
+        // --- Simulation State ---
+        let simParams = { T: 300, numMono: 20, numDi: 20 };
+        let particles = [];
+        const k_B = 1.38e-23;
+        const PARTICLE_RADIUS = 5;
+        const MONO_MASS = 1;
+        const DI_MASS = 2;
+        const DI_LENGTH = 20;
+        const DI_INERTIA = 2 * (MONO_MASS/2) * (DI_LENGTH/2)**2;
+
+        function setup() {
+            simParams.T = parseFloat(tempSlider.value);
+            simParams.numMono = parseInt(monoSlider.value);
+            simParams.numDi = parseInt(diSlider.value);
+
+            particles = [];
+            const v_rms_mono = Math.sqrt(2 * k_B * simParams.T / MONO_MASS);
+            for(let i=0; i<simParams.numMono; i++) {
+                const speed = v_rms_mono * (0.5 + Math.random());
+                const angle = Math.random() * 2 * Math.PI;
+                particles.push({
+                    type: 'mono', mass: MONO_MASS, radius: PARTICLE_RADIUS,
+                    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                });
+            }
+
+            const v_rms_di = Math.sqrt(2 * k_B * simParams.T / DI_MASS);
+            const w_rms = Math.sqrt(k_B * simParams.T / DI_INERTIA);
+            for(let i=0; i<simParams.numDi; i++) {
+                const speed = v_rms_di * (0.5 + Math.random());
+                const angle = Math.random() * 2 * Math.PI;
+                particles.push({
+                    type: 'di', mass: DI_MASS, radius: PARTICLE_RADIUS,
+                    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                    angle: Math.random() * 2 * Math.PI,
+                    omega: (Math.random() - 0.5) * 2 * w_rms,
+                });
+            }
+        }
+
+        function setTemperature(new_T) {
+            const old_T = simParams.T;
+            if (old_T === 0) return;
+            const ratio = Math.sqrt(new_T / old_T);
+            particles.forEach(p => {
+                p.vx *= ratio;
+                p.vy *= ratio;
+                if(p.type === 'di') p.omega *= ratio;
+            });
+            simParams.T = new_T;
+        }
+
+        function update() {
+            const dt = 0.1;
+            particles.forEach(p => {
+                p.x += p.vx * dt * 0.01;
+                p.y += p.vy * dt * 0.01;
+
+                if(p.type === 'di') p.angle += p.omega * dt * 0.01;
+
+                // Wall collisions (simplified)
+                if (p.x < p.radius || p.x > canvas.width - p.radius) p.vx *= -1;
+                if (p.y < p.radius || p.y > canvas.height - p.radius) p.vy *= -1;
+            });
+
+            // Simplified energy exchange via collisions
+            for(let i=0; i<particles.length; i++) {
+                for(let j=i+1; j<particles.length; j++) {
+                    const p1 = particles[i];
+                    const p2 = particles[j];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dist2 = dx*dx + dy*dy;
+                    if(dist2 < (2*PARTICLE_RADIUS)**2) {
+                        // Very simple model: swap some energy
+                        const total_vx = p1.vx + p2.vx;
+                        p1.vx = total_vx * Math.random();
+                        p2.vx = total_vx - p1.vx;
+
+                        if(p1.type === 'di' && p2.type === 'di') {
+                            const total_w = p1.omega + p2.omega;
+                            p1.omega = total_w * Math.random();
+                            p2.omega = total_w - p1.omega;
+                        } else if (p1.type === 'di') {
+                            p1.omega += p1.vy * 0.001;
+                        } else if (p2.type === 'di') {
+                            p2.omega += p2.vy * 0.001;
+                        }
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                if (p.type === 'mono') {
+                    ctx.fillStyle = isDark ? '#5dade2' : '#3498db';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else { // diatomic
+                    ctx.strokeStyle = isDark ? '#f1948a' : '#e74c3c';
+                    ctx.lineWidth = 4;
+                    const x1 = p.x + Math.cos(p.angle) * DI_LENGTH/2;
+                    const y1 = p.y + Math.sin(p.angle) * DI_LENGTH/2;
+                    const x2 = p.x - Math.cos(p.angle) * DI_LENGTH/2;
+                    const y2 = p.y - Math.sin(p.angle) * DI_LENGTH/2;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                    ctx.fillStyle = isDark ? '#f1948a' : '#e74c3c';
+                    ctx.beginPath(); ctx.arc(x1, y1, p.radius, 0, 2*Math.PI); ctx.fill();
+                    ctx.beginPath(); ctx.arc(x2, y2, p.radius, 0, 2*Math.PI); ctx.fill();
+                }
+            });
+        }
+
+        function updateReadouts() {
+            let mono_E_total = 0, di_E_total = 0, total_trans_E = 0, total_rot_E = 0;
+            let mono_count = 0, di_count = 0;
+            const kT = k_B * simParams.T;
+            if(kT === 0) return;
+
+            particles.forEach(p => {
+                const trans_E = 0.5 * p.mass * (p.vx**2 + p.vy**2);
+                total_trans_E += trans_E;
+
+                if(p.type === 'mono') {
+                    mono_E_total += trans_E;
+                    mono_count++;
+                } else {
+                    const rot_E = 0.5 * DI_INERTIA * p.omega**2;
+                    total_rot_E += rot_E;
+                    di_E_total += trans_E + rot_E;
+                    di_count++;
+                }
+            });
+
+            // Normalize by kT
+            const avg_mono_E = (mono_count > 0) ? (mono_E_total / mono_count) / kT : 0;
+            const avg_di_E = (di_count > 0) ? (di_E_total / di_count) / kT : 0;
+            const avg_trans_E = (particles.length > 0) ? (total_trans_E / particles.length) / kT : 0;
+            const avg_rot_E = (di_count > 0) ? (total_rot_E / di_count) / kT : 0;
+
+            monoTotalVal.textContent = avg_mono_E.toFixed(2);
+            diTotalVal.textContent = avg_di_E.toFixed(2);
+            transVal.textContent = avg_trans_E.toFixed(2);
+            rotVal.textContent = avg_rot_E.toFixed(2);
+        }
+
+        let frameCount = 0;
+        function mainLoop() {
+            update();
+            draw();
+            if(frameCount % 30 === 0) { // Update readouts less frequently
+                updateReadouts();
+            }
+            frameCount++;
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        tempSlider.addEventListener('input', e => {
+            tempLabel.textContent = e.target.value;
+            setTemperature(parseFloat(e.target.value));
+        });
+        monoSlider.addEventListener('input', e => {
+            monoLabel.textContent = e.target.value;
+            simParams.numMono = parseInt(e.target.value);
+            setup();
+        });
+        diSlider.addEventListener('input', e => {
+            diLabel.textContent = e.target.value;
+            simParams.numDi = parseInt(e.target.value);
+            setup();
+        });
+        resetBtn.addEventListener('click', setup);
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

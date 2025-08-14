@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Gibbs Paradox</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #9b59b6;
+            --accent-color-dark: #8e44ad;
+            --code-bg: #e2e8f0;
+            --gas-a-color: #c0392b;
+            --gas-b-color: #2980b9;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #af7ac5;
+            --accent-color-dark: #9b59b6;
+            --code-bg: #2d3748;
+            --gas-a-color: #e74c3c;
+            --gas-b-color: #5dade2;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            display: block;
+        }
+
+        #entropy-meter {
+            margin-top: 1rem;
+            padding: 15px;
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            text-align: center;
+        }
+        #entropy-meter h3 { margin-top: 0; }
+        #entropy-value { font-size: 2rem; font-weight: bold; color: var(--accent-color); }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .control-group button.primary { background-color: var(--accent-color); color: white; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Gibbs Paradox Simulator</h1>
+            <p class="subtitle">Exploring the surprising role of indistinguishability in the entropy of mixing.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop/Mobile</span>
+                <span><strong>Approx. HTML Size:</strong> 200 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>If you mix milk and coffee, the resulting mixture is more "disordered" than the separated liquids—a process that physicists say increases entropy. But what if you mix a cup of coffee with another identical cup of coffee? You just get a bigger cup of coffee; it seems nothing has fundamentally changed. The Gibbs Paradox is a famous puzzle in physics that highlights this exact problem. Classically, it was difficult to explain why mixing two identical gases should be any different from mixing two different gases. This simulation lets you explore the paradox directly. You can mix two different colored gases and watch the entropy increase, then mix two identical gases and see that, correctly, the entropy does not change at all. This demonstrates a profound concept from quantum mechanics: identical particles are truly indistinguishable, and this fact has real, measurable consequences.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Case of the Identical Gases</h2>
+
+            <h3>Step 1: Entropy of Mixing</h3>
+            <p>Entropy is often described as a measure of "disorder." When you take two separate, pure gases (like the <span style="color:var(--gas-a-color)">red</span> and <span style="color:var(--gas-b-color)">blue</span> particles in our simulation) and allow them to mix, they will spread out and intermingle. The final state is more disordered and less predictable than the initial state. This is an irreversible process (the mixed gases won't spontaneously separate) and it corresponds to an increase in the total entropy of the system. The simulation begins by showing you this familiar case.</p>
+
+            <h3>Step 2: The Experiment</h3>
+            <p>Use the buttons in the control panel to set up two experiments:
+            <ol>
+                <li>Click <strong>"Load Different Gases (A+B)"</strong>. This places red particles on the left and blue particles on the right. Now click <strong>"Remove Partition"</strong>. As you'd expect, they mix, and the Entropy Meter shows a large, positive change in entropy (ΔS).</li>
+                <li>Now, click <strong>"Reset"</strong>, and then click <strong>"Load Identical Gases (A+A)"</strong>. This places red particles on both sides. Click <strong>"Remove Partition"</strong> again. The particles spread out, but since they are all identical, the final state is just a larger volume of the same gas. Watch the Entropy Meter—it shows no change in entropy (ΔS = 0)!</li>
+            </ol>
+            This difference is the Gibbs Paradox. Why should the result be so different?</p>
+
+            <h3>Step 3: The Classical Paradox</h3>
+            <p>In classical physics, particles were thought of as tiny, distinct billiard balls. Even if two were of the same "type," you could imagine painting a tiny number on each one to tell them apart. From this point of view, when you mix two identical gases, the "red ball #1" from the left side is mixing with "red ball #2" from the right side. It seems like a mixing process, and classical theory incorrectly predicted that the entropy should increase, just as it did for the different gases.</p>
+
+            <h3>Step 4: The Quantum Resolution: Indistinguishability</h3>
+            <p>Quantum mechanics provides the solution. It states that identical particles (like two electrons, or two atoms of Helium-4) are fundamentally, perfectly **indistinguishable**. There is no secret label or tiny number on them. You cannot tell them apart, even in principle. </p>
+            <p>This has a profound consequence. When you remove the partition between two identical gases, the final state is not "more disordered." Swapping any particle from the left side with any particle from the right side results in a final state that is physically identical to the one before the swap. Because we cannot distinguish between the particles, there is no increase in the number of unique microscopic arrangements. Therefore, the entropy does not increase.</p>
+            <p>The paradox arises from a flawed classical assumption (that you can secretly label identical particles) and is resolved by a core principle of quantum reality.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="256" aria-label="Simulation of gases mixing in a partitioned box"></canvas>
+                <div id="entropy-meter">
+                    <h3>Change in Entropy (ΔS)</h3>
+                    <span id="entropy-value">0.00</span> k<sub>B</sub>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="load-ab-btn">Load Different Gases (A+B)</button>
+                    <button id="load-aa-btn">Load Identical Gases (A+A)</button>
+                </div>
+                <div class="control-group">
+                    <button id="remove-wall-btn" class="primary">Remove Partition</button>
+                    <button id="reset-btn" style="background-color:#7f8c8d">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="particles-slider">Particles per Side: <span id="particles-label">50</span></label>
+                    <input type="range" id="particles-slider" min="10" max="100" value="50" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Distinguishable vs. Indistinguishable</h2>
+
+            <h3>1. Entropy of Mixing (Distinguishable Gases)</h3>
+            <p>When you mix two different ideal gases, A and B, which are initially separated, the change in the system's entropy is given by:</p>
+            <p><code>&Delta;S = -N k<sub>B</sub> (x<sub>A</sub> ln x<sub>A</sub> + x<sub>B</sub> ln x<sub>B</sub>)</code></p>
+            <p>Where <code>N</code> is the total number of particles and <code>x<sub>A</sub></code> and <code>x<sub>B</sub></code> are the mole fractions. For our simulation with equal numbers of particles on each side, N<sub>A</sub> = N<sub>B</sub>, so x<sub>A</sub> = x<sub>B</sub> = 1/2. The total number of particles is 2N<sub>A</sub>.</p>
+            <p><code>&Delta;S = -2N<sub>A</sub> k<sub>B</sub> (&frac12; ln &frac12; + &frac12; ln &frac12;) = -2N<sub>A</sub> k<sub>B</sub> ln(&frac12;) = 2N<sub>A</sub> k<sub>B</sub> ln(2)</code></p>
+            <p>This is a positive, significant increase in entropy. The simulation calculates and displays this value when you mix A and B.</p>
+
+            <h3>2. Mixing Identical Gases (Indistinguishable)</h3>
+            <p>The Gibbs Paradox arises because if you naively applied the same formula to two samples of the same gas, you would get the same non-zero result. The resolution comes from quantum mechanics and the principle of indistinguishability.</p>
+            <p>Since the particles are identical, swapping any two particles does not create a new, distinct microstate. When the partition is removed, the particles simply occupy a larger volume. The entropy of an ideal gas is given by the Sackur-Tetrode equation, which correctly includes a term (<code>1/N!</code>) to account for indistinguishability. When calculated properly, the entropy of the combined gas is simply the sum of the entropies of the two initial gases. Therefore, the change in entropy upon mixing is zero.</p>
+            <p><code>&Delta;S = S<sub>final</sub> - (S<sub>initial,A</sub> + S<sub>initial,A</sub>) = 0</code></p>
+            <p>This is what the simulation shows. The act of "mixing" identical things is a mental construct; physically, nothing new is created.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const loadABBtn = document.getElementById('load-ab-btn');
+        const loadAABtn = document.getElementById('load-aa-btn');
+        const removeWallBtn = document.getElementById('remove-wall-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const particlesSlider = document.getElementById('particles-slider');
+        const particlesLabel = document.getElementById('particles-label');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const entropyValue = document.getElementById('entropy-value');
+
+        // --- Simulation State ---
+        let simParams = { N_side: 50, speed: 1.5, mix_type: 'none' };
+        let particles = [];
+        let wallRemoved = false;
+
+        function setup(type) {
+            simParams.N_side = parseInt(particlesSlider.value);
+            simParams.mix_type = type;
+            wallRemoved = false;
+            entropyValue.textContent = "0.00";
+
+            particles = [];
+            // Gas A (Left)
+            for(let i=0; i<simParams.N_side; i++) {
+                particles.push({
+                    x: Math.random() * (canvas.width/2 - 5), y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * simParams.speed, vy: (Math.random() - 0.5) * simParams.speed,
+                    color: 'var(--gas-a-color)'
+                });
+            }
+            // Gas B (Right)
+            for(let i=0; i<simParams.N_side; i++) {
+                particles.push({
+                    x: canvas.width/2 + Math.random() * (canvas.width/2 - 5), y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * simParams.speed, vy: (Math.random() - 0.5) * simParams.speed,
+                    color: (type === 'AB') ? 'var(--gas-b-color)' : 'var(--gas-a-color)'
+                });
+            }
+        }
+
+        function update() {
+            const wallX = wallRemoved ? canvas.width : canvas.width / 2;
+
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                if (!wallRemoved) {
+                    if (i < simParams.N_side) { // Left side
+                        if (p.x > wallX) p.vx *= -1;
+                    } else { // Right side
+                        if (p.x < wallX) p.vx *= -1;
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(p.color).trim();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            if(!wallRemoved) {
+                ctx.fillStyle = isDark ? '#a0aec0' : '#2c3e50';
+                ctx.fillRect(canvas.width/2 - 1, 0, 2, canvas.height);
+            }
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        loadABBtn.addEventListener('click', () => setup('AB'));
+        loadAABtn.addEventListener('click', () => setup('AA'));
+        resetBtn.addEventListener('click', () => setup('none'));
+
+        removeWallBtn.addEventListener('click', () => {
+            if (simParams.mix_type === 'none') return;
+            wallRemoved = true;
+            if(simParams.mix_type === 'AB') {
+                const N_total = 2 * simParams.N_side;
+                const delta_S = N_total * Math.log(2); // In units of k_B
+                entropyValue.textContent = `+${delta_S.toFixed(2)}`;
+            } else { // AA
+                entropyValue.textContent = "0.00";
+            }
+        });
+
+        particlesSlider.addEventListener('input', e => {
+            particlesLabel.textContent = e.target.value;
+        });
+        particlesSlider.addEventListener('change', () => setup(simParams.mix_type));
+
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup('none');
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
