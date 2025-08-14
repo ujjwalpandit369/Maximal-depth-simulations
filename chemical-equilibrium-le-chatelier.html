@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemical Equilibrium: Le Châtelier's Principle</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --text-color: #333; --primary-color: #2a9d8f; --secondary-color: #ddd;
+            --header-bg: #fff; --control-bg: #fff; --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --success-color: #28a745; --danger-color: #d9534f; --warning-color: #ffc107; --code-bg: #e9ecef;
+            --border-radius: 8px; --n2-color: #457b9d; --h2-color: #a8dadc; --nh3-color: #e63946;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a; --text-color: #e0e0e0; --primary-color: #2a9d8f; --secondary-color: #444;
+            --header-bg: #2a2a2a; --control-bg: #252525; --code-bg: #343a40;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 1rem; transition: background-color 0.3s, color 0.3s; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; background-color: var(--header-bg); border-radius: var(--border-radius); padding: 1rem;}
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 400; }
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid var(--secondary-color); padding: 0.75rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: background-color 0.2s; }
+        button:hover { background-color: #248277; }
+        .dark-mode button:hover { background-color: #34c2b2; }
+        .control-group { margin-bottom: 1.5rem; }
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        #simulation-controls { flex: 1; min-width: 320px; background-color: var(--control-bg); padding: 1.5rem; border-radius: var(--border-radius); align-self: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        #simulation-visuals { flex: 2; min-width: 400px; }
+        canvas { width: 100%; height: auto; background-color: #fff; border: 1px solid var(--secondary-color); border-radius: 4px; }
+        .dark-mode canvas { background-color: #111; }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+        #readouts p { margin: 0.5rem 0; font-family: 'Courier New', Courier, monospace; }
+        #legend { display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+        .legend-color { width: 15px; height: 15px; border-radius: 50%; }
+        #quality-check-panel, #error-panel { display: none; background-color: var(--danger-color); color: white; padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem; }
+        #dev-console { display: none; background-color: var(--code-bg); border: 1px solid var(--secondary-color); margin-top: 1rem; padding: 1rem; border-radius: var(--border-radius); max-height: 200px; overflow-y: auto; }
+        #dev-console-header { cursor: pointer; font-weight: bold; }
+        #metadata-bar { text-align: center; color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
+        @media (max-width: 768px) { #simulation-container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div id="quality-check-panel"></div>
+    <header>
+        <h1>Chemical Equilibrium: Le Châtelier's Principle</h1>
+        <p>An interactive simulation of how a chemical system at equilibrium responds to stress.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span> |
+            <span>Recommended Device: Desktop</span> |
+            <span id="html-size">Size: ...</span>
+            <button id="theme-toggle" title="Toggle light/dark mode" style="margin-left: 1rem; padding: 0.2rem 0.5rem;">🌙</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="error-panel"></div>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation visualizes Le Châtelier's Principle for the Haber-Bosch process: <strong>N₂(g) + 3H₂(g) ⇌ 2NH₃(g)</strong>. A system at chemical equilibrium is in a stable, balanced state where the rates of the forward and reverse reactions are equal. Le Châtelier's Principle states that if you apply a "stress" to this system (like changing concentration, pressure, or temperature), the system will shift its equilibrium position to counteract the stress. Use the controls to apply these stresses and watch how the concentrations of reactants and products change to find a new balance.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner’s Guide to Le Châtelier's Principle</h2>
+            <p>Welcome! Chemical equilibrium might sound intimidating, but it's all about balance, much like a perfectly still see-saw. Let's break it down step-by-step.</p>
+
+            <h4>Step 1: The Two-Way Street (Reversible Reactions)</h4>
+            <p>Most chemical reactions you learn about early on are like a one-way street: reactants turn into products, and that's it. But many reactions, including the one in our simulation, are <strong>reversible</strong>. They are two-way streets. Reactants can form products (the "forward reaction"), and products can turn back into reactants (the "reverse reaction").</p>
+            <p>Our reaction is: <code>N₂ + 3H₂ ⇌ 2NH₃</code>. This means Nitrogen (N₂) and Hydrogen (H₂) can combine to make Ammonia (NH₃), and at the same time, Ammonia can break apart to form Nitrogen and Hydrogen.</p>
+
+            <h4>Step 2: Dynamic Equilibrium - The Busy Balance</h4>
+            <p>So if the reaction goes both ways, when does it stop? It doesn't! Instead, it reaches a point called <strong>dynamic equilibrium</strong>. Imagine two islands connected by a bridge. Every hour, 10 people walk from Island A to Island B, and 10 people walk from Island B to Island A. Even though people are constantly moving, the total number of people on each island stays the same. The system is balanced and stable, but it's dynamic and active, not static and frozen.</p>
+            <p>In our simulation, equilibrium is when the rate of N₂ and H₂ forming NH₃ is exactly equal to the rate of NH₃ breaking down. When this happens, the total amounts of all three chemicals remain constant. You can see this in the simulation: even at equilibrium, the particles are still moving around!</p>
+
+            <h4>Step 3: Le Châtelier's Principle - The Rule of Counter-Attack</h4>
+            <p>This is the core idea. Le Châtelier's Principle states that if you disturb a system at equilibrium, the system will <strong>shift to counteract the disturbance</strong>. It's like the system is trying to undo what you just did. If you push it, it pushes back. We can disturb, or "stress," the system in three main ways:</p>
+
+            <h5>Stress 1: Changing Concentration (Adding or Removing Chemicals)</h5>
+            <p><strong>Analogy: A Crowded See-Saw.</strong> Imagine our reaction is a see-saw with reactants (N₂, H₂) on the left and products (NH₃) on the right. If you dump more reactants onto the left side (by clicking the <code>+ N₂</code> or <code>+ H₂</code> buttons), that side becomes too heavy. To regain balance, the see-saw must shift some of that new weight over to the right side. The system counteracts your addition of reactants by turning them into products.</p>
+
+            <h5>Stress 2: Changing Pressure (by Changing Volume)</h5>
+            <p><strong>Analogy: Crowded Rooms.</strong> Look at the number of gas molecules on each side of the equation: <code><strong>1</strong> N₂ + <strong>3</strong> H₂ ⇌ <strong>2</strong> NH₃</code>. The left side has 1+3 = <strong>4 gas molecules</strong>, while the right side has only <strong>2 gas molecules</strong>. The left side is more "crowded." If you squeeze the container (decrease the volume with the slider), the pressure increases. It's like making a room smaller. To relieve this pressure, the system shifts to the side that is less crowded—the side with fewer gas molecules. In this case, it shifts to the right, producing more NH₃.</p>
+
+            <h5>Stress 3: Changing Temperature</h5>
+            <p><strong>Analogy: A Worker Who Hates Overtime.</strong> Our reaction is <strong>exothermic</strong>, which is a fancy way of saying it releases heat when it goes forward. You can think of heat as a product: <code>N₂ + 3H₂ ⇌ 2NH₃ + <strong>HEAT</strong></code>. Now, imagine the forward reaction is a worker that produces heat. If you add a bunch of heat yourself (by increasing the temperature with the slider), the worker says, "Whoa, it's too hot in here, I'm taking a break!" The forward reaction slows down, and the reverse reaction (which consumes heat) speeds up. The system shifts to the left to "use up" the extra heat you added.</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter/Control</th><th>Type</th><th>Description</th><th>Physical Effect & Worked Example</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Add Molecules</td>
+                        <td>Buttons (+N₂, +H₂, +NH₃)</td>
+                        <td>Directly adds a fixed amount of moles of the chosen chemical to the system.</td>
+                        <td>This is a <strong>concentration stress</strong>. Adding a substance causes the equilibrium to shift to consume that substance. <br><b>Example:</b> Click "+N₂". The concentration of N₂ spikes, causing the value of Q to drop. The system will shift right, consuming N₂ and H₂ to produce more NH₃ until Q rises back to K.</td>
+                    </tr>
+                    <tr>
+                        <td>Volume</td>
+                        <td>Slider (Liters)</td>
+                        <td>Changes the volume of the container.</td>
+                        <td>This is a <strong>pressure stress</strong>. Decreasing volume increases the concentration of all gases and raises the pressure. The equilibrium shifts to the side with fewer moles of gas to relieve the pressure. <br><b>Example:</b> Decrease volume from 10L to 5L. All concentrations double, but Q changes disproportionately. The system shifts right (4 gas moles → 2 gas moles) to reduce pressure.</td>
+                    </tr>
+                    <tr>
+                        <td>Temperature</td>
+                        <td>Slider (Kelvin)</td>
+                        <td>Changes the temperature of the system.</td>
+                        <td>This is a <strong>temperature stress</strong>. For this exothermic reaction, increasing temperature decreases the equilibrium constant (K), making the reaction less favorable. The system shifts to absorb the added heat. <br><b>Example:</b> Increase T from 450K to 550K. The value of K drops significantly. The system now has too many products for this new K value, so it shifts left, converting NH₃ back into N₂ and H₂.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+
+                <div class="control-group">
+                    <h4>Concentration Stress</h4>
+                    <p>Add molecules to the system.</p>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="add-n2">+ N₂</button>
+                        <button id="add-h2">+ H₂</button>
+                        <button id="add-nh3">+ NH₃</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4>Pressure (Volume) Stress</h4>
+                    <div class="slider-container">
+                        <label for="volume-slider">Volume (L): <span id="volume-readout">10</span></label>
+                        <input type="range" id="volume-slider" min="5" max="20" step="0.5" value="10" aria-label="Container Volume">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4>Temperature Stress</h4>
+                    <div class="slider-container">
+                        <label for="temp-slider">Temperature (K): <span id="temp-readout">450</span></label>
+                        <input type="range" id="temp-slider" min="300" max="600" step="10" value="450" aria-label="System Temperature">
+                    </div>
+                     <p><small>This reaction is exothermic (releases heat).</small></p>
+                </div>
+
+                <hr>
+
+                <h3>Actions</h3>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="play-pause-btn" title="Pause/Resume simulation (Spacebar)">Pause</button>
+                    <button id="reset-btn" title="Reset to initial state (R)">Reset</button>
+                    <button id="export-png-btn" title="Save image of canvas">Export PNG</button>
+                    <button id="export-json-btn" title="Save parameters as a JSON file">Export JSON</button>
+                </div>
+
+                <hr>
+                <h3>Presets</h3>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="preset-equilibrium" title="Start with a balanced system at equilibrium">Equilibrium</button>
+                    <button id="preset-add-reactant" title="Start at equilibrium, then add extra N₂">Add Reactant</button>
+                    <button id="preset-inc-pressure" title="Start at equilibrium in a smaller container">Increase Pressure</button>
+                </div>
+
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+                <div id="legend">
+                    <div class="legend-item"><div class="legend-color" style="background-color: var(--n2-color);"></div><span>N₂</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: var(--h2-color);"></div><span>H₂</span></div>
+                    <div class="legend-item"><div class="legend-color" style="background-color: var(--nh3-color);"></div><span>NH₃</span></div>
+                </div>
+                <div id="readouts">
+                    <h4>System State</h4>
+                    <p>Q (Reaction Quotient): <code id="q-readout">N/A</code></p>
+                    <p>K (Equilibrium Constant): <code id="k-readout">N/A</code></p>
+                    <p>[N₂]: <code id="n2-conc-readout">N/A</code> M</p>
+                    <p>[H₂]: <code id="h2-conc-readout">N/A</code> M</p>
+                    <p>[NH₃]: <code id="nh3-conc-readout">N/A</code> M</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h4>Walkthrough 1: Concentration Stress</h4>
+            <ol>
+                <li>Press the "Reset" button to start at a stable equilibrium. Note the value of [NH₃].</li>
+                <li>Press the "+ N₂" button once.</li>
+                <li><strong>Observe:</strong> The system is no longer at equilibrium! You'll see the value of Q instantly drop. Watch as the simulation runs: N₂ and H₂ particles will be consumed, and more NH₃ particles will appear. The concentrations will change until the value of Q once again equals K. The final [NH₃] will be higher than where you started.</li>
+            </ol>
+
+            <h4>Walkthrough 2: Pressure Stress</h4>
+            <ol>
+                <li>Press "Reset". Note the value of [NH₃].</li>
+                <li>Slide the "Volume" slider all the way to the left (5 L).</li>
+                <li><strong>Observe:</strong> The container is smaller, and all the concentrations instantly increase. The system immediately shifts to the right (the side with fewer gas molecules) to relieve the pressure. You will see the amount of NH₃ increase significantly until a new, stable equilibrium is reached.</li>
+            </ol>
+
+            <h4>Micro-Experiments to Try</h4>
+            <ul>
+                <li><strong>Add a Product:</strong> Reset the simulation, then press "+ NH₃". Which way does the equilibrium shift? Why?</li>
+                <li><strong>Decrease Pressure:</strong> Reset, then slide the Volume slider all the way to the right (20 L). Observe how the system shifts to the left (the side with more gas molecules) to "fill" the larger space.</li>
+                <li><strong>Cool it Down:</strong> Since the reaction is exothermic (releases heat), what do you predict will happen if you lower the temperature? Reset and slide the Temperature slider to the left. Was your prediction correct?</li>
+                <li><strong>Fighting the System:</strong> Press the "Add Reactant" preset. As the system produces NH₃, try to manually counteract it by adding more NH₃. Can you stop the reaction from shifting?</li>
+                <li><strong>Find Maximum Yield:</strong> What combination of temperature and pressure gives the highest possible concentration of ammonia ([NH₃])? (Hint: This is the central challenge for the real-world Haber-Bosch process).</li>
+                <li><strong>Balance the Stress:</strong> Add some N₂. The system shifts right. Now, increase the temperature. Can you make it shift back to the left? You can use one stress to counteract another.</li>
+            </ul>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory of Chemical Equilibrium</h2>
+            <p>The state of a reversible reaction is described by the <strong>Reaction Quotient (Q)</strong>, which relates the concentrations of products to reactants.</p>
+
+            <h4>The Reaction Quotient (Q)</h4>
+            <p>For our reaction, <code>N₂(g) + 3H₂(g) ⇌ 2NH₃(g)</code>, the reaction quotient Q<sub>c</sub> is defined as:</p>
+            <div class="equation">Q<sub>c</sub> = <sup>[NH₃]²</sup> &frasl; <sub>[N₂][H₂]³</sub></div>
+            <p>In plain English, you take the concentration of each product raised to the power of its stoichiometric coefficient (the number in front of it in the equation), and divide by the concentration of each reactant raised to its coefficient. This value of Q tells us the current state of the reaction mix.</p>
+
+            <h4>The Equilibrium Constant (K)</h4>
+            <p>A reaction left to its own devices will always head towards a specific, fixed ratio of products to reactants known as the <strong>Equilibrium Constant (K)</strong>. You can think of K as the "target" value for Q. When <code>Q = K</code>, the system is at equilibrium and the net reaction stops.</p>
+            <ul>
+                <li>If <strong>Q < K</strong>: There are too many reactants. The reaction will proceed to the <strong>right</strong> (→) to make more products.</li>
+                <li>If <strong>Q > K</strong>: There are too many products. The reaction will proceed to the <strong>left</strong> (←) to make more reactants.</li>
+                <li>If <strong>Q = K</strong>: The system is at equilibrium.</li>
+            </ul>
+            <p><strong>Important Note:</strong> The value of K itself can change, but only if you change the <strong>temperature</strong>. This is why temperature is such a powerful tool for controlling reactions.</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <ul>
+                <li><strong>Kinetics vs. Thermodynamics:</strong> This simulation models thermodynamics (where the equilibrium lies) but not kinetics (how fast it gets there). The real Haber-Bosch process is extremely slow at low temperatures, which is why a catalyst and high temperatures (despite a less favorable K value) are used to get a reasonable reaction rate. Our <code>REACTION_RATE</code> constant is an artificial stand-in for the complex kinetics.</li>
+                <li><strong>Numerical Method:</strong> The simulation does not solve differential equations. It uses a simple iterative method where, each frame, it checks if Q is different from K and adds or subtracts a tiny, fixed amount (the <code>delta</code>) from the moles. This is a robust but simplified way to model the shift.</li>
+                <li><strong>Ideal Gas Assumption:</strong> The relationship between volume and pressure assumes ideal gas behavior. At the very high pressures used in the industrial process, real gas effects become significant.</li>
+                <li><strong>How to Extend:</strong> You could extend this simulation by adding a "Catalyst" button that increases the <code>REACTION_RATE</code> constant without changing K. You could also model a different reaction, such as an endothermic one, to see how the temperature effects are reversed.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+             <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What's the difference between Q and K?</dt>
+                <dd><strong>Q</strong> is the reaction quotient; it's a snapshot of the ratio of products to reactants at any given moment. <strong>K</strong> is the equilibrium constant; it's the specific value Q has when the reaction is at a stable equilibrium. A reaction always "tries" to make its Q value equal to its K value.</dd>
+
+                <dt>2. Why does the reaction shift to counteract a change?</dt>
+                <dd>On a deep level, it's about minimizing the system's Gibbs Free Energy. But an intuitive way to think about it is that the rates of the forward and reverse reactions are affected differently by stresses. If you add more reactants, the forward reaction has more "fuel" and speeds up, shifting the balance until the reverse reaction catches up.</dd>
+
+                <dt>3. Is this how ammonia is really made?</dt>
+                <dd>Yes, the principles are the same! The industrial Haber-Bosch process uses extremely high pressures (150-250 atm) and moderately high temperatures (400-500 °C) along with an iron catalyst to produce ammonia efficiently. Our simulation shows why high pressure is so effective.</dd>
+
+                <dt>4. Why do the particles keep moving at equilibrium?</dt>
+                <dd>This is the "dynamic" part of dynamic equilibrium. Even when the overall concentrations are stable, reactions are still happening in both directions at an equal rate. Individual molecules are constantly changing, but the net effect is zero.</dd>
+
+                <dt>5. What does "exothermic" mean?</dt>
+                <dd>It means the reaction releases heat as it proceeds in the forward direction. Think of it like a tiny engine that gets hot as it runs. An "endothermic" reaction is the opposite; it consumes heat.</dd>
+
+                <dt>6. Why can't I get 100% products?</dt>
+                <dd>Because the reaction is reversible! As soon as you make some products (NH₃), they start turning back into reactants (N₂ and H₂). Equilibrium is the point where these two processes happen at the same speed.</dd>
+            </dl>
+        </section>
+
+        <section>
+            <h2 id="dev-console-header">Developer Console ▼</h2>
+            <div id="dev-console">
+                <p>Last error: <span id="last-error">None</span></p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Get DOM Elements ---
+        const htmlSizeEl = document.getElementById('html-size');
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        // Readouts
+        const qReadout = document.getElementById('q-readout');
+        const kReadout = document.getElementById('k-readout');
+        const n2ConcReadout = document.getElementById('n2-conc-readout');
+        const h2ConcReadout = document.getElementById('h2-conc-readout');
+        const nh3ConcReadout = document.getElementById('nh3-conc-readout');
+        const volumeReadout = document.getElementById('volume-readout');
+        const tempReadout = document.getElementById('temp-readout');
+        // Controls
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const volumeSlider = document.getElementById('volume-slider');
+        const tempSlider = document.getElementById('temp-slider');
+        const addN2Btn = document.getElementById('add-n2');
+        const addH2Btn = document.getElementById('add-h2');
+        const addNH3Btn = document.getElementById('add-nh3');
+
+        // --- Simulation Constants ---
+        const K_REF = 0.08; // Equilibrium constant at reference temperature
+        const T_REF = 450; // Reference temperature in Kelvin
+        const REACTION_RATE = 0.0005; // How fast equilibrium is approached
+        const EQUILIBRIUM_TOLERANCE = 0.01; // How close Q needs to be to K
+        const PARTICLE_SCALE = 10; // particles per mole
+        const PARTICLE_RADIUS = { n2: 6, h2: 4, nh3: 7 };
+        const PARTICLE_SPEED = 1;
+
+        // --- Simulation State ---
+        let state = {};
+        let particleColors = {};
+
+        function getInitialState() {
+            return {
+                moles: { n2: 5, h2: 15, nh3: 4 },
+                volume: 10, // Liters
+                temperature: 450, // Kelvin
+                k: K_REF,
+                q: 0,
+                paused: false,
+                particles: []
+            };
+        }
+
+        // --- Visualization ---
+        function createParticle(type) {
+            return {
+                type: type,
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * PARTICLE_SPEED,
+                vy: (Math.random() - 0.5) * PARTICLE_SPEED,
+                radius: PARTICLE_RADIUS[type],
+                color: particleColors[type]
+            };
+        }
+
+        function syncParticles() {
+            const targetCounts = {
+                n2: Math.floor(state.moles.n2 * PARTICLE_SCALE),
+                h2: Math.floor(state.moles.h2 * PARTICLE_SCALE),
+                nh3: Math.floor(state.moles.nh3 * PARTICLE_SCALE)
+            };
+
+            for (const type of ['n2', 'h2', 'nh3']) {
+                let currentParticles = state.particles.filter(p => p.type === type);
+                let diff = targetCounts[type] - currentParticles.length;
+
+                if (diff > 0) { // Add particles
+                    for (let i = 0; i < diff; i++) {
+                        state.particles.push(createParticle(type));
+                    }
+                } else if (diff < 0) { // Remove particles
+                    for (let i = 0; i < -diff; i++) {
+                        const index = state.particles.findIndex(p => p.type === type);
+                        if (index > -1) {
+                            state.particles.splice(index, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateParticles() {
+            if (state.paused) return;
+            for (const p of state.particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < p.radius || p.x > canvas.width - p.radius) p.vx *= -1;
+                if (p.y < p.radius || p.y > canvas.height - p.radius) p.vy *= -1;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            for (const p of state.particles) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            }
+        }
+
+        // --- Core Logic ---
+        function calculateK() {
+            // Simplified Van 't Hoff: K decreases as T increases for exothermic reaction
+            state.k = K_REF * Math.exp(4000 * (1 / state.temperature - 1 / T_REF));
+        }
+
+        function calculateQ() {
+            const concentrations = getConcentrations();
+            if (concentrations.n2 === 0 || concentrations.h2 === 0) {
+                state.q = Infinity; // Avoid division by zero if reactants are absent
+                return;
+            }
+            state.q = (Math.pow(concentrations.nh3, 2)) /
+                      (concentrations.n2 * Math.pow(concentrations.h2, 3));
+        }
+
+        function getConcentrations() {
+            return {
+                n2: state.moles.n2 / state.volume,
+                h2: state.moles.h2 / state.volume,
+                nh3: state.moles.nh3 / state.volume,
+            };
+        }
+
+        function updateEquilibrium() {
+            if (state.paused) return;
+
+            calculateK();
+            calculateQ();
+
+            const q_k_ratio = state.q / state.k;
+
+            if (q_k_ratio < 1 - EQUILIBRIUM_TOLERANCE) {
+                // Shift right: Q < K
+                const delta = REACTION_RATE;
+                if (state.moles.n2 >= delta && state.moles.h2 >= 3 * delta) {
+                    state.moles.n2 -= delta;
+                    state.moles.h2 -= 3 * delta;
+                    state.moles.nh3 += 2 * delta;
+                }
+            } else if (q_k_ratio > 1 + EQUILIBRIUM_TOLERANCE) {
+                // Shift left: Q > K
+                const delta = REACTION_RATE;
+                if (state.moles.nh3 >= 2 * delta) {
+                    state.moles.n2 += delta;
+                    state.moles.h2 += 3 * delta;
+                    state.moles.nh3 -= 2 * delta;
+                }
+            }
+            // else: at equilibrium
+        }
+
+        function updateUI() {
+            const concentrations = getConcentrations();
+            qReadout.textContent = state.q.toFixed(4);
+            kReadout.textContent = state.k.toFixed(4);
+            n2ConcReadout.textContent = concentrations.n2.toFixed(3);
+            h2ConcReadout.textContent = concentrations.h2.toFixed(3);
+            nh3ConcReadout.textContent = concentrations.nh3.toFixed(3);
+            volumeReadout.textContent = state.volume.toFixed(1);
+            tempReadout.textContent = state.temperature.toFixed(0);
+        }
+
+        // --- Main Loop ---
+        function mainLoop() {
+            updateEquilibrium();
+            updateParticles();
+            syncParticles(); // Sync after logic update
+            updateUI();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Event Listeners & Setup ---
+        function applyPreset(type) {
+            reset();
+            if (type === 'add_reactant') {
+                state.moles.n2 += 10; // Add a large amount of reactant
+            } else if (type === 'inc_pressure') {
+                state.volume = 5; // Decrease volume to increase pressure
+                volumeSlider.value = state.volume;
+            }
+            // 'equilibrium' preset is just a plain reset
+            syncParticles();
+        }
+
+        function exportPNG() {
+            const link = document.createElement('a');
+            link.download = 'le-chatelier-equilibrium.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify({
+                moles: state.moles,
+                volume: state.volume,
+                temperature: state.temperature
+            }, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'le-chatelier-settings.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function setupControls() {
+            playPauseBtn.addEventListener('click', () => {
+                state.paused = !state.paused;
+                playPauseBtn.textContent = state.paused ? 'Play' : 'Pause';
+            });
+
+            resetBtn.addEventListener('click', reset);
+            document.getElementById('export-png-btn').addEventListener('click', exportPNG);
+            document.getElementById('export-json-btn').addEventListener('click', exportJSON);
+
+            document.getElementById('preset-equilibrium').addEventListener('click', () => applyPreset('equilibrium'));
+            document.getElementById('preset-add-reactant').addEventListener('click', () => applyPreset('add_reactant'));
+            document.getElementById('preset-inc-pressure').addEventListener('click', () => applyPreset('inc_pressure'));
+
+            volumeSlider.addEventListener('input', (e) => {
+                state.volume = parseFloat(e.target.value);
+            });
+
+            tempSlider.addEventListener('input', (e) => {
+                state.temperature = parseFloat(e.target.value);
+            });
+
+            addN2Btn.addEventListener('click', () => { state.moles.n2 += 2; syncParticles(); });
+            addH2Btn.addEventListener('click', () => { state.moles.h2 += 6; syncParticles(); });
+            addNH3Btn.addEventListener('click', () => { state.moles.nh3 += 4; syncParticles(); });
+
+            // Add theme toggle listener
+            const themeToggle = document.getElementById('theme-toggle');
+            if(themeToggle) {
+                themeToggle.addEventListener('click', () => {
+                    document.body.classList.toggle('dark-mode');
+                    themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+                    getThemeColors(); // Update colors after theme change
+                });
+            }
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (e.key === ' ' || e.key === 'p') { // Space or P for play/pause
+                    e.preventDefault();
+                    playPauseBtn.click();
+                }
+                if (e.key === 'r') { // R for reset
+                    e.preventDefault();
+                    resetBtn.click();
+                }
+            });
+        }
+
+        function reset() {
+            state = getInitialState();
+            volumeSlider.value = state.volume;
+            tempSlider.value = state.temperature;
+            if(state.paused) {
+                state.paused = false;
+                playPauseBtn.textContent = 'Pause';
+            }
+            syncParticles(); // Initialize particles
+        }
+
+        function getThemeColors() {
+            const styles = getComputedStyle(document.documentElement);
+            particleColors = {
+                n2: styles.getPropertyValue('--n2-color').trim(),
+                h2: styles.getPropertyValue('--h2-color').trim(),
+                nh3: styles.getPropertyValue('--nh3-color').trim()
+            };
+            // also update particle colors in state
+            if(state.particles) {
+                 for (const p of state.particles) {
+                    p.color = particleColors[p.type];
+                }
+            }
+        }
+
+        function init() {
+            // Set HTML size metadata
+            const sizeInBytes = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            htmlSizeEl.textContent = `Size: ${(sizeInBytes / 1024).toFixed(1)} KB`;
+
+            getThemeColors();
+            // --- Self-Check ---
+            const qualityCheckPanel = document.getElementById('quality-check-panel');
+            const requiredIds = ['main-canvas', 'volume-slider', 'temp-slider', 'add-n2', 'reset-btn', 'preset-equilibrium'];
+            const missing = requiredIds.filter(id => !document.getElementById(id));
+            if (missing.length > 0) {
+                qualityCheckPanel.style.display = 'block';
+                qualityCheckPanel.innerHTML = `<strong>Quality Check Failed!</strong> Missing required elements: ${missing.join(', ')}. Please report this bug.`;
+                return; // Stop initialization
+            }
+
+            reset();
+            setupControls();
+            mainLoop();
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

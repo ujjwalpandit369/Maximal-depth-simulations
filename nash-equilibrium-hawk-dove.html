@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Theory: The Hawk-Dove Nash Equilibrium</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --text-color: #333; --primary-color: #9b5de5; --secondary-color: #ddd;
+            --header-bg: #fff; --control-bg: #fff; --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --code-bg: #e9ecef; --border-radius: 8px;
+            --hawk-color: #f15bb5; --dove-color: #00bbf9;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a; --text-color: #e0e0e0; --primary-color: #c77dff; --secondary-color: #444;
+            --header-bg: #2a2a2a; --control-bg: #252525; --code-bg: #343a40;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 1rem; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; background-color: var(--header-bg); border-radius: var(--border-radius); padding: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 400; }
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: background-color 0.2s; }
+        button:hover { background-color: #7b2cbf; }
+        .dark-mode button:hover { background-color: #deafff; }
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        #simulation-controls { flex: 1; min-width: 320px; background-color: var(--control-bg); padding: 1.5rem; border-radius: var(--border-radius); align-self: flex-start; }
+        #simulation-visuals { flex: 2; min-width: 400px; display: flex; flex-direction: column; gap: 1rem;}
+        canvas { width: 100%; height: auto; background-color: #fff; border: 1px solid var(--secondary-color); border-radius: 4px; }
+        .dark-mode canvas { background-color: #111; }
+        .slider-container { margin-bottom: 1.2rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+        #readouts { display: flex; justify-content: space-around; margin-top: 1rem; text-align: center; }
+        #quality-check-panel { display: none; background-color: #d9534f; color: white; padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem; }
+        #metadata-bar { text-align: center; color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
+        @media (max-width: 768px) { #simulation-container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div id="quality-check-panel"></div>
+    <header>
+        <h1>Game Theory: The Hawk-Dove Nash Equilibrium</h1>
+        <p>An interactive simulation of evolutionary game theory and stable strategies.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span> |
+            <span>Recommended Device: Desktop</span> |
+            <span id="html-size">Size: ...</span>
+            <button id="theme-toggle" title="Toggle light/dark theme" style="margin-left: 1rem; padding: 0.2rem 0.5rem;">🌙</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation explores the concept of a Nash Equilibrium through the lens of the classic "Hawk-Dove" game. In this model, a population of individuals competes for resources. Each individual can adopt one of two strategies: "Hawk" (always fight) or "Dove" (posture, but retreat from a fight). The simulation shows how these strategies fare against each other over time. Through a process of selection where successful strategies reproduce, the population naturally converges to a stable state—the Nash Equilibrium—where the proportions of Hawks and Doves remain constant.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner’s Guide to the Hawk-Dove Game</h2>
+            <p>Game theory sounds complex, but it's really just the study of how to make smart decisions when the outcome depends on the choices of others. This simulation shows one of the most famous ideas in game theory using a simple story about Hawks and Doves competing for food.</p>
+
+            <h4>Step 1: The Players and Their Strategies</h4>
+            <p>Imagine a field with a limited amount of food. The individuals in our population, which we'll call "agents," compete for this food. Each agent has a fixed, simple strategy for how it behaves when it encounters another agent at a food source:</p>
+            <ul>
+                <li>A <strong style="color:var(--hawk-color);">Hawk</strong> is aggressive. It will always fight to try and win the entire food resource for itself.</li>
+                <li>A <strong style="color:var(--dove-color);">Dove</strong> is passive. It will posture and act tough, but if its opponent starts a fight, it will always retreat to avoid injury.</li>
+            </ul>
+
+            <h4>Step 2: Scoring the Game (The Payoff Matrix)</h4>
+            <p>To see which strategy is better, we need to score the outcomes of their interactions. In game theory, this is called a "payoff matrix."</p>
+            <ul>
+                <li><strong>When a Hawk meets a Dove:</strong> The Dove immediately flees. The Hawk gets the entire resource (Value, <strong>V</strong>) without a fight. The Dove gets nothing. A big win for the Hawk.</li>
+                <li><strong>When a Dove meets a Dove:</strong> They both posture for a bit, but neither wants to fight. They agree to share the resource, and each gets half the value (<strong>V/2</strong>). A peaceful and decent outcome for both.</li>
+                <li><strong>When a Hawk meets a Hawk:</strong> This is the dangerous one. Both are aggressive, so they fight. There's a 50/50 chance of winning or losing. The winner gets the food (V), but the loser gets injured, which has a significant Cost (<strong>C</strong>). The average outcome for each Hawk in a fight is half the value minus half the cost: <strong>(V - C) / 2</strong>.</li>
+            </ul>
+            <p>The key tension of the game is this: being a Hawk is great against Doves, but terrible against other Hawks, especially if the cost of fighting (C) is high.</p>
+
+            <h4>Step 3: Survival of the Fittest (Evolution)</h4>
+            <p>This isn't a one-on-one game; it's a population simulation. The agents here don't think or change their strategy. Instead, we use evolution to find the best strategy. As the simulation runs, agents collect points (or "fitness") from their encounters. Every so often, the simulation takes the lowest-scoring agents and removes them. It then takes the highest-scoring agents and lets them reproduce, creating new copies of themselves. This is "survival of the fittest" in action. If a strategy is earning a lot of points, you will see more of it in the next generation.</p>
+
+            <h4>Step 4: Finding the Balance (Nash Equilibrium)</h4>
+            <p>What strategy will win? As you'll see, the answer depends on the values of V and C. The simulation will run until the population reaches a stable state where the proportions of Hawks and Doves no longer change. This stable point, where neither strategy can do better by changing, is the <strong>Nash Equilibrium</strong> for the population.</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+             <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Control</th><th>Description</th><th>Effect on the Game</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Value of Resource (V)</td>
+                        <td>Slider</td>
+                        <td>The "payoff" or "points" an agent gets for winning a food resource.</td>
+                        <td>A higher V makes winning more important. It increases the incentive to be a Hawk, as they are better at winning resources outright.</td>
+                    </tr>
+                    <tr>
+                        <td>Cost of Fighting (C)</td>
+                        <td>Slider</td>
+                        <td>The "penalty" or "points lost" from being injured in a fight with another Hawk.</td>
+                        <td>A higher C makes fighting more dangerous. It discourages the Hawk strategy, because a Hawk-Hawk encounter becomes very costly. The ratio of V to C is the most important factor in the game.</td>
+                    </tr>
+                    <tr>
+                        <td>Initial Population</td>
+                        <td>Sliders</td>
+                        <td>Sets the starting number of Hawks and Doves in the population.</td>
+                        <td>This allows you to test how the population evolves from different starting points. Does a single Hawk thrive in a world of Doves? Watch and see!</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Game Parameters</h3>
+                <div class="slider-container">
+                    <label for="resource-value-slider">Value of Resource (V): <span id="resource-value-readout">50</span></label>
+                    <input type="range" id="resource-value-slider" min="10" max="100" step="5" value="50" aria-label="Value of Resource">
+                </div>
+                 <div class="slider-container">
+                    <label for="fight-cost-slider">Cost of Fighting (C): <span id="fight-cost-readout">100</span></label>
+                    <input type="range" id="fight-cost-slider" min="10" max="200" step="5" value="100" aria-label="Cost of Fighting">
+                </div>
+
+                <h3>Initial Population</h3>
+                <div class="slider-container">
+                    <label for="hawks-slider">Number of Hawks: <span id="hawks-readout">50</span></label>
+                    <input type="range" id="hawks-slider" min="1" max="100" step="1" value="50" aria-label="Initial number of Hawks">
+                </div>
+                <div class="slider-container">
+                    <label for="doves-slider">Number of Doves: <span id="doves-readout">50</span></label>
+                    <input type="range" id="doves-slider" min="1" max="100" step="1" value="50" aria-label="Initial number of Doves">
+                </div>
+
+                <hr>
+
+                <h3>Actions & Presets</h3>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <button id="play-pause-btn" title="Start/Pause simulation (Spacebar)">Pause</button>
+                    <button id="reset-btn" title="Reset to initial population (R)">Reset</button>
+                    <button id="export-png-btn" title="Save image of simulation and graph">Export PNG</button>
+                    <button id="export-json-btn" title="Save parameters as a JSON file">Export JSON</button>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="preset-c-gt-v" title="Set V=50, C=100. Leads to a mixed equilibrium.">Preset: Cost > Value</button>
+                    <button id="preset-v-gt-c" title="Set V=100, C=50. Leads to a pure Hawk equilibrium.">Preset: Value > Cost</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+                <canvas id="graph-canvas" width="600" height="150"></canvas>
+            </div>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h4>Walkthrough 1: The Stable Mix (When Fighting is Costly)</h4>
+            <ol>
+                <li>Click the <strong>"Preset: Cost > Value"</strong> button. This sets V=50 and C=100. Here, the potential injury from a fight is worse than the reward.</li>
+                <li>Press "Start". Watch the graph at the bottom. Initially, the population might fluctuate wildly.</li>
+                <li><strong>Observe:</strong> After a while, the population will stabilize. The percentage of Hawks will hover around a specific value. The theoretical equilibrium for Hawks in this case is V/C = 50/100 = <strong>50%</strong>. See how close the simulation gets to this value, indicated by the grey dashed line on the graph.</li>
+            </ol>
+
+            <h4>Walkthrough 2: The Hawk World (When Fighting is Cheap)</h4>
+            <ol>
+                <li>Click the <strong>"Preset: Value > Cost"</strong> button. This sets V=100 and C=50. Here, the reward is so great that it's always worth the risk of a fight.</li>
+                <li>Press "Start".</li>
+                <li><strong>Observe:</strong> The Hawks are incredibly successful. They dominate Doves and don't lose much even when fighting other Hawks. The pink "Hawk" line on the graph will rapidly rise to 100%, and the Doves will be driven to extinction. This is also a Nash Equilibrium.</li>
+            </ol>
+
+            <h4>Micro-Experiments to Try</h4>
+            <ul>
+                <li><strong>Invasion of the Hawk:</strong> Set the initial population to 1 Hawk and 99 Doves. Is being a Hawk in a world of Doves a good strategy? Watch the graph.</li>
+                <li><strong>The Lone Dove:</strong> Set the initial population to 99 Hawks and 1 Dove. How does the lone Dove fare?</li>
+                <li><strong>Calculate and Verify:</strong> Set V=30 and C=120. The theoretical equilibrium proportion of Hawks is V/C = 30/120 = 25%. Run the simulation and see if the population converges to this value.</li>
+                <li><strong>All Doves?:</strong> Can a population of 100% Doves be stable? Start with 100 Doves and 0 Hawks. It seems stable. Now, pause the simulation, set the Hawk count to 1, and press play. A population of pure Doves is not an "uninvadable" strategy.</li>
+            </ul>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory of Nash Equilibrium</h2>
+            <p>A <strong>Nash Equilibrium</strong> is a state in a strategic game where no player can benefit by unilaterally changing their strategy, assuming all other players keep their strategies unchanged. It's a point of mutual best response.</p>
+
+            <h4>The Hawk-Dove Payoff Matrix</h4>
+            <p>We can represent the outcomes of the game in a table called a payoff matrix. The values represent the score change for the player choosing the row strategy.</p>
+            <table style="text-align:center;">
+                <thead><tr><th></th><th>Opponent is Hawk</th><th>Opponent is Dove</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Play Hawk</strong></td><td>(V-C)/2</td><td>V</td></tr>
+                    <tr><td><strong>Play Dove</strong></td><td>0</td><td>V/2</td></tr>
+                </tbody>
+            </table>
+
+            <h4>Evolutionarily Stable Strategy (ESS)</h4>
+            <p>In evolutionary biology, the key concept is an <strong>Evolutionarily Stable Strategy (ESS)</strong>. An ESS is a strategy which, if adopted by an entire population, cannot be "invaded" by a small number of individuals playing a different, mutant strategy.</p>
+            <ul>
+                <li><strong>Case 1: V > C</strong> (Value > Cost). In this scenario, the payoff for Hawk-vs-Hawk is positive. It is always better to be a Hawk. The pure Hawk strategy is the ESS. Any Dove mutant will be easily beaten and will not spread.</li>
+                <li><strong>Case 2: V < C</strong> (Cost > Value). In this case, a pure Hawk population is not stable, because a Dove mutant would do better (getting 0) than the Hawks who are constantly fighting each other for a negative payoff. A pure Dove population is also not stable, because a Hawk mutant would easily dominate.</li>
+            </ul>
+            <p>The only stable state when V < C is a <strong>mixed strategy equilibrium</strong>. The ESS is to play Hawk with a probability of <code>p = V/C</code>. In our simulation, this is represented by a population containing a V/C proportion of agents who are hard-wired to be Hawks. At this ratio, the average payoff for a Hawk is exactly equal to the average payoff for a Dove, so neither strategy has an advantage and the proportions remain stable.</p>
+        </section>
+
+        <section id="faq">
+             <h2>FAQ & Troubleshooting</h2>
+             <dl>
+                <dt>1. What is a Nash Equilibrium?</dt>
+                <dd>It's a stable outcome in a game where no player wishes to change their strategy, given what everyone else is doing. In our simulation, it's the point where the Hawk/Dove population percentages stop changing because both strategies are equally successful.</dd>
+
+                <dt>2. Why don't the Doves always lose?</dt>
+                <dd>While Doves lose to Hawks, they do very well against other Doves. In a population with many Hawks, being a Dove can be better because you avoid the very high cost of fighting other Hawks. A score of 0 is better than a negative score.</dd>
+
+                <dt>3. Why don't the Hawks always win?</dt>
+                <dd>When the cost of fighting (C) is greater than the value of the resource (V), Hawks pay a heavy price for their aggression. As the Hawk population grows, they are more likely to meet other Hawks, leading to costly fights that lower their average score. This opens the door for the passive Dove strategy to be more successful.</dd>
+
+                <dt>4. Is this applicable to real life?</dt>
+                <dd>Yes, in many ways. The Hawk-Dove model is used to understand animal conflict, from birds competing for territory to countries in a political standoff. It helps explain why most animal conflicts involve a lot of posturing (Dove-like behavior) rather than constant, bloody fights (Hawk-like behavior).</dd>
+
+                <dt>5. What does the "score" represent?</dt>
+                <dd>In evolutionary game theory, the score is a stand-in for "fitness" or "reproductive success." A higher score means that agent is more successful and more likely to have offspring that share its strategy.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Get DOM Elements ---
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const htmlSizeEl = document.getElementById('html-size');
+        const mainCanvas = document.getElementById('main-canvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const graphCtx = graphCanvas.getContext('2d');
+
+        // Sliders
+        const resourceSlider = document.getElementById('resource-value-slider');
+        const costSlider = document.getElementById('fight-cost-slider');
+        const hawksSlider = document.getElementById('hawks-slider');
+        const dovesSlider = document.getElementById('doves-slider');
+
+        // Readouts
+        const resourceReadout = document.getElementById('resource-value-readout');
+        const costReadout = document.getElementById('fight-cost-readout');
+        const hawksReadout = document.getElementById('hawks-readout');
+        const dovesReadout = document.getElementById('doves-readout');
+
+        // Buttons
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const presetCGtVBtn = document.getElementById('preset-c-gt-v');
+        const presetVGtCBtn = document.getElementById('preset-v-gt-c');
+
+        // --- Simulation Constants ---
+        const PARTICLE_RADIUS = 5;
+        const PARTICLE_SPEED = 1;
+        const SELECTION_INTERVAL = 240; // Run selection every ~4 seconds
+        const HISTORY_INTERVAL = 30; // Update history every ~0.5 seconds
+        const HISTORY_LENGTH = 600; // Store 10 seconds of history points
+
+        // --- Simulation State ---
+        let state = {};
+        let frameCount = 0;
+        let nextId = 0;
+        let hawkColor, doveColor, textColor;
+
+
+        function getInitialState() {
+            return {
+                V: parseInt(resourceSlider.value),
+                C: parseInt(costSlider.value),
+                paused: true,
+                particles: [],
+                history: [],
+            };
+        }
+
+        // --- Core Game Logic ---
+        function createParticle(type) {
+            return {
+                id: nextId++,
+                type: type,
+                x: Math.random() * mainCanvas.width,
+                y: Math.random() * mainCanvas.height,
+                vx: (Math.random() - 0.5) * PARTICLE_SPEED,
+                vy: (Math.random() - 0.5) * PARTICLE_SPEED,
+                score: 100,
+                cooldown: 0,
+            };
+        }
+
+        function playGame(p1, p2) {
+            const { V, C } = state;
+            if (p1.type === 'hawk' && p2.type === 'hawk') {
+                const payoff = (V - C) / 2;
+                p1.score += payoff;
+                p2.score += payoff;
+            } else if (p1.type === 'hawk' && p2.type === 'dove') {
+                p1.score += V;
+            } else if (p1.type === 'dove' && p2.type === 'hawk') {
+                p2.score += V;
+            } else if (p1.type === 'dove' && p2.type === 'dove') {
+                p1.score += V / 2;
+                p2.score += V / 2;
+            }
+            p1.cooldown = 20;
+            p2.cooldown = 20;
+        }
+
+        function updateParticles() {
+            if (state.paused) return;
+            for (const p of state.particles) {
+                if (p.cooldown > 0) p.cooldown--;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < PARTICLE_RADIUS) { p.x = PARTICLE_RADIUS; p.vx *= -1; }
+                if (p.x > mainCanvas.width - PARTICLE_RADIUS) { p.x = mainCanvas.width - PARTICLE_RADIUS; p.vx *= -1; }
+                if (p.y < PARTICLE_RADIUS) { p.y = PARTICLE_RADIUS; p.vy *= -1; }
+                if (p.y > mainCanvas.height - PARTICLE_RADIUS) { p.y = mainCanvas.height - PARTICLE_RADIUS; p.vy *= -1; }
+            }
+        }
+
+        function handleCollisions() {
+            if (state.paused) return;
+            for (let i = 0; i < state.particles.length; i++) {
+                for (let j = i + 1; j < state.particles.length; j++) {
+                    const p1 = state.particles[i];
+                    const p2 = state.particles[j];
+                    if (p1.cooldown > 0 || p2.cooldown > 0) continue;
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < PARTICLE_RADIUS * 2) {
+                        playGame(p1, p2);
+                    }
+                }
+            }
+        }
+
+        function runEvolution() {
+            if (state.paused || state.particles.length < 10) return;
+
+            const numberToSelect = Math.floor(state.particles.length * 0.1);
+            if (numberToSelect === 0) return;
+
+            state.particles.sort((a, b) => a.score - b.score);
+
+            const best = state.particles.slice(-numberToSelect);
+            const newParticles = [];
+            for(const parent of best) {
+                const newP = createParticle(parent.type);
+                newP.score = 100; // Reset score for new particles
+                newParticles.push(newP);
+            }
+
+            // Remove the worst and add the new
+            state.particles.splice(0, numberToSelect);
+            state.particles.push(...newParticles);
+        }
+
+        function updateHistory() {
+            if(state.paused) return;
+            const hawkCount = state.particles.filter(p => p.type === 'hawk').length;
+            const totalCount = state.particles.length;
+            if (totalCount === 0) return;
+            const hawkRatio = hawkCount / totalCount;
+            state.history.push(hawkRatio);
+            if (state.history.length > HISTORY_LENGTH) {
+                state.history.shift();
+            }
+        }
+
+        function updateUI() {
+            resourceReadout.textContent = resourceSlider.value;
+            costReadout.textContent = costSlider.value;
+            hawksReadout.textContent = hawksSlider.value;
+            dovesReadout.textContent = dovesSlider.value;
+        }
+
+        // --- Visualization ---
+        function draw() {
+            mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+            for(const p of state.particles) {
+                mainCtx.beginPath();
+                mainCtx.arc(p.x, p.y, PARTICLE_RADIUS, 0, 2 * Math.PI);
+                mainCtx.fillStyle = p.type === 'hawk' ? hawkColor : doveColor;
+                if (p.cooldown > 0) {
+                    mainCtx.globalAlpha = 0.5;
+                }
+                mainCtx.fill();
+                mainCtx.globalAlpha = 1.0;
+            }
+        }
+
+        function drawGraph() {
+            graphCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+
+            // Draw axes
+            graphCtx.strokeStyle = textColor;
+            graphCtx.fillStyle = textColor;
+            graphCtx.font = '12px Arial';
+            graphCtx.beginPath();
+            graphCtx.moveTo(20, 0);
+            graphCtx.lineTo(20, h - 20);
+            graphCtx.lineTo(w, h - 20);
+            graphCtx.stroke();
+            graphCtx.fillText('100%', 0, 10);
+            graphCtx.fillText('0%', 0, h - 20);
+            graphCtx.fillText('Time', w / 2, h);
+
+            // Draw lines
+            if (state.history.length < 2) return;
+
+            // Hawk line
+            graphCtx.strokeStyle = hawkColor;
+            graphCtx.beginPath();
+            for (let i = 0; i < state.history.length; i++) {
+                const x = (i / HISTORY_LENGTH) * (w - 20) + 20;
+                const y = (1 - state.history[i]) * (h - 20);
+                if (i === 0) graphCtx.moveTo(x, y);
+                else graphCtx.lineTo(x, y);
+            }
+            graphCtx.stroke();
+
+            // Dove line
+            graphCtx.strokeStyle = doveColor;
+            graphCtx.beginPath();
+            for (let i = 0; i < state.history.length; i++) {
+                const x = (i / HISTORY_LENGTH) * (w - 20) + 20;
+                const y = state.history[i] * (h - 20);
+                if (i === 0) graphCtx.moveTo(x, y);
+                else graphCtx.lineTo(x, y);
+            }
+            graphCtx.stroke();
+
+            // Nash equilibrium line
+            if (state.V < state.C) {
+                const equilibriumRatio = state.V / state.C;
+                const y = (1 - equilibriumRatio) * (h - 20);
+                graphCtx.beginPath();
+                graphCtx.setLineDash([5, 5]);
+                graphCtx.moveTo(20, y);
+                graphCtx.lineTo(w, y);
+                graphCtx.strokeStyle = 'grey';
+                graphCtx.stroke();
+                graphCtx.setLineDash([]);
+            }
+        }
+
+        // --- Main Loop ---
+        function mainLoop() {
+            if(!state.paused) {
+                updateParticles();
+                handleCollisions();
+
+                if (frameCount % SELECTION_INTERVAL === 0) {
+                    runEvolution();
+                }
+                if (frameCount % HISTORY_INTERVAL === 0) {
+                     updateHistory();
+                }
+            }
+
+            draw();
+            drawGraph();
+
+            frameCount++;
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls and Event Listeners ---
+        function reset() {
+            state = getInitialState();
+            state.particles = [];
+            nextId = 0;
+            const numHawks = parseInt(hawksSlider.value);
+            const numDoves = parseInt(dovesSlider.value);
+            for(let i=0; i<numHawks; i++) state.particles.push(createParticle('hawk'));
+            for(let i=0; i<numDoves; i++) state.particles.push(createParticle('dove'));
+            state.history = [];
+            frameCount = 0;
+            playPauseBtn.textContent = 'Start';
+            state.paused = true;
+            updateUI();
+        }
+
+        function getThemeColors() {
+            const styles = getComputedStyle(document.documentElement);
+            hawkColor = styles.getPropertyValue('--hawk-color').trim();
+            doveColor = styles.getPropertyValue('--dove-color').trim();
+            textColor = styles.getPropertyValue('--text-color').trim();
+        }
+
+        function exportPNG() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = mainCanvas.width;
+            tempCanvas.height = mainCanvas.height + graphCanvas.height + 10;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.fillStyle = document.body.classList.contains('dark-mode') ? '#1a1a1a' : '#f0f2f5';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(mainCanvas, 0, 0);
+            tempCtx.drawImage(graphCanvas, 0, mainCanvas.height + 10);
+
+            const link = document.createElement('a');
+            link.download = 'hawk-dove-equilibrium.png';
+            link.href = tempCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify({
+                value: state.V,
+                cost: state.C,
+                initialHawks: state.particles.filter(p=>p.type === 'hawk').length,
+                initialDoves: state.particles.filter(p=>p.type === 'dove').length
+            }, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'hawk-dove-settings.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function setupControls() {
+            playPauseBtn.addEventListener('click', () => {
+                state.paused = !state.paused;
+                playPauseBtn.textContent = state.paused ? 'Start' : 'Pause';
+            });
+            resetBtn.addEventListener('click', reset);
+            exportPngBtn.addEventListener('click', exportPNG);
+            exportJsonBtn.addEventListener('click', exportJSON);
+
+            [resourceSlider, costSlider, hawksSlider, dovesSlider].forEach(slider => {
+                slider.addEventListener('input', () => {
+                    updateUI();
+                    reset();
+                });
+            });
+
+            presetCGtVBtn.addEventListener('click', () => {
+                resourceSlider.value = 50;
+                costSlider.value = 100;
+                updateUI();
+                reset();
+            });
+            presetVGtCBtn.addEventListener('click', () => {
+                resourceSlider.value = 100;
+                costSlider.value = 50;
+                updateUI();
+                reset();
+            });
+
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+                getThemeColors();
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === ' ' || e.key === 'p') { e.preventDefault(); playPauseBtn.click(); }
+                if (e.key === 'r') { e.preventDefault(); resetBtn.click(); }
+            });
+        }
+
+        function init() {
+            // --- Quality Check ---
+            const requiredIds = ['main-canvas', 'graph-canvas', 'resource-value-slider', 'fight-cost-slider', 'hawks-slider', 'doves-slider', 'reset-btn'];
+            const missing = requiredIds.filter(id => !document.getElementById(id));
+            if (missing.length > 0) {
+                qualityCheckPanel.style.display = 'block';
+                qualityCheckPanel.innerHTML = `<strong>Quality Check Failed!</strong> Missing required elements: ${missing.join(', ')}.`;
+                return;
+            }
+
+            // --- Metadata ---
+            const sizeInBytes = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            htmlSizeEl.textContent = `Size: ${(sizeInBytes / 1024).toFixed(1)} KB`;
+
+            getThemeColors();
+            setupControls();
+            reset();
+            mainLoop();
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

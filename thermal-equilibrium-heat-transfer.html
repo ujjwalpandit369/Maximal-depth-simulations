@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Equilibrium: Heat Transfer</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --text-color: #333; --primary-color: #e76f51; --secondary-color: #ddd;
+            --header-bg: #fff; --control-bg: #fff; --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --code-bg: #e9ecef; --border-radius: 8px;
+            --cold-color: #2196f3; --hot-color: #f44336;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a; --text-color: #e0e0e0; --primary-color: #f4a261; --secondary-color: #444;
+            --header-bg: #2a2a2a; --control-bg: #252525; --code-bg: #343a40;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 1rem; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; background-color: var(--header-bg); border-radius: var(--border-radius); padding: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 400; }
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: background-color 0.2s; }
+        button:hover { background-color: #d8593e; }
+        .dark-mode button:hover { background-color: #f6b98a; }
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        #simulation-controls { flex: 1; min-width: 320px; background-color: var(--control-bg); padding: 1.5rem; border-radius: var(--border-radius); align-self: flex-start; }
+        #simulation-visuals { flex: 2; min-width: 400px; }
+        canvas { width: 100%; height: auto; background-color: #fff; border: 1px solid var(--secondary-color); border-radius: 4px; }
+        .dark-mode canvas { background-color: #111; }
+        .slider-container { margin-bottom: 1.2rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+        #readouts { display: flex; justify-content: space-around; margin-top: 1rem; text-align: center; }
+        #quality-check-panel { display: none; background-color: #d9534f; color: white; padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1rem; }
+        #metadata-bar { text-align: center; color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
+        @media (max-width: 768px) { #simulation-container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div id="quality-check-panel"></div>
+    <header>
+        <h1>Thermal Equilibrium: Heat Transfer</h1>
+        <p>An interactive simulation of two objects transferring heat until they reach the same temperature.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span> |
+            <span>Recommended Device: Desktop</span> |
+            <span id="html-size">Size: ...</span>
+            <button id="theme-toggle" title="Toggle light/dark theme" style="margin-left: 1rem; padding: 0.2rem 0.5rem;">🌙</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation demonstrates the concept of thermal equilibrium. When two objects at different temperatures come into contact, heat energy flows from the hotter object to the colder one until their temperatures are equal. This balanced state is called thermal equilibrium. Here, you can set the initial temperatures and masses of two blocks, and observe how they exchange heat and reach a final, common temperature. The motion of the particles inside each block gives a visual sense of its internal kinetic energy (temperature).</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner’s Guide to Heat Transfer</h2>
+            <p>Ever touched a hot mug of cocoa and felt the warmth spread to your hands? Or added a cold ice cube to a drink and watched it get cooler? You've experienced thermal equilibrium! Let's explore the simple rules that govern this everyday phenomenon.</p>
+
+            <h4>Step 1: What is Temperature? (The Jiggling Particles)</h4>
+            <p>Everything is made of tiny particles (atoms and molecules) that are constantly jiggling and moving. <strong>Temperature</strong> is a measure of the average energy of this jiggling motion. In our simulation, you can see this directly:</p>
+            <ul>
+                <li>In a <strong>hot block (red)</strong>, the particles are moving very fast and erratically.</li>
+                <li>In a <strong>cold block (blue)</strong>, the particles are much slower and calmer.</li>
+            </ul>
+            So, "hot" just means "fast-jiggling particles," and "cold" means "slow-jiggling particles."
+
+            <h4>Step 2: What is Heat? (The Flow of Energy)</h4>
+            <p>Heat is not something an object *has*; it's the <strong>transfer of energy</strong> from a hotter object to a colder one. This flow always goes in one direction: from hot to cold. It's like pouring water from a full bucket into an emptier one; the water only flows downhill.</p>
+            <p>When our two blocks touch, the fast particles in the hot block collide with the slow particles in the cold block at the boundary. In these collisions, the fast particles give some of their energy to the slow ones. This slows down the hot block's particles (cooling it down) and speeds up the cold block's particles (warming it up).</p>
+
+            <h4>Step 3: What is Thermal Equilibrium? (The Final Balance)</h4>
+            <p>This energy transfer continues until the particles in both blocks are jiggling with the same average energy. At this point, their temperatures are equal. The energy transfer doesn't stop completely—particles still bump into each other—but the energy transferred from A to B is now equal to the energy transferred from B to A. The net flow is zero. This final, stable state is called <strong>thermal equilibrium</strong>.</p>
+
+            <h4>Step 4: Why Mass Matters (Heat Capacity)</h4>
+            <p>Imagine trying to heat up a cup of water versus a swimming pool with the same small heater. The cup of water will get hot very quickly, while the swimming pool's temperature will barely change. The pool has a much larger <strong>mass</strong> and therefore a higher "heat capacity"—it takes more energy to change its temperature.</p>
+            <p>In our simulation, a more massive block requires more energy to heat up and must lose more energy to cool down. When a massive hot block touches a small cold block, the final temperature will be much closer to the hot block's original temperature, because the small block doesn't have enough "thermal pull" to change it significantly.</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Control</th><th>Description</th><th>Physical Effect & Worked Example</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Temperature</td>
+                        <td>Sliders (°C)</td>
+                        <td>Sets the initial temperature of each block before they interact.</td>
+                        <td>This determines the initial energy of the particles and the direction of heat flow. Heat will always flow from the block with the higher initial temperature to the one with the lower temperature.</td>
+                    </tr>
+                    <tr>
+                        <td>Mass</td>
+                        <td>Sliders (kg)</td>
+                        <td>Sets the mass of each block. This is a proxy for its heat capacity.</td>
+                        <td>A higher mass means the block has more thermal inertia; its temperature changes more slowly. <br><b>Example:</b> If a 50kg block at 100°C touches a 5kg block at 0°C, the final temperature will be very close to 100°C.</td>
+                    </tr>
+                    <tr>
+                        <td>Thermal Conductivity</td>
+                        <td>Slider</td>
+                        <td>Controls how quickly heat can transfer between the blocks.</td>
+                        <td>A high conductivity is like a metal wall (fast transfer). A low conductivity is like a styrofoam wall (slow transfer, good insulation). It affects the <strong>rate</strong> of change, but not the final equilibrium temperature.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Block A</h3>
+                <div class="slider-container">
+                    <label for="tempA-slider">Temperature (°C): <span id="tempA-readout">80</span></label>
+                    <input type="range" id="tempA-slider" min="0" max="100" step="1" value="80" aria-label="Block A Temperature">
+                </div>
+                <div class="slider-container">
+                    <label for="massA-slider">Mass (kg): <span id="massA-readout">10</span></label>
+                    <input type="range" id="massA-slider" min="1" max="50" step="1" value="10" aria-label="Block A Mass">
+                </div>
+
+                <h3>Block B</h3>
+                <div class="slider-container">
+                    <label for="tempB-slider">Temperature (°C): <span id="tempB-readout">20</span></label>
+                    <input type="range" id="tempB-slider" min="0" max="100" step="1" value="20" aria-label="Block B Temperature">
+                </div>
+                <div class="slider-container">
+                    <label for="massB-slider">Mass (kg): <span id="massB-readout">10</span></label>
+                    <input type="range" id="massB-slider" min="1" max="50" step="1" value="10" aria-label="Block B Mass">
+                </div>
+
+                <h3>System</h3>
+                 <div class="slider-container">
+                    <label for="conductivity-slider">Thermal Conductivity: <span id="conductivity-readout">0.5</span></label>
+                    <input type="range" id="conductivity-slider" min="0.05" max="1" step="0.05" value="0.5" aria-label="Thermal Conductivity">
+                </div>
+
+                <hr>
+
+                <h3>Actions & Presets</h3>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <button id="play-pause-btn" title="Start/Pause simulation (Spacebar)">Pause</button>
+                    <button id="reset-btn" title="Reset to default values (R)">Reset</button>
+                    <button id="export-png-btn" title="Save image of canvas">Export PNG</button>
+                    <button id="export-json-btn" title="Save parameters as a JSON file">Export JSON</button>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="preset-hot-cold" title="Set blocks to 100°C and 0°C with equal mass">Preset: Hot & Cold</button>
+                    <button id="preset-big-small" title="Set a large hot block and a small cold block">Preset: Big & Small</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="300"></canvas>
+                <div id="readouts">
+                    <div>
+                        <h4>Block A</h4>
+                        <p><span id="finalTempA-readout">80.0</span> °C</p>
+                    </div>
+                     <div>
+                        <h4>System</h4>
+                        <p>Final Temp: <span id="finalTemp-readout">50.0</span> °C</p>
+                    </div>
+                    <div>
+                        <h4>Block B</h4>
+                        <p><span id="finalTempB-readout">20.0</span> °C</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h4>Walkthrough 1: The Effect of Mass</h4>
+            <ol>
+                <li>Click the <strong>"Preset: Big & Small"</strong> button. This sets up a large, hot block (50kg, 100°C) and a small, cold block (5kg, 0°C).</li>
+                <li>Before you begin, look at the "Final Temp" readout. The simulation calculates it will be <strong>90.9°C</strong>. Why is it so close to 100°C? Because the massive block has more thermal inertia.</li>
+                <li>Press the "Start" button and observe. The color of the large block barely changes, while the small block rapidly turns reddish-orange. The temperatures meet exactly where predicted.</li>
+            </ol>
+
+            <h4>Walkthrough 2: The Effect of Conductivity</h4>
+            <ol>
+                <li>Click the <strong>"Reset"</strong> button for a standard setup (80°C and 20°C, equal masses).</li>
+                <li>Slide the "Thermal Conductivity" slider all the way to the <strong>left (minimum)</strong>. Press "Start". Notice how slowly the temperatures creep towards the middle. This is like trying to heat a room through a well-insulated wall.</li>
+                <li>Now, click "Reset" again. Slide the conductivity all the way to the <strong>right (maximum)</strong>. Press "Start". The temperatures equalize almost instantly. This is like the two blocks being made of copper.</li>
+            </ol>
+
+            <h4>Micro-Experiments to Try</h4>
+            <ul>
+                <li><strong>Perfectly Balanced:</strong> Reset the simulation. The initial temperatures are 80°C and 20°C with equal 10kg masses. Predict the final temperature before looking at the readout. (Hint: It should be the exact average).</li>
+                <li><strong>Ice Cube in Coffee:</strong> Set Block A (the "coffee") to be hot (90°C) and massive (30kg). Set Block B (the "ice cube") to be cold (0°C) and small (2kg). What is the final temperature? How much did the coffee's temperature actually drop?</li>
+                <li><strong>The Insulator:</strong> Set up a large temperature difference (100°C vs 0°C). Set conductivity to its absolute minimum. Does heat still transfer? Yes, just very, very slowly. Perfect insulators do not exist in reality.</li>
+                <li><strong>Reversing the Flow:</strong> Set Block A to 20°C and Block B to 80°C. Observe that the heat now flows from B to A. The direction is only dependent on the temperature difference.</li>
+            </ul>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory of Thermal Equilibrium</h2>
+            <p>The concepts of heat transfer are governed by the laws of thermodynamics. Thermal equilibrium is a direct consequence of these foundational laws.</p>
+
+            <h4>Heat Transfer by Conduction</h4>
+            <p>The simulation models heat transfer via conduction. The rate at which heat (Q) flows over time (t) is proportional to the temperature difference (ΔT) and the conductivity (k) of the interface.</p>
+            <div class="equation" style="font-size:1.2rem;"><sup>dQ</sup>&frasl;<sub>dt</sub> ∝ k &times; (T<sub>hot</sub> - T<sub>cold</sub>)</div>
+            <p>This equation tells us that the bigger the temperature difference, the faster the heat will flow. As the blocks approach the same temperature, the rate of transfer slows down, eventually becoming zero at equilibrium.</p>
+
+            <h4>Calculating the Final Temperature</h4>
+            <p>When two objects exchange heat in an isolated system, the heat energy lost by the hot object is equal to the heat energy gained by the cold one. The energy required to change an object's temperature is given by <code>q = mcΔT</code>, where 'c' is the specific heat capacity. Assuming both blocks are made of the same material (i.e., they have the same 'c'), we can find the final temperature (T<sub>f</sub>) with a weighted average:</p>
+            <div class="equation" style="font-size:1.2rem;">T<sub>f</sub> = <sup>(m<sub>A</sub>T<sub>A, initial</sub> + m<sub>B</sub>T<sub>B, initial</sub>)</sup> &frasl; <sub>(m<sub>A</sub> + m<sub>B</sub>)</sub></div>
+            <p><strong>Worked Example:</strong> Using the default values, m<sub>A</sub>=10, T<sub>A</sub>=80, m<sub>B</sub>=10, T<sub>B</sub>=20.
+            <br>T<sub>f</sub> = (10kg &times; 80°C + 10kg &times; 20°C) / (10kg + 10kg)
+            <br>T<sub>f</sub> = (800 + 200) / 20 = 1000 / 20 = <strong>50°C</strong>.
+            </p>
+        </section>
+
+        <section id="faq">
+             <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What's the difference between heat and temperature?</dt>
+                <dd><strong>Temperature</strong> is a measure of the average internal energy of an object's particles (how fast they are jiggling). <strong>Heat</strong> is the transfer of that energy from a hotter object to a colder one. An object has temperature, but it doesn't "have" heat; heat is a flow.</dd>
+
+                <dt>2. Why do the particles move?</dt>
+                <dd>In reality, atoms and molecules are never perfectly still (unless at absolute zero, -273.15°C). Their constant motion is a fundamental property of matter and is what we measure as temperature.</dd>
+
+                <dt>3. Why does a more massive object change temperature more slowly?</dt>
+                <dd>Because it has more particles. To raise the average energy (temperature) of a million particles by 1 degree, you need to add much more total energy than you would for a thousand particles. This resistance to temperature change is called heat capacity.</dd>
+
+                <dt>4. What is thermal conductivity?</dt>
+                <dd>It's a material property that describes how well heat can travel through it. Metals have high conductivity (a metal spoon in hot soup gets hot quickly). Styrofoam and wood have low conductivity (they are good insulators).</dd>
+
+                <dt>5. What happens if the blocks are made of different materials?</dt>
+                <dd>Then we would also need to consider their "specific heat capacity" (c). A material with a high specific heat (like water) requires more energy to raise its temperature than a material with a low one (like copper). The formula would become T<sub>f</sub> = (m<sub>A</sub>c<sub>A</sub>T<sub>A</sub> + m<sub>B</sub>c<sub>B</sub>T<sub>B</sub>) / (m<sub>A</sub>c<sub>A</sub> + m<sub>B</sub>c<sub>B</sub>).</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Get DOM Elements ---
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const htmlSizeEl = document.getElementById('html-size');
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Sliders
+        const tempA_slider = document.getElementById('tempA-slider');
+        const massA_slider = document.getElementById('massA-slider');
+        const tempB_slider = document.getElementById('tempB-slider');
+        const massB_slider = document.getElementById('massB-slider');
+        const conductivity_slider = document.getElementById('conductivity-slider');
+
+        // Readouts
+        const tempA_readout = document.getElementById('tempA-readout');
+        const massA_readout = document.getElementById('massA-readout');
+        const tempB_readout = document.getElementById('tempB-readout');
+        const massB_readout = document.getElementById('massB-readout');
+        const conductivity_readout = document.getElementById('conductivity-readout');
+        const finalTempA_readout = document.getElementById('finalTempA-readout');
+        const finalTempB_readout = document.getElementById('finalTempB-readout');
+        const finalTemp_readout = document.getElementById('finalTemp-readout');
+
+        // Buttons
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const presetHotColdBtn = document.getElementById('preset-hot-cold');
+        const presetBigSmallBtn = document.getElementById('preset-big-small');
+
+        // --- Simulation State ---
+        let state = {};
+
+        let coldColor, hotColor;
+
+        function getInitialState() {
+            return {
+                blockA: {
+                    temp: parseFloat(tempA_slider.value),
+                    mass: parseFloat(massA_slider.value),
+                    initialTemp: parseFloat(tempA_slider.value),
+                    particles: []
+                },
+                blockB: {
+                    temp: parseFloat(tempB_slider.value),
+                    mass: parseFloat(massB_slider.value),
+                    initialTemp: parseFloat(tempB_slider.value),
+                    particles: []
+                },
+                conductivity: parseFloat(conductivity_slider.value),
+                finalTemp: 0,
+                paused: true,
+            };
+        }
+
+        // --- Visualization ---
+        function lerpColor(color1, color2, factor) {
+            let result = color1.slice();
+            for (let i = 0; i < 3; i++) {
+                result[i] = Math.round(result[i] + factor * (color2[i] - result[i]));
+            }
+            return `rgb(${result[0]}, ${result[1]}, ${result[2]})`;
+        }
+
+        function getColorForTemp(temp) {
+            const factor = Math.max(0, Math.min(1, temp / 100)); // temp 0-100
+            return lerpColor(coldColor, hotColor, factor);
+        }
+
+        function setupParticles() {
+            state.blockA.particles = [];
+            state.blockB.particles = [];
+            const particleCountA = Math.floor(state.blockA.mass * 2); // 2 particles per kg
+            const particleCountB = Math.floor(state.blockB.mass * 2);
+
+            for(let i=0; i<particleCountA; i++) {
+                state.blockA.particles.push({
+                    x: Math.random() * (canvas.width / 2 - 10) + 5,
+                    y: Math.random() * (canvas.height - 10) + 5,
+                    vx: (Math.random() - 0.5),
+                    vy: (Math.random() - 0.5)
+                });
+            }
+            for(let i=0; i<particleCountB; i++) {
+                state.blockB.particles.push({
+                    x: Math.random() * (canvas.width / 2 - 10) + canvas.width / 2 + 5,
+                    y: Math.random() * (canvas.height - 10) + 5,
+                    vx: (Math.random() - 0.5),
+                    vy: (Math.random() - 0.5)
+                });
+            }
+        }
+
+        function updateParticles() {
+            if (state.paused) return;
+
+            const speedA = 1 + (state.blockA.temp / 100) * 4; // Base speed + temp bonus
+            const speedB = 1 + (state.blockB.temp / 100) * 4;
+
+            for(const p of state.blockA.particles) {
+                p.x += p.vx * speedA;
+                p.y += p.vy * speedA;
+                if (p.x < 5 || p.x > canvas.width/2 - 5) p.vx *= -1;
+                if (p.y < 5 || p.y > canvas.height - 5) p.vy *= -1;
+            }
+            for(const p of state.blockB.particles) {
+                p.x += p.vx * speedB;
+                p.y += p.vy * speedB;
+                if (p.x < canvas.width/2 + 5 || p.x > canvas.width - 5) p.vx *= -1;
+                if (p.y < 5 || p.y > canvas.height - 5) p.vy *= -1;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Block A
+            ctx.fillStyle = getColorForTemp(state.blockA.temp);
+            ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
+            // Block B
+            ctx.fillStyle = getColorForTemp(state.blockB.temp);
+            ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+
+            // Particles
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            for(const p of state.blockA.particles) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI); ctx.fill();
+            }
+            for(const p of state.blockB.particles) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI); ctx.fill();
+            }
+        }
+
+        // --- Core Physics Logic ---
+        function calculateFinalTemp() {
+            const { blockA, blockB } = state;
+            // Formula assumes same specific heat for both blocks
+            const final = (blockA.initialTemp * blockA.mass + blockB.initialTemp * blockB.mass) / (blockA.mass + blockB.mass);
+            state.finalTemp = final;
+        }
+
+        function updateTemperatures() {
+            if (state.paused) return;
+
+            const tempDiff = state.blockA.temp - state.blockB.temp;
+
+            // Stop if equilibrium is reached
+            if (Math.abs(tempDiff) < 0.01) {
+                state.paused = true;
+                playPauseBtn.textContent = 'Play';
+                return;
+            }
+
+            // Simplified heat transfer rate
+            const heatFlowRate = tempDiff * state.conductivity * 0.01; // 0.01 is a time step factor
+
+            const deltaTempA = -heatFlowRate / state.blockA.mass;
+            const deltaTempB = heatFlowRate / state.blockB.mass;
+
+            state.blockA.temp += deltaTempA;
+            state.blockB.temp += deltaTempB;
+        }
+
+        // --- UI Update ---
+        function updateUI() {
+            // Update slider readouts
+            tempA_readout.textContent = parseFloat(tempA_slider.value).toFixed(0);
+            massA_readout.textContent = parseFloat(massA_slider.value).toFixed(0);
+            tempB_readout.textContent = parseFloat(tempB_slider.value).toFixed(0);
+            massB_readout.textContent = parseFloat(massB_slider.value).toFixed(0);
+            conductivity_readout.textContent = parseFloat(conductivity_slider.value).toFixed(2);
+
+            // Update live temperature readouts
+            finalTempA_readout.textContent = state.blockA.temp.toFixed(1);
+            finalTempB_readout.textContent = state.blockB.temp.toFixed(1);
+            finalTemp_readout.textContent = state.finalTemp.toFixed(1);
+        }
+
+        // --- Main Loop ---
+        function mainLoop() {
+            updateTemperatures();
+            updateParticles();
+            updateUI();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls and Event Listeners ---
+        function resetSimulation() {
+            state.paused = true;
+            playPauseBtn.textContent = 'Play';
+            state.blockA.temp = parseFloat(tempA_slider.value);
+            state.blockB.temp = parseFloat(tempB_slider.value);
+            state.blockA.initialTemp = state.blockA.temp;
+            state.blockB.initialTemp = state.blockB.temp;
+            state.blockA.mass = parseFloat(massA_slider.value);
+            state.blockB.mass = parseFloat(massB_slider.value);
+            calculateFinalTemp();
+            setupParticles();
+        }
+
+        function exportPNG() {
+            const link = document.createElement('a');
+            link.download = 'thermal-equilibrium.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify({
+                initialTempA: state.blockA.initialTemp,
+                massA: state.blockA.mass,
+                initialTempB: state.blockB.initialTemp,
+                massB: state.blockB.mass,
+                conductivity: state.conductivity
+            }, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'thermal-settings.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function setupControls() {
+            playPauseBtn.addEventListener('click', () => {
+                // If starting from a finished state, reset first
+                if (Math.abs(state.blockA.temp - state.finalTemp) < 0.01) {
+                    resetSimulation();
+                }
+                state.paused = !state.paused;
+                playPauseBtn.textContent = state.paused ? 'Play' : 'Start';
+            });
+
+            resetBtn.addEventListener('click', () => {
+                tempA_slider.value = 80;
+                massA_slider.value = 10;
+                tempB_slider.value = 20;
+                massB_slider.value = 10;
+                conductivity_slider.value = 0.5;
+                resetSimulation();
+            });
+
+            exportPngBtn.addEventListener('click', exportPNG);
+            exportJsonBtn.addEventListener('click', exportJSON);
+
+            [tempA_slider, massA_slider, tempB_slider, massB_slider].forEach(slider => {
+                slider.addEventListener('input', resetSimulation);
+            });
+
+            conductivity_slider.addEventListener('input', () => {
+                 state.conductivity = parseFloat(conductivity_slider.value);
+            });
+
+            presetHotColdBtn.addEventListener('click', () => {
+                tempA_slider.value = 100;
+                massA_slider.value = 10;
+                tempB_slider.value = 0;
+                massB_slider.value = 10;
+                resetSimulation();
+            });
+
+            presetBigSmallBtn.addEventListener('click', () => {
+                tempA_slider.value = 100;
+                massA_slider.value = 50; // Big hot block
+                tempB_slider.value = 0;
+                massB_slider.value = 5; // Small cold block
+                resetSimulation();
+            });
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (e.key === ' ' || e.key === 'p') { e.preventDefault(); playPauseBtn.click(); }
+                if (e.key === 'r') { e.preventDefault(); resetBtn.click(); }
+            });
+        }
+
+
+        function getThemeColors() {
+             const styles = getComputedStyle(document.documentElement);
+             coldColor = styles.getPropertyValue('--cold-color').trim().replace('rgb(', '').replace(')', '').split(',').map(Number);
+             hotColor = styles.getPropertyValue('--hot-color').trim().replace('rgb(', '').replace(')', '').split(',').map(Number);
+        }
+
+        function init() {
+            // --- Quality Check ---
+            const requiredIds = ['main-canvas', 'tempA-slider', 'massA-slider', 'tempB-slider', 'massB-slider', 'conductivity-slider', 'reset-btn'];
+            const missing = requiredIds.filter(id => !document.getElementById(id));
+            if (missing.length > 0) {
+                qualityCheckPanel.style.display = 'block';
+                qualityCheckPanel.innerHTML = `<strong>Quality Check Failed!</strong> Missing required elements: ${missing.join(', ')}.`;
+                return;
+            }
+
+            // --- Metadata ---
+            const sizeInBytes = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            htmlSizeEl.textContent = `Size: ${(sizeInBytes / 1024).toFixed(1)} KB`;
+
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+                getThemeColors();
+            });
+
+            getThemeColors();
+            state = getInitialState();
+            playPauseBtn.textContent = 'Start';
+            calculateFinalTemp();
+            setupParticles();
+            setupControls();
+            mainLoop();
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
