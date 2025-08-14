@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neutron Activation Analysis Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --sample-color: #95a5a6;
+            --neutron-beam-color: rgba(241, 196, 15, 0.5);
+            --gamma-ray-color: #e74c3c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2/1;
+        }
+
+        #info-box {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            min-height: 50px;
+        }
+        #info-box h4 { margin-top: 0; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .control-group button:disabled { background-color: var(--code-bg); cursor: not-allowed; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Neutron Activation Analysis (NAA) Simulator</h1>
+            <p class="subtitle">A non-destructive technique for identifying the elemental composition of a sample.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>How can scientists determine the precise elements inside a valuable artifact without destroying it? One powerful method is Neutron Activation Analysis. The process involves two main steps: first, the sample is safely bombarded with neutrons, which "activates" some of the atoms inside, turning them into unstable radioactive isotopes. Second, the sample is moved to a detector that listens for the unique "fingerprint" of radiation emitted as these unstable atoms decay. Each element emits gamma rays with a characteristic set of energies, allowing scientists to identify the original composition with extreme precision. This simulation walks you through this two-step process, from activation to detection and identification.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Making Atoms Talk</h2>
+            <p>Neutron Activation Analysis is a clever way to force atoms to reveal their identity. It's a three-part story: activate, decay, and detect.</p>
+
+            <h3>Step 1: Activation</h3>
+            <p>First, we need to make the atoms in our sample "active." We do this by placing the sample in a beam of neutrons. Most atoms in the sample won't be affected, but occasionally an atom will absorb a neutron into its nucleus. This doesn't change what element it is (since the number of protons is the same), but it creates a new, heavier **isotope** of that element. This new isotope is often radioactive.</p>
+            <p>Click the **"Place Sample in Beam"** button to see this. An animation will show the sample being irradiated, with a nucleus absorbing a neutron and becoming "activated" (it will start to glow).</p>
+
+            <h3>Step 2: Decay and Detection</h3>
+            <p>The newly created radioactive isotope is unstable and wants to get back to a more stable state. To do this, it undergoes radioactive decay, releasing its excess energy. This energy is often emitted in the form of **gamma rays**, which are very high-energy photons.</p>
+            <p>Crucially, each type of radioactive isotope emits gamma rays at a very specific, well-known set of energies. This set of energies is like a unique fingerprint for that isotope. After activating the sample, click **"Move to Detector"**. The sample is moved to a gamma-ray detector, which measures the energy of every gamma ray that hits it.</p>
+
+            <h3>Step 3: The Spectrum and Identification</h3>
+            <p>The detector builds up a **gamma-ray spectrum**, which is a graph of how many gamma rays were detected at each energy. You will see sharp peaks appear on the graph at the characteristic energies of the isotopes in the sample. By looking up which isotopes emit gamma rays at these energies, we can identify what was in the original sample.
+            <br>
+            After the spectrum is generated, click **"Identify Peaks"**. The simulation will label the peaks on the graph, revealing the elemental composition of the sample you chose.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="400" aria-label="Animation of NAA process"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="sample-select">Select a Sample to Analyze:</label>
+                    <select id="sample-select" style="width:100%; padding: 5px;">
+                        <option value="A">Sample A (Unknown Alloy)</option>
+                        <option value="B">Sample B (Geological Rock)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button id="activate-btn">1. Place Sample in Beam</button>
+                    <button id="detect-btn" disabled>2. Move to Detector</button>
+                    <button id="identify-btn" disabled>3. Identify Peaks</button>
+                </div>
+                <div id="info-box">
+                    <h4>Process Status</h4>
+                    <p>Select a sample and begin the analysis.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const sampleSelect = document.getElementById('sample-select');
+        const activateBtn = document.getElementById('activate-btn');
+        const detectBtn = document.getElementById('detect-btn');
+        const identifyBtn = document.getElementById('identify-btn');
+        const infoBox = document.getElementById('info-box');
+
+        // --- Data ---
+        const samples = {
+            'A': { name: 'Alloy', elements: {'Co-60': [1173, 1332], 'Al-28': [1779] } },
+            'B': { name: 'Rock', elements: {'Na-24': [1368, 2754], 'Mn-56': [846, 1810]} }
+        };
+
+        // --- Simulation State ---
+        let state = { stage: 'ready', progress: 0, sample: 'A', peaks: [], showLabels: false };
+
+        function reset() {
+            state.stage = 'ready';
+            state.sample = sampleSelect.value;
+            state.progress = 0;
+            state.peaks = [];
+            state.showLabels = false;
+            activateBtn.disabled = false;
+            detectBtn.disabled = true;
+            identifyBtn.disabled = true;
+            infoBox.innerHTML = '<h4>Process Status</h4><p>Select a sample and click Step 1 to begin the analysis.</p>';
+        }
+
+        function update() {
+            if(state.stage !== 'ready') {
+                state.progress += 0.01;
+                if(state.progress >= 1) {
+                    state.progress = 1;
+                    if(state.stage === 'activating') {
+                        state.stage = 'activated';
+                        detectBtn.disabled = false;
+                        infoBox.innerHTML = '<h4>Process Status</h4><p>Activation complete. The sample is now radioactive. Proceed to Step 2.</p>';
+                    } else if (state.stage === 'detecting') {
+                        state.stage = 'detected';
+                        identifyBtn.disabled = false;
+                        infoBox.innerHTML = '<h4>Process Status</h4><p>Gamma spectrum acquired. Proceed to Step 3 to identify elements.</p>';
+                    }
+                }
+            }
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width, h = canvas.height;
+            const beamPos = { x: w*0.25, y: h*0.5 };
+            const detectorPos = { x: w*0.75, y: h*0.5 };
+
+            // Draw equipment
+            ctx.fillStyle = isDark ? '#4a5568' : '#bdc3c7';
+            ctx.fillRect(beamPos.x - 50, beamPos.y - 100, 100, 200); // Reactor
+            ctx.fillRect(detectorPos.x - 50, detectorPos.y - 50, 100, 100); // Detector
+            ctx.fillStyle = isDark ? '#a0aec0' : '#2c3e50';
+            ctx.textAlign = 'center';
+            ctx.fillText("Neutron Source", beamPos.x, beamPos.y + 120);
+            ctx.fillText("Gamma Detector", detectorPos.x, detectorPos.y + 70);
+
+            // Draw sample
+            let sampleX, sampleY;
+            if(state.stage === 'ready') {
+                sampleX = w/2; sampleY = h*0.2;
+            } else if (state.stage === 'activating' || state.stage === 'activated') {
+                sampleX = beamPos.x; sampleY = beamPos.y;
+            } else {
+                sampleX = detectorPos.x; sampleY = detectorPos.y;
+            }
+
+            ctx.fillStyle = 'var(--sample-color)';
+            ctx.fillRect(sampleX - 15, sampleY - 15, 30, 30);
+
+            // Draw animations
+            if(state.stage === 'activating') {
+                if(Math.random() > 0.5) { // Neutron beam
+                    ctx.strokeStyle = 'var(--neutron-beam-color)';
+                    ctx.beginPath();
+                    ctx.moveTo(beamPos.x-50, beamPos.y - 50 + Math.random()*100);
+                    ctx.lineTo(sampleX, sampleY);
+                    ctx.stroke();
+                }
+            }
+            if(state.stage === 'activated') { // Glow
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.5)';
+                ctx.beginPath(); ctx.arc(sampleX, sampleY, 20, 0, 2*Math.PI); ctx.fill();
+            }
+            if(state.stage === 'detecting') { // Gamma rays
+                if(Math.random() > 0.5) {
+                    ctx.strokeStyle = 'var(--gamma-ray-color)';
+                    const angle = Math.random()*2*Math.PI;
+                    ctx.beginPath();
+                    ctx.moveTo(sampleX, sampleY);
+                    ctx.lineTo(sampleX + Math.cos(angle)*50, sampleY + Math.sin(angle)*50);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw Spectrum
+            if(state.stage === 'detecting' || state.stage === 'detected') {
+                ctx.globalAlpha = (state.stage === 'detecting') ? state.progress : 1.0;
+                const peaks = samples[state.sample].elements;
+                const maxE = 3000;
+
+                ctx.strokeStyle = 'var(--accent-color)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(detectorPos.x - 150, detectorPos.y - 150);
+                for(let E=0; E < maxE; E+=10) {
+                    let counts = 10 + Math.random()*10;
+                    for(const key in peaks) {
+                        peaks[key].forEach(peakE => {
+                            if(Math.abs(E - peakE) < 100) {
+                                counts += 100 * Math.exp(-((E-peakE)**2)/500);
+                            }
+                        });
+                    }
+                    const x = detectorPos.x - 150 + (E/maxE) * 300;
+                    const y = detectorPos.y - 50 - counts*0.5;
+                    ctx.lineTo(x,y);
+                }
+                ctx.stroke();
+                if(state.showLabels) {
+                    ctx.fillStyle = isDark ? '#ecf0f1' : '#1a202c';
+                    for(const key in peaks) {
+                        peaks[key].forEach(peakE => {
+                            const x = detectorPos.x - 150 + (peakE/maxE) * 300;
+                            ctx.fillText(key, x, detectorPos.y - 180);
+                        });
+                    }
+                }
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        activateBtn.addEventListener('click', () => {
+            if(state.stage === 'ready') {
+                state.stage = 'activating';
+                state.progress = 0;
+                activateBtn.disabled = true;
+                infoBox.innerHTML = '<h4>Process Status</h4><p>Irradiating sample with neutrons...</p>';
+            }
+        });
+        detectBtn.addEventListener('click', () => {
+            if(state.stage === 'activated') {
+                state.stage = 'detecting';
+                state.progress = 0;
+                detectBtn.disabled = true;
+                infoBox.innerHTML = '<h4>Process Status</h4><p>Measuring gamma-ray emissions...</p>';
+            }
+        });
+        identifyBtn.addEventListener('click', () => {
+            if(state.stage === 'detected') {
+                state.showLabels = true;
+                identifyBtn.disabled = true;
+                const elements = Object.keys(samples[state.sample].elements).join(', ');
+                infoBox.innerHTML = `<h4>Process Status</h4><p>Analysis complete. Sample contains: ${elements}.</p>`;
+            }
+        });
+        sampleSelect.addEventListener('change', reset);
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
