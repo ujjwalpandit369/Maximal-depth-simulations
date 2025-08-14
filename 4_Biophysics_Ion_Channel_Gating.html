@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biophysics: Ion Channel Gating</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --code-bg: #e2e8f0;
+            --membrane-color: #f39c12;
+            --channel-color: #8e44ad;
+            --ion-color: #3498db;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --code-bg: #2d3748;
+            --membrane-color: #e67e22;
+            --channel-color: #9b59b6;
+            --ion-color: #5dade2;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #main-canvas { aspect-ratio: 1.5/1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 2/1; }
+
+        #status-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            margin-top: 1rem;
+            border-radius: 5px;
+            border: 2px solid;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Biophysics: Voltage-Gated Ion Channel</h1>
+            <p class="subtitle">A simulation of the molecular gates that power your nervous system.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Every thought you have and every move you make is controlled by electrical signals firing through your neurons. These signals are made possible by tiny, sophisticated molecular machines called **ion channels**. These channels act as gates embedded in the cell's membrane, opening and closing to allow specific ions (charged atoms) to rush in or out. Many of these channels are "voltage-gated," meaning they open and close in response to changes in the electrical voltage across the cell membrane. This simulation provides a simplified view of how one of these gates works, showing how a change in voltage causes the channel protein to change its shape, opening a pore and allowing ions to flow, which is the fundamental event that creates a nerve impulse.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Neuron's Electrical Gates</h2>
+
+            <h3>Step 1: The Cell Membrane</h3>
+            <p>Every living cell is enclosed in a membrane, which acts as a barrier between the inside and the outside of the cell. This membrane maintains a small electrical voltage, called the **membrane potential**. In a resting neuron, this is typically around -70 millivolts (mV).</p>
+
+            <h3>Step 2: Ion Channels - The Gates in the Wall</h3>
+            <p>The membrane is studded with proteins that act as channels or pores. The one shown in the simulation is a **voltage-gated ion channel**. It's a highly specialized gate that is usually closed, blocking the flow of ions (like the blue sodium ions). You can control the membrane voltage with the slider.</p>
+
+            <h3>Step 3: The Voltage Sensor</h3>
+            <p>How does the gate "know" what the voltage is? The channel protein has parts that are electrically charged, called **voltage sensors** (represented by the small paddles with '+' signs).
+            <ul>
+                <li>At rest (-70mV), the inside of the cell is negative, which pulls these positive sensors *down* and holds the gate *closed*.</li>
+                <li>When the membrane voltage becomes more positive (an event called **depolarization**), the electrical force changes. The positive inside now repels the positive sensors, pushing them *up*.</li>
+            </ul>
+            This upward movement of the sensors triggers a conformational change in the rest of the protein, causing the central gate to snap open.</p>
+
+            <h3>Step 4: The Flow of Ions</h3>
+            <p>Once the gate is open, ions are free to move through the pore. They will flow down their electrochemical gradient—in this case, from the high concentration outside the cell to the low concentration inside. This sudden influx of positive ions is what creates the "spike" of an action potential, or nerve impulse.</p>
+
+            <h3>Step 5: The Conductance Plot</h3>
+            <p>The graph on the right shows the channel's **conductance**, which is its ability to let ions flow. It's essentially a plot of the probability that the channel is open. Notice that it's not a simple on/off switch; it's an S-shaped (sigmoid) curve. At very negative voltages, the probability of opening is near zero. As the voltage crosses a certain threshold, the probability rapidly increases until, at positive voltages, the channel is almost certain to be open. The point on the curve shows the probability for the current voltage you have set.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="341" aria-label="Animation of an ion channel opening and closing"></canvas>
+                <canvas id="plot-canvas" width="512" height="256" aria-label="Plot of channel conductance vs. membrane voltage"></canvas>
+            </div>
+            <div id="controls-area">
+                <div id="status-display">Channel Status: <span id="status-label">CLOSED</span></div>
+                <div class="control-group">
+                    <label for="voltage-slider">Membrane Voltage: <span id="voltage-label">-70</span> mV</label>
+                    <input type="range" id="voltage-slider" min="-90" max="50" value="-70" step="1">
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+        const voltageSlider = document.getElementById('voltage-slider');
+        const voltageLabel = document.getElementById('voltage-label');
+        const statusLabel = document.getElementById('status-label');
+        const statusDisplay = document.getElementById('status-display');
+
+        // --- Simulation State ---
+        let V_m = -70; // Membrane voltage in mV
+        let P_open = 0;
+        let ions = [];
+        const NUM_IONS = 50;
+
+        function setup() {
+            ions = [];
+            for(let i=0; i<NUM_IONS; i++) {
+                ions.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * (canvas.height/2 - 20),
+                    vx: (Math.random()-0.5)*0.5,
+                    vy: (Math.random()-0.5)*0.5
+                });
+            }
+        }
+
+        function update() {
+            V_m = parseFloat(voltageSlider.value);
+            voltageLabel.textContent = V_m.toFixed(0);
+
+            // Sigmoid Boltzmann function for open probability
+            const V_half = -50; // Voltage for 50% open probability
+            const z = 4; // Gating charge
+            const T = 300; // Kelvin
+            const k_B = 8.617e-5; // eV/K
+            const e = 1; // elementary charge
+            const kT_mV = k_B * T * 1000; // in meV
+            P_open = 1 / (1 + Math.exp(-z*e*(V_m - V_half) / (kT_mV/10))); // Scaled kT
+
+            statusLabel.textContent = P_open > 0.5 ? "OPEN" : "CLOSED";
+            statusDisplay.style.borderColor = P_open > 0.5 ? 'var(--accent-color)' : 'var(--control-border)';
+
+            // Update ions
+            if (P_open > Math.random()) {
+                ions.forEach(ion => {
+                    const channel_center = {x: canvas.width/2, y: canvas.height/2};
+                    const dx = channel_center.x - ion.x;
+                    const dy = channel_center.y - ion.y;
+                    ion.x += ion.vx;
+                    ion.y += ion.vy;
+                    // Simple flow through open channel
+                    if(Math.abs(ion.x - channel_center.x) < 20 && ion.y > channel_center.y - 30) {
+                        ion.y += 5; // Flow down
+                    }
+                    if(ion.y > canvas.height) {
+                        ion.y = 0;
+                        ion.x = Math.random() * canvas.width;
+                    }
+                });
+            }
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            // --- Draw Main Canvas ---
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const mem_y = canvas.height/2;
+            const mem_h = 20;
+
+            // Draw membrane
+            ctx.fillStyle = 'var(--membrane-color)';
+            ctx.fillRect(0, mem_y - mem_h/2, canvas.width, mem_h);
+
+            // Draw ions
+            ctx.fillStyle = 'var(--ion-color)';
+            ions.forEach(ion => {
+                ctx.beginPath();
+                ctx.arc(ion.x, ion.y, 3, 0, 2*Math.PI);
+                ctx.fill();
+            });
+
+            // Draw Channel
+            const channel_w = 80;
+            const gate_h = 30;
+            const sensor_offset = 20 * (P_open - 0.5); // Moves sensor up/down
+
+            ctx.fillStyle = 'var(--channel-color)';
+            // Left part
+            ctx.fillRect(canvas.width/2 - channel_w/2, mem_y - 50, -50, 100);
+            // Right part
+            ctx.fillRect(canvas.width/2 + channel_w/2, mem_y - 50, 50, 100);
+            // Gate (moves with P_open)
+            const gate_y = mem_y - gate_h/2 + (1-P_open)*20;
+            ctx.fillRect(canvas.width/2 - channel_w/2, gate_y, channel_w, gate_h);
+            // Voltage sensor paddles
+            ctx.fillRect(canvas.width/2 - channel_w/2 - 10, mem_y-10 - sensor_offset, 10, 20);
+            ctx.fillRect(canvas.width/2 + channel_w/2, mem_y-10 - sensor_offset, 10, 20);
+
+            // --- Draw Plot ---
+            p_ctx.fillStyle = isDark ? '#2d3748' : '#ffffff';
+            p_ctx.fillRect(0,0,plotCanvas.width, plotCanvas.height);
+            // Axes
+            const V_min = -90, V_max = 50;
+            const mapX = v => (v - V_min)/(V_max - V_min) * plotCanvas.width;
+            const mapY = p => plotCanvas.height - (p * (plotCanvas.height - 40) + 20);
+            p_ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            p_ctx.beginPath();
+            p_ctx.moveTo(mapX(V_min), mapY(0)); p_ctx.lineTo(mapX(V_max), mapY(0));
+            p_ctx.moveTo(mapX(0), mapY(0)); p_ctx.lineTo(mapX(0), mapY(1));
+            p_ctx.stroke();
+            // Curve
+            p_ctx.strokeStyle = 'var(--accent-color)';
+            p_ctx.lineWidth = 2;
+            p_ctx.beginPath();
+            for(let v_plot = V_min; v_plot <= V_max; v_plot++) {
+                const p_plot = 1 / (1 + Math.exp(-4*1*(v_plot - (-50)) / (25)));
+                const x = mapX(v_plot);
+                const y = mapY(p_plot);
+                if(v_plot === V_min) p_ctx.moveTo(x,y); else p_ctx.lineTo(x,y);
+            }
+            p_ctx.stroke();
+            // Current point
+            const currentX = mapX(V_m);
+            const currentY = mapY(P_open);
+            p_ctx.fillStyle = '#c0392b';
+            p_ctx.beginPath(); p_ctx.arc(currentX, currentY, 5, 0, 2*Math.PI); p_ctx.fill();
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        voltageSlider.addEventListener('input', update);
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Econophysics: Agent-Based Financial Market</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #2c3e50;
+            --code-bg: #e2e8f0;
+            --price-color: #2980b9;
+            --value-color: #c0392b;
+            --buy-color: #27ae60;
+            --sell-color: #e74c3c;
+            --hold-color: #7f8c8d;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #5d6d7e;
+            --code-bg: #2d3748;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #price-canvas { aspect-ratio: 2/1; margin-bottom: 1rem; }
+        #agent-canvas { aspect-ratio: 4/1; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: calc(50% - 5px);
+            padding: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .control-group button.active { background-color: var(--accent-color); color: white; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Econophysics: Agent-Based Financial Market</h1>
+            <p class="subtitle">A simplified model showing how market bubbles and crashes can emerge from simple trading behaviors.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Why do stock market prices sometimes shoot up into a "bubble" far beyond any rational value, only to crash dramatically? While real markets are incredibly complex, this **agent-based model** shows how such wild behavior can emerge from the simple, competing strategies of different types of traders. In this simulation, the market is populated by two kinds of agents: "fundamentalists" who trade based on a stock's perceived true value, and "chartists" who simply follow the recent price trend. By changing the mix of these traders, you can see how a market dominated by rational fundamentalists stays stable, while a market with too many trend-followers can become unstable, creating feedback loops that lead to the bubbles and crashes we see in the real world.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: A Tale of Two Traders</h2>
+
+            <h3>Step 1: The Agents</h3>
+            <p>An **agent-based model** simulates a system by creating a population of individual "agents" that follow a simple set of rules. The complex behavior of the whole system emerges from their collective interactions. Our market has two types of traders:
+            <ul>
+                <li><strong>Fundamentalists:</strong> These traders believe every stock has a "fundamental value" based on the company's health, earnings, etc. (represented by the <span style="color:var(--value-color)">red line</span> on the price chart). They act as a stabilizing force: if the price drops below the value, they buy; if it rises above, they sell.</li>
+                <li><strong>Chartists (or Trend-Followers):</strong> These traders ignore fundamental value. Their strategy is much simpler: if the price has been going up, they buy, assuming the trend will continue. If it's been going down, they sell. They create feedback loops.</li>
+            </ul>
+            You can control the population mix with the "Fraction of Fundamentalists" slider. The rest of the population will be chartists.</p>
+
+            <h3>Step 2: How Price is Determined</h3>
+            <p>At each time step, every agent decides whether to buy, sell, or hold based on their rules. The simulation then looks at the net demand. If there are more buyers than sellers, the price goes up. If there are more sellers than buyers, the price goes down. This new price then influences the agents' decisions in the next time step.</p>
+
+            <h3>Step 3: Experiment 1 - The "Efficient" Market</h3>
+            <p>Set the **Fraction of Fundamentalists** to 100% and press "Run". You will see that the <span style="color:var(--price-color)">blue stock price</span> closely follows the <span style="color:var(--value-color)">red fundamental value line</span>. When random news shocks move the value, the price quickly corrects and returns to it. This is what's known as an "efficient market," where price reflects all available information.</p>
+
+            <h3>Step 4: Experiment 2 - The Bubble and the Crash</h3>
+            <p>Now, set the **Fraction of Fundamentalists** to a low value, like 20% (meaning 80% are chartists). Press "Run" or "Reset". Watch the market now. A small, random upward movement in price can trigger the chartists to start buying. This pushes the price up, which makes *more* chartists buy, creating a positive feedback loop. The price can shoot up into a speculative **bubble**, completely detached from the red fundamental value line.
+            <br>
+            However, this can't last forever. Eventually, a small downturn (or the fundamentalists deciding the price is too absurd) can cause some selling. This makes the chartists start to sell, which drops the price, which causes more chartists to panic and sell, leading to a **crash**.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="price-canvas" width="800" height="400" aria-label="Stock price chart"></canvas>
+                <canvas id="agent-canvas" width="800" height="200" aria-label="Agent population visualization"></canvas>
+            </div>
+            <div id="controls-area">
+                 <div class="control-group">
+                    <button id="run-pause-btn" class="active">Pause</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="fundamentalist-slider">Fundamentalists: <span id="fundamentalist-label">50</span>%</label>
+                    <input type="range" id="fundamentalist-slider" min="0" max="100" value="50" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="volatility-slider">News Volatility: <span id="volatility-label">0.1</span></label>
+                    <input type="range" id="volatility-slider" min="0" max="1" value="0.1" step="0.01">
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const priceCanvas = document.getElementById('price-canvas');
+        const p_ctx = priceCanvas.getContext('2d');
+        const agentCanvas = document.getElementById('agent-canvas');
+        const a_ctx = agentCanvas.getContext('2d');
+
+        const fundamentalistSlider = document.getElementById('fundamentalist-slider');
+        const fundamentalistLabel = document.getElementById('fundamentalist-label');
+        const volatilitySlider = document.getElementById('volatility-slider');
+        const volatilityLabel = document.getElementById('volatility-label');
+        const runPauseBtn = document.getElementById('run-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- Simulation State ---
+        const NUM_AGENTS = 500;
+        let agents = [];
+        let priceHistory = [100];
+        let valueHistory = [100];
+        let isRunning = true;
+
+        function setup() {
+            const fundamentalistFrac = parseFloat(fundamentalistSlider.value) / 100;
+            fundamentalistLabel.textContent = (fundamentalistFrac*100).toFixed(0);
+
+            agents = [];
+            for(let i=0; i<NUM_AGENTS; i++) {
+                agents.push({
+                    type: Math.random() < fundamentalistFrac ? 'fundamentalist' : 'chartist',
+                    value_offset: (Math.random() - 0.5) * 10, // Personal valuation
+                    state: 'hold' // buy, sell, hold
+                });
+            }
+            priceHistory = [100];
+            valueHistory = [100];
+        }
+
+        function update() {
+            if(!isRunning) return;
+
+            const volatility = parseFloat(volatilitySlider.value);
+            const price = priceHistory[priceHistory.length - 1];
+            const last_price = priceHistory.length > 1 ? priceHistory[priceHistory.length - 2] : price;
+            let value = valueHistory[valueHistory.length - 1];
+
+            // Update fundamental value
+            value += (Math.random() - 0.5) * volatility;
+            value = Math.max(50, value); // Floor value
+            valueHistory.push(value);
+
+            // Agent decisions
+            let buy_orders = 0, sell_orders = 0;
+            agents.forEach(agent => {
+                let decision = 'hold';
+                if(agent.type === 'fundamentalist') {
+                    if(price < value + agent.value_offset) decision = 'buy';
+                    else if (price > value + agent.value_offset) decision = 'sell';
+                } else { // Chartist
+                    if(price > last_price) decision = 'buy';
+                    else if (price < last_price) decision = 'sell';
+                }
+                agent.state = decision;
+                if(decision === 'buy') buy_orders++;
+                else if(decision === 'sell') sell_orders++;
+            });
+
+            // Update price
+            const net_demand = (buy_orders - sell_orders) / NUM_AGENTS;
+            const new_price = price * (1 + net_demand * 0.1);
+            priceHistory.push(Math.max(1, new_price)); // Floor price
+            if(priceHistory.length > 400) {
+                priceHistory.shift();
+                valueHistory.shift();
+            }
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            // Draw Price Chart
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0,0,priceCanvas.width, priceCanvas.height);
+            const max_p = Math.max(...priceHistory, ...valueHistory) * 1.1;
+
+            const drawLine = (history, color) => {
+                p_ctx.strokeStyle = color;
+                p_ctx.lineWidth = 2;
+                p_ctx.beginPath();
+                history.forEach((p, i) => {
+                    const x = i * (priceCanvas.width / 400);
+                    const y = priceCanvas.height - (p / max_p) * priceCanvas.height;
+                    if(i===0) p_ctx.moveTo(x,y); else p_ctx.lineTo(x,y);
+                });
+                p_ctx.stroke();
+            };
+            drawLine(valueHistory, 'var(--value-color)');
+            drawLine(priceHistory, 'var(--price-color)');
+
+            // Draw Agent Population
+            a_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            a_ctx.fillRect(0,0,agentCanvas.width, agentCanvas.height);
+            const cols = 50;
+            const rows = Math.ceil(NUM_AGENTS / cols);
+            const cellW = agentCanvas.width / cols;
+            const cellH = agentCanvas.height / rows;
+
+            agents.forEach((agent, i) => {
+                const x = (i % cols) * cellW;
+                const y = Math.floor(i / cols) * cellH;
+                if(agent.state === 'buy') a_ctx.fillStyle = 'var(--buy-color)';
+                else if (agent.state === 'sell') a_ctx.fillStyle = 'var(--sell-color)';
+                else a_ctx.fillStyle = 'var(--hold-color)';
+                a_ctx.fillRect(x,y,cellW-1, cellH-1);
+            });
+        }
+
+        let lastTime = 0;
+        function mainLoop(time) {
+            if(isRunning && time - lastTime > 50) {
+                update();
+                lastTime = time;
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        runPauseBtn.addEventListener('click', () => {
+            isRunning = !isRunning;
+            runPauseBtn.textContent = isRunning ? 'Pause' : 'Run';
+            runPauseBtn.classList.toggle('active', isRunning);
+        });
+        resetBtn.addEventListener('click', setup);
+        fundamentalistSlider.addEventListener('input', e => {
+            fundamentalistLabel.textContent = e.target.value;
+            setup();
+        });
+        volatilitySlider.addEventListener('input', e => {
+            volatilityLabel.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

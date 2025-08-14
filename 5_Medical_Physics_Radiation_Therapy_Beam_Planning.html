@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Physics: Radiation Therapy Planning</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #2980b9;
+            --code-bg: #e2e8f0;
+            --tumor-color: rgba(192, 57, 43, 0.8);
+            --oar-color: rgba(46, 204, 113, 0.8);
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #5dade2;
+            --code-bg: #2d3748;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+        #main-canvas { aspect-ratio: 1/1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 1.5/1; }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .control-group button.primary { background-color: var(--accent-color); color: white; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Medical Physics: Radiation Therapy Beam Planning</h1>
+            <p class="subtitle">A simplified tool for understanding how to target tumors while sparing healthy organs.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Radiation therapy is a primary method for treating cancer, using high-energy beams like X-rays to destroy tumor cells. The central challenge is to deliver a lethal dose of radiation to the tumor while minimizing the damage to surrounding healthy tissues and critical organs. The solution is to use multiple beams from different angles that all intersect at the tumor. This way, the tumor gets a high cumulative dose, while the dose to any single healthy area is spread out and kept low. This simplified planning tool lets you place and aim radiation beams to treat a virtual patient. You can see the resulting dose distribution as a color map and analyze your plan's effectiveness with a Dose-Volume Histogram, the same type of graph used by real medical physicists.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Cross-Firing for a Cure</h2>
+
+            <h3>Step 1: The Goal</h3>
+            <p>The simulation shows a 2D cross-section of a patient. Inside, there is a red **Tumor** that we want to destroy, and a green **Organ at Risk (OAR)** that we must protect. Our goal is to deliver a high dose of radiation to 100% of the tumor, while delivering as little dose as possible to the OAR.</p>
+
+            <h3>Step 2: The Problem with a Single Beam</h3>
+            <p>Click **"Add Beam"** to create a radiation beam. You can click and drag the square at the edge of the box to change the beam's angle. Notice that a single beam delivers its maximum dose not just to the tumor, but to all the healthy tissue in its path. This would cause unacceptable damage.</p>
+
+            <h3>Step 3: The Multi-Beam Solution</h3>
+            <p>The standard technique is to use multiple beams from different angles, all aimed to intersect at the tumor. Add a few more beams and arrange them around the patient. Now look at the **Dose Distribution Map** (the color map). Where the beams overlap at the tumor, the dose is high (bright yellow/white). In the surrounding tissue, where only one beam passes through, the dose is much lower (blue/green). This is the core principle of modern radiotherapy.</p>
+
+            <h3>Step 4: The Dose-Volume Histogram (DVH)</h3>
+            <p>How good is your plan? The graph on the right provides a quantitative answer. This is a **Dose-Volume Histogram**, a critical tool for medical physicists.
+            <ul>
+                <li>The **X-axis** is the radiation dose.</li>
+                <li>The **Y-axis** is the percentage of an organ's volume that receives *at least* that dose.</li>
+            </ul>
+            An ideal plan would have:
+            <ul>
+                <li>A <span style="color:var(--tumor-color)">red Tumor curve</span> that looks like a rectangle: 100% of the volume receives the target dose.</li>
+                <li>A <span style="color:var(--oar-color)">green OAR curve</span> that is as low and as far to the left as possible, meaning very little of its volume receives a high dose.</li>
+            </ul>
+            Try to adjust your beam angles and intensities (by selecting a beam and using the sliders) to get your DVH curves as close to this ideal as possible.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Dose distribution map"></canvas>
+            </div>
+            <div id="controls-area">
+                 <div class="control-group">
+                    <button id="add-beam-btn" class="primary">Add Beam</button>
+                    <button id="clear-btn">Clear Beams</button>
+                </div>
+                <div id="beam-controls" style="display:none;">
+                    <h4>Selected Beam (<span id="beam-id-label">1</span>)</h4>
+                    <div class="control-group">
+                        <label for="intensity-slider">Intensity: <span id="intensity-label">100</span>%</label>
+                        <input type="range" id="intensity-slider" min="10" max="100" value="100" step="5">
+                    </div>
+                </div>
+                <canvas id="plot-canvas" width="280" height="187" aria-label="Dose-Volume Histogram"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const addBeamBtn = document.getElementById('add-beam-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const beamControls = document.getElementById('beam-controls');
+        const beamIdLabel = document.getElementById('beam-id-label');
+        const intensitySlider = document.getElementById('intensity-slider');
+        const intensityLabel = document.getElementById('intensity-label');
+
+        // --- Simulation State ---
+        const GRID_SIZE = 128;
+        let doseGrid = new Float32Array(GRID_SIZE*GRID_SIZE);
+        let beams = [];
+        let selectedBeam = -1;
+        let draggingBeam = -1;
+
+        const tumor = { x: GRID_SIZE/2, y: GRID_SIZE/2, r: 20 };
+        const oar = { x: GRID_SIZE/2, y: GRID_SIZE*0.75, r: 15 };
+
+        function setup() {
+            beams = [ { angle: -Math.PI/2, intensity: 1.0 } ];
+            selectedBeam = 0;
+            calculateDose();
+        }
+
+        function calculateDose() {
+            doseGrid.fill(0);
+            beams.forEach(beam => {
+                const dir = { x: Math.cos(beam.angle), y: Math.sin(beam.angle) };
+                const beamWidth = 15; // pixels
+                for(let j=0; j<GRID_SIZE; j++) {
+                    for(let i=0; i<GRID_SIZE; i++) {
+                        const dx = i - GRID_SIZE/2, dy = j - GRID_SIZE/2;
+                        const dist_along = dx*dir.x + dy*dir.y;
+                        const dist_perp = -dx*dir.y + dy*dir.x;
+                        if(Math.abs(dist_perp) < beamWidth) {
+                            const dose = beam.intensity * Math.exp(-dist_perp**2 / (2*(beamWidth/2)**2));
+                            doseGrid[i + j*GRID_SIZE] += dose;
+                        }
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            // Draw Dose Map
+            const maxDose = Math.max(...doseGrid, 1.0);
+            const cellW = canvas.width/GRID_SIZE;
+            const cellH = canvas.height/GRID_SIZE;
+            for(let j=0; j<GRID_SIZE; j++) {
+                for(let i=0; i<GRID_SIZE; i++) {
+                    const dose = doseGrid[i+j*GRID_SIZE];
+                    const ratio = dose / maxDose;
+                    // viridis-like colormap
+                    const r = Math.floor(Math.sqrt(ratio) * 255);
+                    const g = Math.floor(ratio**3 * 255);
+                    const b = Math.floor(Math.sin(ratio*Math.PI) * 128);
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    ctx.globalAlpha = ratio > 0.1 ? 0.6 : 0;
+                    ctx.fillRect(i*cellW, j*cellH, cellW, cellH);
+                }
+            }
+            ctx.globalAlpha = 1.0;
+
+            // Draw organs
+            const drawOrgan = (org, color) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(org.x*cellW, org.y*cellH, org.r*cellW, 0, 2*Math.PI);
+                ctx.stroke();
+            };
+            drawOrgan(tumor, 'var(--tumor-color)');
+            drawOrgan(oar, 'var(--oar-color)');
+
+            // Draw beams
+            beams.forEach((beam, i) => {
+                const r = canvas.width/2;
+                const x = r + r * Math.cos(beam.angle);
+                const y = r + r * Math.sin(beam.angle);
+                ctx.fillStyle = (i === selectedBeam) ? '#fff' : '#aaa';
+                ctx.fillRect(x-10, y-10, 20, 20);
+            });
+
+            drawDVH();
+        }
+
+        function drawDVH() {
+            p_ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#2d3748' : '#ffffff';
+            p_ctx.fillRect(0,0,plotCanvas.width, plotCanvas.height);
+
+            const plotDVH = (structure, color) => {
+                let doses = [];
+                for(let j=0; j<GRID_SIZE; j++) {
+                    for(let i=0; i<GRID_SIZE; i++) {
+                        if((i-structure.x)**2 + (j-structure.y)**2 < structure.r**2) {
+                            doses.push(doseGrid[i+j*GRID_SIZE]);
+                        }
+                    }
+                }
+                if(doses.length === 0) return;
+
+                const maxDose = Math.max(...doseGrid) * 1.1;
+                p_ctx.strokeStyle = color;
+                p_ctx.lineWidth = 2;
+                p_ctx.beginPath();
+                for(let d=0; d<maxDose; d+= maxDose/100) {
+                    const vol_frac = doses.filter(v => v >= d).length / doses.length;
+                    const x = (d/maxDose) * plotCanvas.width;
+                    const y = (1 - vol_frac) * plotCanvas.height;
+                    if(d===0) p_ctx.moveTo(x,y); else p_ctx.lineTo(x,y);
+                }
+                p_ctx.stroke();
+            };
+
+            plotDVH(tumor, 'var(--tumor-color)');
+            plotDVH(oar, 'var(--oar-color)');
+        }
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        addBeamBtn.addEventListener('click', () => {
+            beams.push({ angle: Math.random()*2*Math.PI, intensity: 1.0 });
+            calculateDose();
+        });
+        clearBtn.addEventListener('click', () => { beams = []; calculateDose(); });
+
+        intensitySlider.addEventListener('input', e => {
+            if(selectedBeam > -1) {
+                beams[selectedBeam].intensity = parseFloat(e.target.value)/100;
+                intensityLabel.textContent = e.target.value;
+                calculateDose();
+            }
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            beams.forEach((beam, i) => {
+                const r = canvas.width/2;
+                const bx = r + r * Math.cos(beam.angle);
+                const by = r + r * Math.sin(beam.angle);
+                if(Math.sqrt((x-bx)**2 + (y-by)**2) < 15) {
+                    draggingBeam = i;
+                    selectedBeam = i;
+                    beamControls.style.display = 'block';
+                    beamIdLabel.textContent = i+1;
+                    intensitySlider.value = beam.intensity * 100;
+                    intensityLabel.textContent = (beam.intensity*100).toFixed(0);
+                }
+            });
+        });
+        canvas.addEventListener('mousemove', e => {
+            if(draggingBeam > -1) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const dx = x - canvas.width/2;
+                const dy = y - canvas.height/2;
+                beams[draggingBeam].angle = Math.atan2(dy, dx);
+                calculateDose();
+            }
+        });
+        window.addEventListener('mouseup', () => { draggingBeam = -1; });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

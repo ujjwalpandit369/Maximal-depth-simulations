@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biophysics: Polymer Dynamics of DNA</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --particle-color: #8e44ad;
+            --spring-color: #7f8c8d;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+            --particle-color: #af7ac5;
+            --spring-color: #95a5a6;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: grab;
+        }
+        canvas:active { cursor: grabbing; }
+        #main-canvas { aspect-ratio: 1/1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 2/1; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Biophysics: Polymer Dynamics of DNA</h1>
+            <p class="subtitle">A simulation of a polymer chain's thermal motion and entropic elasticity.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Long-chain molecules like DNA and proteins, known as polymers, are fundamental to life. In the watery environment of a cell, these chains don't sit still; they are constantly writhing and coiling due to random thermal jolts from the surrounding water molecules. This simulation shows a simplified "bead-spring" model of a polymer chain undergoing this thermal dance. You can control the chain's length, its stiffness, and the temperature of the environment to see how these factors affect its shape and motion. You can even grab one end and pull on it to feel the strange "entropic elasticity" that makes polymers want to curl back up, a property crucial for how they function in our cells.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Wiggling Chain</h2>
+
+            <h3>Step 1: The Bead-Spring Model</h3>
+            <p>A real DNA molecule is incredibly complex. To study its physics, scientists use simplified models. This simulation uses a common **bead-spring model**. The polymer is represented as a series of beads (representing segments of the chain) connected by springs. This simple model captures two essential properties: the chain is connected, and it is flexible.</p>
+
+            <h3>Step 2: The Thermal Dance (Brownian Motion)</h3>
+            <p>The polymer is not in a vacuum; it's surrounded by smaller, fast-moving solvent molecules (like water). These solvent molecules are constantly bumping into the beads of the chain from all directions. This leads to **Brownian motion**, causing the chain to wiggle, flex, and change its overall shape randomly. You can control the intensity of this effect with the **Temperature** slider. Higher temperatures mean more violent kicks from the solvent, causing the chain to writhe more energetically.</p>
+
+            <h3>Step 3: Stiffness and the Random Coil</h3>
+            <p>Real polymers have some degree of stiffness. The **Chain Stiffness** slider (related to a property called "persistence length") controls how easily the chain can bend.
+            <ul>
+                <li>At **low stiffness**, the chain is very flexible and will curl up into a tangled, compact shape called a **random coil**.</li>
+                <li>At **high stiffness**, the chain resists bending and will behave more like a rigid rod.</li>
+            </ul>
+            The overall size of the coiled polymer is measured by its **Radius of Gyration**, which is plotted in real-time below the main simulation.</p>
+
+            <h3>Step 4: Entropic Elasticity</h3>
+            <p>Try this experiment: grab the last bead of the chain with your mouse and slowly pull it to stretch the polymer out. As you pull, a second graph will appear, plotting the **Force** you are exerting versus the **Extension** (how far you've stretched it). You'll notice two things:
+            <ol>
+                <li>It takes very little force to stretch it at first, but it gets progressively harder as the chain becomes fully extended.</li>
+                <li>When you let go, the chain quickly snaps back into a random coil.</li>
+            </ol>
+            This pulling-back force isn't like a normal spring. It's an **entropic force**. There are vastly more ways for the chain to be in a crumpled, disordered coil than there are for it to be in a straight, ordered line. The laws of thermodynamics and probability mean the chain will always tend to return to its most probable, high-entropy (disordered) state. Your pulling is an act of creating order, and the chain "resists" this by pulling back.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Animation of a polymer chain"></canvas>
+                <canvas id="plot-canvas" width="512" height="256" aria-label="Plot of polymer metrics"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="temp-slider">Temperature: <span id="temp-label">10</span></label>
+                    <input type="range" id="temp-slider" min="1" max="50" value="10" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="stiff-slider">Chain Stiffness: <span id="stiff-label">0.1</span></label>
+                    <input type="range" id="stiff-slider" min="0.01" max="1.0" value="0.1" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="length-slider">Chain Length (N): <span id="length-label">50</span></label>
+                    <input type="range" id="length-slider" min="10" max="100" value="50" step="1">
+                </div>
+                 <div class="control-group">
+                    <button id="reset-btn" style="background-color:#7f8c8d">Reset Chain</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const sliders = {
+            T: document.getElementById('temp-slider'),
+            k: document.getElementById('stiff-slider'),
+            N: document.getElementById('length-slider'),
+        };
+        const labels = {
+            T: document.getElementById('temp-label'),
+            k: document.getElementById('stiff-label'),
+            N: document.getElementById('length-label'),
+        };
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- Simulation State ---
+        let simParams = { T: 10, k_stiff: 0.1, N: 50 };
+        let particles = [];
+        let rgHistory = [];
+        let forceExtensionData = [];
+        let dragging = { active: false, index: -1 };
+
+        function setup() {
+            simParams.N = parseInt(sliders.N.value);
+            particles = [];
+            const startX = canvas.width / 2;
+            const startY = canvas.height / 2;
+            for(let i=0; i<simParams.N; i++) {
+                particles.push({
+                    x: startX + (Math.random()-0.5),
+                    y: startY + i * 5,
+                    vx: 0, vy: 0
+                });
+            }
+            rgHistory = [];
+            forceExtensionData = [];
+        }
+
+        function update() {
+            simParams.T = parseFloat(sliders.T.value);
+            simParams.k_stiff = parseFloat(sliders.k.value);
+
+            const k_spring = 0.5;
+            const rest_length = 5;
+            const dt = 0.2;
+
+            // Apply forces
+            for(let i=0; i<simParams.N; i++) {
+                const p = particles[i];
+                let fx = 0, fy = 0;
+
+                // Spring forces
+                if(i > 0) {
+                    const prev = particles[i-1];
+                    const dx = p.x - prev.x, dy = p.y - prev.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const force = k_spring * (dist - rest_length);
+                    fx -= force * dx/dist;
+                    fy -= force * dy/dist;
+                }
+                if(i < simParams.N - 1) {
+                    const next = particles[i+1];
+                    const dx = p.x - next.x, dy = p.y - next.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const force = k_spring * (dist - rest_length);
+                    fx -= force * dx/dist;
+                    fy -= force * dy/dist;
+                }
+
+                // Bending stiffness
+                if (i > 0 && i < simParams.N-1) {
+                    const p0 = particles[i-1], p2 = particles[i+1];
+                    const d1x = p.x - p0.x, d1y = p.y - p0.y;
+                    const d2x = p2.x - p.x, d2y = p2.y - p.y;
+                    // Simplified bending force pushing towards collinearity
+                    fx += (p0.x + p2.x - 2*p.x) * simParams.k_stiff;
+                    fy += (p0.y + p2.y - 2*p.y) * simParams.k_stiff;
+                }
+
+                // Brownian motion
+                fx += (Math.random()-0.5) * simParams.T;
+                fy += (Math.random()-0.5) * simParams.T;
+
+                // Verlet integration
+                const ax = fx, ay = fy; // assume mass=1
+                p.vx += ax * dt;
+                p.vy += ay * dt;
+
+                // Damping
+                p.vx *= 0.9; p.vy *= 0.9;
+            }
+
+            // Update positions
+            for(let i=0; i<simParams.N; i++) {
+                // Don't move first particle and dragged particle
+                if(i === 0 || (dragging.active && i === dragging.index)) continue;
+                particles[i].x += particles[i].vx * dt;
+                particles[i].y += particles[i].vy * dt;
+            }
+
+            // Calculate metrics
+            let comX=0, comY=0;
+            particles.forEach(p => {comX += p.x; comY += p.y;});
+            comX /= simParams.N; comY /= simParams.N;
+            let rg2 = 0;
+            particles.forEach(p => { rg2 += (p.x-comX)**2 + (p.y-comY)**2; });
+            const rg = Math.sqrt(rg2 / simParams.N);
+            rgHistory.push(rg);
+            if(rgHistory.length > 200) rgHistory.shift();
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw springs
+            ctx.strokeStyle = 'var(--spring-color)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(particles[0].x, particles[0].y);
+            for(let i=1; i<simParams.N; i++) {
+                ctx.lineTo(particles[i].x, particles[i].y);
+            }
+            ctx.stroke();
+
+            // Draw beads
+            particles.forEach(p => {
+                ctx.fillStyle = 'var(--particle-color)';
+                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 2*Math.PI); ctx.fill();
+            });
+
+            drawPlot();
+        }
+
+        function drawPlot() {
+            const isDark = document.body.classList.contains('dark-mode');
+            p_ctx.fillStyle = isDark ? '#2d3748' : '#ffffff';
+            p_ctx.fillRect(0,0,plotCanvas.width, plotCanvas.height);
+
+            if(dragging.active) {
+                // Draw Force-Extension plot
+                const p1 = particles[0];
+                const p2 = particles[simParams.N-1];
+                const extension = Math.sqrt((p2.x-p1.x)**2 + (p2.y-p1.y)**2);
+                const p_prev = particles[simParams.N-2];
+                const dx = p2.x-p_prev.x, dy = p2.y-p_prev.y;
+                const dist = Math.sqrt(dx*dx+dy*dy);
+                const force = 0.5 * (dist - 5);
+                forceExtensionData.push({x: extension, f: force});
+                if(forceExtensionData.length > 200) forceExtensionData.shift();
+
+                const maxX = simParams.N * 5;
+                const maxF = 50;
+
+                p_ctx.strokeStyle = '#c0392b';
+                p_ctx.beginPath();
+                forceExtensionData.forEach((d,i) => {
+                    const x = (d.x/maxX) * plotCanvas.width;
+                    const y = plotCanvas.height - (d.f/maxF) * plotCanvas.height;
+                    if(i===0) p_ctx.moveTo(x,y); else p_ctx.lineTo(x,y);
+                });
+                p_ctx.stroke();
+
+            } else {
+                // Draw Rg plot
+                const maxRg = 50;
+                p_ctx.strokeStyle = '#2980b9';
+                p_ctx.beginPath();
+                rgHistory.forEach((rg, i) => {
+                    const x = i * (plotCanvas.width / 200);
+                    const y = plotCanvas.height - (rg / maxRg) * plotCanvas.height;
+                    if(i===0) p_ctx.moveTo(x,y); else p_ctx.lineTo(x,y);
+                });
+                p_ctx.stroke();
+            }
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        resetBtn.addEventListener('click', setup);
+        Object.values(sliders).forEach(s => s.addEventListener('input', () => {
+            labels[s.id.split('-')[0]].textContent = parseFloat(s.value).toFixed(s.id.includes('stiff')?2:0);
+        }));
+        sliders.N.addEventListener('change', setup);
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const p_end = particles[simParams.N-1];
+            if(Math.sqrt((x-p_end.x)**2 + (y-p_end.y)**2) < 20) {
+                dragging.active = true;
+                dragging.index = simParams.N-1;
+                forceExtensionData = [];
+            }
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if(dragging.active) {
+                const rect = canvas.getBoundingClientRect();
+                particles[dragging.index].x = e.clientX - rect.left;
+                particles[dragging.index].y = e.clientY - rect.top;
+            }
+        });
+        window.addEventListener('mouseup', () => { dragging.active = false; });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
