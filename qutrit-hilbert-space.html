@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum: The Hilbert Space of a Spin-1 Particle</title>
+    <style>
+        /* General Body and Typography */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #212529;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* High Contrast Theme */
+        body.high-contrast {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        body.high-contrast a {
+            color: #00ffff;
+        }
+        body.high-contrast button, body.high-contrast .button {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #fff;
+        }
+        body.high-contrast section {
+            background-color: #111;
+            border-color: #555;
+        }
+        body.high-contrast table th {
+            background-color: #333;
+        }
+        body.high-contrast table td, body.high-contrast table th {
+            border-color: #555;
+        }
+        body.high-contrast #dev-console {
+            background: #1e1e1e;
+            border-top: 1px solid #555;
+        }
+        body.high-contrast #suggestion-box {
+            background-color: #1a1a1a;
+            border: 1px solid #555;
+        }
+        body.high-contrast h2 {
+            border-bottom-color: #00ffff;
+        }
+        body.high-contrast code {
+            background-color: #333;
+        }
+        body.high-contrast .control-group output {
+            background: #333;
+        }
+        body.high-contrast #simulation-canvas {
+            border-color: #555;
+            background-color: #000;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 1rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        #metadata-bar {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        #metadata-bar span {
+            margin: 0 10px;
+        }
+
+        /* Main Layout */
+        .layout-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .content-column {
+            flex: 2;
+            min-width: 300px;
+        }
+        .sim-column {
+            flex: 1;
+            min-width: 400px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start; /* Makes sticky work */
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .layout-container {
+                flex-direction: column;
+            }
+            .sim-column {
+                position: static; /* Unstick on smaller screens */
+                order: -1; /* Move sim to the top on mobile */
+                width: 100%;
+            }
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Controls Styling */
+        #controls {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group .label-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .control-group label {
+            font-weight: bold;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .control-group output {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        #controls .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        button, .button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border: 1px solid #007bff;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        button:hover, .button:hover, button:focus, .button:focus {
+            background-color: #0056b3;
+            outline: 2px solid #0056b3;
+            outline-offset: 2px;
+        }
+        button:active, .button:active {
+            transform: scale(0.98);
+        }
+        .preset-buttons button {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        .preset-buttons button:hover, .preset-buttons button:focus {
+            background-color: #5a6268;
+        }
+        .action-buttons button.active {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        /* Canvas */
+        #simulation-canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid #ced4da;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #e9ecef;
+        }
+        code {
+            font-family: "SF Mono", "Fira Code", "Source Code Pro", monospace;
+            background-color: #e9ecef;
+            padding: .2em .4em;
+            border-radius: 3px;
+            font-size: 85%;
+        }
+
+        /* Suggestion Box */
+        #suggestion-box {
+            background-color: #eef7ff;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #suggestion-box p {
+            margin: 0 0 0.5rem 0;
+        }
+        #suggestion-box .button-group button {
+            margin-right: 0.5rem;
+            background-color: #ffffff;
+            color: #007bff;
+            border: 1px solid #007bff;
+        }
+        #suggestion-box .button-group button.selected {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+
+        /* Footer & Dev Console */
+        footer {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        #dev-console {
+            margin-top: 1rem;
+            background: #f1f3f5;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            text-align: left;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #dev-console-header {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            margin: 0;
+            background: #e9ecef;
+            border-radius: 8px 8px 0 0;
+        }
+        #dev-console-content {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem 1rem;
+            display: none; /* Hidden by default */
+        }
+        #dev-console-content.open {
+            display: block;
+        }
+        #dev-log {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        #dev-log li {
+            padding: 2px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        body.high-contrast #dev-console-header {
+            background: #333;
+        }
+        body.high-contrast #dev-log li {
+            border-bottom-color: #444;
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none;
+        }
+        .equation {
+            background-color: var(--subtle-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-family: "SF Mono", "Fira Code", "Source Code Pro", monospace;
+            text-align: center;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <!-- Suggestion box will go here -->
+    </div>
+
+    <header>
+        <h1>The Hilbert Space of a Spin-1 Particle (Qutrit)</h1>
+        <p class="subtitle">An interactive visualization of a real-valued cross-section of the qutrit state space.</p>
+        <div id="metadata-bar">
+            <!-- Metadata will be populated by JS -->
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <div class="layout-container">
+            <div class="content-column">
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>This simulation provides an interactive glimpse into the state of a <strong>qutrit</strong>, a quantum system with three distinct levels. While a standard computer bit is either 0 or 1, and a quantum bit (qubit) can be in a superposition of two states, a qutrit can be in a superposition of three states, labeled <code>|1⟩</code>, <code>|0⟩</code>, and <code>|-1⟩</code>. Here, we visualize a simplified version of this state space as a single vector pointing to the surface of a sphere. By moving the vector with the sliders, you can change the quantum state and see how the probabilities of measuring each of the three outcomes (<code>|1⟩</code>, <code>|0⟩</code>, or <code>|-1⟩</code>) change in response.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide</h2>
+                    <h3>1. From Bits to Qubits</h3>
+                    <p>In a classical computer, the fundamental unit of information is a <strong>bit</strong>. A bit can only have one of two values: 0 or 1. It's like a light switch, which is either on or off. There's no in-between.</p>
+                    <p>Quantum computers use a more powerful unit called a <strong>qubit</strong>. A qubit can be 0, 1, or a combination—a "superposition"—of both at the same time. Think of it like a dimmer switch instead of a simple on/off switch. It can be fully off (0), fully on (1), or any brightness in between. This ability to exist in multiple states at once is what gives quantum computers their power. The state of a qubit is often visualized as a point on a sphere called the Bloch Sphere.</p>
+
+                    <h3>2. What is a Qutrit?</h3>
+                    <p>A <strong>qutrit</strong> is the next logical step up. If a bit has two states (0, 1) and a qubit is a superposition of two states, a qutrit is a quantum system with <strong>three</strong> fundamental states. In the context of particle physics, this often corresponds to the spin of a particle. A spin-1 particle, for example, can have a spin projection of +1, 0, or -1 along a chosen axis. We label these basis states as <code>|1⟩</code>, <code>|0⟩</code>, and <code>|-1⟩</code>.</p>
+                    <p>Just like a qubit, a qutrit can exist in a superposition of these three states. Its state, which we call <code>|ψ⟩</code> (pronounced "psi"), is written as:</p>
+                    <p class="equation">|ψ⟩ = c₀|1⟩ + c₁|0⟩ + c₂|-1⟩</p>
+                    <p>The numbers <code>c₀</code>, <code>c₁</code>, and <code>c₂</code> are called <strong>probability amplitudes</strong>. They are complex numbers that tell us "how much" of each basis state is in the mix.</p>
+
+                    <h3>3. Simplifying a Complex Idea</h3>
+                    <p>The full state space of a qutrit is very complex and has 4 real dimensions of freedom, making it impossible to show in our 3D world. This simulation makes a huge simplification: it assumes the amplitudes <code>c₀</code>, <code>c₁</code>, and <code>c₂</code> are all <strong>real numbers</strong>, not complex ones. This reduces the state space to something we can visualize.</p>
+                    <p>With this simplification, the state of our qutrit is just a set of three real numbers <code>(c₀, c₁, c₂)</code>. There's one more crucial rule in quantum mechanics: the sum of the probabilities must be 1. The probability of measuring a certain state is the square of its amplitude. So, we must always have:</p>
+                    <p class="equation">c₀² + c₁² + c₂² = 1</p>
+                    <p>This is the equation for a sphere with a radius of 1! That's what you see in the simulation: a vector pointing from the center to a point <code>(c₀, c₁, c₂)</code> on the surface of a unit sphere.</p>
+
+                    <h3>4. How to Read the Visualization</h3>
+                    <ol>
+                        <li><strong>The 3D Sphere:</strong> This represents the simplified state space. The three axes correspond to the three basis states: the x-axis is for <code>|1⟩</code> (coefficient <code>c₀</code>), the y-axis for <code>|0⟩</code> (<code>c₁</code>), and the z-axis for <code>|-1⟩</code> (<code>c₂</code>).</li>
+                        <li><strong>The Red Vector:</strong> This vector represents the current state <code>|ψ⟩</code> of the qutrit. Its tip always lies on the surface of the sphere, ensuring the `c₀² + c₁² + c₂² = 1` rule is met. You can change the state by using the sliders to move this vector.</li>
+                        <li><strong>The Bar Chart (Probabilities):</strong> When you measure a quantum system, it "collapses" into one of its basis states. The bar chart at the bottom left shows you the probability of it collapsing into each of the three states. For example, <code>P(|1⟩)</code> is the probability of finding the particle in the <code>|1⟩</code> state, and it's calculated as <code>c₀²</code>. Notice how the three probabilities always add up to 1.</li>
+                    </ol>
+
+                    <h3>5. An Everyday Analogy: The Loaded Die</h3>
+                    <p>Imagine you have a three-sided die. A fair die would have a 1/3 chance of landing on any face. A qutrit is like a "loaded" three-sided die. The quantum state <code>|ψ⟩</code> defines how the die is weighted. If the state vector points directly along the <code>c₀</code> axis, it means <code>c₀=1</code> and <code>c₁=c₂=0</code>. The probability of measuring <code>|1⟩</code> is <code>1²=1</code> (or 100%), and the probability of the others is 0. This is like a die that is guaranteed to land on face '1'. If the vector is in a position where <code>c₀² = 0.5</code>, <code>c₁² = 0.3</code>, and <code>c₂² = 0.2</code>, then you have a 50% chance of measuring <code>|1⟩</code>, 30% for <code>|0⟩</code>, and 20% for <code>|-1⟩</code>. The sliders let you change the weighting in real-time.</p>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory</h2>
+                    <p>The state of a qutrit is a vector in a 3-dimensional complex Hilbert space. Here, we simplify by only considering real coefficients.</p>
+
+                    <h4>The State Vector</h4>
+                    <p>A general qutrit state <code>|ψ⟩</code> is a linear combination (a superposition) of its three basis states.</p>
+                    <p class="equation">|ψ⟩ = c₀|1⟩ + c₁|0⟩ + c₂|-1⟩</p>
+                    <p>Here, <code>|1⟩</code>, <code>|0⟩</code>, and <code>|-1⟩</code> are the basis vectors, which are mutually orthogonal. The coefficients <code>c₀, c₁, c₂</code> are the probability amplitudes. In this simulation, they are real numbers.</p>
+
+                    <h4>Normalization</h4>
+                    <p>A fundamental postulate of quantum mechanics is that the total probability of finding the particle in *any* state must be 1. This translates to the condition that the sum of the squares of the amplitudes must equal 1.</p>
+                    <p class="equation">c₀² + c₁² + c₂² = 1</p>
+                    <p>This is why the state vector in the visualization is constrained to the surface of a unit sphere.</p>
+                    <p><strong>Example:</strong> If a state has <code>c₀ = 0.5</code> and <code>c₁ = 0.5</code>, then to be valid, <code>c₂</code> must satisfy <code>0.5² + 0.5² + c₂² = 1</code>, which means <code>0.25 + 0.25 + c₂² = 1</code>, so <code>c₂² = 0.5</code>, and <code>c₂ = √0.5 ≈ 0.707</code>.</p>
+
+                    <h4>Measurement Probability</h4>
+                    <p>If you measure the qutrit, you will find it in one of the three basis states. The probability of measuring a specific basis state <code>|i⟩</code> is given by the square of its corresponding amplitude, <code>cᵢ</code>.</p>
+                    <p class="equation">P(|i⟩) = cᵢ²</p>
+                    <p><strong>Example:</strong> For the state above, the probabilities are:
+                    <ul>
+                        <li>Probability of measuring <code>|1⟩</code>: P(|1⟩) = c₀² = 0.5² = <strong>0.25</strong> (or 25%)</li>
+                        <li>Probability of measuring <code>|0⟩</code>: P(|0⟩) = c₁² = 0.5² = <strong>0.25</strong> (or 25%)</li>
+                        <li>Probability of measuring <code>|-1⟩</code>: P(|-1⟩) = c₂² = (√0.5)² = <strong>0.50</strong> (or 50%)</li>
+                    </ul>
+                    The bar chart in the simulation displays these three values.</p>
+
+                    <h4>Spherical Coordinate Parametrization</h4>
+                    <p>To easily satisfy the normalization condition, we can define the coefficients using two angles, just like locating a point on the globe with latitude and longitude. We use the polar angle <code>θ</code> (theta) and azimuthal angle <code>φ</code> (phi).</p>
+                    <p class="equation">c₀ = sin(θ)cos(φ)<br>c₁ = sin(θ)sin(φ)<br>c₂ = cos(θ)</p>
+                    <p>The sliders in this simulation control <code>θ</code> and <code>φ</code> directly, which ensures the vector always has a length of 1.</p>
+                </section>
+
+                <div id="long-text-container" style="display:none;">
+                    <!-- Lazy-loaded markdown content will go here -->
+                </div>
+                <button id="toggle-long-text" style="display:none;">Read the full exposition</button>
+
+            </div>
+
+            <div class="sim-column">
+                <section id="interactive-simulation">
+                    <h2>Interactive Simulation</h2>
+                    <canvas id="simulation-canvas" width="500" height="500"></canvas>
+                    <div id="controls">
+                        <div class="control-group">
+                            <div class="label-container">
+                                <label for="theta-slider">Polar Angle (θ)</label>
+                                <output id="theta-value">0.79</output>
+                            </div>
+                            <input type="range" id="theta-slider" min="0" max="3.14159" step="0.01" value="0.785" aria-label="Polar Angle Theta" title="Controls the angle from the Z-axis (0 to π)">
+                        </div>
+                        <div class="control-group">
+                            <div class="label-container">
+                                <label for="phi-slider">Azimuthal Angle (φ)</label>
+                                <output id="phi-value">0.79</output>
+                            </div>
+                            <input type="range" id="phi-slider" min="0" max="6.28318" step="0.01" value="0.785" aria-label="Azimuthal Angle Phi" title="Controls the angle in the XY-plane (0 to 2π)">
+                        </div>
+
+                        <div class="button-group preset-buttons" aria-label="Simulation Presets">
+                            <button id="preset-superposition" title="Set to an equal superposition of all three basis states">Equal Superposition</button>
+                            <button id="preset-pure-1" title="Set to the pure |1⟩ state (c₀=1)">Pure |1⟩ State</button>
+                            <button id="preset-pure-0" title="Set to the pure |0⟩ state (c₁=1)">Pure |0⟩ State</button>
+                            <button id="preset-pure-neg1" title="Set to the pure |-1⟩ state (c₂=1)">Pure |-1⟩ State</button>
+                        </div>
+
+                        <div class="button-group action-buttons" aria-label="Simulation Actions">
+                            <button id="export-png-btn" title="Download the current view as a PNG image (Shortcut: e)">Export PNG</button>
+                            <button id="export-json-btn" title="Download the current parameters as a JSON file">Export JSON</button>
+                            <button id="share-btn" title="Copy a shareable link with the current parameters to the clipboard">Share Preset</button>
+                            <button id="reset-view-btn" title="Reset the 3D view to the default orientation (Shortcut: r)">Reset View</button>
+                            <button id="perf-mode-btn" title="Toggle performance mode (no-op in this sim)">Perf. Mode</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>The state of the qutrit is controlled by two parameters that define the direction of the state vector on the sphere.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Symbol</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Polar Angle</td>
+                        <td>θ (theta)</td>
+                        <td>radians</td>
+                        <td>0.79</td>
+                        <td>[0, π]</td>
+                        <td>Controls the angle from the 'up' direction (the <code>c₂</code> axis). A value of 0 points straight up (pure <code>|-1⟩</code> state), while π points straight down.</td>
+                    </tr>
+                    <tr>
+                        <td>Azimuthal Angle</td>
+                        <td>φ (phi)</td>
+                        <td>radians</td>
+                        <td>0.79</td>
+                        <td>[0, 2π]</td>
+                        <td>Controls the rotation around the 'up' axis (the <code>c₂</code> axis). It determines the mixture between the <code>c₀</code> and <code>c₁</code> components.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4>Worked Examples</h4>
+            <p>Let's see how the angles <code>θ</code> and <code>φ</code> create the state coefficients.
+            <br>If <strong><code>θ = 1.57</code></strong> (π/2) and <strong><code>φ = 0</code></strong>:
+            </p>
+            <ul>
+                <li><code>c₂ = cos(1.57) ≈ 0</code></li>
+                <li><code>sin(1.57) ≈ 1</code></li>
+                <li><code>c₀ = sin(1.57) * cos(0) = 1 * 1 = 1</code></li>
+                <li><code>c₁ = sin(1.57) * sin(0) = 1 * 0 = 0</code></li>
+            </ul>
+            <p>The resulting state is <code>(c₀, c₁, c₂) = (1, 0, 0)</code>, which is the pure <code>|1⟩</code> state.</p>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group">
+                <h4>1. Equal Superposition</h4>
+                <p>This state is an equal mixture of all three basis states, so the probability of measuring <code>|1⟩</code>, <code>|0⟩</code>, or <code>|-1⟩</code> is exactly the same (1/3 or 33.3%).</p>
+                <p><strong>Observe:</strong> The vector points to a location equally angled from all three axes, and the three bars in the probability chart are of equal height.</p>
+                <button onclick="document.getElementById('preset-superposition').click()">Set to Equal Superposition</button>
+            </div>
+            <div class="example-group">
+                <h4>2. Pure |1⟩ State</h4>
+                <p>This is a "basis state" where the qutrit is definitively in the <code>|1⟩</code> state. There is no uncertainty in the measurement outcome.</p>
+                <p><strong>Observe:</strong> The vector points directly along the <code>c₀</code> (x-axis). The probability bar for <code>P(|1⟩)</code> is at 100%, and the others are at 0.</p>
+                <button onclick="document.getElementById('preset-pure-1').click()">Set to Pure |1⟩ State</button>
+            </div>
+            <div class="example-group">
+                <h4>3. A 50/50 Mix of |0⟩ and |-1⟩</h4>
+                <p>This state has zero contribution from the <code>|1⟩</code> state and is an equal mix of the other two.</p>
+                <p><strong>Observe:</strong> The vector lies entirely in the <code>c₁-c₂</code> (y-z) plane. The probability <code>P(|1⟩)</code> is 0, while <code>P(|0⟩)</code> and <code>P(|-1⟩)</code> are both 0.5 (50%). To achieve this, set <strong>θ = π/4 (0.785)</strong> and <strong>φ = π/2 (1.57)</strong>.</p>
+                 <button onclick="window.applyPreset(0.785, 1.57)">Set to 50/50 |0⟩/|-1⟩ Mix</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Changing the Polar Angle (θ)</h4>
+            <p>The <strong>polar angle θ</strong> primarily controls the balance between the <code>|-1⟩</code> state (on the z-axis) and the <code>|1⟩</code>/<code>|0⟩</code> states (in the x-y plane).</p>
+            <ol>
+                <li>Set <code>φ</code> to 0.785 (π/4) and leave it there.</li>
+                <li>Start with <strong>θ = 0</strong>. The vector points up, along the z-axis. Here, <code>c₂ = cos(0) = 1</code>, so <code>P(|-1⟩) = 100%</code>.</li>
+                <li>Now, slide <strong>θ from 0 to 1.57 (π/2)</strong>. As you do, <code>c₂ = cos(θ)</code> decreases, so the <code>P(|-1⟩)</code> probability drops. The vector moves down towards the equator (the x-y plane). The other two probabilities, <code>P(|1⟩)</code> and <code>P(|0⟩)</code>, grow.</li>
+                <li>At <strong>θ = 1.57</strong>, the vector is on the equator. <code>c₂ = cos(π/2) = 0</code>, so <code>P(|-1⟩) = 0%</code>. All the probability is now in <code>P(|1⟩)</code> and <code>P(|0⟩)</code>.</li>
+            </ol>
+            <p><strong>Analogy:</strong> Think of θ as the latitude on a globe. θ=0 is the North Pole (<code>|-1⟩</code> state). θ=π/2 is the equator (a mix of <code>|1⟩</code> and <code>|0⟩</code> states). θ=π is the South Pole.</p>
+
+            <h4>Changing the Azimuthal Angle (φ)</h4>
+            <p>The <strong>azimuthal angle φ</strong> controls the balance *between* the <code>|1⟩</code> state (x-axis) and the <code>|0⟩</code> state (y-axis).</p>
+            <ol>
+                <li>First, set <strong>θ = 1.57 (π/2)</strong> to move the vector to the equator. This makes the effect of φ most clear.</li>
+                <li>Start with <strong>φ = 0</strong>. Here, <code>c₀ = sin(θ)cos(φ) = 1*1=1</code> and <code>c₁ = sin(θ)sin(φ) = 1*0=0</code>. The state is pure <code>|1⟩</code>.</li>
+                <li>Now, slide <strong>φ from 0 to 1.57 (π/2)</strong>. As you do, <code>cos(φ)</code> decreases and <code>sin(φ)</code> increases. The vector swings from the x-axis (<code>c₀</code>) towards the y-axis (<code>c₁</code>). You are trading probability from <code>P(|1⟩)</code> to <code>P(|0⟩)</code>.</li>
+                <li>At <strong>φ = 1.57</strong>, the state is pure <code>|0⟩</code>.</li>
+            </ol>
+            <p><strong>Analogy:</strong> Think of φ as the longitude on a globe. It controls your position around the equator. Changing φ is like walking along the equator, changing your mixture of "x-ness" and "y-ness".</p>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li><strong>Find the pure |0⟩ state:</strong> Adjust the sliders until the probability <code>P(|0⟩)</code> is exactly 1.000. What are the values of θ and φ? (Expected: θ=1.57, φ=1.57).</li>
+                <li><strong>No chance of |-1⟩:</strong> Find any state where the probability of measuring <code>|-1⟩</code> is 0. What is the value of θ? (Expected: θ=1.57, or π/2). Notice that φ can be anything.</li>
+                <li><strong>Equal parts |1⟩ and |-1⟩:</strong> Find a state where <code>P(|1⟩) = 0.5</code> and <code>P(|-1⟩) = 0.5</code>. What must <code>P(|0⟩)</code> be? (Expected: 0). What are the values of θ and φ? (Expected: θ=π/4, φ=0).</li>
+                <li><strong>Maximize <code>P(|0⟩)</code>:</strong> Start from the "Equal Superposition" preset. Which slider do you need to move, and to what value, to maximize the probability of the <code>|0⟩</code> state?</li>
+                <li><strong>From one pole to the other:</strong> Set φ to 0 and slide θ from 0 to π (3.14). Describe the path the vector takes and how the probabilities change.</li>
+                <li><strong>Equatorial trace:</strong> Set θ to 1.57 (π/2) and slide φ through its full range (0 to 2π). What happens to <code>P(|-1⟩)</code>? (Expected: It stays at 0). How do <code>P(|1⟩)</code> and <code>P(|0⟩)</code> behave?</li>
+                <li><strong>Find the antipode:</strong> Start at the pure <code>|1⟩</code> state. The opposite point on the sphere is the "antipode". What state is it? (Expected: Pure <code>|-1⟩</code> is not the antipode. The antipode is at <code>(-c₀, -c₁, -c₂)</code>. For the pure <code>|1⟩</code> state (1,0,0), the antipode is (-1,0,0), which corresponds to θ=π/2, φ=π).</li>
+                <li><strong>A 25/75 split:</strong> Create a state where <code>P(|1⟩) = 0.25</code> and <code>P(|0⟩) = 0.75</code>. What must θ and φ be? (Expected: θ=π/2, φ=π/3 or 1.047 rad).</li>
+            </ol>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>Limitation: Real vs. Complex Numbers</h4>
+            <p>The most significant simplification in this visualization is the use of <strong>real numbers</strong> for the amplitudes <code>c₀, c₁, c₂</code>. In a real quantum system, these are <strong>complex numbers</strong>. A complex number has two parts (a real part and an imaginary part), so a state of three complex amplitudes actually has 6 numerical degrees of freedom. The normalization condition (<code>|c₀|² + |c₁|² + |c₂|² = 1</code>) removes one degree of freedom. Another, called the "global phase," can be ignored, as it has no observable effect. This leaves <strong>four real dimensions</strong> needed to describe a qutrit's state space. Our 3D sphere is a 2D surface, so this visualization is a "slice" of the full 4D space (known as the complex projective space ℂP²).</p>
+            <p>The missing dimensions correspond to the relative phases between the amplitudes. These phases are crucial for quantum interference effects, which are at the heart of many quantum algorithms.</p>
+
+            <h4>Extension: Visualizing Phase</h4>
+            <p>How could one visualize the missing phase information? There are a few ways, but none are perfect.
+            <ul>
+                <li>One could use color to represent the phase of the state vector. For example, the hue of the vector could change as its overall phase changes.</li>
+                <li>One could add more controls, perhaps small dials or sliders, to control the phase angles of <code>c₀</code> and <code>c₁</code> relative to <code>c₂</code>. This would not change the vector's position but would be reflected in a data table.</li>
+            </ul>
+            These extensions add significant complexity, which is why this simulation focuses on the more intuitive real-valued case.</p>
+
+            <h4>Numerical Stability</h4>
+            <p>The calculations in this simulation are simple and numerically stable. The use of spherical coordinates <code>(θ, φ)</code> is an excellent technique to ensure the normalization condition <code>∑cᵢ²=1</code> is always met perfectly, avoiding potential floating-point errors that could arise from manually adjusting three <code>c</code> values and re-normalizing.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. The Ball on a Rigid Rod (Physical Analogy)</h4>
+            <p>Imagine a small ball attached to the center of a room by a rigid, unstretchable rod of length 1. The center of the room is the origin (0,0,0). The three axes of the room are the <code>|1⟩</code>, <code>|0⟩</code>, and <code>|-1⟩</code> states. You can move the ball anywhere, but because the rod has a fixed length, the ball must always be on the surface of a sphere. The position of the ball is the quantum state.</p>
+            <ul>
+                <li><strong>State:</strong> The direction the rod is pointing.</li>
+                <li><strong>Measurement:</strong> Imagine the room has three special light sources, one for each axis. When you "measure," one light flashes, and you look at the length of the shadow the ball casts on that axis's wall. The longer the shadow, the higher the probability of measuring that state.</li>
+                <li><strong>Limitation:</strong> This analogy is great for the vector nature of the state but doesn't capture the concept of phase or superposition in a deep way. The "shadow" metaphor for probability is also just a loose visual guide.</li>
+            </ul>
+
+            <h4>2. The RGB Color Picker (Visualization Analogy)</h4>
+            <p>Think of the three basis states as pure primary colors: <code>|1⟩</code> is pure Red, <code>|0⟩</code> is pure Green, and <code>|-1⟩</code> is pure Blue. A qutrit state is a specific color mixed from these three primaries. The "state" is not the final color itself, but the *recipe* for the mix.</p>
+            <ul>
+                <li><strong>State:</strong> The recipe of percentages, e.g., "50% Red, 25% Green, 25% Blue."</li>
+                <li><strong>Probabilities:</strong> The numbers in the recipe directly correspond to the probabilities. <code>P(Red) = 0.5</code>, <code>P(Green) = 0.25</code>, etc.</li>
+                <li><strong>Sliders:</strong> The sliders are like color mixing controls that let you change the recipe, but they are constrained so the total always adds to 100%.</li>
+                <li><strong>Limitation:</strong> This is a good analogy for probabilities as proportions but completely misses the geometric/vector nature of the state and the crucial role of negative amplitudes and phase. For example, you can't have "negative red" in a color mix, but you can have a negative amplitude.</li>
+            </ul>
+
+            <h4>3. The Loaded Three-Sided Die (Computational Analogy)</h4>
+            <p>This is perhaps the most direct analogy for the measurement process. A qutrit that is about to be measured behaves like a loaded three-sided die.</p>
+            <ul>
+                <li><strong>State:</strong> The set of weights applied to the die's faces. A state where the vector points to <code>(c₀, c₁, c₂)</code> corresponds to a die where the faces have probabilities <code>c₀²</code>, <code>c₁²</code>, and <code>c₂²</code> of landing face-up.</li>
+                <li><strong>Measurement:</strong> The act of rolling the die once and seeing which face it lands on. You only get one outcome out of the three possibilities.</li>
+                <li><strong>Sliders:</strong> The sliders are tools to re-manufacture the die with different internal weights.</li>
+                <li><strong>Limitation:</strong> This analogy is excellent for the probabilistic nature of measurement but doesn't explain *how* the system gets into that state. It treats the state as a classical probability distribution, ignoring the underlying wave-like nature (amplitudes, phase, interference) that makes quantum mechanics unique.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why is the vector always on the surface of a sphere?</dt>
+                <dd>This is a visual representation of the normalization rule in quantum mechanics. The probability of measuring *any* outcome must be 100%. For a qutrit, this means the probabilities of measuring |1⟩, |0⟩, or |-1⟩ must sum to 1. Since these probabilities are the squares of the amplitudes (P(|i⟩) = cᵢ²), we get the condition c₀² + c₁² + c₂² = 1, which is the mathematical equation for a sphere of radius 1.</dd>
+
+                <dt>2. What do θ and φ actually *do*?</dt>
+                <dd>They are a convenient way to control the state while automatically keeping the vector on the sphere. <strong>θ (theta)</strong> is the polar angle, controlling the "latitude"—how much the state is tilted towards the |-1⟩ axis (the "north pole"). <strong>φ (phi)</strong> is the azimuthal angle, controlling the "longitude"—how the state is mixed between the |1⟩ and |0⟩ axes.</dd>
+
+                <dt>3. Is this what a qutrit really "looks like"?</dt>
+                <dd>No. A qutrit doesn't have a physical appearance in this sense. This is an abstract mathematical visualization of its state. Furthermore, it's a simplified visualization. A true qutrit's state space requires 4 dimensions to represent fully, because the amplitudes are complex numbers, not just real numbers.</dd>
+
+                <dt>4. What is the difference between an amplitude and a probability?</dt>
+                <dd>The amplitude (e.g., <code>c₀</code>) is a more fundamental number that can be positive or negative (or complex, in a full simulation). The probability is the square of the amplitude (<code>c₀²</code>). Because it's squared, probability is always a positive number between 0 and 1.</dd>
+
+                <dt>5. Why are the basis states <code>|1⟩, |0⟩, |-1⟩</code>? Why not <code>|0⟩, |1⟩, |2⟩</code>?</dt>
+                <dd>The choice of labels is a convention. For a spin-1 particle, the physically measured values of the spin projection along an axis are +1, 0, and -1 (in units of ħ), so the labels <code>|+1⟩, |0⟩, |-1⟩</code> are physically motivated. Other three-level systems might use different labels.</dd>
+
+                <dt>6. The simulation is blank or not responding. What can I do?</dt>
+                <dd>First, try reloading the page. If that doesn't work, ensure you are using a modern web browser (like Chrome, Firefox, or Edge). If the problem persists, open the browser's developer console (usually by pressing F12), look for any red error messages, and copy them if you need to report a bug. The "Developer Console" at the bottom of this page may also show relevant errors.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Main Simulation Object ---
+            const sim = {
+                // State parameters
+                theta: Math.PI / 4, // polar angle (from Z axis)
+                phi: Math.PI / 4,   // azimuthal angle (from X axis in XY plane)
+                // 3D view parameters
+                rotationX: 0.5,
+                rotationY: -0.5,
+                zoom: 150,
+                // State vector components [c₀, c₁, c₂]
+                c: [0, 0, 0],
+                // Dragging state
+                isDragging: false,
+                lastMouseX: 0,
+                lastMouseY: 0,
+                // Performance
+                frameTimeAvg: 0,
+            };
+
+            // --- DOM Elements ---
+            const elements = {
+                canvas: null, ctx: null,
+                thetaSlider: null, phiSlider: null, thetaValue: null, phiValue: null,
+                presetSuperposition: null, presetPure1: null, presetPure0: null, presetPureNeg1: null,
+                exportPngBtn: null, exportJsonBtn: null, shareBtn: null, resetViewBtn: null, perfModeBtn: null,
+                themeToggleBtn: null, devConsoleHeader: null, devConsoleContent: null, devLog: null,
+                qualityCheckPanel: null, suggestionButtons: null,
+            };
+
+            // --- Initialization ---
+            function init() {
+                getDOMElements();
+                if (!elements.canvas) {
+                    logError("Quality Check Failed: Canvas element #simulation-canvas not found.");
+                    elements.qualityCheckPanel.textContent = "Error: Canvas not found. The simulation cannot run.";
+                    elements.qualityCheckPanel.style.display = 'block';
+                    return;
+                }
+                sim.width = elements.canvas.width;
+                sim.height = elements.canvas.height;
+                elements.ctx = elements.canvas.getContext('2d');
+
+                addEventListeners();
+                loadStateFromURL(); // Load state from URL first
+                updateState();      // Then calculate state
+                updateUI();         // Then update UI to match
+
+                populateMetadata();
+                runQualityChecks();
+                requestAnimationFrame(draw);
+                log("Simulation initialized.");
+            }
+
+            function getDOMElements() {
+                const ids = [
+                    'simulation-canvas', 'theta-slider', 'phi-slider', 'theta-value', 'phi-value',
+                    'preset-superposition', 'preset-pure-1', 'preset-pure-0', 'preset-pure-neg1',
+                    'export-png-btn', 'export-json-btn', 'share-btn', 'reset-view-btn', 'perf-mode-btn', 'theme-toggle-btn',
+                    'dev-console-header', 'dev-console-content', 'dev-log', 'quality-check-panel'
+                ];
+                const camelCaseIds = [
+                    'canvas', 'thetaSlider', 'phiSlider', 'thetaValue', 'phiValue',
+                    'presetSuperposition', 'presetPure1', 'presetPure0', 'presetPureNeg1',
+                    'exportPngBtn', 'exportJsonBtn', 'shareBtn', 'resetViewBtn', 'perfModeBtn', 'themeToggleBtn',
+                    'devConsoleHeader', 'devConsoleContent', 'devLog', 'qualityCheckPanel'
+                ];
+                for(let i=0; i<ids.length; i++) {
+                    elements[camelCaseIds[i]] = document.getElementById(ids[i]);
+                }
+                elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+            }
+
+            // --- Event Listeners ---
+            function addEventListeners() {
+                // Sliders
+                elements.thetaSlider.addEventListener('input', () => {
+                    sim.theta = parseFloat(elements.thetaSlider.value);
+                    updateState();
+                    updateUI();
+                });
+                elements.phiSlider.addEventListener('input', () => {
+                    sim.phi = parseFloat(elements.phiSlider.value);
+                    updateState();
+                    updateUI();
+                });
+
+                // Presets
+                elements.presetSuperposition.addEventListener('click', () => applyPreset(0.955, 0.785)); // acos(1/√3), π/4
+                elements.presetPure1.addEventListener('click', () => applyPreset(Math.PI / 2, 0));
+                elements.presetPure0.addEventListener('click', () => applyPreset(Math.PI / 2, Math.PI / 2));
+                elements.presetPureNeg1.addEventListener('click', () => applyPreset(0, 0));
+
+                // Actions
+                elements.resetViewBtn.addEventListener('click', resetView);
+                elements.exportPngBtn.addEventListener('click', exportPNG);
+                elements.exportJsonBtn.addEventListener('click', exportJSON);
+                elements.shareBtn.addEventListener('click', shareState);
+                elements.perfModeBtn.addEventListener('click', () => {
+                    log('Performance mode toggled. (This is a demonstration button and has no effect in this lightweight simulation).');
+                    elements.perfModeBtn.classList.toggle('active');
+                });
+
+                // Meta
+                elements.themeToggleBtn.addEventListener('click', toggleTheme);
+                elements.devConsoleHeader.addEventListener('click', () => elements.devConsoleContent.classList.toggle('open'));
+                document.addEventListener('keydown', handleKeyPress);
+
+                // Canvas interaction
+                elements.canvas.addEventListener('mousedown', (e) => {
+                    sim.isDragging = true;
+                    sim.lastMouseX = e.clientX;
+                    sim.lastMouseY = e.clientY;
+                    elements.canvas.style.cursor = 'grabbing';
+                });
+                ['mouseup', 'mouseleave'].forEach(evt => elements.canvas.addEventListener(evt, () => {
+                    sim.isDragging = false;
+                    elements.canvas.style.cursor = 'grab';
+                }));
+                elements.canvas.addEventListener('mousemove', (e) => {
+                    if (!sim.isDragging) return;
+                    const dx = e.clientX - sim.lastMouseX;
+                    const dy = e.clientY - sim.lastMouseY;
+                    sim.rotationY += dx * 0.01;
+                    sim.rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, sim.rotationX + dy * 0.01));
+                    sim.lastMouseX = e.clientX;
+                    sim.lastMouseY = e.clientY;
+                });
+                elements.canvas.style.cursor = 'grab';
+            }
+
+            // --- State and UI Management ---
+            function updateState() {
+                sim.c[0] = Math.sin(sim.theta) * Math.cos(sim.phi);
+                sim.c[1] = Math.sin(sim.theta) * Math.sin(sim.phi);
+                sim.c[2] = Math.cos(sim.theta);
+            }
+
+            function updateUI() {
+                elements.thetaSlider.value = sim.theta;
+                elements.thetaValue.textContent = sim.theta.toFixed(2);
+                elements.phiSlider.value = sim.phi;
+                elements.phiValue.textContent = sim.phi.toFixed(2);
+            }
+
+            window.applyPreset = function(theta, phi) {
+                sim.theta = theta;
+                sim.phi = phi;
+                updateState();
+                updateUI();
+                log(`Applied preset: θ=${theta.toFixed(3)}, φ=${phi.toFixed(3)}`);
+            }
+
+            function resetView() {
+                sim.rotationX = 0.5;
+                sim.rotationY = -0.5;
+                sim.zoom = 150;
+                log("View reset.");
+            }
+
+            // --- Actions ---
+            function exportPNG() {
+                const url = elements.canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `qutrit_state_t${sim.theta.toFixed(2)}_p${sim.phi.toFixed(2)}.png`;
+                link.href = url;
+                link.click();
+                log("Exported PNG.");
+            }
+
+            function exportJSON() {
+                const state = {
+                    theta: sim.theta, phi: sim.phi,
+                    view: { rotationX: sim.rotationX, rotationY: sim.rotationY, zoom: sim.zoom }
+                };
+                const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = 'qutrit_preset.json';
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
+                log("Exported JSON.");
+            }
+
+            function shareState() {
+                const state = {
+                    t: sim.theta.toFixed(3), p: sim.phi.toFixed(3),
+                    rx: sim.rotationX.toFixed(3), ry: sim.rotationY.toFixed(3), z: sim.zoom.toFixed(0)
+                };
+                const encoded = btoa(JSON.stringify(state));
+                const url = `${window.location.origin}${window.location.pathname}#params=${encoded}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    const originalText = elements.shareBtn.textContent;
+                    elements.shareBtn.textContent = 'Copied!';
+                    setTimeout(() => { elements.shareBtn.textContent = originalText; }, 2000);
+                    log("Copied share link to clipboard.");
+                }, err => logError("Failed to copy link: " + err));
+            }
+
+            function loadStateFromURL() {
+                if (!window.location.hash.startsWith('#params=')) return;
+                try {
+                    const encoded = window.location.hash.substring(8);
+                    const state = JSON.parse(atob(encoded));
+                    sim.theta = parseFloat(state.t);
+                    sim.phi = parseFloat(state.p);
+                    sim.rotationX = parseFloat(state.rx);
+                    sim.rotationY = parseFloat(state.ry);
+                    sim.zoom = parseFloat(state.z);
+                    log("Loaded state from URL.");
+                } catch (e) {
+                    logError("Failed to load state from URL: " + e.message);
+                }
+            }
+
+            function handleKeyPress(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                const keyMap = { 'r': resetView, 'e': exportPNG,
+                    '1': () => elements.presetSuperposition.click(),
+                    '2': () => elements.presetPure1.click(),
+                    '3': () => elements.presetPure0.click(),
+                    '4': () => elements.presetPureNeg1.click(),
+                };
+                if (keyMap[e.key]) {
+                    e.preventDefault();
+                    keyMap[e.key]();
+                }
+            }
+
+            function toggleTheme() {
+                document.body.classList.toggle('high-contrast');
+                log(`Toggled theme to ${document.body.classList.contains('high-contrast') ? 'high contrast' : 'default'}.`);
+            }
+
+            // --- 3D Rendering ---
+            const project = (() => {
+                const rotCache = { cosY: 0, sinY: 0, cosX: 0, sinX: 0 };
+                let lastRotX = null, lastRotY = null;
+
+                return function(point3d) {
+                    if (sim.rotationX !== lastRotX || sim.rotationY !== lastRotY) {
+                        rotCache.cosY = Math.cos(sim.rotationY);
+                        rotCache.sinY = Math.sin(sim.rotationY);
+                        rotCache.cosX = Math.cos(sim.rotationX);
+                        rotCache.sinX = Math.sin(sim.rotationX);
+                        lastRotX = sim.rotationX;
+                        lastRotY = sim.rotationY;
+                    }
+
+                    let {x, y, z} = point3d;
+                    let rotY_x = rotCache.cosY * x - rotCache.sinY * z;
+                    let rotY_z = rotCache.sinY * x + rotCache.cosY * z;
+                    let rotX_y = rotCache.cosX * y - rotCache.sinX * rotY_z;
+                    let rotX_z = rotCache.sinX * y + rotCache.cosX * rotY_z;
+
+                    let scale = sim.zoom / (sim.zoom + rotX_z + 5);
+                    return {
+                        x: sim.width / 2 + rotY_x * scale,
+                        y: sim.height / 2 - rotX_y * scale,
+                    };
+                }
+            })();
+
+            function drawLine(p1, p2, color, lineWidth = 1) {
+                const p1_2d = project(p1);
+                const p2_2d = project(p2);
+                elements.ctx.beginPath();
+                elements.ctx.moveTo(p1_2d.x, p1_2d.y);
+                elements.ctx.lineTo(p2_2d.x, p2_2d.y);
+                elements.ctx.strokeStyle = color;
+                elements.ctx.lineWidth = lineWidth;
+                elements.ctx.stroke();
+            }
+
+            function drawText(text, p3d, color, font = "14px Arial") {
+                const p2d = project(p3d);
+                elements.ctx.fillStyle = color;
+                elements.ctx.font = font;
+                elements.ctx.textAlign = "center";
+                elements.ctx.textBaseline = "middle";
+                elements.ctx.fillText(text, p2d.x, p2d.y);
+            }
+
+            function drawAxes(colors) {
+                const axisLength = 1.5;
+                elements.ctx.setLineDash([5, 5]);
+                drawLine({x:0, y:0, z:0}, {x:-axisLength, y:0, z:0}, colors.axes, 0.5);
+                drawLine({x:0, y:0, z:0}, {x:0, y:-axisLength, z:0}, colors.axes, 0.5);
+                drawLine({x:0, y:0, z:0}, {x:0, y:0, z:-axisLength}, colors.axes, 0.5);
+                elements.ctx.setLineDash([]);
+
+                drawLine({x:0, y:0, z:0}, {x:axisLength, y:0, z:0}, colors.axes, 2);
+                drawText("c₀ |1⟩", {x: axisLength + 0.3, y: 0, z: 0}, colors.text);
+                drawLine({x:0, y:0, z:0}, {x:0, y:axisLength, z:0}, colors.axes, 2);
+                drawText("c₁ |0⟩", {x: 0, y: axisLength + 0.3, z: 0}, colors.text);
+                drawLine({x:0, y:0, z:0}, {x:0, y:0, z:axisLength}, colors.axes, 2);
+                drawText("c₂ |-1⟩", {x: 0, y: 0, z: axisLength + 0.3}, colors.text);
+            }
+
+            function drawStateVector(colors) {
+                const vectorHead = { x: sim.c[0], y: sim.c[1], z: sim.c[2] };
+                drawLine({x:0,y:0,z:0}, vectorHead, colors.vector, 3);
+                const p2d = project(vectorHead);
+                elements.ctx.beginPath();
+                elements.ctx.arc(p2d.x, p2d.y, 5, 0, 2 * Math.PI);
+                elements.ctx.fillStyle = colors.vector;
+                elements.ctx.fill();
+            }
+
+            function drawProbabilities(colors) {
+                const barWidth = 40, barSpacing = 20, maxHeight = 100;
+                const startX = 20, startY = sim.height - 20;
+                const probs = [sim.c[0]**2, sim.c[1]**2, sim.c[2]**2];
+                const labels = ["P(|1⟩)", "P(|0⟩)", "P(|-1⟩)"];
+
+                elements.ctx.textAlign = "center";
+                elements.ctx.font = "12px Arial";
+                elements.ctx.strokeStyle = colors.text;
+                elements.ctx.lineWidth = 1;
+                elements.ctx.beginPath();
+                elements.ctx.moveTo(startX - 10, startY);
+                elements.ctx.lineTo(startX + 3 * (barWidth + barSpacing), startY);
+                elements.ctx.stroke();
+
+                for (let i = 0; i < 3; i++) {
+                    const barHeight = probs[i] * maxHeight;
+                    const x = startX + i * (barWidth + barSpacing);
+                    elements.ctx.fillStyle = colors.probBar;
+                    elements.ctx.fillRect(x, startY - barHeight, barWidth, barHeight);
+                    elements.ctx.fillStyle = colors.text;
+                    elements.ctx.fillText(labels[i], x + barWidth / 2, startY + 15);
+                    elements.ctx.fillText(probs[i].toFixed(3), x + barWidth / 2, startY - barHeight - 5);
+                }
+                elements.ctx.textAlign = "start";
+            }
+
+            // --- Main Draw Loop ---
+            function draw() {
+                const startTime = performance.now();
+                const isHighContrast = document.body.classList.contains('high-contrast');
+                const colors = isHighContrast ? {
+                    bg: '#000000', axes: '#aaaaaa', vector: '#ff8888', text: '#ffffff', probBar: '#00ffff'
+                } : {
+                    bg: '#ffffff', axes: '#888888', vector: '#d9534f', text: '#000000', probBar: '#007bff'
+                };
+
+                elements.ctx.clearRect(0, 0, sim.width, sim.height);
+                elements.ctx.fillStyle = colors.bg;
+                elements.ctx.fillRect(0, 0, sim.width, sim.height);
+                drawAxes(colors);
+                drawStateVector(colors);
+                drawProbabilities(colors);
+
+                const endTime = performance.now();
+                updatePerfMeter(endTime - startTime);
+
+                requestAnimationFrame(draw);
+            }
+
+            // --- Utility & Quality ---
+            function populateMetadata() {
+                const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+                const htmlSizeKB = (htmlSize / 1024).toFixed(1);
+                const sizeSpan = document.getElementById('html-size');
+                if (sizeSpan) {
+                    sizeSpan.textContent = `Size: ${htmlSizeKB} KB`;
+                }
+
+                elements.suggestionButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const pref = button.dataset.pref;
+                        const value = button.dataset.value;
+                        button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                        button.classList.add('selected');
+                        log(`User preference selected: ${pref}=${value}. (Note: This is a demo and does not alter the content).`);
+                    });
+                });
+            }
+
+            function updatePerfMeter(drawTime) {
+                sim.frameTimeAvg = sim.frameTimeAvg * 0.95 + drawTime * 0.05;
+                const perfMeter = document.getElementById('performance-meter');
+                if (perfMeter) {
+                    perfMeter.textContent = `Draw Time: ${sim.frameTimeAvg.toFixed(2)}ms`;
+                }
+            }
+
+            function log(message) {
+                if (elements.devLog) {
+                    const li = document.createElement('li');
+                    li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                    elements.devLog.prepend(li);
+                }
+            }
+            function logError(message) {
+                if (elements.devLog) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`;
+                    elements.devLog.prepend(li);
+                }
+                console.error(message);
+            }
+
+            function runQualityChecks() {
+                let errors = [];
+                for (const key in elements) {
+                    if (elements[key] === null && key !== 'ctx') { // ctx is derived
+                        errors.push(`Required element with ID '#${key.replace(/([A-Z])/g, "-$1").toLowerCase()}' not found.`);
+                    }
+                }
+                if (typeof(btoa) === 'undefined') {
+                    errors.push('The btoa function is not defined, "Share" button may not work.');
+                }
+                if (errors.length > 0) {
+                    elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                    elements.qualityCheckPanel.style.display = 'block';
+                } else {
+                    log("Quality checks passed.");
+                }
+            }
+
+            // --- Start Simulation ---
+            init();
+        });
+    </script>
+</body>
+</html>
