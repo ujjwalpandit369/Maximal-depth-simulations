@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relative Velocity: River Crossing</title>
+    <style>
+        :root {
+            --bg-color: #e3f2fd;
+            --text-color: #0d47a1;
+            --header-color: #0d47a1;
+            --accent-color: #1976d2;
+            --accent-hover: #1565c0;
+            --control-bg: #fff;
+            --control-border: #bbdefb;
+            --canvas-bg: #e3f2fd;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #1565c0; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 500px; }
+        .sim-canvas { width: 100%; height: 100%; background-color: #42a5f5; border-radius: 4px; }
+        .controls { padding: 10px; border-left: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1.5em; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; width: 100%; }
+        button:hover { background-color: var(--accent-hover); }
+        .readouts { margin-top: 20px; font-weight: bold; }
+
+        @media (max-width: 900px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Relative Velocity: River Crossing</h1>
+            <p class="subtitle">A classic physics problem demonstrating vector addition.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>If a boat points straight across a river, it won't land directly on the other side; the current will carry it downstream. To travel straight across, the boat must point partially upstream to counteract the river's flow. This is a classic problem of relative velocity, where the boat's final path is the vector sum of its own velocity relative to the water and the water's velocity relative to the ground. This simulation lets you explore this concept by setting the boat's speed, heading, and the river's current, then visualizing the resulting path and the underlying vectors.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="v-boat-slider">Boat Speed (v_boat): <span id="v-boat-value">5</span> m/s</label>
+                    <input type="range" id="v-boat-slider" min="1" max="10" step="0.5" value="5">
+                </div>
+                <div class="control-group">
+                    <label for="v-river-slider">River Speed (v_current): <span id="v-river-value">2</span> m/s</label>
+                    <input type="range" id="v-river-slider" min="0" max="10" step="0.5" value="2">
+                </div>
+                <div class="control-group">
+                    <label for="angle-slider">Boat Heading (θ): <span id="angle-value">90</span>°</label>
+                    <input type="range" id="angle-slider" min="0" max="180" step="1" value="90">
+                </div>
+                <button id="go-btn">Go!</button>
+                <div class="readouts">
+                    <p>Time to Cross: <span id="time-value">--</span> s</p>
+                    <p>Downstream Drift: <span id="drift-value">--</span> m</p>
+                </div>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>Vector Addition in Action</h2>
+            <p>The boat's motion is governed by a simple vector equation:</p>
+            <code>v_ground = v_boat + v_current</code>
+            <ul>
+                <li><code>v_boat</code> (blue vector) is the velocity of the boat with respect to the water. Its direction is the "heading" you set with the slider.</li>
+                <li><code>v_current</code> (gray vector) is the velocity of the water with respect to the ground. It always points downstream.</li>
+                <li><code>v_ground</code> (red vector) is the velocity of the boat with respect to the ground. This is the vector sum of the other two, and it represents the boat's actual path.</li>
+            </ul>
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li><strong>Go Straight Across:</strong> Set the boat speed to 5 m/s and the river speed to 3 m/s. What heading angle (θ) do you need to set so the boat travels straight across the river with zero downstream drift? (Hint: The upstream component of the boat's velocity must cancel out the river's velocity).</li>
+                <li><strong>Fastest Crossing:</strong> At what heading angle does the boat cross the river in the shortest amount of time? Does the river's speed affect this? (Hint: The time to cross depends only on the component of the boat's velocity that is perpendicular to the banks).</li>
+                <li><strong>Upstream Battle:</strong> Set the boat speed to 4 m/s and the river speed to 5 m/s. Is it possible to travel upstream (i.e., land at a point to the left of where you started)? Why or why not?</li>
+            </ol>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            vBoat: document.getElementById('v-boat-slider'),
+            vRiver: document.getElementById('v-river-slider'),
+            angle: document.getElementById('angle-slider'),
+            go: document.getElementById('go-btn'),
+        };
+        const values = {
+            vBoat: document.getElementById('v-boat-value'),
+            vRiver: document.getElementById('v-river-value'),
+            angle: document.getElementById('angle-value'),
+            time: document.getElementById('time-value'),
+            drift: document.getElementById('drift-value'),
+        };
+
+        let boat = { x: 0, y: 0, isMoving: false };
+        let path = [];
+        let config = {};
+
+        function updateConfig() {
+            config.vBoat = parseFloat(controls.vBoat.value);
+            config.vRiver = parseFloat(controls.vRiver.value);
+            config.angle = parseFloat(controls.angle.value);
+            values.vBoat.textContent = config.vBoat.toFixed(1);
+            values.vRiver.textContent = config.vRiver.toFixed(1);
+            values.angle.textContent = config.angle.toFixed(0);
+        }
+
+        function reset() {
+            boat.x = width / 2;
+            boat.y = height - 20;
+            boat.isMoving = false;
+            path = [{x: boat.x, y: boat.y}];
+            values.time.textContent = '--';
+            values.drift.textContent = '--';
+            draw();
+        }
+
+        function drawVector(x, y, vx, vy, color, label) {
+            const scale = 15;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + vx * scale, y - vy * scale);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.fillText(label, x + vx*scale + 5, y - vy*scale);
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,width,height);
+            // Draw river banks
+            ctx.fillStyle = '#a5d6a7';
+            ctx.fillRect(0,0,width,10);
+            ctx.fillRect(0,height-10,width,10);
+
+            // Draw boat path
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for(let i=1; i<path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+
+            // Draw boat
+            ctx.fillStyle = '#795548';
+            ctx.save();
+            ctx.translate(boat.x, boat.y);
+            ctx.rotate(-config.angle * Math.PI / 180 + Math.PI/2);
+            ctx.beginPath();
+            ctx.moveTo(0, -15);
+            ctx.lineTo(-8, 10);
+            ctx.lineTo(8, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // Draw vectors
+            const angleRad = config.angle * Math.PI / 180;
+            const vBoat_x = config.vBoat * Math.cos(angleRad);
+            const vBoat_y = config.vBoat * Math.sin(angleRad);
+            const vGround_x = vBoat_x + config.vRiver;
+            const vGround_y = vBoat_y;
+
+            ctx.font = '14px sans-serif';
+            drawVector(boat.x, boat.y, vBoat_x, vBoat_y, '#0d47a1', 'v_boat');
+            drawVector(boat.x, boat.y, config.vRiver, 0, '#9e9e9e', 'v_current');
+            drawVector(boat.x, boat.y, vGround_x, vGround_y, '#d32f2f', 'v_ground');
+        }
+
+        function animate() {
+            if (boat.isMoving) {
+                const angleRad = config.angle * Math.PI / 180;
+                const vBoat_y = config.vBoat * Math.sin(angleRad);
+                if(vBoat_y <= 0) { // boat is not heading towards other bank
+                    boat.isMoving = false;
+                    return;
+                }
+
+                const vGround_x = config.vBoat * Math.cos(angleRad) + config.vRiver;
+
+                boat.x += vGround_x * 0.1;
+                boat.y -= vBoat_y * 0.1;
+                path.push({x: boat.x, y: boat.y});
+
+                if (boat.y <= 20) {
+                    boat.isMoving = false;
+                    const time = (height - 30) / (vBoat_y * 5); // 5 is a scaling factor
+                    const drift = (boat.x - width/2);
+                    values.time.textContent = time.toFixed(2);
+                    values.drift.textContent = drift.toFixed(2);
+                }
+            }
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        controls.go.addEventListener('click', () => {
+            reset();
+            boat.isMoving = true;
+        });
+
+        Object.values(controls).forEach(c => c.addEventListener('input', updateConfig));
+        window.addEventListener('resize', () => {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            reset();
+        });
+
+        updateConfig();
+        reset();
+        animate();
+    });
+    </script>
+</body>
+</html>

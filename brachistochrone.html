@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Brachistochrone Problem</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --header-color: #f57c00;
+            --accent-color: #ffa726;
+            --accent-hover: #fb8c00;
+            --control-bg: #fff;
+            --control-border: #eee;
+            --canvas-bg: #fffde7;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { text-align: center; }
+        .control-group { display: inline-block; margin: 0 15px; }
+
+        .readouts { display: flex; justify-content: space-around; font-weight: bold; font-size: 1.2em; width: 100%; max-width: 800px;}
+        #winner-text { font-size: 1.5em; color: var(--header-color); height: 2em; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Brachistochrone Problem</h1>
+            <p class="subtitle">Finding the path of fastest descent.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>What is the fastest path for an object to slide under gravity from a point A to a lower point B? Your first instinct might be a straight line, as it's the shortest distance. However, the solution to this famous problem, posed by Johann Bernoulli in 1696, is a curve called a <strong>brachistochrone</strong>, which turns out to be a segment of a <strong>cycloid</strong>. This simulation lets you race two balls, one on a straight ramp and one on the brachistochrone curve. Despite traveling a longer distance, the ball on the cycloid curve wins every time.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <div class="readouts">
+                <div>Straight Ramp Time: <span id="time-straight">0.00</span>s</div>
+                <div id="winner-text"></div>
+                <div>Cycloid Curve Time: <span id="time-cycloid">0.00</span>s</div>
+            </div>
+            <div class="controls">
+                 <div class="control-group">
+                    <label for="h-slider">Vertical Drop: <span id="h-value">0.5</span></label>
+                    <input type="range" id="h-slider" min="0.1" max="0.9" step="0.05" value="0.5">
+                </div>
+                <button id="race-btn">Race!</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>Why the Curve is Faster</h2>
+            <p>The straight line is the shortest path, but it's not the smartest. The ball on the straight ramp has a relatively slow, constant acceleration. The ball on the cycloid curve, however, uses a different strategy: it takes a steep dive at the beginning. This initial plunge allows it to convert its potential energy into kinetic energy much more quickly, building up a very high speed early in the race. Even though it has to climb back up at the end and travels a longer total distance, the high average speed it maintains for most of the journey allows it to easily beat the ball on the straight path.</p>
+
+            <h3>Analogy: The City vs. Highway</h3>
+            <p>Imagine you need to travel between two points in a city. The straight-line path might go directly through the city center, with lots of traffic lights and low speed limits (like the straight ramp). An alternative route might be to take a short road to a highway that loops around the city, then another short road back to your destination. The highway path is much longer, but you can travel at a much higher average speed. If the time saved by the high speed outweighs the extra distance, the highway route will be faster. The brachistochrone curve is the perfectly optimized "highway" for a falling object.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            h: document.getElementById('h-slider'),
+            race: document.getElementById('race-btn'),
+        };
+        const values = {
+            h: document.getElementById('h-value'),
+            timeStraight: document.getElementById('time-straight'),
+            timeCycloid: document.getElementById('time-cycloid'),
+            winner: document.getElementById('winner-text'),
+        };
+
+        let state = { h_ratio: 0.5, isRacing: false };
+        let paths = { straight: [], cycloid: [] };
+        let balls = { straight: { pos: 0, v: 0, time: 0, finished: false }, cycloid: { pos: 0, v: 0, time: 0, finished: false } };
+        const g = 9.8;
+
+        function solveCycloidParams(x_b, y_b) {
+            // Numerical solution to find the radius r and angle theta_b for the cycloid
+            let theta_b = Math.PI;
+            for(let i=0; i<10; i++) { // Newton-Raphson iteration
+                let f = theta_b - Math.sin(theta_b) - x_b * (1 - Math.cos(theta_b)) / y_b;
+                let df = 1 - Math.cos(theta_b) + (x_b/y_b) * Math.sin(theta_b);
+                theta_b -= f / df;
+            }
+            const r = y_b / (1 - Math.cos(theta_b));
+            return { r, theta_b };
+        }
+
+        function generatePaths() {
+            const w = width, h = height;
+            const start = { x: w * 0.1, y: h * 0.1 };
+            const end = { x: w * 0.9, y: h * (0.1 + state.h_ratio * 0.8) };
+
+            // Straight path
+            paths.straight = [start, end];
+
+            // Cycloid path
+            paths.cycloid = [];
+            const { r, theta_b } = solveCycloidParams(end.x - start.x, end.y - start.y);
+            if (!r || !theta_b || r < 0) return;
+
+            for (let theta = 0; theta <= theta_b; theta += 0.02) {
+                const x = start.x + r * (theta - Math.sin(theta));
+                const y = start.y + r * (1 - Math.cos(theta));
+                paths.cycloid.push({ x, y });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,width,height);
+
+            // Draw paths
+            ctx.strokeStyle = '#9e9e9e';
+            ctx.lineWidth = 4;
+            // Straight
+            ctx.beginPath();
+            ctx.moveTo(paths.straight[0].x, paths.straight[0].y);
+            ctx.lineTo(paths.straight[1].x, paths.straight[1].y);
+            ctx.stroke();
+            // Cycloid
+            ctx.beginPath();
+            ctx.moveTo(paths.cycloid[0].x, paths.cycloid[0].y);
+            for(let i=1; i<paths.cycloid.length; i++) {
+                ctx.lineTo(paths.cycloid[i].x, paths.cycloid[i].y);
+            }
+            ctx.stroke();
+
+            // Draw balls
+            const p_s = paths.straight[0];
+            const p_c = paths.cycloid[Math.floor(balls.cycloid.pos)];
+
+            ctx.fillStyle = '#d32f2f';
+            ctx.beginPath();
+            ctx.arc(p_s.x + (paths.straight[1].x-p_s.x)*balls.straight.pos, p_s.y + (paths.straight[1].y-p_s.y)*balls.straight.pos, 10, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.fillStyle = '#0d47a1';
+            ctx.beginPath();
+            if(p_c) ctx.arc(p_c.x, p_c.y, 10, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        function update(dt) {
+            if (!state.isRacing) return;
+
+            // Straight line physics
+            if (!balls.straight.finished) {
+                const start = paths.straight[0];
+                const end = paths.straight[1];
+                const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                const acc = g * Math.sin(angle);
+                balls.straight.v += acc * dt;
+                balls.straight.pos += balls.straight.v * dt / Math.hypot(end.x-start.x, end.y-start.y);
+                balls.straight.time += dt;
+                if (balls.straight.pos >= 1) {
+                    balls.straight.pos = 1;
+                    balls.straight.finished = true;
+                    if(!balls.cycloid.finished) values.winner.textContent = "Straight Ramp Wins!? (This shouldn't happen)";
+                }
+                values.timeStraight.textContent = balls.straight.time.toFixed(2);
+            }
+
+            // Cycloid physics
+            if (!balls.cycloid.finished) {
+                const currentPoint = paths.cycloid[Math.floor(balls.cycloid.pos)];
+                const startPoint = paths.cycloid[0];
+                if(currentPoint) {
+                    const y = currentPoint.y - startPoint.y;
+                    balls.cycloid.v = Math.sqrt(2 * g * y);
+                    balls.cycloid.pos += balls.cycloid.v * dt * 0.5; // 0.5 is scaling factor
+                    balls.cycloid.time += dt;
+                }
+                if (Math.floor(balls.cycloid.pos) >= paths.cycloid.length - 1) {
+                    balls.cycloid.pos = paths.cycloid.length - 1;
+                    balls.cycloid.finished = true;
+                    if(!balls.straight.finished) values.winner.textContent = "Cycloid Wins!";
+                }
+                values.timeCycloid.textContent = balls.cycloid.time.toFixed(2);
+            }
+
+            if (balls.straight.finished && balls.cycloid.finished) {
+                state.isRacing = false;
+            }
+        }
+
+        let lastTime = 0;
+        function animate(time) {
+            if (!lastTime) lastTime = time;
+            const deltaTime = (time - lastTime) / 1000;
+            lastTime = time;
+
+            update(deltaTime);
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        function reset() {
+            state.isRacing = false;
+            balls = { straight: { pos: 0, v: 0, time: 0, finished: false }, cycloid: { pos: 0, v: 0, time: 0, finished: false } };
+            values.timeStraight.textContent = "0.00";
+            values.timeCycloid.textContent = "0.00";
+            values.winner.textContent = "";
+            generatePaths();
+            draw();
+        }
+
+        controls.race.addEventListener('click', () => {
+            reset();
+            state.isRacing = true;
+            lastTime = 0;
+        });
+        controls.h.addEventListener('input', e => {
+            state.h_ratio = parseFloat(e.target.value);
+            values.h.textContent = state.h_ratio.toFixed(2);
+            reset();
+        });
+
+        window.addEventListener('resize', () => {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            reset();
+        });
+
+        reset();
+        requestAnimationFrame(animate);
+    });
+    </script>
+</body>
+</html>

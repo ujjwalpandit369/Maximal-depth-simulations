@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centripetal Force on a String</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #d81b60;
+            --accent-color: #ec407a;
+            --accent-hover: #d81b60;
+            --control-bg: #fff;
+            --control-border: #f8bbd0;
+            --canvas-bg: #fce4ec;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 400px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .controls { padding: 10px; border-left: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1.5em; }
+
+        button { background-color: var(--header-color); color: white; border: none; padding: 15px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; width: 100%; margin-top: 10px; }
+        button:hover { background-color: var(--accent-hover); }
+        .readout { text-align: center; font-weight: bold; font-size: 1.4em; margin-top: 20px; }
+        .readout span { color: var(--header-color); font-family: monospace; }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Centripetal Force on a String</h1>
+            <p class="subtitle">An interactive demonstration of circular motion and inertia.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>An object moving in a circle is constantly changing direction, which means it is constantly accelerating, even if its speed is constant. According to Newton's Second Law, an acceleration requires a net force. The force that causes this circular acceleration is called the <strong>centripetal force</strong>, and it always points towards the center of the circle. In this simulation, a ball is whirled on a string. The tension in the string provides the centripetal force. Explore how mass, speed, and radius affect the required force, and see what happens to the ball when that force is suddenly removed.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="mass-slider">Mass (m): <span id="mass-value">1.0</span> kg</label>
+                    <input type="range" id="mass-slider" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+                 <div class="control-group">
+                    <label for="radius-slider">String Length (r): <span id="radius-value">1.5</span> m</label>
+                    <input type="range" id="radius-slider" min="0.5" max="2.5" step="0.1" value="1.5">
+                </div>
+                <div class="control-group">
+                    <label for="omega-slider">Angular Velocity (ω): <span id="omega-value">2.0</span> rad/s</label>
+                    <input type="range" id="omega-slider" min="0.5" max="5" step="0.1" value="2.0">
+                </div>
+                <div class="readout">
+                    Tension Force:<br><span id="force-value">6.0</span> N
+                </div>
+                <button id="break-btn">Break String</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Physics of Circular Motion</h2>
+            <h3>Centripetal Force is Not a "New" Force</h3>
+            <p>It's important to understand that centripetal force is not a fundamental force of nature like gravity or electromagnetism. It is simply the <em>net force</em> required to keep an object in circular motion. This force can be provided by many things: the tension in a string, the force of gravity holding a planet in orbit, or the friction between a car's tires and the road in a turn. In this simulation, the tension is the centripetal force.</p>
+
+            <h3>The Governing Equation</h3>
+            <p>The magnitude of the required centripetal force is given by:</p>
+            <code>Fc = m * a_c = m * ω² * r</code>
+            <ul>
+                <li><code>Fc</code> is the <strong>Centripetal Force</strong> in Newtons (N).</li>
+                <li><code>m</code> is the <strong>mass</strong> of the object. A heavier object requires more force to turn.</li>
+                <li><code>ω</code> (omega) is the <strong>angular velocity</strong> in radians per second. A faster spin requires exponentially more force.</li>
+                <li><code>r</code> is the <strong>radius</strong> of the circle. A larger circle also requires more force for the same angular velocity.</li>
+            </ul>
+
+            <h3>What Happens When the String Breaks?</h3>
+            <p>Click the "Break String" button to see Newton's First Law (the Law of Inertia) in action. At the moment the string breaks, the centripetal force (tension) instantly drops to zero. With no net force acting on it, the ball no longer accelerates. It continues to move in a straight line with whatever velocity it had at that instant, which is always tangent to the circle. It does not fly straight outwards from the center.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            mass: document.getElementById('mass-slider'),
+            radius: document.getElementById('radius-slider'),
+            omega: document.getElementById('omega-slider'),
+            break: document.getElementById('break-btn'),
+            reset: document.getElementById('reset-btn'),
+        };
+        const values = {
+            mass: document.getElementById('mass-value'),
+            radius: document.getElementById('radius-value'),
+            omega: document.getElementById('omega-value'),
+            force: document.getElementById('force-value'),
+        };
+
+        let state = { m: 1.0, r: 1.5, omega: 2.0, angle: 0, stringBroken: false };
+        const scale = 80; // pixels per meter
+
+        function updateConfig() {
+            state.m = parseFloat(controls.mass.value);
+            state.r = parseFloat(controls.radius.value);
+            state.omega = parseFloat(controls.omega.value);
+
+            values.mass.textContent = state.m.toFixed(1);
+            values.radius.textContent = state.r.toFixed(1);
+            values.omega.textContent = state.omega.toFixed(1);
+
+            const force = state.m * Math.pow(state.omega, 2) * state.r;
+            values.force.textContent = `${force.toFixed(1)}`;
+        }
+
+        let ball = { x: 0, y: 0, vx: 0, vy: 0 };
+
+        function reset() {
+            state.angle = 0;
+            state.stringBroken = false;
+            updateConfig();
+        }
+
+        function animate() {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            if (state.stringBroken) {
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+            } else {
+                state.angle += state.omega * 0.016; // 60fps
+                const radius_px = state.r * scale;
+                ball.x = centerX + Math.cos(state.angle) * radius_px;
+                ball.y = centerY + Math.sin(state.angle) * radius_px;
+
+                // For tangent calculation
+                const tangential_angle = state.angle + Math.PI / 2;
+                const v = state.omega * state.r;
+                ball.vx = Math.cos(tangential_angle) * v * 0.5; // 0.5 is visual scaling
+                ball.vy = Math.sin(tangential_angle) * v * 0.5;
+
+                // Draw string
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(ball.x, ball.y);
+                ctx.stroke();
+            }
+
+            // Draw ball
+            const ballRadius = 5 + state.m * 5;
+            ctx.fillStyle = '#d81b60';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            requestAnimationFrame(animate);
+        }
+
+        controls.break.addEventListener('click', () => {
+            if (!state.stringBroken) {
+                state.stringBroken = true;
+            }
+        });
+
+        controls.reset.addEventListener('click', reset);
+        Object.values(controls).forEach(c => c.addEventListener('input', updateConfig));
+
+        updateConfig();
+        animate();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foucault Pendulum</title>
+    <style>
+        :root {
+            --bg-color: #1a237e;
+            --text-color: #e8eaf6;
+            --header-color: #8c9eff;
+            --accent-color: #536dfe;
+            --accent-hover: #3d5afe;
+            --control-bg: #283593;
+            --control-border: #1a237e;
+            --canvas-bg: #1a237e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #c5cae9; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+        }
+        .controls { text-align: center; }
+        .control-group { display: inline-block; margin: 0 15px; }
+
+        .readout { text-align: center; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Foucault Pendulum Demonstrator</h1>
+            <p class="subtitle">A simulation showing the rotation of the Earth beneath a swinging pendulum.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In 1851, Léon Foucault provided the first simple, direct proof of the Earth's rotation using a large pendulum. A Foucault pendulum is a heavy pendulum on a long wire, designed to swing for a long time. Its secret is that the plane of its swing remains fixed in inertial space (relative to the distant stars). To an observer on the ground, however, the floor appears to rotate underneath the pendulum. This simulation provides a 3D view of this effect, allowing you to place a pendulum at any latitude and observe how the rate of this apparent precession changes.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas" width="600" height="600"></canvas>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="latitude-slider">Latitude: <span id="latitude-value">45</span>°</label><br>
+                    <input type="range" id="latitude-slider" min="0" max="90" step="1" value="45">
+                </div>
+                <div class="control-group">
+                    <label for="speed-slider">Time Speed: <span id="speed-value">1</span>x</label><br>
+                    <input type="range" id="speed-slider" min="1" max="10" step="1" value="1">
+                </div>
+            </div>
+            <div class="readout">
+                Apparent Precession Rate: <span id="rate-readout">254.6</span> °/day
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Earth Turns, Not the Pendulum</h2>
+            <p>The key to understanding the Foucault pendulum is to realize that its swing plane is incredibly stable. Due to conservation of momentum, it wants to keep swinging back and forth in the same direction relative to the rest of the universe. The effect we see is entirely due to us, the observers, standing on a rotating platform: the Earth.</p>
+
+            <h3>The Role of Latitude</h3>
+            <p>The rate at which the floor appears to turn depends on your latitude (λ), according to the formula:</p>
+            <code>Apparent Rotation = 360° * sin(λ) per day</code>
+            <ul>
+                <li><strong>At the North Pole (90°):</strong> `sin(90°) = 1`. The Earth spins directly under the pendulum like a turntable. The pendulum's swing plane appears to make one full 360° rotation every 24 hours.</li>
+                <li><strong>At the Equator (0°):</strong> `sin(0°) = 0`. The pendulum swings parallel to the axis of rotation. From the ground, it just appears to swing back and forth; the Earth's rotation doesn't twist the floor underneath it. The precession rate is zero.</li>
+                <li><strong>At Mid-Latitudes (e.g., 45°):</strong> The rate is between these extremes. At 45°, the precession rate is 360 * sin(45°) ≈ 254.6° per day.</li>
+            </ul>
+            <p>Use the latitude slider in the simulation to see this effect. Watch how the dial on the ground rotates. At 90°, it rotates at the full "Time Speed." At 0°, it doesn't rotate at all.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const controls = {
+            latitude: document.getElementById('latitude-slider'),
+            speed: document.getElementById('speed-slider'),
+        };
+        const values = {
+            latitude: document.getElementById('latitude-value'),
+            speed: document.getElementById('speed-value'),
+            rate: document.getElementById('rate-readout'),
+        };
+
+        let config = { latitude: 45, speed: 1 };
+        let earthRotation = 0;
+        let pendulumAngle = 0;
+
+        function updateConfig() {
+            config.latitude = parseFloat(controls.latitude.value);
+            config.speed = parseFloat(controls.speed.value);
+            values.latitude.textContent = config.latitude.toFixed(0);
+            values.speed.textContent = config.speed.toFixed(0);
+            const rate = 360 * Math.sin(config.latitude * Math.PI / 180);
+            values.rate.textContent = `${rate.toFixed(1)} °/day`;
+        }
+
+        function drawEarth() {
+            const r = 150;
+            const latRad = config.latitude * Math.PI / 180;
+
+            // Globe
+            const gradient = ctx.createRadialGradient(300, 300, 50, 300, 300, r);
+            gradient.addColorStop(0, '#42a5f5');
+            gradient.addColorStop(1, '#0d47a1');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(300, 300, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Latitude lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            for(let i=-6; i<=6; i++) {
+                const y = 300 + i * (r/6);
+                const x_r = Math.sqrt(r*r - (y-300)**2);
+                ctx.beginPath();
+                ctx.arc(300, y, x_r, 0, Math.PI*2);
+                ctx.stroke();
+            }
+
+            // Precession Dial
+            const dialRadius = 50;
+            const dialX = 300 + Math.cos(latRad) * r;
+            const dialY = 300 - Math.sin(latRad) * r;
+
+            ctx.save();
+            ctx.translate(dialX, dialY);
+            ctx.rotate(earthRotation);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.beginPath();
+            ctx.arc(0,0, dialRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 12; i++) {
+                const angle = i * Math.PI / 6;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(angle) * (dialRadius - 10), Math.sin(angle) * (dialRadius - 10));
+                ctx.lineTo(Math.cos(angle) * dialRadius, Math.sin(angle) * dialRadius);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawPendulum() {
+            const swing = Math.sin(pendulumAngle);
+            const pendulumLength = 200;
+            const bobRadius = 15;
+            const dialRadius = 50;
+            const r = 150;
+            const latRad = config.latitude * Math.PI / 180;
+            const dialX = 300 + Math.cos(latRad) * r;
+            const dialY = 300 - Math.sin(latRad) * r;
+
+            const pivotX = dialX;
+            const pivotY = dialY - dialRadius - pendulumLength;
+
+            const bobX = pivotX + swing * 100;
+            const bobY = pivotY + pendulumLength;
+
+            // String
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pivotX, pivotY);
+            ctx.lineTo(bobX, bobY);
+            ctx.stroke();
+
+            // Bob
+            ctx.fillStyle = '#ffca28';
+            ctx.beginPath();
+            ctx.arc(bobX, bobY, bobRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffb300';
+            ctx.stroke();
+        }
+
+        function animate() {
+            ctx.fillStyle = '#1a237e';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            pendulumAngle += 0.05;
+            const precessionRate = Math.sin(config.latitude * Math.PI / 180);
+            earthRotation += 0.001 * config.speed * precessionRate;
+
+            drawEarth();
+            drawPendulum();
+
+            requestAnimationFrame(animate);
+        }
+
+        Object.values(controls).forEach(c => c.addEventListener('input', updateConfig));
+        updateConfig();
+        animate();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Potential Energy Well</title>
+    <style>
+        :root {
+            --bg-color: #1a237e;
+            --text-color: #e8eaf6;
+            --header-color: #8c9eff;
+            --accent-color: #536dfe;
+            --accent-hover: #3d5afe;
+            --control-bg: #283593;
+            --control-border: #1a237e;
+            --canvas-bg: #1a237e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #c5cae9; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 2 / 3; grid-row: 1 / 2; }
+        .sim-container { grid-column: 1 / 2; grid-row: 1 / 2; min-height: 500px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; cursor: grab; }
+
+        .control-group { margin-bottom: 1em; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; width: 100%; }
+        button:hover { background-color: var(--accent-hover); }
+
+        @media (max-width: 900px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { grid-column: 1 / -1; grid-row: 2 / 3; }
+            .sim-container { grid-column: 1 / -1; grid-row: 1 / 2; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gravitational Potential Energy Well</h1>
+            <p class="subtitle">A 3D visualization of gravity's influence on spacetime and orbits.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Gravity is often visualized as a curvature in the fabric of spacetime. A massive object like a planet creates a deep "well" in this fabric. The <strong>gravitational potential energy</strong> of a satellite is a measure of its position within this well. This simulation provides a 3D wireframe view of this potential well. You can launch a satellite with a given velocity and watch it "roll" along the surface, tracing out an orbit. This provides an intuitive way to understand how satellites trade kinetic energy (speed) for potential energy (height in the well) to maintain circular or elliptical orbits.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="mass-slider">Planet Mass (M): <span id="mass-value">1.0</span></label>
+                    <input type="range" id="mass-slider" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+                <hr>
+                <h4>Launch Satellite</h4>
+                <p style="font-size:0.8em">Click and drag on the grid to set launch position and velocity, then release.</p>
+                 <div class="control-group">
+                    <label for="trace-toggle"><input type="checkbox" id="trace-toggle" checked> Show Orbital Trace</label>
+                </div>
+                <button id="reset-btn">Reset View</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>Rolling Through Spacetime</h2>
+            <h3>The Potential Well</h3>
+            <p>The 3D surface shows the potential energy `U = -GMm/r`. It's negative because we define zero potential energy as being infinitely far away from the planet. As an object gets closer (r decreases), its potential energy becomes more negative, creating the "well" shape. The steepness of the well is determined by the planet's mass.</p>
+
+            <h3>Types of Orbits</h3>
+            <ul>
+                <li><strong>Circular Orbit:</strong> If you give the satellite just the right initial velocity, it will orbit at a constant radius. On the potential well, this looks like the satellite rolling around the edge of the well at a constant height, neither climbing the walls nor falling deeper. Its kinetic and potential energy remain constant.</li>
+                <li><strong>Elliptical Orbit:</strong> If the initial velocity is not perfectly matched for a circular orbit, the satellite will follow an elliptical path. On the well, this looks like the satellite rolling up and down the sides. As it falls deeper into the well (closer to the planet), its potential energy decreases, and its kinetic energy (speed) increases. As it climbs back up the well wall, it slows down, trading kinetic energy for potential energy.</li>
+                <li><strong>Escape Velocity:</strong> If you give the satellite a very high initial velocity, it will have enough energy to climb all the way out of the well and escape the planet's gravity, never to return.</li>
+            </ul>
+            <h3>How to Use</h3>
+            <p>Click and hold your mouse on the grid. This sets the satellite's starting position. Drag the mouse to set the direction and magnitude of its initial velocity vector. Release the mouse to launch the satellite into orbit. You can also click and drag on the background to rotate the view of the potential well.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let angleX = 0.8, angleY = 0.5;
+        let mass = 1.0;
+        let satellite = null;
+        let trace = [];
+        let showTrace = true;
+
+        const grid_size = 20;
+        const scale = 150;
+
+        // Mouse controls for rotation
+        let dragging = false, dragStart = {};
+        canvas.addEventListener('mousedown', e => {
+            if(e.button === 0) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                if (!satellite) { // Launch satellite
+                    dragStart = {x: x, y: y};
+                } else { // Rotate view
+                    dragging = true;
+                    dragStart = {x: e.pageX, y: e.pageY, angleX: angleX, angleY: angleY};
+                }
+            }
+        });
+        canvas.addEventListener('mouseup', e => {
+            dragging = false;
+            if(!satellite && dragStart.x) {
+                const rect = canvas.getBoundingClientRect();
+                const endX = e.clientX - rect.left;
+                const endY = e.clientY - rect.top;
+
+                const start3D = screenToWorld(dragStart.x, dragStart.y);
+                if(start3D) {
+                    satellite = {
+                        x: start3D.x,
+                        y: start3D.y,
+                        z: 0,
+                        vx: (endX - dragStart.x) / 50,
+                        vy: (endY - dragStart.y) / 50,
+                    };
+                    trace = [];
+                }
+            }
+            dragStart = {};
+        });
+        canvas.addEventListener('mousemove', e => {
+            if (dragging) {
+                angleY = dragStart.angleY - (e.pageX - dragStart.x) * 0.01;
+                angleX = dragStart.angleX - (e.pageY - dragStart.y) * 0.01;
+                angleX = Math.max(-Math.PI/2, Math.min(Math.PI/2, angleX));
+            }
+        });
+
+        // Control listeners
+        document.getElementById('mass-slider').addEventListener('input', e => {
+            mass = parseFloat(e.target.value);
+            document.getElementById('mass-value').textContent = mass.toFixed(1);
+        });
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            angleX = 0.8; angleY = 0.5;
+            satellite = null; trace = [];
+        });
+        document.getElementById('trace-toggle').addEventListener('change', e => {
+            showTrace = e.target.checked;
+        });
+
+        function project(x, y, z) {
+            const cosX = Math.cos(angleX), sinX = Math.sin(angleX);
+            const cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+
+            const y1 = y * cosX - z * sinX;
+            const z1 = y * sinX + z * cosX;
+            const x2 = x * cosY - z1 * sinY;
+            const z2 = x * sinY + z1 * cosY;
+
+            const perspective = 350 / (350 + z2);
+            return {
+                x: canvas.width / 2 + x2 * perspective,
+                y: canvas.height / 2 + y1 * perspective,
+            };
+        }
+
+        function getPotential(x, y) {
+            const r = Math.hypot(x, y);
+            if (r < 0.1) return -mass / 0.1 * 10;
+            return -mass / r * 10;
+        }
+
+        function screenToWorld(sx, sy) {
+            // Simplified inverse projection for launching
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            return { x: (sx-cx)/20, y: (sy-cy)/20 };
+        }
+
+        function updateSatellite() {
+            if (!satellite) return;
+            const r = Math.hypot(satellite.x, satellite.y);
+            const force = -mass / (r*r);
+            const ax = force * satellite.x / r;
+            const ay = force * satellite.y / r;
+
+            satellite.vx += ax * 0.05;
+            satellite.vy += ay * 0.05;
+            satellite.x += satellite.vx * 0.1;
+            satellite.y += satellite.vy * 0.1;
+            satellite.z = getPotential(satellite.x, satellite.y);
+
+            trace.push({x: satellite.x, y: satellite.y, z: satellite.z});
+            if(trace.length > 500) trace.shift();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#1a237e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const points = [];
+            for (let i = -grid_size; i <= grid_size; i++) {
+                for (let j = -grid_size; j <= grid_size; j++) {
+                    const x = i * 2;
+                    const y = j * 2;
+                    const z = getPotential(x, y);
+                    points.push(project(x * 10, y * 10, z));
+                }
+            }
+
+            ctx.strokeStyle = 'rgba(83, 109, 254, 0.5)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < grid_size*2; i++) {
+                for (let j = 0; j < grid_size*2; j++) {
+                    const p1 = points[i * (grid_size*2+1) + j];
+                    const p2 = points[i * (grid_size*2+1) + j + 1];
+                    const p3 = points[(i+1) * (grid_size*2+1) + j];
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p3.x, p3.y);
+                    ctx.stroke();
+                }
+            }
+
+            if (showTrace && trace.length > 1) {
+                ctx.strokeStyle = '#ffca28';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const p_start = project(trace[0].x*10, trace[0].y*10, trace[0].z);
+                ctx.moveTo(p_start.x, p_start.y);
+                for(let i=1; i<trace.length; i++) {
+                    const p = project(trace[i].x*10, trace[i].y*10, trace[i].z);
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            }
+
+            if (satellite) {
+                const p_sat = project(satellite.x * 10, satellite.y * 10, satellite.z);
+                ctx.fillStyle = '#ffca28';
+                ctx.beginPath();
+                ctx.arc(p_sat.x, p_sat.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function animate() {
+            updateSatellite();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    });
+    </script>
+</body>
+</html>
