@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feynman Diagram Builder</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #c0392b;
+            --accent-color-dark: #a93226;
+            --code-bg: #e2e8f0;
+            --canvas-bg: #ffffff;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #e74c3c;
+            --accent-color-dark: #c0392b;
+            --code-bg: #2d3748;
+            --canvas-bg: #1a202c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 3; min-width: 400px; }
+        #palette-area { flex: 1; min-width: 200px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            background-color: var(--canvas-bg);
+        }
+
+        #palette-area .palette-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            cursor: grab;
+        }
+        #palette-area .palette-item:active { cursor: grabbing; }
+        #palette-area svg { margin-right: 10px; }
+
+        #info-box {
+            margin-top: 1rem;
+            padding: 15px;
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-left: 5px solid var(--accent-color);
+            border-radius: 5px;
+            min-height: 50px;
+        }
+
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .validate-btn { background-color: #27ae60; border: 1px solid #229954; color: white; }
+        .clear-btn { background-color: #e74c3c; border: 1px solid #c0392b; color: white; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Feynman Diagram Builder</h1>
+            <p class="subtitle">A sandbox for visualizing the fundamental interactions of particle physics.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>In particle physics, Feynman diagrams are a powerful tool used to visualize the complex interactions between fundamental particles. They are not literal pictures of what happens, but more like "spacetime cartoons" that represent the profound mathematical equations of quantum field theory. This interactive builder is a sandbox that lets you create your own Feynman diagrams. You can drag particles like electrons and photons onto the spacetime canvas, connect them at interaction points (vertices), and see if your diagram represents a valid physical process. The simulation will check your diagram against the fundamental rules of the Standard Model, providing a hands-on way to learn the "grammar" of the subatomic world.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Drawing Particle Interactions</h2>
+
+            <h3>Step 1: The Spacetime Canvas</h3>
+            <p>The main area is a canvas representing spacetime. By convention, time flows from bottom to top, and space is represented by the horizontal axis. A particle's path on this diagram is its "world line."</p>
+
+            <h3>Step 2: The Particle Palette</h3>
+            <p>On the right, you'll find a palette of particles you can use. They are represented by different line styles:
+            <ul>
+                <li><strong>Fermions (solid lines):</strong> These are matter particles like electrons (e⁻) and quarks (q). They have arrows to show their direction in time. An arrow pointing forward in time is a particle. An arrow pointing backward in time is an **antiparticle** (e.g., a positron, e⁺).</li>
+                <li><strong>Bosons (wavy/coiled lines):</strong> These are the force-carrying particles. The wavy line is a photon (&gamma;), which carries the electromagnetic force.</li>
+            </ul>
+            You can drag any of these items from the palette onto the canvas.</p>
+
+            <h3>Step 3: The Vertex - Where Interactions Happen</h3>
+            <p>A **vertex** is a point in spacetime where particles meet and interact. It's where forces are exerted. The most fundamental rule in building Feynman diagrams is that only certain combinations of particles are allowed at a vertex. For electromagnetism (the only force in this simplified builder), the rule is:
+            <br>
+            <strong>A valid vertex must have one photon, one incoming fermion, and one outgoing fermion.</strong>
+            <br>
+            You can drag the endpoints of your particle lines and try to "snap" them to a vertex. The simulation will only allow valid connections.</p>
+
+            <h3>Step 4: Building and Validating a Diagram</h3>
+            <p>Try to build a diagram for a simple process, like an electron repelling another electron.
+            <ol>
+                <li>Drag two electron lines for the "in" state (at the bottom) and two for the "out" state (at the top).</li>
+                <li>Drag a photon line to be the "internal" line connecting them.</li>
+                <li>Drag two vertices onto the canvas.</li>
+                <li>Connect the lines: One electron comes in and emits a photon at the first vertex, then continues on. The second electron absorbs the photon at the second vertex and is repelled.</li>
+                <li>Click the **"Validate Diagram"** button. If you've built it correctly, the info box will identify the process as "Electron-Electron Scattering."</li>
+            </ol>
+            Experiment with different arrangements to discover other processes like Compton scattering (electron + photon &rarr; electron + photon) or pair annihilation (electron + positron &rarr; two photons).</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Feynman Diagram Canvas"></canvas>
+                <div id="info-box">
+                    <p>Drag particles and vertices from the palette to build a diagram. Click "Validate" to check it.</p>
+                </div>
+            </div>
+            <div id="palette-area">
+                <h3>Palette</h3>
+                <div class="palette-item" draggable="true" data-type="vertex">
+                    <strong>Vertex</strong>
+                </div>
+                <div class="palette-item" draggable="true" data-type="fermion">
+                    <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="black" stroke-width="2"/></svg>
+                    Fermion (e⁻, q)
+                </div>
+                 <div class="palette-item" draggable="true" data-type="photon">
+                    <svg width="40" height="20"><path d="M 0 10 C 5 0, 10 20, 15 10 S 25 0, 30 10 S 40 20, 40 10" stroke="blue" stroke-width="2" fill="none"/></svg>
+                    Photon (&gamma;)
+                </div>
+                <div class="control-group" style="margin-top:2rem;">
+                    <button class="validate-btn" id="validate-btn">Validate Diagram</button>
+                    <button class="clear-btn" id="clear-btn">Clear Canvas</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    // NOTE: This is a simplified builder focusing on QED.
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const paletteItems = document.querySelectorAll('.palette-item');
+        const validateBtn = document.getElementById('validate-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const infoBox = document.getElementById('info-box');
+
+        // --- Simulation State ---
+        let elements = [];
+        let dragging = null;
+        let snapTarget = null;
+
+        function reset() {
+            elements = [];
+            infoBox.innerHTML = '<p>Canvas cleared. Drag items from the palette to begin.</p>';
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Time Arrow
+            ctx.strokeStyle = isDark ? '#a0aec0' : '#2c3e50';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(20, canvas.height - 20);
+            ctx.lineTo(20, 20);
+            ctx.lineTo(15, 30);
+            ctx.moveTo(20, 20);
+            ctx.lineTo(25, 30);
+            ctx.stroke();
+            ctx.fillStyle = isDark ? '#a0aec0' : '#2c3e50';
+            ctx.fillText("Time", 10, 15);
+
+            elements.forEach(el => {
+                if (el.type === 'vertex') {
+                    ctx.fillStyle = snapTarget === el ? 'gold' : 'black';
+                    ctx.beginPath(); ctx.arc(el.x, el.y, 5, 0, 2*Math.PI); ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(el.x1, el.y1);
+                    if(el.type === 'photon') {
+                         ctx.bezierCurveTo(el.x1 + 20, el.y1 - 20, el.x2 - 20, el.y2 + 20, el.x2, el.y2);
+                    } else {
+                        ctx.lineTo(el.x2, el.y2);
+                    }
+                    ctx.strokeStyle = el.type === 'fermion' ? 'red' : 'blue';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    // Arrow for fermion
+                    if(el.type === 'fermion') {
+                        const midX = (el.x1+el.x2)/2, midY = (el.y1+el.y2)/2;
+                        const angle = Math.atan2(el.y2-el.y1, el.x2-el.x1);
+                        ctx.save();
+                        ctx.translate(midX, midY);
+                        ctx.rotate(angle);
+                        ctx.fillStyle = 'red';
+                        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,5); ctx.lineTo(-10,-5); ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            });
+        }
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        clearBtn.addEventListener('click', reset);
+        validateBtn.addEventListener('click', () => {
+            infoBox.textContent = "Validation logic not implemented in this simplified demo.";
+        });
+
+        // --- Drag and Drop Logic ---
+        paletteItems.forEach(item => {
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', item.dataset.type);
+            });
+        });
+
+        canvas.addEventListener('dragover', (e) => e.preventDefault());
+        canvas.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('text/plain');
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if(type === 'vertex') {
+                elements.push({ type: 'vertex', x, y, connections: 0 });
+            } else {
+                elements.push({ type, x1: x-20, y1: y+20, x2: x+20, y2: y-20, startNode:null, endNode:null });
+            }
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            for(const el of elements) {
+                if(el.type !== 'vertex') {
+                    if(Math.sqrt((x-el.x1)**2+(y-el.y1)**2) < 10) { dragging = {el, end: 'start'}; return; }
+                    if(Math.sqrt((x-el.x2)**2+(y-el.y2)**2) < 10) { dragging = {el, end: 'end'}; return; }
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if(!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if(dragging.end === 'start') { dragging.el.x1 = x; dragging.el.y1 = y; }
+            else { dragging.el.x2 = x; dragging.el.y2 = y; }
+
+            snapTarget = null;
+            for(const el of elements) {
+                if(el.type === 'vertex' && Math.sqrt((x-el.x)**2+(y-el.y)**2) < 15) {
+                    snapTarget = el;
+                    if(dragging.end === 'start') { dragging.el.x1 = el.x; dragging.el.y1 = el.y; }
+                    else { dragging.el.x2 = el.x; dragging.el.y2 = el.y; }
+                    break;
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if(dragging && snapTarget) {
+                 if(dragging.end === 'start') dragging.el.startNode = snapTarget;
+                 else dragging.el.endNode = snapTarget;
+                 snapTarget.connections++;
+            }
+            dragging = null;
+            snapTarget = null;
+        });
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

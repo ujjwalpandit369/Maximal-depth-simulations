@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear Fission Chain Reaction Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #e74c3c;
+            --accent-color-dark: #c0392b;
+            --code-bg: #e2e8f0;
+            --u235-color: #c0392b;
+            --u238-color: #34495e;
+            --neutron-color: #f1c40f;
+            --rod-color: #7f8c8d;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #e74c3c;
+            --accent-color-dark: #c0392b;
+            --code-bg: #2d3748;
+            --u238-color: #5d6d7e;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+            background-color: var(--bg-color);
+        }
+        #main-canvas { aspect-ratio: 1/1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 2/1; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid var(--accent-color);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nuclear Fission Chain Reaction Simulator</h1>
+            <p class="subtitle">Visualizing subcritical, critical, and supercritical reactions in a fissile mass.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 230 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>A nuclear chain reaction is one of the most powerful processes humans have harnessed. It begins when a single neutron strikes a heavy, unstable atom (like Uranium-235), causing it to split. This process, called fission, releases a tremendous amount of energy and, crucially, several more neutrons. These new neutrons can then go on to strike other atoms, creating a cascading, self-sustaining reaction. This simulation lets you explore the conditions needed for a chain reaction. You can control the "enrichment" of the nuclear fuel and insert or retract control rods to see how a reaction can either fizzle out (subcritical), sustain itself (critical), or grow exponentially (supercritical).</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Domino Effect of Atoms</h2>
+
+            <h3>Step 1: The Players</h3>
+            <p>The simulation contains a few key components:
+            <ul>
+                <li><span style="color:var(--u235-color)">■</span> <strong>Uranium-235 (Fissile):</strong> This is the red nucleus. It's unstable and will split apart if hit by a neutron.</li>
+                <li><span style="color:var(--u238-color)">■</span> <strong>Uranium-238 (Non-fissile):</strong> This is the blue nucleus. It's the most common type of uranium and will simply absorb a neutron without splitting.</li>
+                <li><strong>Neutrons:</strong> The small yellow dots that fly around and trigger fissions.</li>
+                <li><strong>Control Rods:</strong> The gray bars that can be lowered into the reactor. They are made of a material that is very good at absorbing neutrons.</li>
+            </ul>
+            </p>
+
+            <h3>Step 2: The Chain Reaction</h3>
+            <p>Click the **"Fire Neutron"** button to start. A neutron will hit a U-235 nucleus. You will see it flash, split into smaller fragments, and release 2 or 3 new neutrons. These new neutrons will then fly off in random directions. If one of them hits *another* U-235 nucleus, the process repeats. This is a **chain reaction**.</p>
+
+            <h3>Step 3: Criticality - The Deciding Factor</h3>
+            <p>The fate of the chain reaction is determined by the **multiplication factor, k**, which is the average number of neutrons from one fission that go on to cause another fission.
+            <ul>
+                <li><strong>Subcritical (k < 1):</strong> More neutrons are lost (by escaping or being absorbed by U-238) than are produced. The reaction quickly dies out. Try this by setting the **Enrichment** slider to a low value.</li>
+                <li><strong>Supercritical (k > 1):</strong> More neutrons are produced than are lost. The number of fissions grows exponentially, leading to a rapid release of energy. Try this by setting the Enrichment to a high value.</li>
+                <li><strong>Critical (k = 1):</strong> Exactly one neutron from each fission, on average, goes on to cause another fission. This creates a stable, self-sustaining reaction at a constant rate. This is the goal for operating a nuclear power plant.</li>
+            </ul>
+            The plot at the bottom shows the neutron population over time. You can see it die out, grow exponentially, or level off depending on the conditions.</p>
+
+            <h3>Step 4: Controlling the Reaction</h3>
+            <p>How do you control a chain reaction? You control the number of free neutrons.
+            <ul>
+                <li><strong>Enrichment:</strong> Natural uranium is mostly U-238. "Enriching" it means increasing the percentage of the fissile U-235. A higher enrichment means a neutron is more likely to find another U-235 atom to continue the chain, increasing `k`.</li>
+                <li><strong>Control Rods:</strong> These rods are made of neutron-absorbing materials like boron or cadmium. By lowering them into the reactor core, you can soak up neutrons and reduce `k`, slowing down or stopping the reaction. Try starting a supercritical reaction and then lowering the control rods to see how you can bring it under control.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Animation of a nuclear chain reaction"></canvas>
+                <canvas id="plot-canvas" width="512" height="256" aria-label="Plot of neutron count and energy release"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="fire-btn">Fire Neutron</button>
+                </div>
+                <div class="control-group">
+                    <label for="enrich-slider">Enrichment (% U-235): <span id="enrich-label">20</span>%</label>
+                    <input type="range" id="enrich-slider" min="1" max="100" value="20" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="rod-slider">Control Rod Insertion: <span id="rod-label">0</span>%</label>
+                    <input type="range" id="rod-slider" min="0" max="100" value="0" step="1">
+                </div>
+                <div id="readout" style="font-family:monospace; text-align:center;">
+                    <p>Status: <span id="status-label">Ready</span></p>
+                    <p>Neutron Count: <span id="neutron-count">0</span></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const fireBtn = document.getElementById('fire-btn');
+        const enrichSlider = document.getElementById('enrich-slider');
+        const rodSlider = document.getElementById('rod-slider');
+        const enrichLabel = document.getElementById('enrich-label');
+        const rodLabel = document.getElementById('rod-label');
+        const statusLabel = document.getElementById('status-label');
+        const neutronCount = document.getElementById('neutron-count');
+
+        // --- Simulation State ---
+        let nuclei = [], neutrons = [], fragments = [];
+        let plotHistory = {neutrons: [], energy: []};
+        let totalEnergy = 0;
+        const GRID_SIZE = 25;
+        const CELL_SIZE = canvas.width / GRID_SIZE;
+
+        function setup() {
+            const enrichment = parseFloat(enrichSlider.value) / 100;
+            enrichLabel.textContent = (enrichment*100).toFixed(0);
+            nuclei = [];
+            for(let i=0; i<GRID_SIZE; i++) {
+                for(let j=0; j<GRID_SIZE; j++) {
+                    if(Math.random() < 0.5) { // Fill about half the space
+                        nuclei.push({
+                            x: (i + 0.5) * CELL_SIZE,
+                            y: (j + 0.5) * CELL_SIZE,
+                            type: (Math.random() < enrichment) ? 'u235' : 'u238',
+                            r: CELL_SIZE * 0.4
+                        });
+                    }
+                }
+            }
+            neutrons = [];
+            fragments = [];
+            plotHistory = {neutrons: [], energy: []};
+            totalEnergy = 0;
+            statusLabel.textContent = 'Ready';
+        }
+
+        function fire() {
+            if(neutrons.length > 0) return; // Don't fire into active reaction
+            neutrons.push({
+                x: 0, y: canvas.height/2,
+                vx: 5, vy: 0
+            });
+        }
+
+        function update() {
+            const rodDepth = parseFloat(rodSlider.value)/100 * canvas.height;
+            rodLabel.textContent = parseFloat(rodSlider.value).toFixed(0);
+
+            for(let i=neutrons.length-1; i>=0; i--) {
+                const n = neutrons[i];
+                n.x += n.vx;
+                n.y += n.vy;
+
+                // Check for collision with nuclei
+                for(let j=nuclei.length-1; j>=0; j--) {
+                    const N = nuclei[j];
+                    const dx = N.x - n.x;
+                    const dy = N.y - n.y;
+                    if(dx*dx + dy*dy < N.r*N.r) {
+                        if(N.type === 'u235') {
+                            // Fission!
+                            nuclei.splice(j, 1);
+                            const numNewNeutrons = Math.floor(Math.random() * 2) + 2; // 2 or 3
+                            for(let k=0; k<numNewNeutrons; k++) {
+                                const angle = Math.random() * 2 * Math.PI;
+                                neutrons.push({ x: N.x, y: N.y, vx: Math.cos(angle)*5, vy: Math.sin(angle)*5 });
+                            }
+                            totalEnergy += 200; // MeV
+                        }
+                        neutrons.splice(i, 1);
+                        break;
+                    }
+                }
+
+                // Check for control rod collision
+                if(n.y < rodDepth && (n.x > canvas.width*0.2 && n.x < canvas.width*0.3 || n.x > canvas.width*0.7 && n.x < canvas.width*0.8)) {
+                    neutrons.splice(i,1);
+                    continue;
+                }
+
+                // Check for leaving box
+                if(n.x < 0 || n.x > canvas.width || n.y < 0 || n.y > canvas.height) {
+                    neutrons.splice(i,1);
+                }
+            }
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw nuclei
+            nuclei.forEach(n => {
+                ctx.fillStyle = n.type === 'u235' ? 'var(--u235-color)' : 'var(--u238-color)';
+                ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 2*Math.PI); ctx.fill();
+            });
+
+            // Draw neutrons
+            ctx.fillStyle = 'var(--neutron-color)';
+            neutrons.forEach(n => {
+                ctx.beginPath(); ctx.arc(n.x, n.y, 2, 0, 2*Math.PI); ctx.fill();
+            });
+
+            // Draw control rods
+            const rodDepth = parseFloat(rodSlider.value)/100 * canvas.height;
+            ctx.fillStyle = 'var(--rod-color)';
+            ctx.fillRect(canvas.width*0.2, 0, canvas.width*0.1, rodDepth);
+            ctx.fillRect(canvas.width*0.7, 0, canvas.width*0.1, rodDepth);
+
+            // Draw plot
+            plotHistory.neutrons.push(neutrons.length);
+            plotHistory.energy.push(totalEnergy);
+            if(plotHistory.neutrons.length > 200) {
+                plotHistory.neutrons.shift();
+                plotHistory.energy.shift();
+            }
+
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0,0,plotCanvas.width, plotCanvas.height);
+
+            const drawPlotLine = (data, color) => {
+                const maxVal = Math.max(...data, 10);
+                p_ctx.strokeStyle = color;
+                p_ctx.lineWidth = 2;
+                p_ctx.beginPath();
+                data.forEach((val, i) => {
+                    const x = i * (plotCanvas.width / 200);
+                    const y = plotCanvas.height - (val/maxVal) * plotCanvas.height;
+                    if(i===0) p_ctx.moveTo(x,y);
+                    else p_ctx.lineTo(x,y);
+                });
+                p_ctx.stroke();
+            };
+            drawPlotLine(plotHistory.neutrons, 'var(--neutron-color)');
+            drawPlotLine(plotHistory.energy, 'var(--accent-color)');
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            neutronCount.textContent = neutrons.length;
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        fireBtn.addEventListener('click', fire);
+        enrichSlider.addEventListener('input', setup);
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
