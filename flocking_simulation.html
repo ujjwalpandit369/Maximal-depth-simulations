@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Flocking Simulation (Boids)</title>
+    <style>
+        /* --- General Styles & Resets --- */
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --primary-text: #ffffff;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #ffffff;
+            --code-bg: #e9ecef;
+            --link-color: #0056b3;
+            --header-bg: #e9ecef;
+            --slider-track: #dee2e6;
+            --slider-thumb: #007bff;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #ffff00;
+            --primary-text: #000000;
+            --secondary-color: #aaaaaa;
+            --border-color: #ffffff;
+            --canvas-bg: #000000;
+            --code-bg: #333333;
+            --link-color: #ffff00;
+            --header-bg: #1a1a1a;
+            --slider-track: #555555;
+            --slider-thumb: #ffff00;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        /* --- Layout --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .main-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .simulation-column {
+            flex: 2;
+            min-width: 400px;
+        }
+
+        .controls-column {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        @media (max-width: 800px) {
+            .main-layout {
+                flex-direction: column;
+            }
+        }
+
+        /* --- Typography & Content --- */
+        h1, h2, h3 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        h3 { font-size: 1.5rem; }
+
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+        a:hover { text-decoration: underline; }
+
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        pre {
+            background-color: var(--code-bg);
+            padding: 1em;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        /* --- UI Elements --- */
+        button {
+            background-color: var(--primary-color);
+            color: var(--primary-text);
+            border: none;
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+
+        .controls-group {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+
+        .preset-description {
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            display: block;
+            margin-top: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        /* --- Simulation Canvas --- */
+        #simulationCanvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        /* --- Tables --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            text-align: left;
+        }
+        th {
+            background-color: var(--header-bg);
+        }
+
+        /* --- Helper Classes --- */
+        .hidden {
+            display: none;
+        }
+        .error-panel {
+            background-color: #ffcccc;
+            color: #cc0000;
+            border: 1px solid #cc0000;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        .suggestion-box {
+            background-color: #eef8ff;
+            border: 1px solid #cce5ff;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+        .dev-console {
+            background-color: #333;
+            color: #eee;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        .dev-console summary { cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header and Metadata -->
+        <header>
+            <h1>Interactive Flocking Simulation (Boids)</h1>
+            <p>An interactive simulation of emergent flocking behavior based on Craig Reynolds' Boids algorithm.</p>
+            <div id="metadata-bar">
+                <small>Est. Runtime: Real-time | Recommended Device: Desktop | Approx. Size: 35KB</small>
+                <button id="theme-toggle" class="secondary" style="float: right;">High Contrast</button>
+            </div>
+        </header>
+
+        <!-- Suggestion Box -->
+        <div id="suggestion-box" class="suggestion-box">
+            <p style="margin:0;">Tune simulation:
+                <button class="secondary" data-audience="beginner">Beginner</button>
+                <button class="secondary" data-audience="intermediate">Intermediate</button>
+                <button class="secondary" data-audience="advanced">Advanced</button>
+            </p>
+        </div>
+
+        <!-- Self-Check Error Panel -->
+        <div id="quality-check-panel" class="error-panel hidden">
+            <h3>Quality Check Failed</h3>
+            <p>Some parts of the simulation may not work as expected. Please ensure you are using a modern browser. If the problem persists, please report the bug with the details from the developer console below.</p>
+            <ul id="quality-check-list"></ul>
+        </div>
+
+        <div class="main-layout">
+            <!-- Left Column: Simulation and Explanations -->
+            <div class="simulation-column">
+                <section id="simulation-area">
+                    <h2>Live Simulation</h2>
+                    <canvas id="simulationCanvas" width="800" height="450"></canvas>
+                    <div id="sim-performance-meter">
+                        <span>FPS: --</span> | <span>Particles: --</span> | <span>Mem. Usage: --MB</span>
+                    </div>
+                </section>
+
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>This simulation explores <strong>emergent behavior</strong>—a phenomenon where complex global patterns arise from simple, local rules. Each of the individual agents, called a "boid," follows just three basic instincts related to its nearby flockmates. There is no central leader or choreographer telling the boids what to do. And yet, from these simple rules, the graceful and life-like synchronized motion of a flock emerges, demonstrating how complexity can grow from simplicity. This same principle helps explain patterns we see in nature, from schools of fish and flocks of birds to the formation of galaxies.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide: Understanding the Flock</h2>
+                    <p>Welcome to the world of Boids! If you've ever been mesmerized by a flock of starlings painting the sky, you've seen this simulation in real life. The magic is that there's no leader. Each bird, or "boid" in our case, is just following a few simple rules. Let's break them down step-by-step.</p>
+
+                    <h3>Step 1: What is a "Boid"?</h3>
+                    <p>A "boid" (a term coined by creator Craig Reynolds, short for "bird-oid object") is a simulated agent. Think of it as a simple digital creature. It has a position, a velocity (how fast and in what direction it's moving), and a very limited awareness of its surroundings. It can't see the whole flock, only its closest neighbors. This limited perception is key to the simulation.</p>
+                    <p>The main parameter that controls this is the <strong>Visual Range</strong>. Try sliding it up and down. When the range is small, boids only react to their immediate neighbors, leading to smaller, tighter clusters. When it's large, the entire group becomes more coordinated, behaving like one giant organism.</p>
+
+                    <h3>Step 2: The Three Core Rules</h3>
+                    <p>Every boid in the flock lives its life by three foundational rules. These rules are calculated for each boid on every single frame of the simulation, based on the positions and velocities of its neighbors within its <strong>Visual Range</strong>.</p>
+
+                    <h4>Rule 1: Separation (Don't Crowd Me)</h4>
+                    <p>The first rule is about maintaining personal space. Each boid tries to steer away from its flockmates to avoid collisions. If a neighbor gets too close, the boid will feel a "push" force directly away from that neighbor.</p>
+                    <ul>
+                        <li><strong>Physical Analogy:</strong> Imagine you're in a moderately crowded public space. You naturally keep a certain distance from strangers, stepping aside to avoid bumping into them. The boids are doing the exact same thing.</li>
+                        <li><strong>In the simulation:</strong> The <strong>Separation Force</strong> slider controls how strongly boids avoid each other. If you turn it up high, the flock will spread out and might even break apart. If you turn it down low, they will clump together much more tightly, sometimes even overlapping.</li>
+                    </ul>
+
+                    <h4>Rule 2: Alignment (Go with the Flow)</h4>
+                    <p>The second rule encourages boids to conform. Each boid looks at the average direction its neighbors are heading and tries to steer itself to match that direction. It's about matching heading and speed.</p>
+                    <ul>
+                        <li><strong>Physical Analogy:</strong> Think about cars on a multi-lane highway. To keep traffic flowing smoothly, you adjust your speed and direction to match the cars around you. You are "aligning" with the flow of traffic.</li>
+                        <li><strong>In the simulation:</strong> The <strong>Alignment Force</strong> slider controls this conforming behavior. When set high, the boids will quickly form highly parallel, synchronized groups, moving like a disciplined army. When set low, they will move more independently, and the flock will look more disorganized.</li>
+                    </ul>
+
+                    <h4>Rule 3: Cohesion (Stay with the Group)</h4>
+                    <p>The third rule is the glue that holds the flock together. Each boid calculates the average position of its neighbors and feels a "pull" towards that center point. This prevents the flock from drifting apart.</p>
+                    <ul>
+                        <li><strong>Visualization Analogy:</strong> Imagine each boid is attached to its neighbors by invisible, weak rubber bands. If a boid strays too far, the rubber bands pull it back toward the center of its local group.</li>
+                        <li><strong>In the simulation:</strong> The <strong>Cohesion Force</strong> slider adjusts the strength of this "group gravity." When high, boids will be strongly attracted to the center of their local group, forming dense, compact clusters. If you turn it down, the flock will be much looser and can spread out over a larger area.</li>
+                    </ul>
+
+                    <h3>Step 3: Finding the Balance</h3>
+                    <p>The beautiful, life-like motion you see is a result of the constant balancing act between these three forces. On every frame, each boid calculates the desired direction for all three rules and then averages them to get its final direction.</p>
+                    <ul>
+                        <li><strong>Separation</strong> pushes them apart.</li>
+                        <li><strong>Cohesion</strong> pulls them together.</li>
+                        <li><strong>Alignment</strong> makes them move as one.</li>
+                    </ul>
+                    <p>Use the presets to see how different balances create different behaviors. The "Calm Flock" preset has a good balance. "Chaos" has low alignment and cohesion, making the boids act more like a swarm of gnats. Experiment with the sliders yourself to find your own interesting behaviors!</p>
+                </section>
+
+                <section id="parameters-explained">
+                    <h2>Parameters Explained</h2>
+                    <p>The following table details every parameter you can control in the simulation.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Units</th>
+                                <th>Default</th>
+                                <th>Examples (L/M/H)</th>
+                                <th>Description</th>
+                                <th>Worked Example</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Boid Count</strong></td>
+                                <td>Boids</td>
+                                <td>100</td>
+                                <td>50 / 100 / 250</td>
+                                <td>The total number of boids in the simulation. More boids can lead to more complex and stable flock patterns but requires more computational power.</td>
+                                <td>If you set this to <strong>50</strong>, the simulation will create 50 individual boid agents.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Max Speed</strong></td>
+                                <td>pixels/frame</td>
+                                <td>2.5</td>
+                                <td>1.5 / 2.5 / 5</td>
+                                <td>The maximum speed a boid is allowed to reach. This acts as a limiter on the boid's velocity vector.</td>
+                                <td>If a boid's velocity becomes (3, 4), its magnitude is 5. If Max Speed is <strong>4</strong>, the velocity will be scaled down to (2.4, 3.2) to have a magnitude of 4.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Max Force</strong></td>
+                                <td>(pixels/frame²)/frame</td>
+                                <td>0.05</td>
+                                <td>0.03 / 0.05 / 0.1</td>
+                                <td>The maximum magnitude of the steering force that can be applied from the three rules. This prevents boids from turning too sharply.</td>
+                                <td>If the combined steering force is (0.1, 0.2), its magnitude is ~0.22. If Max Force is <strong>0.1</strong>, the force is scaled down to have a magnitude of 0.1.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Visual Range</strong></td>
+                                <td>pixels</td>
+                                <td>50</td>
+                                <td>30 / 50 / 100</td>
+                                <td>The radius around a boid within which it can "see" other boids. All three rules only apply to flockmates within this range.</td>
+                                <td>If Visual Range is <strong>50</strong>, a boid at position (100, 100) will only consider neighbors between roughly (50, 50) and (150, 150).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Separation Force</strong></td>
+                                <td>Unitless Multiplier</td>
+                                <td>1.5</td>
+                                <td>2.0 / 1.5 / 1.0</td>
+                                <td>A multiplier for the separation rule. Higher values make boids repel each other more strongly.</td>
+                                <td>If the calculated separation steering vector is (-0.1, 0.05), and this value is <strong>2.0</strong>, the final applied separation force will be (-0.2, 0.1).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Alignment Force</strong></td>
+                                <td>Unitless Multiplier</td>
+                                <td>1.0</td>
+                                <td>0.8 / 1.0 / 1.2</td>
+                                <td>A multiplier for the alignment rule. Higher values make boids match their neighbors' direction more quickly and rigidly.</td>
+                                <td>If the calculated alignment steering vector is (0.08, 0.06), and this value is <strong>1.5</strong>, the final applied alignment force will be (0.12, 0.09).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cohesion Force</strong></td>
+                                <td>Unitless Multiplier</td>
+                                <td>1.0</td>
+                                <td>1.2 / 1.0 / 0.8</td>
+                                <td>A multiplier for the cohesion rule. Higher values make boids stick together more tightly.</td>
+                                <td>If the calculated cohesion steering vector is (0.02, -0.04), and this value is <strong>0.5</strong>, the final applied cohesion force will be (0.01, -0.02).</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="walkthroughs">
+                    <h2>Worked Walkthroughs: Developing Intuition</h2>
+                    <p>Let's experiment with the core parameters to see their effects in action. Use the "Reset" button after changing presets to see the full effect from the start.</p>
+
+                    <h3>Walkthrough 1: The Power of Separation</h3>
+                    <p>This force controls the "personal space" of each boid.</p>
+                    <ol>
+                        <li>Apply the <strong>"Typical"</strong> preset. Let the simulation run for a few seconds until a flock forms. Note the average spacing between the boids. The default Separation Force is <strong>1.5</strong>.</li>
+                        <li>Now, slide the <strong>Separation Force</strong> down to its minimum, <strong>0.0</strong>. The boids will immediately start to clump together, eventually forming a very dense, overlapping ball. Without this force, there is nothing to prevent them from crashing into each other.</li>
+                        <li>Slide the force up to its maximum, <strong>3.0</strong>. The flock will explode outwards! The repulsive force is so strong that it overwhelms the forces of cohesion and alignment, and the boids can no longer form a stable group.</li>
+                    </ol>
+                    <p><strong>Analogy:</strong> Think of magnets. When the Separation Force is high, it's like trying to push the positive ends of two powerful magnets together. They strongly repel. When the force is zero, it's like the magnets are turned off.</p>
+
+                    <h3>Walkthrough 2: The Harmony of Alignment</h3>
+                    <p>This force dictates how much a boid tries to match the direction of its neighbors.</p>
+                    <ol>
+                        <li>Apply the <strong>"Typical"</strong> preset again and let a flock form. The default Alignment Force is <strong>1.0</strong>. Notice the smooth, flowing motion of the group.</li>
+                        <li>Slide the <strong>Alignment Force</strong> down to <strong>0.0</strong>. The flock's coordinated movement will dissolve. Boids will move in random directions, held together only by cohesion. The group looks more like a swarm of confused bees than a flock of birds.</li>
+                        <li>Now, slide the force up to <strong>2.0</strong> or higher. The flock becomes rigid and hyper-organized. Any change in direction propagates through the flock almost instantly. They turn on a dime, moving like a single solid object.</li>
+                    </ol>
+                    <p><strong>Analogy:</strong> This is like the discipline in a marching band. High alignment is like a band in perfect formation, every member turning in perfect sync. Low alignment is like the band members all walking in their own direction during a break.</p>
+
+                    <h3>Walkthrough 3: The Pull of Cohesion</h3>
+                    <p>This is the "group gravity" that keeps the boids together.</p>
+                    <ol>
+                        <li>Start with the <strong>"Typical"</strong> preset (Cohesion Force is <strong>1.0</strong>). You'll see one or two main flocks form.</li>
+                        <li>Slide the <strong>Cohesion Force</strong> down to <strong>0.0</strong>. The flock will slowly but surely drift apart. Without the pull to the group's center, any boid that gets bumped too far away by a separation force will never return. The flock dissipates over time.</li>
+                        <li>Now, crank the Cohesion Force up to <strong>2.5</strong>. The boids will form extremely tight, dense balls. The pull toward the center of the group is so strong that it's difficult for the separation force to push them apart. The flock becomes very compact.</li>
+                    </ol>
+                    <p><strong>Analogy:</strong> Cohesion is like gravity. With low cohesion, it's like being in deep space where objects just drift away. With high cohesion, it's like being near a massive planet that pulls everything relentlessly toward its center.</p>
+                </section>
+
+                <section id="micro-experiments">
+                    <h2>Micro-Experiments</h2>
+                    <p>Try these small experiments to test your understanding. For each one, reset the simulation after applying the settings.</p>
+                    <ol>
+                        <li><strong>Isolate Cohesion:</strong> Set Separation and Alignment forces to 0. Set Cohesion to 1.0. The boids will clump into a single, disorganized ball.</li>
+                        <li><strong>Isolate Alignment:</strong> Set Separation and Cohesion to 0. Set Alignment to 1.0. The boids will form parallel streams but will drift apart and pass through each other.</li>
+                        <li><strong>Isolate Separation:</strong> Set Alignment and Cohesion to 0. Set Separation to 1.5. The boids will spread out, trying to fill the entire space, like a gas.</li>
+                        <li><strong>Nervous Breakdown:</strong> Set Boid Count to 200, Max Speed to its maximum, and all three forces to their maximums. The flock will exhibit jittery, high-energy, and unstable behavior.</li>
+                        <li><strong>The Commute:</strong> Set Alignment to max (3.0) and Cohesion and Separation to low values (e.g., 0.5). The flock will form long, thin, persistent "lanes" of traffic.</li>
+                        <li><strong>Myopic Herding:</strong> Set Visual Range to its minimum (10). Observe the formation of many tiny, independent flocks that interact only when they bump into each other.</li>
+                        <li><strong>Global Consciousness:</strong> Set Visual Range to its maximum (200). The entire population will act as a single, hyper-coordinated organism. Notice how fast a change in direction propagates.</li>
+                        <li><strong>The Oscillator:</strong> Set Boid Count to 50. Set Cohesion to 2.0, Separation to 2.0, and Alignment to 0. The flock will "breathe," constantly pulling together and pushing apart in a rhythmic oscillation.</li>
+                    </ol>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory: The Math of the Flock</h2>
+                    <p>The behavior of each boid is determined by calculating three steering vectors on each frame, one for each rule. The final steering force is the weighted sum of these three vectors.</p>
+
+                    <h3>The Steering Formula</h3>
+                    <p>For any desired change, the core calculation is a "seek" behavior:</p>
+                    <p><code>Steer = DesiredVelocity - CurrentVelocity</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> To figure out which way to turn, calculate the velocity you *want* to have, and then subtract the velocity you *currently* have. The result is the force vector needed to make up the difference.</li>
+                        <li><strong>Example:</strong> If you are moving right at (1, 0) but you want to move up at (0, 1), the required steering force is (0, 1) - (1, 0) = (-1, 1), which points up and to the left.</li>
+                    </ul>
+
+                    <h3>Rule 1: Separation</h3>
+                    <p><code>SeparationSteer = &sum; (MyPosition - NeighborPosition) / distance&sup2;</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> For every neighbor that's too close, calculate a vector pointing directly away from it. The closer the neighbor, the stronger the push (weighing by inverse square of the distance). Add all these "push" vectors together.</li>
+                        <li><strong>Example:</strong> A neighbor is at (10, 5) from you. The vector pointing away is (-10, -5). If it's very close (e.g., d=2), the force is strong. If it's far (d=10), the force is weak.</li>
+                    </ul>
+
+                    <h3>Rule 2: Alignment</h3>
+                    <p><code>AlignmentSteer = Average(AllNeighborVelocities)</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> Find the average velocity of all your neighbors. That average vector is the "desired velocity" for the main steering formula.</li>
+                        <li><strong>Example:</strong> If you have two neighbors, one moving at (2, 0) and the other at (2, 2), their average velocity is ((2+2)/2, (0+2)/2) = (2, 1). This is the direction you'll try to match.</li>
+                    </ul>
+
+                    <h3>Rule 3: Cohesion</h3>
+                    <p><code>CohesionSteer = Average(AllNeighborPositions) - MyPosition</code></p>
+                    <ul>
+                        <li><strong>Plain English:</strong> Find the average position (the center of mass) of all your neighbors. Then, calculate the vector needed to steer from your current position to that center point.</li>
+                        <li><strong>Example:</strong> If your neighbors are at (50, 50) and (60, 50), their center is (55, 50). If you are at (54, 50), the cohesion vector is (55, 50) - (54, 50) = (1, 0), pulling you to the right.</li>
+                    </ul>
+                    <p><strong>Note:</strong> In the actual code, all resulting steering vectors are normalized, limited by <code>MaxForce</code>, and then multiplied by their respective force sliders before being added to the boid's acceleration.</p>
+                </section>
+
+                <section id="advanced-notes">
+                    <h2>Advanced Notes & Extensions</h2>
+                    <ul>
+                        <li><strong>Numerical Stability:</strong> The simulation uses a simple "Euler integration" method to update positions (<code>position += velocity</code>). At very high speeds and forces, this can become unstable, causing boids to "jump" too far in one step and behave erratically. A more advanced integrator like a Verlet or Runge-Kutta integrator would provide more stability.</li>
+                        <li><strong>Performance at Scale:</strong> The current algorithm is of O(N&sup2;) complexity, meaning for N boids, it performs N*N checks. This gets slow very quickly! For thousands of boids, a more efficient method for finding neighbors is needed. Common solutions include spatial partitioning data structures like a <strong>Quadtree</strong> (in 2D) or an Octree (in 3D), which would reduce the complexity closer to O(N log N).</li>
+                        <li><strong>Possible Extensions:</strong>
+                            <ol>
+                                <li><strong>Obstacles:</strong> Add static objects to the canvas that boids must steer to avoid.</li>
+                                <li><strong>Predator/Prey:</strong> Introduce a special "predator" boid (controlled by the user or AI) that the flock tries to flee from, and "food" sources that the flock tries to seek.</li>
+                                <li><strong>3D Flocking:</strong> The same three rules work perfectly in three dimensions. The vector math is identical, just with an added Z-component.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </section>
+
+                <section id="analogies">
+                    <h2>Analogies & Intuition</h2>
+                    <p>Here are a few different ways to think about the flock.</p>
+
+                    <h3>1. The Physical Analogy: A Crowd of People</h3>
+                    <p>Imagine a dense crowd of people trying to move somewhere. Each person tries to avoid bumping into others (separation), move in the same general direction as the people around them (alignment), and stay with the main group (cohesion). This is a strong, intuitive analogy for the boid's-eye view.</p>
+                    <p><strong>Limitation:</strong> People have intention and intelligence. They can predict paths and make complex decisions. Boids are much simpler; they only react to the current state.</p>
+
+                    <h3>2. The Visualization Analogy: A Flow Field</h3>
+                    <p>Imagine the canvas is a fluid, and each boid generates forces around it. It pushes nearby things away (separation), "drags" the fluid along with it in its direction of travel (alignment), and creates a small gravitational pull (cohesion). Each boid is simply a particle navigating the combined force field created by all the other particles.</p>
+                    <p><strong>Limitation:</strong> In a real fluid, forces would propagate at a certain speed. Here, the "force field" updates instantly everywhere as the boids move.</p>
+
+                    <h3>3. The Computational Analogy: Distributed Computing</h3>
+                    <p>Think of each boid as a tiny, independent computer processor. Its only inputs are the state of other processors within its "network range" (the visual range). It performs a simple calculation based on these inputs and produces an output (its new velocity). The global pattern is a result of this parallel, distributed computation. There is no central server telling the processors what to do.</p>
+                    <p><strong>Limitation:</strong> Unlike most distributed systems, the "network" topology for the boids is constantly and fluidly changing as they move in and out of each other's visual range.</p>
+                </section>
+
+                <section id="faq">
+                    <h2>FAQ & Troubleshooting</h2>
+                    <dl>
+                        <dt>Why is the simulation running slowly?</dt>
+                        <dd>The simulation's performance depends heavily on the <strong>Boid Count</strong>. For every boid, it has to check every other boid. Try lowering the Boid Count slider. You can also toggle "Performance Mode" to reduce rendering quality.</dd>
+
+                        <dt>Why did my flock explode or fly off-screen?</dt>
+                        <dd>This usually happens if the <strong>Separation Force</strong> is too high compared to the <strong>Cohesion Force</strong>. The boids are pushing each other away more strongly than they are pulling together. Try increasing Cohesion or decreasing Separation.</dd>
+
+                        <dt>Why did my boids clump into one big ball?</dt>
+                        <dd>This happens when the <strong>Cohesion Force</strong> is very high and the <strong>Separation Force</strong> is very low. They are all being pulled to their average center point with nothing to keep them from overlapping.</dd>
+
+                        <dt>The canvas is blank or not working.</dt>
+                        <dd>First, try clicking the "Reset" button. If that doesn't work, reload the page. If it's still not working, your browser might be too old or an error may have occurred. Open the "Developer Console" at the bottom of the page and copy/paste the error log if you need to ask for help.</dd>
+
+                        <dt>How do I save a cool pattern I made?</dt>
+                        <dd>Use the "Share Preset" button! It will copy a special URL to your clipboard. When you or someone else opens that URL, the simulation will start with the exact same parameters you had.</dd>
+
+                        <dt>What do the keyboard shortcuts do?</dt>
+                        <dd><strong>Spacebar:</strong> Play/Pause. <strong>Right Arrow:</strong> Step forward one frame (when paused). <strong>R:</strong> Reset the simulation. <strong>E:</strong> Export a PNG image of the current frame.</dd>
+                    </dl>
+                </section>
+
+            </div>
+
+            <!-- Right Column: Controls -->
+            <div class="controls-column">
+                <div class="controls-group">
+                    <h3>Main Controls</h3>
+                    <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                    <button id="step-btn" aria-label="Step (Right Arrow)">Step</button>
+                    <button id="reset-btn" aria-label="Reset (r)">Reset</button>
+                    <label for="speed-slider">Speed:</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" step="0.1" value="1" aria-label="Simulation Speed">
+                </div>
+
+                <div class="controls-group">
+                    <h3>Simulation Parameters</h3>
+                    <!-- Sliders will be added here by JS -->
+                    <div id="sliders-container"></div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Presets</h3>
+                    <div id="presets-container">
+                        <!-- Preset buttons will be added here by JS -->
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Export</h3>
+                    <button id="export-png-btn" aria-label="Export PNG (e)">Export PNG</button>
+                    <button id="export-json-btn">Export JSON</button>
+                    <button id="share-preset-btn">Share Preset</button>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Settings</h3>
+                    <label>
+                        <input type="checkbox" id="perf-mode-toggle">
+                        Performance Mode
+                    </label>
+                </div>
+
+            </div>
+        </div>
+
+        <footer>
+            <details id="dev-console" class="dev-console">
+                <summary>Developer Console</summary>
+                <pre id="dev-log">Initializing...</pre>
+            </details>
+        </footer>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const devLog = document.getElementById('dev-log');
+
+        // --- Simulation State ---
+        let boids = [];
+        let animationFrameId;
+        let isRunning = false; // Start paused
+        let lastTime = 0;
+        let frameCount = 0;
+
+        // --- Simulation Parameters (will be controllable later) ---
+        const PARAMS = {
+            boidCount: 100,
+            maxSpeed: 2.5,
+            maxForce: 0.05,
+            visualRange: 50,
+            separationForce: 1.5,
+            alignmentForce: 1.0,
+            cohesionForce: 1.0,
+        };
+
+        // --- Vector Class for 2D Math ---
+        class Vector {
+            constructor(x = 0, y = 0) {
+                this.x = x;
+                this.y = y;
+            }
+
+            add(v) { this.x += v.x; this.y += v.y; return this; }
+            sub(v) { this.x -= v.x; this.y -= v.y; return this; }
+            mult(n) { this.x *= n; this.y *= n; return this; }
+            div(n) { this.x /= n; this.y /= n; return this; }
+            mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+
+            normalize() {
+                const len = this.mag();
+                if (len !== 0) this.div(len);
+                return this;
+            }
+
+            limit(max) {
+                const magSq = this.x * this.x + this.y * this.y;
+                if (magSq > max * max) {
+                    this.normalize().mult(max);
+                }
+                return this;
+            }
+
+            static sub(v1, v2) { return new Vector(v1.x - v2.x, v1.y - v2.y); }
+        }
+
+        // --- Boid Class ---
+        class Boid {
+            constructor() {
+                this.position = new Vector(Math.random() * canvas.width, Math.random() * canvas.height);
+                this.velocity = new Vector(Math.random() * 2 - 1, Math.random() * 2 - 1);
+                this.velocity.normalize().mult(Math.random() * PARAMS.maxSpeed);
+                this.acceleration = new Vector();
+            }
+
+            edges() {
+                if (this.position.x > canvas.width) this.position.x = 0;
+                else if (this.position.x < 0) this.position.x = canvas.width;
+                if (this.position.y > canvas.height) this.position.y = 0;
+                else if (this.position.y < 0) this.position.y = canvas.height;
+            }
+
+            flock(boids) {
+                let separation = new Vector();
+                let alignment = new Vector();
+                let cohesion = new Vector();
+                let total = 0;
+
+                for (let other of boids) {
+                    let d = Vector.sub(this.position, other.position).mag();
+                    if (other !== this && d < PARAMS.visualRange) {
+                        // Separation
+                        let diff = Vector.sub(this.position, other.position);
+                        if (d > 0) diff.div(d * d);
+                        separation.add(diff);
+
+                        // Alignment
+                        alignment.add(other.velocity);
+
+                        // Cohesion
+                        cohesion.add(other.position);
+
+                        total++;
+                    }
+                }
+
+                if (total > 0) {
+                    separation.div(total).normalize().mult(PARAMS.maxSpeed).sub(this.velocity).limit(PARAMS.maxForce).mult(PARAMS.separationForce);
+                    alignment.div(total).normalize().mult(PARAMS.maxSpeed).sub(this.velocity).limit(PARAMS.maxForce).mult(PARAMS.alignmentForce);
+                    cohesion.div(total).sub(this.position).normalize().mult(PARAMS.maxSpeed).sub(this.velocity).limit(PARAMS.maxForce).mult(PARAMS.cohesionForce);
+                }
+
+                this.acceleration.add(separation);
+                this.acceleration.add(alignment);
+                this.acceleration.add(cohesion);
+            }
+
+            update() {
+                this.velocity.add(this.acceleration);
+                this.velocity.limit(PARAMS.maxSpeed);
+                this.position.add(this.velocity);
+                this.acceleration.mult(0);
+            }
+
+            render(ctx) {
+                const color = document.body.classList.contains('high-contrast') ? '#FFFFFF' : '#333333';
+                ctx.fillStyle = color;
+                if (isPerfMode) {
+                    ctx.fillRect(this.position.x - 2, this.position.y - 2, 4, 4);
+                } else {
+                    ctx.save();
+                    ctx.translate(this.position.x, this.position.y);
+                    ctx.rotate(Math.atan2(this.velocity.y, this.velocity.x) + Math.PI / 2);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -6);
+                    ctx.lineTo(-4, 6);
+                    ctx.lineTo(4, 6);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+        }
+
+        // --- Simulation Setup and Loop ---
+        function setup() {
+            log("Setting up simulation...");
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+            boids = [];
+            for (let i = 0; i < PARAMS.boidCount; i++) {
+                boids.push(new Boid());
+            }
+            log(`Created ${PARAMS.boidCount} boids.`);
+
+            // Draw initial state
+            drawFrame();
+        }
+
+        function drawFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let boid of boids) {
+                boid.render(ctx);
+            }
+        }
+
+        function stepSim() {
+             for (let boid of boids) {
+                boid.edges();
+                boid.flock(boids);
+                boid.update();
+            }
+        }
+
+        function animate(timestamp) {
+            if (!isRunning) return;
+
+            updatePerfMeter(timestamp);
+            stepSim();
+            drawFrame();
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            devLog.textContent = `[${time}] ${message}\n` + devLog.textContent;
+        }
+
+        // --- UI Control Logic ---
+
+        const controlsConfig = {
+            boidCount: { min: 10, max: 300, step: 1, name: 'Boid Count' },
+            maxSpeed: { min: 0.5, max: 10, step: 0.1, name: 'Max Speed' },
+            maxForce: { min: 0.01, max: 0.5, step: 0.01, name: 'Max Force' },
+            visualRange: { min: 10, max: 200, step: 1, name: 'Visual Range' },
+            separationForce: { min: 0, max: 3, step: 0.1, name: 'Separation' },
+            alignmentForce: { min: 0, max: 3, step: 0.1, name: 'Alignment' },
+            cohesionForce: { min: 0, max: 3, step: 0.1, name: 'Cohesion' },
+        };
+
+        function createSliders() {
+            const container = document.getElementById('sliders-container');
+            container.innerHTML = '';
+            for (const param in controlsConfig) {
+                const config = controlsConfig[param];
+                const value = PARAMS[param];
+
+                const sliderDiv = document.createElement('div');
+                sliderDiv.classList.add('slider-container');
+
+                const label = document.createElement('label');
+                label.setAttribute('for', `${param}-slider`);
+                label.textContent = `${config.name}: `;
+
+                const valueSpan = document.createElement('span');
+                valueSpan.id = `${param}-value`;
+                valueSpan.textContent = value;
+                label.appendChild(valueSpan);
+
+                const slider = document.createElement('input');
+                slider.type = 'range';
+                slider.id = `${param}-slider`;
+                slider.min = config.min;
+                slider.max = config.max;
+                slider.step = config.step;
+                slider.value = value;
+
+                if (param === 'boidCount') {
+                    let lastBoidCount = PARAMS.boidCount;
+                    slider.addEventListener('input', (e) => {
+                        valueSpan.textContent = e.target.value;
+                    });
+                    slider.addEventListener('change', (e) => {
+                        const newValue = parseInt(e.target.value, 10);
+                        if (newValue > 250) {
+                            if (!window.confirm(`Warning: A boid count of ${newValue} may cause performance issues on some devices. Are you sure?`)) {
+                                slider.value = lastBoidCount;
+                                valueSpan.textContent = lastBoidCount;
+                                return;
+                            }
+                        }
+                        PARAMS.boidCount = newValue;
+                        lastBoidCount = newValue;
+                        resetSim();
+                    });
+                } else {
+                    slider.addEventListener('input', (e) => {
+                        PARAMS[param] = parseFloat(e.target.value);
+                        valueSpan.textContent = e.target.value;
+                    });
+                }
+
+                sliderDiv.appendChild(label);
+                sliderDiv.appendChild(slider);
+                container.appendChild(sliderDiv);
+            }
+        }
+
+        function togglePlayPause() {
+            isRunning = !isRunning;
+            if (isRunning) {
+                playPauseBtn.textContent = 'Pause';
+                log('Simulation started.');
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                playPauseBtn.textContent = 'Play';
+                log('Simulation paused.');
+                cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        function stepAndDraw() {
+            if (isRunning) return;
+            log('Stepping simulation by one frame.');
+            stepSim();
+            drawFrame();
+        }
+
+        function resetSim() {
+            log('Resetting simulation.');
+            if (isRunning) {
+                togglePlayPause(); // Pause the simulation
+            }
+            setup();
+        }
+
+        // --- Presets and Export ---
+
+        const presets = {
+            'Calm Flock': {
+                description: "A large, gentle flock with a strong desire to stay together.",
+                params: { boidCount: 150, maxSpeed: 2, visualRange: 40, separationForce: 1.7, alignmentForce: 1.0, cohesionForce: 1.0 }
+            },
+            'Typical': {
+                description: "A standard, balanced flock showing all behaviors.",
+                params: { boidCount: 100, maxSpeed: 2.5, visualRange: 50, separationForce: 1.5, alignmentForce: 1.0, cohesionForce: 1.0 }
+            },
+            'Chaos': {
+                description: "A frantic, disorganized swarm with low cohesion.",
+                params: { boidCount: 75, maxSpeed: 4, visualRange: 70, separationForce: 1.2, alignmentForce: 0.5, cohesionForce: 0.5 }
+            },
+        };
+
+        function applyPreset(name) {
+            log(`Applying preset: ${name}`);
+            const preset = presets[name];
+            if (!preset) return;
+
+            for (const param in preset.params) {
+                PARAMS[param] = preset.params[param];
+            }
+
+            // Update sliders UI
+            for (const param in controlsConfig) {
+                const slider = document.getElementById(`${param}-slider`);
+                const valueSpan = document.getElementById(`${param}-value`);
+                if(slider && valueSpan) {
+                    slider.value = PARAMS[param];
+                    valueSpan.textContent = PARAMS[param];
+                }
+            }
+            resetSim();
+        }
+
+        function createPresetButtons() {
+            const container = document.getElementById('presets-container');
+            container.innerHTML = '';
+            for (const name in presets) {
+                const preset = presets[name];
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.classList.add('secondary');
+                button.addEventListener('click', () => applyPreset(name));
+
+                const description = document.createElement('span');
+                description.classList.add('preset-description');
+                description.textContent = preset.description;
+
+                container.appendChild(button);
+                container.appendChild(description);
+            }
+        }
+
+        function exportPNG() {
+            log('Exporting canvas to PNG...');
+            const link = document.createElement('a');
+            link.download = `flocking_simulation_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            log('PNG export triggered.');
+        }
+
+        function exportJSON() {
+            log('Exporting parameters to JSON...');
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(PARAMS, null, 2));
+            const link = document.createElement('a');
+            link.href = dataStr;
+            link.download = "flocking_params.json";
+            link.click();
+            log('JSON export triggered.');
+        }
+
+        function sharePreset() {
+            const jsonString = JSON.stringify(PARAMS);
+            const url = window.location.origin + window.location.pathname + '#params=' + encodeURIComponent(jsonString);
+            navigator.clipboard.writeText(url).then(() => {
+                log('Shareable preset URL copied to clipboard.');
+                const shareBtn = document.getElementById('share-preset-btn');
+                const originalText = shareBtn.textContent;
+                shareBtn.textContent = 'Copied!';
+                setTimeout(() => { shareBtn.textContent = originalText; }, 2000);
+            }, (err) => {
+                log(`Error copying URL: ${err}`);
+            });
+        }
+
+        function loadPresetFromURL() {
+            if (window.location.hash.startsWith('#params=')) {
+                try {
+                    const encodedJson = window.location.hash.substring(8);
+                    const decodedJson = decodeURIComponent(encodedJson);
+                    const urlParams = JSON.parse(decodedJson);
+                    log('Found parameters in URL, applying them.');
+                    // Validate and apply params
+                    for (const key in urlParams) {
+                        if (key in PARAMS) {
+                            PARAMS[key] = urlParams[key];
+                        }
+                    }
+                } catch(e) {
+                    log(`Error parsing params from URL: ${e.message}`);
+                }
+            }
+        }
+
+        // --- Final Features: Performance, Quality Checks ---
+        const perfMeter = document.getElementById('sim-performance-meter');
+        let frameCounter = 0;
+        let lastPerfUpdateTime = 0;
+        let isPerfMode = false;
+
+        function updatePerfMeter(timestamp) {
+            frameCounter++;
+            const elapsed = timestamp - lastPerfUpdateTime;
+            if (elapsed > 1000) { // Update once per second
+                const fps = Math.round(frameCounter * 1000 / elapsed);
+                let memUsage = 'N/A';
+                if (performance && performance.memory) {
+                    memUsage = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+                }
+                perfMeter.innerHTML = `<span>FPS: ${fps}</span> | <span>Particles: ${PARAMS.boidCount}</span> | <span>Mem. Usage: ${memUsage}MB</span>`;
+                lastPerfUpdateTime = timestamp;
+                frameCounter = 0;
+            }
+        }
+
+        function runQualityChecks() {
+            const checks = {
+                'Simulation canvas exists': document.getElementById('simulationCanvas'),
+                'Play/Pause button exists': document.getElementById('play-pause-btn'),
+                'Presets container exists': document.getElementById('presets-container'),
+                'Sliders container exists': document.getElementById('sliders-container'),
+                'Boids logic is available': typeof Boid === 'function',
+            };
+
+            const errorList = document.getElementById('quality-check-list');
+            const errorPanel = document.getElementById('quality-check-panel');
+            let failed = false;
+
+            for(const name in checks) {
+                if (!checks[name]) {
+                    failed = true;
+                    const item = document.createElement('li');
+                    item.textContent = `Check failed: ${name}`;
+                    errorList.appendChild(item);
+                }
+            }
+
+            if(failed) {
+                errorPanel.classList.remove('hidden');
+                log('CRITICAL: One or more quality checks failed. The simulation may not run correctly.');
+            } else {
+                log('All quality checks passed.');
+            }
+        }
+
+        // --- Initializer ---
+        document.addEventListener('DOMContentLoaded', () => {
+            log("DOM content loaded. Initializing simulation.");
+
+            const stepBtn = document.getElementById('step-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const themeToggle = document.getElementById('theme-toggle');
+            const exportPngBtn = document.getElementById('export-png-btn');
+            const exportJsonBtn = document.getElementById('export-json-btn');
+            const sharePresetBtn = document.getElementById('share-preset-btn');
+            const perfModeToggle = document.getElementById('perf-mode-toggle');
+
+            // A small delay to ensure layout is stable
+            setTimeout(() => {
+                try {
+                    runQualityChecks();
+                    loadPresetFromURL(); // Load params from URL if they exist
+                    createSliders();
+                    createPresetButtons();
+                    setup();
+                    playPauseBtn.textContent = 'Play';
+                    log("Setup complete. Ready to play.");
+
+                    // Attach event listeners
+                    playPauseBtn.addEventListener('click', togglePlayPause);
+                    stepBtn.addEventListener('click', stepAndDraw);
+                    resetBtn.addEventListener('click', resetSim);
+                    exportPngBtn.addEventListener('click', exportPNG);
+                    exportJsonBtn.addEventListener('click', exportJSON);
+                    sharePresetBtn.addEventListener('click', sharePreset);
+
+                    perfModeToggle.addEventListener('change', (e) => {
+                        isPerfMode = e.target.checked;
+                        log(`Performance mode ${isPerfMode ? 'enabled' : 'disabled'}.`);
+                        drawFrame(); // Redraw with new style
+                    });
+
+                    themeToggle.addEventListener('click', () => {
+                        document.body.classList.toggle('high-contrast');
+                        log(`Toggled high contrast mode: ${document.body.classList.contains('high-contrast')}`);
+                        drawFrame(); // Redraw with new colors
+                    });
+
+                    // Keyboard shortcuts
+                    window.addEventListener('keydown', (e) => {
+                        if (e.target.tagName === 'INPUT') return; // Ignore inputs on sliders
+                        switch (e.code) {
+                            case 'Space':
+                                e.preventDefault();
+                                togglePlayPause();
+                                break;
+                            case 'ArrowRight':
+                                e.preventDefault();
+                                stepAndDraw();
+                                break;
+                            case 'KeyR':
+                                e.preventDefault();
+                                resetSim();
+                                break;
+                            case 'KeyE':
+                                e.preventDefault();
+                                exportPNG();
+                                break;
+                        }
+                    });
+
+                } catch (e) {
+                    log(`Error during setup: ${e.message}`);
+                    console.error(e);
+                }
+            }, 100);
+        });
+    </script>
+
+</body>
+</html>
