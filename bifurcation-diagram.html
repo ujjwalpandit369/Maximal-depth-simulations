@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classical: Parameter Space and Bifurcation Diagrams</title>
+    <style>
+        :root {
+            --primary-color: #007bff; --primary-hover: #0056b3;
+            --text-color: #212529; --bg-color: #f8f9fa;
+            --section-bg: #ffffff; --border-color: #dee2e6;
+            --subtle-bg: #e9ecef;
+        }
+        body.high-contrast {
+            --primary-color: #00ffff; --primary-hover: #00cccc;
+            --text-color: #ffffff; --bg-color: #000000;
+            --section-bg: #111111; --border-color: #555555;
+            --subtle-bg: #333333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        header { text-align: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        h2 { margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        h3 { text-align: center; margin-top: 0; font-weight: normal;}
+        .subtitle { font-size: 1.1rem; color: #6c757d; }
+        body.high-contrast .subtitle { color: #bbbbbb; }
+        #metadata-bar { font-size: 0.9rem; color: #6c757d; margin-top: 1rem; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 1rem; }
+        body.high-contrast #metadata-bar { color: #bbbbbb; }
+        section { margin-bottom: 2rem; padding: 1.5rem; background-color: var(--section-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        main { max-width: 1200px; margin: 0 auto; }
+
+        /* Sim Layout */
+        .sim-layout-container { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; }
+        .sim-panel { flex: 1; min-width: 350px; }
+        .sim-panel canvas { width: 100%; height: auto; border: 1px solid var(--border-color); border-radius: 4px; }
+
+        /* Controls */
+        #controls { padding: 1rem; margin-bottom: 1rem; background: var(--subtle-bg); border-radius: 8px; }
+        .controls-main { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: center; }
+        .control-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
+        .control-group .label-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .control-group label { font-weight: bold; }
+        .control-group output { font-family: monospace; }
+        #controls .button-group { display: flex; gap: 0.5rem; align-items: center; }
+
+        button {
+            padding: 0.5rem 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);
+            background-color: var(--primary-color); color: white; border-radius: 5px;
+            cursor: pointer; transition: background-color 0.2s, transform 0.1s, color 0.2s;
+        }
+        body.high-contrast button { color: black; }
+        button:hover, button:focus { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        button.active { background-color: #28a745; border-color: #28a745; }
+        body.high-contrast button.active { color: white; }
+
+        /* Other styles from previous simulations */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border: 1px solid var(--border-color); }
+        th { background-color: var(--subtle-bg); }
+        code { font-family: monospace; background-color: var(--subtle-bg); padding: .2em .4em; border-radius: 3px; font-size: 85%; }
+        #suggestion-box { background-color: #eef7ff; border: 1px solid var(--primary-color); border-radius: 5px; padding: 1rem; margin-bottom: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        body.high-contrast #suggestion-box { background-color: #1a1a1a; }
+        #suggestion-box p { margin: 0 0 0.5rem 0; }
+        #suggestion-box .button-group button { background-color: var(--section-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
+        #suggestion-box .button-group button.selected { background-color: var(--primary-color); color: white; }
+        body.high-contrast #suggestion-box .button-group button.selected { color: black; }
+        footer { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: center; color: #6c757d; font-size: 0.9rem; }
+        #dev-console { margin-top: 1rem; background: var(--subtle-bg); border: 1px solid var(--border-color); border-radius: 8px; text-align: left; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        #dev-console-header { cursor: pointer; padding: 0.5rem 1rem; margin: 0; background: var(--subtle-bg); border-radius: 8px 8px 0 0; }
+        #dev-console-content { max-height: 200px; overflow-y: auto; padding: 0.5rem 1rem; display: none; }
+        #dev-console-content.open { display: block; }
+        #dev-log { list-style-type: none; padding: 0; margin: 0; font-family: monospace; font-size: 0.85rem; }
+        #dev-log li { padding: 2px 0; border-bottom: 1px solid #e0e0e0; }
+        body.high-contrast #dev-log li { border-bottom-color: #444; }
+        .equation { background-color: var(--subtle-bg); padding: 1rem; border-radius: 5px; margin: 1rem 0; font-family: monospace; text-align: center; font-size: 1.1rem; line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <p>Tune this simulation to your liking:</p>
+        <div class="button-group">
+            <button data-pref="audience" data-value="beginner">Audience: Beginner</button>
+            <button data-pref="audience" data-value="intermediate">Audience: Intermediate</button>
+            <button data-pref="audience" data-value="advanced">Audience: Advanced</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>Bifurcation Diagram of the Logistic Map</h1>
+        <p class="subtitle">Visualizing the route to chaos in a simple dynamical system.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: ~10-30s to generate</span>
+            <span>Recommended Device: Desktop</span>
+            <span id="html-size"></span>
+            <button id="theme-toggle-btn" aria-label="Toggle high contrast theme">Toggle Contrast</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <section id="simulation-area">
+             <div id="controls">
+                <div class="controls-main">
+                    <div class="control-group">
+                        <div class="label-container">
+                            <label for="r-slider">Growth Rate (r)</label>
+                            <output id="r-value">3.550</output>
+                        </div>
+                        <input type="range" id="r-slider" min="2.4" max="4.0" step="0.001" value="3.55" title="Controls the 'r' parameter for the live cobweb plot">
+                    </div>
+                    <div class="button-group">
+                        <button id="generate-btn" title="Start generating the full bifurcation diagram (can be slow!)">Generate Diagram</button>
+                        <button id="clear-btn" title="Stop generation and clear the bifurcation diagram">Clear</button>
+                    </div>
+                </div>
+                <div class="button-group preset-buttons" style="justify-content: center; margin-top: 1rem; grid-column: 1 / -1;">
+                    <button id="preset-stable" title="Set r = 2.8">r = 2.8 (Stable)</button>
+                    <button id="preset-bifurcate" title="Set r = 3.2">r = 3.2 (2-Cycle)</button>
+                    <button id="preset-chaos" title="Set r = 3.7">r = 3.7 (Chaos)</button>
+                    <button id="export-png-btn">Export PNG</button>
+                    <button id="share-btn">Share `r`</button>
+                </div>
+            </div>
+            <div class="sim-layout-container">
+                <div class="sim-panel">
+                    <h3>Cobweb Plot (Live View)</h3>
+                    <canvas id="cobweb-canvas" width="400" height="400"></canvas>
+                </div>
+                <div class="sim-panel">
+                    <h3>Bifurcation Diagram</h3>
+                    <canvas id="bifurcation-canvas" width="600" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation explores how a very simple system can display surprisingly complex behavior as we change a single setting. The system is the <strong>logistic map</strong>, a basic model of population growth. The setting is the <strong>growth rate `r`</strong>. The main panel, the <strong>Bifurcation Diagram</strong>, is a map of the system's long-term behavior. The horizontal axis is the growth rate `r`, and the vertical axis shows the population levels the system eventually settles on. By watching how the plot splits and branches, you can see the system's "route to chaos." The live "Cobweb Plot" on the left shows what the system is doing for the specific `r` value you've chosen with the slider.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. A Simple Model of Population</h3>
+            <p>Imagine a species of fish in a pond. Their population next year depends on their population this year. This relationship is modeled by the <strong>logistic map</strong>: <code>x<sub>next</sub> = r * x<sub>current</sub> * (1 - x<sub>current</sub>)</code>.
+            <ul>
+                <li><code>x</code> is the population, scaled to be a number between 0 (extinction) and 1 (maximum possible population).</li>
+                <li><code>r</code> is the growth rate. A low `r` means the fish reproduce slowly; a high `r` means they reproduce quickly.</li>
+            </ul>
+            The `(1 - x)` term represents a limit to growth—as the population `x` gets closer to 1, the pond gets too crowded, and the growth slows down. It's a simple feedback loop.</p>
+
+            <h3>2. Two Ways to See the Behavior</h3>
+            <p>This simulation has two linked panels:</p>
+            <ol>
+                <li><strong>The Cobweb Plot (Left):</strong> This is a live view for a single value of `r` that you control with the slider. It shows how the population `x` changes from one year to the next. The red line "cobweb" starts at an initial population, goes up to the blue parabola (to calculate next year's population), then horizontally to the `y=x` line (to set up the next calculation). Watching this plot shows you the system's short-term dynamics.</li>
+                <li><strong>The Bifurcation Diagram (Right):</strong> This is the main event. It's a summary of the system's <em>long-term</em> behavior across a whole range of `r` values. To create it, the computer picks an `r`, runs the simulation for 1000 "years" to let it settle, then plots the population values for the next 1000 years as a single vertical line of dots. It then moves to the next `r` and repeats. Click "Generate Diagram" to see this process.</li>
+            </ol>
+
+            <h3>3. The "Route to Chaos"</h3>
+            <p>The magic happens when you look at the bifurcation diagram.
+            <ul>
+                <li>For low `r` (e.g., 2.8), the system settles on a single, stable population. The plot is one thin line.</li>
+                <li>At `r=3.0`, the line splits in two. This is a <strong>bifurcation</strong>. The population no longer settles on one value but oscillates between two values (a 2-year cycle).</li>
+                <li>At `r=3.45`, it splits again into a 4-year cycle. Then it splits into an 8-cycle, then 16, and so on, faster and faster. This is called a <strong>period-doubling cascade</strong>.</li>
+                <li>Finally, around `r=3.57`, the system becomes <strong>chaotic</strong>. The population never settles down and never repeats. It can take on a huge range of values, which appear as a solid block of dots. Within this chaos, however, there are strange windows of stability—white stripes where the system temporarily becomes orderly again.</li>
+            </ul>
+            This transition from order to chaos is a common pattern found in many real-world systems, from fluid dynamics to electrical circuits.
+            </p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory</h2>
+            <h4>The Logistic Map</h4>
+            <p>The entire simulation is based on iterating a single, simple quadratic function. The state of the system in the next time step, <code>x<sub>n+1</sub></code>, is determined solely by its state in the current time step, <code>x<sub>n</sub></code>, and the parameter <code>r</code>.</p>
+            <p class="equation">x<sub>n+1</sub> = r * x<sub>n</sub> * (1 - x<sub>n</sub>)</p>
+            <p>Despite its simplicity, this equation is one of the most famous examples of a system that can exhibit chaotic behavior.</p>
+
+            <h4>Fixed Points and Stability</h4>
+            <p>A "fixed point" is a value of `x` where the population stops changing. This happens when <code>x<sub>n+1</sub> = x<sub>n</sub></code>. For `r` values between 1 and 3, the system has one stable fixed point. The cobweb plot will show the path spiraling into this point.</p>
+
+            <h4>Period-Doubling Bifurcations</h4>
+            <p>As `r` increases past 3, the fixed point becomes unstable. It splits (bifurcates) into two new points, and the system now oscillates between them. This is called a 2-cycle. As `r` increases further, this 2-cycle becomes unstable and each of its points bifurcates, leading to a 4-cycle. This cascade of period-doubling bifurcations is a universal route to chaos. The ratio of the distances between successive bifurcations approaches a universal constant called the <strong>Feigenbaum constant (δ ≈ 4.669)</strong>.</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Symbol</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Growth Rate</strong></td>
+                        <td>r</td>
+                        <td>[2.4, 4.0]</td>
+                        <td>The primary control parameter for the logistic map. It determines the long-term behavior of the system, from stability to chaos.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group">
+                <h4>1. Stable Fixed Point (r = 2.8)</h4>
+                <p>At low growth rates, the population settles to a single, stable value.
+                <p><strong>Observe:</strong> The cobweb plot spirals neatly into a single intersection point. On the bifurcation diagram, this corresponds to the single line on the far left.</p>
+                <button onclick="window.setR(2.8)">Set r = 2.8</button>
+            </div>
+            <div class="example-group">
+                <h4>2. Period-2 Orbit (r = 3.2)</h4>
+                <p>After the first bifurcation, the population no longer settles, but oscillates between two values.</p>
+                <p><strong>Observe:</strong> The cobweb plot settles into a rectangular loop between two points. On the bifurcation diagram, this `r` value is in the region with two distinct lines.</p>
+                <button onclick="window.setR(3.2)">Set r = 3.2</button>
+            </div>
+            <div class="example-group">
+                <h4>3. Chaos (r = 3.7)</h4>
+                <p>At high growth rates, the system's behavior is chaotic and unpredictable.</p>
+                <p><strong>Observe:</strong> The cobweb plot never settles and fills up a large area. On the bifurcation diagram, this `r` value is in the dense, shaded region where the population can take on many values.</p>
+                <button onclick="window.setR(3.7)">Set r = 3.7</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Finding the First Bifurcation</h4>
+            <ol>
+                <li>Use the slider to set <strong>r = 2.9</strong>. Watch the cobweb plot on the left. The red lines spiral into a single point. This is a stable system.</li>
+                <li>Slowly drag the slider to the right. As you pass <strong>r = 3.0</strong>, you'll see the cobweb plot change. It no longer spirals to a point but settles into a small square box. This is the first bifurcation! The system now has two states it alternates between.</li>
+                <li>Continue increasing `r` to <strong>3.2</strong>. The box in the cobweb plot gets larger.</li>
+                <li>Now find the next bifurcation. Slowly increase `r` from 3.2. Around <strong>r = 3.45</strong>, you'll see the cobweb plot change again, now settling into a pattern with four distinct values. You've found the second bifurcation.</li>
+            </ol>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li>Set `r` to 3.83. Generate the bifurcation diagram. You should see a large white "window" of stability. What kind of cycle does the system have in this window? (Hint: check the cobweb plot).</li>
+                <li>What is the highest value of `x` the system can reach? Does it ever reach 1.0? Why or why not?</li>
+                <li>Set `r = 4.0`. The chaotic region seems to cover the whole range from 0 to 1. Is this true?</li>
+                <li>Set `r = 3.627`. This is another interesting window. How many values in its cycle?</li>
+                <li>Can you find the point where the 4-cycle bifurcates into an 8-cycle? (Hint: It's around r = 3.54).</li>
+            </ol>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>Universality and the Feigenbaum Constant</h4>
+            <p>The period-doubling route to chaos is not unique to the logistic map. A huge number of different mathematical functions exhibit the exact same behavior. Furthermore, the ratio of the distances between successive bifurcations always converges to the same number, the Feigenbaum constant <strong>δ ≈ 4.669...</strong>. This discovery of universality was a major breakthrough in chaos theory, showing that the transition to chaos has deep, underlying mathematical rules.</p>
+            <h4>Self-Similarity</h4>
+            <p>If you were to "zoom in" on a small part of the chaotic region of the bifurcation diagram, you would find a distorted, miniature copy of the entire diagram within it. This property of self-similarity is a hallmark of fractals and is intimately connected to the period-doubling cascade.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. A Dripping Faucet</h4>
+            <p>Think of a faucet that you are opening very, very slowly.
+            <ul>
+                <li><strong>Low `r` (Stable):</strong> At first, the water drips out one drop at a time, at a perfectly regular interval. Drip... drip... drip. This is like the stable fixed point.</li>
+                <li><strong>Medium `r` (Period-Doubling):</strong> As you open the tap a bit more, you might find a new rhythm. Drip-drip... drip-drip... This is a 2-cycle. A bit more, and it might become a four-drip pattern. This is the period-doubling cascade.</li>
+                <li><strong>High `r` (Chaos):</strong> Open it further, and the dripping becomes irregular and turbulent. You can't predict when the next drop will fall. This is chaos.</li>
+            </ul>
+            <strong>Limitation:</strong> A real faucet is much more complex, but the analogy for the *transition* from simple, periodic behavior to complex, aperiodic behavior is very strong.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What is this diagram actually showing?</dt>
+                <dd>It's a map of behavior. For any given setting of the "growth rate" `r` on the horizontal axis, the black dots show the long-term values of the population `x` on the vertical axis. If you see one dot, the population is stable. If you see two dots, it's oscillating between two values.</dd>
+                <dt>2. Why does it take a while to generate?</dt>
+                <dd>To draw each vertical slice of the diagram, the computer must simulate thousands of time steps to be sure it has found the "long-term" behavior. Doing this for every pixel across the canvas is computationally intensive.</dd>
+                <dt>3. What are the white stripes in the chaotic area?</dt>
+                <dd>These are "islands of stability." They are small windows of the `r` parameter where the system suddenly snaps back from chaos into a stable, periodic cycle (like a 3-cycle or 6-cycle). These windows are a fascinating and complex feature of chaotic systems.</dd>
+                <dt>4. What is a "cobweb plot"?</dt>
+                <dd>It's a graphical way to see an iterated function in action. You start at a value `x` on the horizontal axis, move vertically to the function's curve (the parabola), and then move horizontally to the `y=x` line. The new point on the horizontal axis is your next value of `x`. Repeating this process traces out the system's trajectory.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sim = {
+            bifurcationCanvas: null, bCtx: null, bWidth: 600, bHeight: 400,
+            cobwebCanvas: null, cCtx: null, cWidth: 400, cHeight: 400,
+            x0: 0.2,
+            isGenerating: false,
+            r_min: 2.4, r_max: 4.0,
+            transient_steps: 500,
+            plot_steps: 200,
+            r_slider_val: 3.55,
+            colors: {
+                bg: '#FFFFFF', line: '#000000', text: '#888888',
+                parabola: '#007bff', cobweb: '#d9534f',
+                bifurcationPoint: 'rgba(0, 0, 0, 0.2)'
+            },
+            highContrastColors: {
+                bg: '#000000', line: '#FFFFFF', text: '#aaaaaa',
+                parabola: '#00ffff', cobweb: '#ff8888',
+                bifurcationPoint: 'rgba(255, 255, 255, 0.2)'
+            }
+        };
+
+        const elements = {};
+
+        function init() {
+            getDOMElements();
+            sim.bifurcationCanvas = elements.bifurcationCanvas;
+            sim.bCtx = sim.bifurcationCanvas.getContext('2d');
+            sim.cobwebCanvas = elements.cobwebCanvas;
+            sim.cCtx = sim.cobwebCanvas.getContext('2d');
+
+            addEventListeners();
+            updateUI();
+            populateMetadata();
+            runQualityChecks();
+            requestAnimationFrame(drawCobweb);
+            log("Bifurcation diagram simulation initialized.");
+        }
+
+        function getDOMElements() {
+            const ids = [
+                'bifurcation-canvas', 'cobweb-canvas', 'r-slider', 'r-value',
+                'generate-btn', 'clear-btn', 'preset-stable', 'preset-bifurcate',
+                'preset-chaos', 'export-png-btn', 'share-btn',
+                'quality-check-panel', 'html-size', 'theme-toggle-btn',
+                'dev-console-header', 'dev-console-content', 'dev-log', 'performance-meter'
+            ];
+            ids.forEach(id => {
+                const camelCaseId = id.replace(/-./g, x => x[1].toUpperCase());
+                elements[camelCaseId] = document.getElementById(id);
+            });
+            elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+        }
+
+        function addEventListeners() {
+            elements.rSlider.addEventListener('input', () => {
+                sim.r_slider_val = parseFloat(elements.rSlider.value);
+                updateUI();
+            });
+            elements.generateBtn.addEventListener('click', generateBifurcation);
+            elements.clearBtn.addEventListener('click', clearBifurcation);
+
+            elements.presetStable.addEventListener('click', () => setR(2.8));
+            elements.presetBifurcate.addEventListener('click', () => setR(3.2));
+            elements.presetChaos.addEventListener('click', () => setR(3.7));
+
+            elements.exportPngBtn.addEventListener('click', exportPNG);
+            elements.shareBtn.addEventListener('click', shareState);
+
+            elements.themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                log(`Theme toggled to ${document.body.classList.contains('high-contrast') ? 'high contrast' : 'default'}.`);
+            });
+
+            elements.suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pref = button.dataset.pref;
+                    const value = button.dataset.value;
+                    button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                    button.classList.add('selected');
+                    log(`User preference selected: ${pref}=${value}. (Note: This is a demo and does not alter the content).`);
+                });
+            });
+             elements.devConsoleHeader.addEventListener('click', () => elements.devConsoleContent.classList.toggle('open'));
+        }
+
+        function updateUI() {
+            elements.rValue.textContent = sim.r_slider_val.toFixed(3);
+            elements.rSlider.value = sim.r_slider_val;
+            elements.generateBtn.disabled = sim.isGenerating;
+        }
+
+        function setR(r_val) {
+            sim.r_slider_val = r_val;
+            updateUI();
+        }
+
+        function logisticMap(r, x) {
+            return r * x * (1.0 - x);
+        }
+
+        function clearBifurcation() {
+            sim.isGenerating = false; // This will stop the generation loop
+            sim.bCtx.clearRect(0, 0, sim.bWidth, sim.bHeight);
+            updateUI();
+        }
+
+        function generateBifurcation() {
+            if (sim.isGenerating) return;
+            sim.isGenerating = true;
+            updateUI();
+
+            const { bCtx, bWidth, bHeight, r_min, r_max, x0, transient_steps, plot_steps } = sim;
+            const colors = document.body.classList.contains('high-contrast') ? sim.highContrastColors : sim.colors;
+
+            clearBifurcation();
+            sim.isGenerating = true; // clearBifurcation sets it to false
+            updateUI();
+
+            bCtx.fillStyle = colors.bifurcationPoint;
+
+            let current_r_pixel = 0;
+            function drawColumn() {
+                if (!sim.isGenerating || current_r_pixel >= bWidth) {
+                    sim.isGenerating = false;
+                    updateUI();
+                    return;
+                }
+
+                const r = r_min + (current_r_pixel / bWidth) * (r_max - r_min);
+                let x = x0;
+
+                for (let i = 0; i < transient_steps; i++) { x = logisticMap(r, x); }
+
+                for (let i = 0; i < plot_steps; i++) {
+                    x = logisticMap(r, x);
+                    if (x >= 0 && x <= 1) {
+                        bCtx.fillRect(current_r_pixel, bHeight * (1 - x), 1, 1);
+                    }
+                }
+
+                current_r_pixel++;
+                requestAnimationFrame(drawColumn);
+            }
+            drawColumn();
+        }
+
+        function drawCobweb() {
+            const { cCtx, cWidth, cHeight, x0 } = sim;
+            const r = sim.r_slider_val;
+            const colors = document.body.classList.contains('high-contrast') ? sim.highContrastColors : sim.colors;
+
+            cCtx.fillStyle = colors.bg;
+            cCtx.fillRect(0, 0, cWidth, cHeight);
+
+            cCtx.strokeStyle = colors.text;
+            cCtx.lineWidth = 1;
+            cCtx.setLineDash([5, 5]);
+            cCtx.beginPath(); cCtx.moveTo(0, cHeight); cCtx.lineTo(cWidth, 0); cCtx.stroke();
+            cCtx.setLineDash([]);
+
+            cCtx.strokeStyle = colors.parabola;
+            cCtx.lineWidth = 2;
+            cCtx.beginPath();
+            let lastY = cHeight * (1 - logisticMap(r, 0));
+            cCtx.moveTo(0, lastY);
+            for (let i = 1; i <= cWidth; i++) {
+                const x_val = i / cWidth;
+                const y_val = logisticMap(r, x_val);
+                if (y_val >= 0 && y_val <= 1) {
+                    cCtx.lineTo(i, cHeight * (1 - y_val));
+                }
+            }
+            cCtx.stroke();
+
+            cCtx.strokeStyle = colors.cobweb;
+            cCtx.lineWidth = 1;
+            cCtx.beginPath();
+            let x = x0;
+            cCtx.moveTo(x * cWidth, cHeight);
+            cCtx.lineTo(x * cWidth, cHeight * (1 - x));
+            for (let i = 0; i < 50; i++) {
+                let y = logisticMap(r, x);
+                cCtx.lineTo(x * cWidth, cHeight * (1 - y));
+                cCtx.lineTo(y * cWidth, cHeight * (1 - y));
+                x = y;
+            }
+            cCtx.stroke();
+
+            requestAnimationFrame(drawCobweb);
+        }
+
+        // --- Final Features ---
+        function log(message) {
+            if (elements.devLog) {
+                const li = document.createElement('li');
+                li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                elements.devLog.prepend(li);
+            }
+        }
+        function logError(message) {
+             if (elements.devLog) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`;
+                elements.devLog.prepend(li);
+            }
+            console.error(message);
+        }
+        function runQualityChecks() {
+             let errors = [];
+            for (const key in elements) {
+                if (elements[key] === null) {
+                    errors.push(`Required element with ID '#${key.replace(/([A-Z])/g, "-$1").toLowerCase()}' not found.`);
+                }
+            }
+            if (errors.length > 0) {
+                elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                elements.qualityCheckPanel.style.display = 'block';
+            } else {
+                log("Quality checks passed.");
+            }
+        }
+        function populateMetadata() {
+            const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            const htmlSizeKB = (htmlSize / 1024).toFixed(1);
+            if (elements.htmlSize) {
+                elements.htmlSize.textContent = `Size: ${htmlSizeKB} KB`;
+            }
+        }
+        function exportPNG() {
+            // Create a temporary canvas to combine both plots
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = sim.cWidth + sim.bWidth;
+            tempCanvas.height = Math.max(sim.cHeight, sim.bHeight);
+            tempCtx.fillStyle = document.body.classList.contains('high-contrast') ? '#000' : '#FFF';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(sim.cobwebCanvas, 0, 0);
+            tempCtx.drawImage(sim.bifurcationCanvas, sim.cWidth, 0);
+
+            const url = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'bifurcation_diagram.png';
+            link.href = url;
+            link.click();
+        }
+
+        function shareState() {
+            const url = `${window.location.origin}${window.location.pathname}#r=${sim.r_slider_val.toFixed(4)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                log("Share link copied to clipboard.");
+            }, () => {
+                logError("Failed to copy share link.");
+            });
+        }
+
+        function loadStateFromURL() {
+            if (window.location.hash.startsWith('#r=')) {
+                const r_val = parseFloat(window.location.hash.substring(3));
+                if (!isNaN(r_val) && r_val >= 2.4 && r_val <= 4.0) {
+                    setR(r_val);
+                    log(`Loaded r=${r_val} from URL.`);
+                }
+            }
+        }
+
+        // --- Init call ---
+        init();
+        loadStateFromURL(); // Load state after init
+    });
+    </script>
+</body>
+</html>
