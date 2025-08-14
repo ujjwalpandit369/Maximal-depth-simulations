@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noether's Theorem: Symmetries & Conservation Laws</title>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --text-color: #212121;
+            --header-color: #00695c;
+            --accent-color: #00897b;
+            --accent-hover: #00695c;
+            --control-bg: #fff;
+            --control-border: #e0e0e0;
+            --canvas-bg: #e0f2f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 400px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .side-panel { padding: 10px; border-left: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1.5em; }
+        .control-group h3 { margin-bottom: 0.5em; }
+
+        .toggle-btn { background-color: #f44336; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; margin-bottom: 5px; }
+        .toggle-btn.active { background-color: var(--accent-color); }
+
+        .readout { margin-bottom: 10px; font-family: monospace; font-size: 1.1em; }
+        .readout-value { float: right; font-weight: bold; }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+            .side-panel { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Noether's Theorem</h1>
+            <p class="subtitle">An interactive demonstration of the link between symmetry and conservation laws.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why are energy, linear momentum, and angular momentum conserved? It's not just a coincidence; it's a direct consequence of the fundamental symmetries of our universe's laws. <strong>Noether's Theorem</strong>, proven by Emmy Noether in 1915, is one of the most profound and beautiful results in physics. It states that for every continuous symmetry in the laws governing a physical system, there must be a corresponding conserved quantity. This simulation lets you be a "universe designer," turning these fundamental symmetries on and off to see the direct impact on the conservation of energy, momentum, and angular momentum.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div class="side-panel">
+                <div class="control-group">
+                    <h3>Symmetries</h3>
+                    <button id="time-btn" class="toggle-btn active">Time-Translation Invariance</button>
+                    <button id="space-btn" class="toggle-btn active">Spatial-Translation Invariance</button>
+                    <button id="rot-btn" class="toggle-btn active">Rotational Invariance</button>
+                </div>
+                 <div class="control-group">
+                    <h3>Conserved Quantities</h3>
+                    <div class="readout">Energy: <span class="readout-value" id="energy-value">0</span></div>
+                    <div class="readout">Lin. Momentum: <span class="readout-value" id="momentum-value">0</span></div>
+                    <div class="readout">Ang. Momentum: <span class="readout-value" id="angular-value">0</span></div>
+                </div>
+                 <button id="reset-btn">Reset Particles</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Three Great Symmetries</h2>
+            <p>This simulation shows a simple system of two particles interacting via a central force. By default, the "laws" governing them have three key symmetries. Try turning each one off to see what happens.</p>
+            <ul>
+                <li><strong>Time-Translation Invariance → Conservation of Energy</strong>
+                    <br>This symmetry means the laws of physics don't change over time. When it's ON, the total energy of the system is constant. When you turn it OFF, we introduce a time-dependent "friction" that causes the system to lose energy over time. Watch the Energy readout decrease.
+                </li>
+                <li><strong>Spatial-Translation Invariance → Conservation of Linear Momentum</strong>
+                     <br>This symmetry means the laws of physics are the same everywhere in space. When it's ON, the total linear momentum (the motion of the center of mass) is constant. When you turn it OFF, we introduce a "spatial gradient" or a "hill" that exerts an external force on the system, causing its total momentum to change.
+                </li>
+                <li><strong>Rotational Invariance → Conservation of Angular Momentum</strong>
+                     <br>This symmetry means the laws of physics don't have a preferred direction. When it's ON, the force between the particles is always central (pointing along the line between them), and total angular momentum is conserved. When you turn it OFF, we introduce a non-central, external "wind" that applies a torque to the system, causing its angular momentum to change.
+                </li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            time: document.getElementById('time-btn'),
+            space: document.getElementById('space-btn'),
+            rot: document.getElementById('rot-btn'),
+            reset: document.getElementById('reset-btn'),
+        };
+        const values = {
+            energy: document.getElementById('energy-value'),
+            momentum: document.getElementById('momentum-value'),
+            angular: document.getElementById('angular-value'),
+        };
+
+        let symmetries = { time: true, space: true, rot: true };
+        let particles = [];
+        let time = 0;
+
+        function resetParticles() {
+            particles = [
+                { x: width/2 - 100, y: height/2, vx: 0, vy: 1, m: 1 },
+                { x: width/2 + 100, y: height/2, vx: 0, vy: -1, m: 1 },
+            ];
+            time = 0;
+        }
+
+        function update() {
+            const dt = 0.1;
+            time += dt;
+
+            const p1 = particles[0];
+            const p2 = particles[1];
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const r = Math.hypot(dx, dy);
+            const k = 0.1; // Spring constant
+            const restLength = 150;
+            const forceMag = k * (r - restLength);
+
+            let f1x = forceMag * dx / r;
+            let f1y = forceMag * dy / r;
+
+            // Apply symmetry breaking forces
+            if (!symmetries.time) { // Time-dependent friction
+                const friction = 0.01 * (1 - Math.exp(-time/100));
+                f1x -= p1.vx * friction;
+                f1y -= p1.vy * friction;
+            }
+            if (!symmetries.space) { // Spatial gradient force
+                f1x += 0.02 * (p1.x / width);
+            }
+            if (!symmetries.rot) { // Non-central "wind" force
+                f1x += 0.01;
+            }
+
+            p1.vx += f1x / p1.m * dt;
+            p1.vy += f1y / p1.m * dt;
+            p2.vx -= f1x / p2.m * dt;
+            p2.vy -= f1y / p2.m * dt;
+
+            p1.x += p1.vx * dt * 10;
+            p1.y += p1.vy * dt * 10;
+            p2.x += p2.vx * dt * 10;
+            p2.y += p2.vy * dt * 10;
+
+            // Calculate conserved quantities
+            const kineticEnergy = 0.5 * p1.m * (p1.vx**2 + p1.vy**2) + 0.5 * p2.m * (p2.vx**2 + p2.vy**2);
+            const potentialEnergy = 0.5 * k * (r - restLength)**2;
+            const totalEnergy = kineticEnergy + potentialEnergy;
+
+            const totalMomX = p1.m * p1.vx + p2.m * p2.vx;
+            const totalMomY = p1.m * p1.vy + p2.m * p2.vy;
+            const totalMomentum = Math.hypot(totalMomX, totalMomY);
+
+            const L1 = p1.m * (p1.x * p1.vy - p1.y * p1.vx);
+            const L2 = p2.m * (p2.x * p2.vy - p2.y * p2.vx);
+            const totalAngularMomentum = L1 + L2;
+
+            values.energy.textContent = totalEnergy.toFixed(2);
+            values.momentum.textContent = totalMomentum.toFixed(2);
+            values.angular.textContent = (totalAngularMomentum/1000).toFixed(2);
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,width,height);
+            particles.forEach(p => {
+                ctx.fillStyle = '#283593';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            // Draw spring
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(particles[0].x, particles[0].y);
+            ctx.lineTo(particles[1].x, particles[1].y);
+            ctx.stroke();
+        }
+
+        function animate() {
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        Object.keys(controls).forEach(key => {
+            if(key === 'reset') return;
+            controls[key].addEventListener('click', () => {
+                symmetries[key] = !symmetries[key];
+                controls[key].classList.toggle('active', symmetries[key]);
+            });
+        });
+        controls.reset.addEventListener('click', resetParticles);
+
+        resetParticles();
+        animate();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Drop Model of the Nucleus</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #00695c;
+            --accent-color: #00897b;
+            --control-bg: #fff;
+            --control-border: #e0e0e0;
+            --canvas-bg: #e0f2f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { padding-right: 20px; border-right: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1.5em; }
+
+        .viz-container { min-height: 400px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .readout { text-align: center; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-right: none; border-bottom: 1px solid var(--control-border); padding: 0 0 20px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Liquid Drop Model of the Nucleus</h1>
+            <p class="subtitle">Using the Semi-Empirical Mass Formula to understand nuclear binding energy.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why are some atomic nuclei stable while others are radioactive? Why does nuclear fission release energy? The <strong>Liquid Drop Model</strong> is a simple but powerful model that treats the atomic nucleus like a droplet of incompressible liquid. This analogy leads to the <strong>Semi-Empirical Mass Formula (SEMF)</strong>, which calculates the binding energy of a nucleus based on a few key terms. This simulation allows you to build your own nucleus by setting the number of protons and neutrons, and it visualizes how each term in the SEMF contributes to the overall binding energy, revealing the delicate balance of forces that holds a nucleus together.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <h3>Nucleus Parameters</h3>
+                <div class="control-group">
+                    <label for="a-slider">Mass Number (A): <span id="a-value">56</span></label>
+                    <input type="range" id="a-slider" min="1" max="250" step="1" value="56">
+                </div>
+                <div class="control-group">
+                    <label for="z-slider">Proton Number (Z): <span id="z-value">26</span></label>
+                    <input type="range" id="z-slider" min="1" max="100" step="1" value="26">
+                </div>
+                <div class="readout">
+                    Binding Energy / Nucleon:<br><span id="be-readout">8.79 MeV</span>
+                </div>
+            </div>
+            <div class="viz-container">
+                <h3>Binding Energy Contributions</h3>
+                <canvas id="chart-canvas" class="sim-canvas"></canvas>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Competing Forces</h2>
+            <p>The binding energy of a nucleus is the energy required to disassemble it into its constituent protons and neutrons. A higher binding energy per nucleon means a more stable nucleus. The SEMF calculates this by starting with a main attractive term and then subtracting several effects that weaken the nucleus.</p>
+            <ul>
+                <li><strong style="color:#4caf50;">Volume Term (Positive):</strong> This is the main attractive term. It assumes every nucleon (proton or neutron) binds to its immediate neighbors with the strong nuclear force. It's proportional to the total number of nucleons, A.</li>
+                <li><strong style="color:#ff9800;">Surface Term (Negative):</strong> Nucleons on the surface have fewer neighbors to bind with, so this term corrects for their weaker binding. It's proportional to the surface area of the nucleus.</li>
+                <li><strong style="color:#f44336;">Coulomb Term (Negative):</strong> Protons are positively charged and repel each other. This electrostatic repulsion weakens the nucleus. This term becomes very significant for heavy nuclei with many protons.</li>
+                <li><strong style="color:#2196f3;">Asymmetry Term (Negative):</strong> Nuclei are most stable when they have roughly equal numbers of protons and neutrons (N ≈ Z). This term penalizes nuclei that deviate too far from this balance.</li>
+                <li><strong>Pairing Term (Small Correction):</strong> A small term that accounts for the tendency of protons and neutrons to form pairs. It adds a small amount of binding energy for even-even nuclei and subtracts it for odd-odd nuclei.</li>
+            </ul>
+            <h3>The Valley of Stability</h3>
+            <p>Use the sliders to explore. You'll find that the binding energy per nucleon is highest around A=56 (Iron), which is why iron is one of the most stable elements. For elements heavier than iron, the Coulomb repulsion between the many protons starts to dominate, making them less stable. This is why splitting a very heavy nucleus (like Uranium, A=235) in a process called <strong>fission</strong> releases energy. Conversely, for very light elements, combining them in a process called <strong>fusion</strong> releases energy.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('chart-canvas');
+        const ctx = canvas.getContext('2d');
+        const aSlider = document.getElementById('a-slider');
+        const zSlider = document.getElementById('z-slider');
+        const aValue = document.getElementById('a-value');
+        const zValue = document.getElementById('z-value');
+        const beReadout = document.getElementById('be-readout');
+
+        const state = { A: 56, Z: 26 };
+
+        // Coefficients in MeV
+        const aV = 15.75, aS = 17.8, aC = 0.711, aA = 23.7, aP = 12.0;
+
+        function calculateBindingEnergy() {
+            const A = state.A;
+            const Z = state.Z;
+            const N = A - Z;
+
+            const volumeTerm = aV * A;
+            const surfaceTerm = -aS * Math.pow(A, 2/3);
+            const coulombTerm = -aC * Z * (Z - 1) / Math.pow(A, 1/3);
+            const asymmetryTerm = -aA * Math.pow(A - 2*Z, 2) / A;
+
+            let pairingTerm = 0;
+            if (Z % 2 === 0 && N % 2 === 0) pairingTerm = aP / Math.sqrt(A);
+            if (Z % 2 !== 0 && N % 2 !== 0) pairingTerm = -aP / Math.sqrt(A);
+
+            const totalBE = volumeTerm + surfaceTerm + coulombTerm + asymmetryTerm + pairingTerm;
+            const bePerNucleon = totalBE / A;
+
+            return {
+                volume: volumeTerm / A,
+                surface: surfaceTerm / A,
+                coulomb: coulombTerm / A,
+                asymmetry: asymmetryTerm / A,
+                pairing: pairingTerm / A,
+                total: bePerNucleon
+            };
+        }
+
+        function draw() {
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0,0,w,h);
+
+            const data = calculateBindingEnergy();
+            if(!data || data.total < 0) {
+                 beReadout.textContent = "Unstable";
+                 return;
+            } else {
+                 beReadout.textContent = `${data.total.toFixed(2)} MeV`;
+            }
+
+            const maxBarHeight = 16; // Max BE/A is ~9 MeV, plus negative parts
+            const scale = (h - 40) / maxBarHeight;
+            const barWidth = w / 2;
+            const barX = w / 4;
+
+            let currentY = h - 20;
+
+            // Volume (positive)
+            const volH = data.volume * scale;
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(barX, currentY - volH, barWidth, volH);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('Volume', barX + 10, currentY - volH/2);
+            currentY -= volH;
+
+            // Negative terms
+            const surfH = -data.surface * scale;
+            ctx.fillStyle = '#ff9800';
+            ctx.fillRect(barX, currentY, barWidth, surfH);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('Surface', barX + 10, currentY + surfH/2);
+            currentY += surfH;
+
+            const coulH = -data.coulomb * scale;
+            ctx.fillStyle = '#f44336';
+            ctx.fillRect(barX, currentY, barWidth, coulH);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('Coulomb', barX + 10, currentY + coulH/2);
+            currentY += coulH;
+
+            const asymH = -data.asymmetry * scale;
+            ctx.fillStyle = '#2196f3';
+            ctx.fillRect(barX, currentY, barWidth, asymH);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('Asymmetry', barX + 10, currentY + asymH/2);
+
+            // Draw total BE line
+            const totalY = h - 20 - data.total * scale;
+            ctx.strokeStyle = '#d32f2f';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([5,5]);
+            ctx.beginPath();
+            ctx.moveTo(0, totalY);
+            ctx.lineTo(w, totalY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Axes
+            ctx.fillStyle = '#333';
+            ctx.fillText(`${data.total.toFixed(2)} MeV`, 30, totalY - 5);
+            ctx.fillText("0 MeV", 30, h - 25);
+            ctx.fillText(`${maxBarHeight} MeV`, 30, 15);
+        }
+
+        function update() {
+            state.A = parseInt(aSlider.value);
+            state.Z = parseInt(zSlider.value);
+
+            if (state.Z > state.A) {
+                state.Z = state.A;
+                zSlider.value = state.Z;
+            }
+            zSlider.max = state.A;
+
+            aValue.textContent = state.A;
+            zValue.textContent = state.Z;
+            draw();
+        }
+
+        aSlider.addEventListener('input', update);
+        zSlider.addEventListener('input', update);
+
+        update();
+    });
+    </script>
+</body>
+</html>

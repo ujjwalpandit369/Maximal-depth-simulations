@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neutrino Oscillations</title>
+    <style>
+        :root {
+            --bg-color: #1a237e;
+            --text-color: #e8eaf6;
+            --header-color: #8c9eff;
+            --accent-color: #536dfe;
+            --accent-hover: #3d5afe;
+            --control-bg: #283593;
+            --control-border: #1a237e;
+            --canvas-bg: #1a237e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #c5cae9; margin-top: 0; }
+
+        .main-container {
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            height: 200px;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .graph-canvas {
+            width: 100%;
+            height: 250px;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+            margin-top: 20px;
+        }
+        .controls { text-align: center; padding: 15px 0; }
+        .control-group { display: inline-block; margin: 0 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Neutrino Oscillations</h1>
+            <p class="subtitle">A simulation of a neutrino's changing identity.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Neutrinos are ghostly fundamental particles that come in three "flavors": electron (νₑ), muon (νμ), and tau (ντ). <strong>Neutrino oscillation</strong> is a bizarre quantum mechanical phenomenon where a neutrino created with one flavor can, as it travels through space, be measured to have a different flavor. This discovery proved that neutrinos have mass and resolved the long-standing "solar neutrino problem." This simulation visualizes this process, showing how the probability of detecting a certain flavor oscillates as the neutrino travels from a source to a detector.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <canvas id="graph-canvas" class="graph-canvas"></canvas>
+            <div class="controls">
+                 <div class="control-group">
+                    <label for="dist-slider">Travel Distance (L): <span id="dist-value">500</span> km</label><br>
+                    <input type="range" id="dist-slider" min="1" max="2000" step="5" value="500" style="width: 300px;">
+                </div>
+                <div class="control-group">
+                    <label for="energy-slider">Neutrino Energy (E): <span id="energy-value">1</span> GeV</label><br>
+                    <input type="range" id="energy-slider" min="0.1" max="5" step="0.1" value="1.0" style="width: 300px;">
+                </div>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>Flavor vs. Mass</h2>
+            <p>The key to understanding neutrino oscillations is that the states we produce and detect (the "flavor states") are not the same as the states that actually travel through space (the "mass states"). Each flavor state is a quantum superposition, or mixture, of the three mass states (ν₁, ν₂, ν₃). Because the mass states have slightly different masses, their quantum waves travel at slightly different "speeds" (or more accurately, their phases evolve at different rates). This causes them to get out of sync with each other as they travel.</p>
+            <p>As the phase relationship between the mass states changes, the specific mixture that defines a flavor also changes. The simulation visualizes this for a simplified two-flavor system (muon and electron neutrinos). The traveling particle is shown as a pie chart representing its flavor composition. The graph below plots the probability of measuring each flavor as a function of distance. Notice how the probabilities oscillate sinusoidally.</p>
+            <h3>The Oscillation Formula (2-Flavor)</h3>
+            <code>P(νμ → νₑ) = sin²(2θ) * sin²(1.27 * Δm² * L / E)</code>
+            <ul>
+                <li><code>P(νμ → νₑ)</code> is the probability that a muon neutrino becomes an electron neutrino.</li>
+                <li><code>sin²(2θ)</code> is the "mixing amplitude," determined by the mixing angle θ. A larger value means more dramatic oscillations.</li>
+                <li><code>Δm²</code> is the difference between the squares of the masses of the two mass states. A larger mass difference leads to faster oscillations.</li>
+                <li><code>L</code> is the travel distance in km.</li>
+                <li><code>E</code> is the neutrino energy in GeV.</li>
+            </ul>
+            <p>Try adjusting the <strong>Distance</strong> and <strong>Energy</strong> sliders. You'll see that the oscillation pattern depends on the ratio L/E. This is why different experiments looking at different distances and energy ranges are needed to measure all the oscillation parameters.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const simCanvas = document.getElementById('sim-canvas');
+        const sCtx = simCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            dist: document.getElementById('dist-slider'),
+            energy: document.getElementById('energy-slider'),
+        };
+        const values = {
+            dist: document.getElementById('dist-value'),
+            energy: document.getElementById('energy-value'),
+        };
+
+        const config = {
+            L: 500, E: 1.0,
+            // Using atmospheric neutrino parameters for a strong visual effect
+            sin2_2theta: 1.0,
+            delta_m_sq: 2.5e-3,
+        };
+
+        let particleX = 0;
+        let animationFrameId;
+
+        function getProb(L, E) {
+            const arg = 1.27 * config.delta_m_sq * L / E;
+            const p_ue = config.sin2_2theta * Math.pow(Math.sin(arg), 2);
+            return { p_ue, p_uu: 1 - p_ue };
+        }
+
+        function drawPie(ctx, x, y, radius, probs) {
+            let startAngle = -Math.PI / 2;
+            // Muon neutrino prob
+            ctx.fillStyle = '#1e88e5';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.arc(x, y, radius, startAngle, startAngle + Math.PI * 2 * probs.p_uu);
+            ctx.closePath();
+            ctx.fill();
+            startAngle += Math.PI * 2 * probs.p_uu;
+            // Electron neutrino prob
+            ctx.fillStyle = '#d32f2f';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.arc(x, y, radius, startAngle, startAngle + Math.PI * 2 * probs.p_ue);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width, h = graphCanvas.height;
+            gCtx.clearRect(0,0,w,h);
+            const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+
+            // Axes
+            gCtx.strokeStyle = '#9e9e9e';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            gCtx.moveTo(margin.left, margin.top); gCtx.lineTo(margin.left, h - margin.bottom);
+            gCtx.lineTo(w - margin.right, h - margin.bottom);
+            gCtx.stroke();
+            gCtx.fillStyle = '#e8eaf6';
+            gCtx.fillText("Distance (km)", w/2, h - 10);
+            gCtx.save();
+            gCtx.translate(15, h/2); gCtx.rotate(-Math.PI/2);
+            gCtx.fillText("Probability", 0, 0);
+            gCtx.restore();
+
+            // Curves
+            const distMax = parseFloat(controls.dist.max);
+            ['p_uu', 'p_ue'].forEach(key => {
+                gCtx.strokeStyle = key === 'p_uu' ? '#1e88e5' : '#d32f2f';
+                gCtx.lineWidth = 2;
+                gCtx.beginPath();
+                for(let l_px = 0; l_px < w - margin.left - margin.right; l_px++) {
+                    const L = (l_px / (w - margin.left - margin.right)) * distMax;
+                    const probs = getProb(L, config.E);
+                    const y = (h - margin.bottom) - probs[key] * (h - margin.top - margin.bottom);
+                    const x = margin.left + l_px;
+                    if(l_px === 0) gCtx.moveTo(x, y);
+                    else gCtx.lineTo(x, y);
+                }
+                gCtx.stroke();
+            });
+
+            // Current position marker
+            const currentX = margin.left + (config.L / distMax) * (w - margin.left - margin.right);
+            gCtx.strokeStyle = '#ffab40';
+            gCtx.beginPath();
+            gCtx.moveTo(currentX, margin.top);
+            gCtx.lineTo(currentX, h - margin.bottom);
+            gCtx.stroke();
+        }
+
+        function drawSim() {
+            const w = simCanvas.width, h = simCanvas.height;
+            sCtx.clearRect(0,0,w,h);
+
+            // Source and Detector
+            sCtx.fillStyle = '#8c9eff';
+            sCtx.fillRect(20, h/2 - 50, 40, 100);
+            sCtx.fillRect(w - 60, h/2 - 50, 40, 100);
+            sCtx.fillStyle = '#e8eaf6';
+            sCtx.fillText("Source", 25, h/2 - 60);
+            sCtx.fillText("Detector", w-55, h/2 - 60);
+
+            // Neutrino path
+            const pathStart = 60;
+            const pathEnd = w - 60;
+            const pathLength = pathEnd - pathStart;
+            particleX = pathStart + (config.L / parseFloat(controls.dist.max)) * pathLength;
+
+            // Draw particle
+            const probs = getProb(config.L, config.E);
+            drawPie(sCtx, particleX, h/2, 15, probs);
+        }
+
+        function update() {
+            config.L = parseFloat(controls.dist.value);
+            config.E = parseFloat(controls.energy.value);
+            values.dist.textContent = config.L.toFixed(0);
+            values.energy.textContent = config.E.toFixed(1);
+
+            drawSim();
+            drawGraph();
+        }
+
+        Object.values(controls).forEach(c => c.addEventListener('input', update));
+        window.addEventListener('resize', update);
+        update();
+    });
+    </script>
+</body>
+</html>

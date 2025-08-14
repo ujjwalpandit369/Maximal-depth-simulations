@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radioactive Decay Chains</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #4527a0;
+            --accent-color: #673ab7;
+            --accent-hover: #512da8;
+            --control-bg: #fff;
+            --control-border: #d1c4e9;
+            --canvas-bg: #ede7f6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .chart-container { min-height: 500px; }
+        .chart-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .controls { padding: 10px; border-left: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1.5em; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.1em; width: 100%; margin-bottom: 10px;}
+        button:hover { background-color: var(--accent-hover); }
+
+        #info-box { border: 2px solid var(--accent-color); padding: 10px; border-radius: 5px; min-height: 150px;}
+        #info-box h3 { margin-top: 0;}
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Radioactive Decay Chains</h1>
+            <p class="subtitle">Visualizing the journey of a heavy element to stability.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Heavy elements like Uranium are often unstable. They undergo a series of radioactive decays, transforming into different elements, until they finally reach a stable configuration. This sequence is called a <strong>decay chain</strong>. The two most common types of decay in these chains are <strong>alpha decay</strong> (losing 2 protons and 2 neutrons) and <strong>beta decay</strong> (a neutron becomes a proton). This simulation visualizes the famous "Uranium Series," which starts at Uranium-238 and proceeds through 14 steps to end at the stable isotope Lead-206.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="chart-container">
+                <h3>Chart of the Nuclides</h3>
+                <canvas id="chart-canvas" class="chart-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <button id="next-btn">Next Step</button>
+                <button id="animate-btn">Animate Full Chain</button>
+                <button id="reset-btn">Reset</button>
+                <div class="control-group">
+                    <label for="speed-slider">Animation Speed</label>
+                    <input type="range" id="speed-slider" min="100" max="2000" step="100" value="500">
+                </div>
+                <div id="info-box">
+                    <h3>Current Isotope</h3>
+                    <p id="isotope-info">Press "Next Step" or "Animate" to begin.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('chart-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            next: document.getElementById('next-btn'),
+            animate: document.getElementById('animate-btn'),
+            reset: document.getElementById('reset-btn'),
+            speed: document.getElementById('speed-slider'),
+        };
+        const infoEl = document.getElementById('isotope-info');
+
+        const decayChain = [
+            { Z: 92, N: 146, name: 'U-238', halfLife: '4.468 Ga', decay: 'α' },
+            { Z: 90, N: 144, name: 'Th-234', halfLife: '24.1 d', decay: 'β⁻' },
+            { Z: 91, N: 143, name: 'Pa-234m', halfLife: '1.17 min', decay: 'β⁻' },
+            { Z: 92, N: 142, name: 'U-234', halfLife: '245,500 a', decay: 'α' },
+            { Z: 90, N: 140, name: 'Th-230', halfLife: '75,380 a', decay: 'α' },
+            { Z: 88, N: 138, name: 'Ra-226', halfLife: '1,600 a', decay: 'α' },
+            { Z: 86, N: 136, name: 'Rn-222', halfLife: '3.82 d', decay: 'α' },
+            { Z: 84, N: 134, name: 'Po-218', halfLife: '3.10 min', decay: 'α' },
+            { Z: 82, N: 132, name: 'Pb-214', halfLife: '26.8 min', decay: 'β⁻' },
+            { Z: 83, N: 131, name: 'Bi-214', halfLife: '19.9 min', decay: 'β⁻' },
+            { Z: 84, N: 130, name: 'Po-214', halfLife: '164.3 µs', decay: 'α' },
+            { Z: 82, N: 128, name: 'Pb-210', halfLife: '22.3 a', decay: 'β⁻' },
+            { Z: 83, N: 127, name: 'Bi-210', halfLife: '5.01 d', decay: 'β⁻' },
+            { Z: 84, N: 126, name: 'Po-210', halfLife: '138.3 d', decay: 'α' },
+            { Z: 82, N: 124, name: 'Pb-206', halfLife: 'Stable', decay: 'Stable' },
+        ];
+
+        let state = {
+            currentIndex: 0,
+            isAnimating: false,
+        };
+
+        let animationTimeout;
+
+        function draw() {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            ctx.clearRect(0,0,width,height);
+
+            const N_min = 123, N_max = 147;
+            const Z_min = 81, Z_max = 93;
+
+            const x = n => (n - N_min) / (N_max - N_min) * width;
+            const y = z => height - (z - Z_min) / (Z_max - Z_min) * height;
+
+            // Draw grid
+            ctx.strokeStyle = '#d1c4e9';
+            for (let n = N_min; n <= N_max; n++) {
+                ctx.beginPath();
+                ctx.moveTo(x(n), 0); ctx.lineTo(x(n), height);
+                ctx.stroke();
+            }
+            for (let z = Z_min; z <= Z_max; z++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y(z)); ctx.lineTo(width, y(z));
+                ctx.stroke();
+            }
+
+            // Draw path
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const start = decayChain[0];
+            ctx.moveTo(x(start.N), y(start.Z));
+            for(let i = 1; i <= state.currentIndex; i++) {
+                const p = decayChain[i];
+                ctx.lineTo(x(p.N), y(p.Z));
+            }
+            ctx.stroke();
+
+            // Draw points
+            for(let i = 0; i <= state.currentIndex; i++) {
+                const p = decayChain[i];
+                ctx.fillStyle = p.decay === 'α' ? '#d32f2f' : '#1976d2';
+                if (p.decay === 'Stable') ctx.fillStyle = '#388e3c';
+                ctx.beginPath();
+                ctx.arc(x(p.N), y(p.Z), 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Update info box
+            const current = decayChain[state.currentIndex];
+            infoEl.innerHTML = `
+                <h3>${current.name}</h3>
+                <p>Protons (Z): ${current.Z}</p>
+                <p>Neutrons (N): ${current.N}</p>
+                <p>Half-life: ${current.halfLife}</p>
+                <p>Next Decay: ${current.decay}</p>
+            `;
+        }
+
+        function nextStep() {
+            if (state.currentIndex < decayChain.length - 1) {
+                state.currentIndex++;
+                draw();
+            } else {
+                state.isAnimating = false;
+                if (animationTimeout) clearTimeout(animationTimeout);
+            }
+        }
+
+        function startAnimation() {
+            if (state.isAnimating) return;
+            reset();
+            state.isAnimating = true;
+            function loop() {
+                nextStep();
+                if(state.isAnimating) {
+                    const speed = 2100 - parseFloat(controls.speed.value);
+                    animationTimeout = setTimeout(loop, speed);
+                }
+            }
+            loop();
+        }
+
+        function reset() {
+            state.currentIndex = 0;
+            state.isAnimating = false;
+            if (animationTimeout) clearTimeout(animationTimeout);
+            draw();
+        }
+
+        controls.next.addEventListener('click', () => {
+            state.isAnimating = false;
+            if (animationTimeout) clearTimeout(animationTimeout);
+            nextStep();
+        });
+        controls.animate.addEventListener('click', startAnimation);
+        controls.reset.addEventListener('click', reset);
+
+        window.addEventListener('resize', draw);
+
+        reset();
+    });
+    </script>
+</body>
+</html>

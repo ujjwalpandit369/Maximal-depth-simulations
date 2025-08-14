@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Higgs Mechanism</title>
+    <style>
+        :root {
+            --bg-color: #1a237e;
+            --text-color: #e8eaf6;
+            --header-color: #ffab40;
+            --accent-color: #ffab40;
+            --accent-hover: #ffd180;
+            --control-bg: #283593;
+            --control-border: #1a237e;
+            --canvas-bg: #1a237e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #c5cae9; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { text-align: center; }
+        .control-group { margin: 1em 0; }
+
+        button { background-color: var(--accent-color); color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; font-weight: bold;}
+        button:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Higgs Mechanism</h1>
+            <p class="subtitle">A conceptual animation of particles acquiring mass.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why do some fundamental particles have mass, while others, like the photon, are massless? The <strong>Higgs mechanism</strong> provides an elegant answer. It postulates that all of space is filled with an invisible energy field, the <strong>Higgs field</strong>. Particles aren't inherently massive; they acquire mass through their interaction with this field. Particles that interact strongly with the field are "dragged" by it, giving them a large inertia (mass). Particles that interact weakly have a small mass, and those that don't interact at all remain massless. This simulation visualizes this "cosmic molasses," showing how different particles are impeded by the Higgs field.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <div class="controls">
+                 <div class="control-group">
+                    <label for="strength-slider">Higgs Field Strength: <span id="strength-value">1.0</span></label><br>
+                    <input type="range" id="strength-slider" min="0" max="2" step="0.1" value="1.0" style="width: 80%; max-width: 400px;">
+                </div>
+                <button id="launch-btn">Launch Particles</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Room Full of Physicists Analogy</h2>
+            <p>A famous analogy helps to explain the Higgs mechanism. Imagine a large room full of physicists, evenly distributed. This room represents the Higgs field.</p>
+            <ul>
+                <li>A random person (like a <strong>photon</strong>) walks through the room. Nobody knows them, so they pass through easily at high speed, unimpeded. They are "massless."</li>
+                <li>A well-known scientist (like an <strong>electron</strong>) enters the room. They are stopped by small groups of people wanting to chat. They are slowed down and it's harder to change their direction. They have acquired a small amount of "mass" from their interactions.</li>
+                <li>Peter Higgs himself (like a <strong>top quark</strong>) enters the room. A huge crowd immediately forms around him, making it incredibly difficult for him to move. He is very sluggish and has acquired a very large "mass."</li>
+            </ul>
+            <h3>What to Observe in the Simulation</h3>
+            <p>The simulation shows this process. The shimmering background is the Higgs field. When you click "Launch Particles," three particles are pushed with the same initial force:</p>
+            <ul>
+                <li>The <strong>Photon</strong> (wavy line) ignores the field and travels at maximum speed.</li>
+                <li>The <strong>Electron</strong> (small blue circle) interacts weakly. You can see a small "wake" or "cluster" of the field around it, slowing it down slightly.</li>
+                <li>The <strong>Top Quark</strong> (large red circle) interacts very strongly. A dense cluster of the field forms around it, making it very difficult to move. It has a large inertia (mass).</li>
+            </ul>
+            <p>Try adjusting the <strong>Higgs Field Strength</strong>. A higher strength makes the "molasses" thicker, increasing the mass of the electron and top quark, while still having no effect on the massless photon.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            strength: document.getElementById('strength-slider'),
+            launch: document.getElementById('launch-btn'),
+        };
+        const values = {
+            strength: document.getElementById('strength-value'),
+        };
+
+        let state = {
+            strength: 1.0,
+            isRunning: false,
+        };
+
+        let higgsBosons = [];
+        let particles = [];
+
+        function setup() {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+
+            higgsBosons = [];
+            for (let i = 0; i < 200; i++) {
+                higgsBosons.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    baseAlpha: 0.1 + Math.random() * 0.2,
+                    alpha: 0,
+                });
+            }
+            particles = [];
+            state.isRunning = false;
+        }
+
+        function launchParticles() {
+            particles = [
+                { type: 'Photon', x: 20, y: height * 0.25, vx: 8, interaction: 0, color: '#ffff8d' },
+                { type: 'Electron', x: 20, y: height * 0.5, vx: 0, interaction: 0.2, color: '#80d8ff' },
+                { type: 'Top Quark', x: 20, y: height * 0.75, vx: 0, interaction: 1.0, color: '#ff8a80' },
+            ];
+            const initialForce = 8;
+            particles.forEach(p => {
+                const mass = 1 + p.interaction * state.strength * 10;
+                p.vx = initialForce / mass;
+            });
+            state.isRunning = true;
+        }
+
+        function animate() {
+            ctx.clearRect(0,0,width,height);
+
+            // Update and draw higgs field
+            higgsBosons.forEach(h => {
+                h.alpha *= 0.9; // Damping
+                let influence = 0;
+                particles.forEach(p => {
+                    const dist = Math.hypot(p.x - h.x, p.y - h.y);
+                    if (dist < 80) {
+                        influence += (p.interaction * state.strength) * (1 - dist/80);
+                    }
+                });
+                h.alpha = Math.max(h.alpha, influence);
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${h.baseAlpha + h.alpha * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(h.x, h.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Update and draw particles
+            if (state.isRunning) {
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    if (p.x > width + 20) {
+                        p.x = 20;
+                        const initialForce = 8;
+                        const mass = 1 + p.interaction * state.strength * 10;
+                        p.vx = initialForce / mass;
+                    }
+
+                    ctx.fillStyle = p.color;
+                    ctx.font = "14px sans-serif";
+                    ctx.fillText(p.type, p.x, p.y - 20);
+
+                    if(p.type === 'Photon') {
+                        ctx.strokeStyle = p.color;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        for(let i=0; i<20; i++) {
+                            const segX = p.x - i*2;
+                            const segY = p.y + Math.sin(i*0.5 + state.time*0.1)*5;
+                            if(i===0) ctx.moveTo(segX, segY);
+                            else ctx.lineTo(segX, segY);
+                        }
+                        ctx.stroke();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, 10 + p.interaction * 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+            }
+            state.time = (state.time || 0) + 1;
+            requestAnimationFrame(animate);
+        }
+
+        controls.launch.addEventListener('click', launchParticles);
+        controls.strength.addEventListener('input', e => {
+            state.strength = parseFloat(e.target.value);
+            values.strength.textContent = state.strength.toFixed(1);
+            if (state.isRunning) launchParticles(); // Relaunch with new mass
+        });
+
+        window.addEventListener('resize', setup);
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>
