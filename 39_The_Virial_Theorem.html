@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Virial Theorem Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #f39c12;
+            --accent-color-dark: #e67e22;
+            --code-bg: #e2e8f0;
+            --particle-color: #ecf0f1;
+            --k-color: #2ecc71;
+            --u-color: #e74c3c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #f1c40f;
+            --accent-color-dark: #f39c12;
+            --code-bg: #2d3748;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            background-color: #1a202c;
+        }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+        .virial-readout { font-size: 1.2rem; font-weight: bold; text-align: center; margin-top: 1rem; }
+        .k-label { color: var(--k-color); }
+        .u-label { color: var(--u-color); }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Virial Theorem Simulator</h1>
+            <p class="subtitle">Demonstrating the deep connection between kinetic and potential energy in a stable, self-gravitating system.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 210 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>How can astronomers "weigh" a distant galaxy or cluster of stars? They can't put it on a scale, but they can use a powerful tool called the Virial Theorem. This theorem reveals a surprisingly simple and profound relationship for any stable system held together by gravity (like a star cluster or a galaxy). It states that the system's long-term average kinetic energy (the energy of motion) is directly related to its long-term average potential energy (the energy of its gravitational configuration). Specifically, twice the average kinetic energy equals the negative of the average potential energy. This simulation lets you watch a virtual star cluster evolve. While the motions of individual stars are chaotic, you'll see the system as a whole settle into a "virialized" state where this beautiful balance holds true.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Balance of a Star Cluster</h2>
+
+            <h3>Step 1: A System Held Together by Gravity</h3>
+            <p>The simulation shows a cluster of stars. Each star pulls on every other star with the force of gravity. If the stars aren't moving too fast, this mutual attraction is enough to hold the cluster together, preventing the stars from flying apart into space. This is a "self-gravitating system." Our solar system, star clusters, and entire galaxies are all examples of such systems.</p>
+
+            <h3>Step 2: Two Kinds of Energy</h3>
+            <p>To understand the system, we need to track two kinds of energy:
+            <ul>
+                <li><strong>Kinetic Energy (K):</strong> The energy of motion. A faster-moving star has more kinetic energy. Since motion is always positive, K is always a positive number.</li>
+                <li><strong>Potential Energy (U):</strong> The energy stored in the gravitational field of the system. For a system that is gravitationally bound together, the potential energy is considered negative. A more tightly packed cluster has a more negative potential energy.</li>
+            </ul>
+            In the readout panel, you can see the instantaneous values of K and U for the whole system. They fluctuate wildly as stars swing close to each other and speed up, then move apart and slow down.</p>
+
+            <h3>Step 3: The Virial Theorem</h3>
+            <p>The motion of any single star is chaotic and unpredictable. However, the Virial Theorem makes a stunning claim about the *long-term average* behavior of the entire stable system. It states:
+            <br>
+            <strong>2 &times; ⟨Kinetic Energy⟩ = -1 &times; ⟨Potential Energy⟩</strong>
+            <br>
+            Or, rearranged: <strong>2⟨K⟩ + ⟨U⟩ = 0</strong>
+            <br>
+            The brackets ⟨ ⟩ mean "the long-term average." This means that after the system settles down, if you average the kinetic and potential energies over a long period of time, they will obey this simple, fixed relationship.</p>
+
+            <h3>Step 4: Watching the System "Virialize"</h3>
+            <p>When you start the simulation, the stars are in a random configuration. The system might collapse, shed a few stars, and generally rearrange itself. During this time, the "Virial Readout" (2⟨K⟩ + ⟨U⟩) will be far from zero. However, after a while, the system will reach a stable equilibrium. This is called "virialization." Once it's virialized, you will see the running averages ⟨K⟩ and ⟨U⟩ settle down to stable values, and the Virial Readout will begin to fluctuate around zero, demonstrating that the theorem now holds true.</p>
+
+            <h3>Why Is This Useful?</h3>
+            <p>Astronomers can point a telescope at a distant galaxy and measure the speeds of its stars (which gives them the kinetic energy, K). Using the Virial Theorem, they can then immediately estimate the galaxy's total potential energy, U. Since U depends on the total mass of the galaxy, this allows them to "weigh" it. It was this very technique that first led to the discovery of dark matter: astronomers saw that galaxies were spinning so fast (had such high K) that they should have flown apart, unless there was a huge amount of unseen "dark" matter providing the extra gravitational potential energy U needed to hold them together.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="N-body simulation of a star cluster"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="reset-btn">Start / Reset Simulation</button>
+                </div>
+                <div class="control-group">
+                    <label for="particles-slider"># of Stars: <span id="particles-label">50</span></label>
+                    <input type="range" id="particles-slider" min="10" max="100" value="50" step="1">
+                </div>
+                <div id="readout">
+                    <h4>Instantaneous Energy</h4>
+                    <p><span class="k-label">K:</span> <span id="k-val">0</span></p>
+                    <p><span class="u-label">U:</span> <span id="u-val">0</span></p>
+                    <hr>
+                    <h4>Running Averages</h4>
+                    <p><span class="k-label">⟨K⟩:</span> <span id="k-avg-val">0</span></p>
+                    <p><span class="u-label">⟨U⟩:</span> <span id="u-avg-val">0</span></p>
+                    <hr>
+                    <div class="virial-readout">
+                        2⟨K⟩ + ⟨U⟩ = <span id="virial-val">0</span>
+                    </div>
+                </div>
+                <div class="control-group" style="margin-top: 2rem;">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: N-Body Gravity</h2>
+            <p>The simulation is a direct N-body integration of Newton's law of gravitation.</p>
+
+            <h3>1. Kinetic and Potential Energy</h3>
+            <p>For a system of N particles, the total kinetic energy K is the sum of the individual kinetic energies:</p>
+            <p><code>K = &Sigma;<sub>i=1</sub><sup>N</sup> &frac12;m<sub>i</sub>v<sub>i</sub>²</code></p>
+            <p>The total gravitational potential energy U is the sum over all unique pairs of particles:</p>
+            <p><code>U = - &Sigma;<sub>i<j</sub> G m<sub>i</sub>m<sub>j</sub> / r<sub>ij</sub></code></p>
+            <p>Where <code>r<sub>ij</sub></code> is the distance between particles <code>i</code> and <code>j</code>.</p>
+
+            <h3>2. The Virial Theorem</h3>
+            <p>The formal statement of the theorem is that for a stable, bound system of particles, the long-term time average of twice the kinetic energy is equal to the negative of the long-term time average of the potential energy.</p>
+            <p><code>2⟨K⟩ = -⟨U⟩</code></p>
+            <p>The simulation calculates the running averages by summing the instantaneous values at each time step and dividing by the number of steps. As time goes on, this running average approaches the true long-term average.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const particlesSlider = document.getElementById('particles-slider');
+        const particlesLabel = document.getElementById('particles-label');
+        const resetBtn = document.getElementById('reset-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        const kVal = document.getElementById('k-val');
+        const uVal = document.getElementById('u-val');
+        const kAvgVal = document.getElementById('k-avg-val');
+        const uAvgVal = document.getElementById('u-avg-val');
+        const virialVal = document.getElementById('virial-val');
+
+        // --- Simulation State ---
+        let simParams = { N: 50, G: 1, dt: 0.01 };
+        let particles = [];
+        let avg_K = 0, avg_U = 0, time_steps = 0;
+
+        function setup() {
+            simParams.N = parseInt(particlesSlider.value);
+            particlesLabel.textContent = simParams.N;
+
+            particles = [];
+            for(let i=0; i<simParams.N; i++) {
+                const r = Math.random() * 100 + 20;
+                const angle = Math.random() * 2 * Math.PI;
+                const v_mag = Math.sqrt(simParams.G * simParams.N / r) * 0.5;
+                particles.push({
+                    x: r * Math.cos(angle), y: r * Math.sin(angle),
+                    vx: -v_mag * Math.sin(angle), vy: v_mag * Math.cos(angle),
+                    mass: 1
+                });
+            }
+            avg_K = 0; avg_U = 0; time_steps = 0;
+        }
+
+        function update() {
+            const forces = particles.map(() => ({fx:0, fy:0}));
+            let potential_U = 0;
+
+            for(let i=0; i<simParams.N; i++) {
+                for(let j=i+1; j<simParams.N; j++) {
+                    const p1 = particles[i];
+                    const p2 = particles[j];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const r2 = dx*dx + dy*dy + 1; // softening
+                    const r = Math.sqrt(r2);
+                    const force = simParams.G * p1.mass * p2.mass / r2;
+
+                    forces[i].fx += force * dx / r;
+                    forces[i].fy += force * dy / r;
+                    forces[j].fx -= force * dx / r;
+                    forces[j].fy -= force * dy / r;
+
+                    potential_U -= simParams.G * p1.mass * p2.mass / r;
+                }
+            }
+
+            let kinetic_K = 0;
+            particles.forEach((p, i) => {
+                p.vx += forces[i].fx / p.mass * simParams.dt;
+                p.vy += forces[i].fy / p.mass * simParams.dt;
+                p.x += p.vx * simParams.dt;
+                p.y += p.vy * simParams.dt;
+                kinetic_K += 0.5 * p.mass * (p.vx**2 + p.vy**2);
+            });
+
+            // Update averages
+            time_steps++;
+            avg_K = ((time_steps - 1) * avg_K + kinetic_K) / time_steps;
+            avg_U = ((time_steps - 1) * avg_U + potential_U) / time_steps;
+
+            // Update UI
+            kVal.textContent = kinetic_K.toFixed(1);
+            uVal.textContent = potential_U.toFixed(1);
+            kAvgVal.textContent = avg_K.toFixed(1);
+            uAvgVal.textContent = avg_U.toFixed(1);
+            virialVal.textContent = (2*avg_K + avg_U).toFixed(2);
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#1a202c'; // Always dark background for space
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+            const zoom = 1.0;
+            ctx.scale(zoom, zoom);
+
+            ctx.fillStyle = isDark ? '#ecf0f1' : '#ecf0f1';
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            ctx.restore();
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        resetBtn.addEventListener('click', setup);
+        particlesSlider.addEventListener('input', e => { particlesLabel.textContent = e.target.value; });
+        particlesSlider.addEventListener('change', setup);
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

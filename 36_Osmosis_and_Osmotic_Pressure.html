@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osmosis and Osmotic Pressure Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --solvent-color: #3498db;
+            --solute-color: #c0392b;
+            --membrane-color: #7f8c8d;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+            --solvent-color: #5dade2;
+            --solute-color: #e74c3c;
+            --membrane-color: #95a5a6;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+        }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Osmosis and Osmotic Pressure Simulator</h1>
+            <p class="subtitle">A microscopic view of solvent flow across a semi-permeable membrane.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 220 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Osmosis is a fundamental process in biology and chemistry, responsible for everything from how plant roots absorb water to how our kidneys filter blood. It's the spontaneous movement of a solvent (like water) across a special kind of barrier—a "semi-permeable membrane"—that lets the solvent pass but blocks other dissolved substances (solutes). This simulation gives you a microscopic view of this process. You'll see small water molecules moving freely across a membrane, while larger solute molecules are trapped on one side. This leads to a net flow of water towards the side with the solute, which in a U-shaped tube, causes the water level to rise, creating a pressure difference known as osmotic pressure.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Why Water Moves Toward Salt</h2>
+
+            <h3>Step 1: The Semi-Permeable Membrane</h3>
+            <p>Imagine a fence with holes that are just big enough for a cat to squeeze through, but too small for a dog. This is a "semi-permeable membrane." It's a barrier that is selective about what it lets pass. In our simulation, the vertical dashed line is a membrane that allows the small <span style="color:var(--solvent-color)">blue water molecules</span> to pass through, but blocks the larger <span style="color:var(--solute-color)">red solute molecules</span>.</p>
+
+            <h3>Step 2: The Setup</h3>
+            <p>The simulation shows a container divided in two. The left side contains pure solvent (water). The right side contains a solution—water with a solute dissolved in it. Both sides start at the same water level. The particles are all in random motion.</p>
+
+            <h3>Step 3: The Flow of Water (Osmosis)</h3>
+            <p>Watch the particles closely. Water molecules from both sides will occasionally hit the membrane and pass through. However, on the right side, the solute molecules also bump into the membrane, effectively "blocking" it some of the time and reducing the rate at which water can leave that side. Because water can leave the pure solvent side more easily than it can leave the solution side, there is a **net flow of water from left to right**. This net movement of a solvent across a semi-permeable membrane is called **osmosis**.</p>
+            <p>You can think of it as nature trying to equalize the *concentration* of water on both sides. Since the right side has solute taking up space, its water concentration is lower, so water from the high-concentration side (left) moves in to try and dilute it.</p>
+
+            <h3>Step 4: Osmotic Pressure</h3>
+            <p>In a U-shaped tube, this net flow of water would cause the water level on the right side to physically rise. The extra height of water creates a downward pressure due to its weight (hydrostatic pressure). This pressure pushes back on the water, making it harder for more water to flow from left to right. The flow continues until the hydrostatic pressure created by the height difference is exactly equal and opposite to the "osmotic potential" driving the flow. The pressure at this equilibrium point is called the **osmotic pressure (Π)**. In the simulation, you can see this represented by the rising water level in the U-tube diagram.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Microscopic simulation of osmosis"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="reset-btn">Reset Simulation</button>
+                </div>
+                <div class="control-group">
+                    <label for="solute-slider">Solute Concentration: <span id="solute-label">10</span></label>
+                    <input type="range" id="solute-slider" min="0" max="40" value="10" step="1">
+                </div>
+                <div id="readout">
+                    <h4>System State</h4>
+                    <p>Solvent Left: <span id="left-count">0</span></p>
+                    <p>Solvent Right: <span id="right-count">0</span></p>
+                    <p>Osmotic Pressure (Π): <span id="pressure-val">0.00</span> atm</p>
+                </div>
+                <div class="control-group" style="margin-top: 2rem;">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The van 't Hoff Equation</h2>
+            <p>The osmotic pressure created by a solute in a solution can be calculated, for dilute solutions, using the van 't Hoff equation, which bears a striking resemblance to the Ideal Gas Law.</p>
+
+            <h3>1. The van 't Hoff Equation</h3>
+            <p><code>&Pi; = iMRT</code></p>
+            <p>Where:
+            <ul>
+                <li><code>&Pi;</code> (Pi) is the osmotic pressure in atmospheres.</li>
+                <li><code>i</code> is the van 't Hoff factor, a dimensionless number representing the number of particles the solute splits into in solution (e.g., i=1 for sugar, i=2 for NaCl). We assume i=1 here.</li>
+                <li><code>M</code> is the molar concentration of the solute (moles per liter).</li>
+                <li><code>R</code> is the ideal gas constant (0.0821 L·atm/(mol·K)).</li>
+                <li><code>T</code> is the absolute temperature in Kelvin.</li>
+            </ul>
+            </p>
+
+            <h3>2. Hydrostatic Pressure</h3>
+            <p>The osmotic pressure is balanced at equilibrium by the hydrostatic pressure from the difference in fluid height (h) in a U-tube.</p>
+            <p><code>P<sub>hydrostatic</sub> = &rho;gh</code></p>
+            <p>Where <code>&rho;</code> is the density of the solvent and <code>g</code> is the acceleration due to gravity. Equilibrium is reached when <code>&Pi; = &rho;gh</code>.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('reset-btn');
+        const soluteSlider = document.getElementById('solute-slider');
+        const soluteLabel = document.getElementById('solute-label');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const leftCountLabel = document.getElementById('left-count');
+        const rightCountLabel = document.getElementById('right-count');
+        const pressureVal = document.getElementById('pressure-val');
+
+        // --- Simulation State ---
+        let simParams = { numSolute: 10, numSolvent: 200, speed: 1.0 };
+        let particles = [];
+
+        function setup() {
+            simParams.numSolute = parseInt(soluteSlider.value);
+            soluteLabel.textContent = simParams.numSolute;
+
+            particles = [];
+            const w2 = canvas.width / 2;
+            // Solvents
+            for(let i=0; i<simParams.numSolvent; i++) {
+                particles.push({
+                    type: 'solvent', radius: 3,
+                    x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * simParams.speed, vy: (Math.random() - 0.5) * simParams.speed,
+                });
+            }
+            // Solutes
+            for(let i=0; i<simParams.numSolute; i++) {
+                particles.push({
+                    type: 'solute', radius: 6,
+                    x: w2 + Math.random() * w2, y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * simParams.speed * 0.5, vy: (Math.random() - 0.5) * simParams.speed * 0.5,
+                });
+            }
+        }
+
+        function update() {
+            const dt = 0.5;
+            const w2 = canvas.width / 2;
+            const membrane_x = w2;
+            const pore_size = 8;
+            const num_pores = 15;
+
+            particles.forEach(p => {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                // Wall collisions
+                if (p.x < p.radius || p.x > canvas.width - p.radius) p.vx *= -1;
+                if (p.y < p.radius || p.y > canvas.height - p.radius) p.vy *= -1;
+
+                // Membrane collision
+                if (Math.abs(p.x - membrane_x) < p.radius) {
+                    let in_pore = false;
+                    for(let i=0; i<num_pores; i++) {
+                        const pore_y = (i+1) * canvas.height / (num_pores+1);
+                        if(Math.abs(p.y - pore_y) < pore_size) {
+                            in_pore = true;
+                            break;
+                        }
+                    }
+
+                    if (p.type === 'solvent' && in_pore) {
+                        // Pass through
+                    } else {
+                        p.vx *= -1;
+                        p.x += p.vx * dt;
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const w2 = canvas.width / 2;
+            const solventColor = getComputedStyle(document.documentElement).getPropertyValue('--solvent-color').trim();
+            const soluteColor = getComputedStyle(document.documentElement).getPropertyValue('--solute-color').trim();
+            const membraneColor = getComputedStyle(document.documentElement).getPropertyValue('--membrane-color').trim();
+
+            let leftCount = 0, rightCount = 0;
+            // Draw particles
+            particles.forEach(p => {
+                if(p.type === 'solvent') {
+                    ctx.fillStyle = solventColor;
+                    if(p.x < w2) leftCount++; else rightCount++;
+                } else {
+                    ctx.fillStyle = soluteColor;
+                }
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw membrane
+            ctx.strokeStyle = membraneColor;
+            ctx.lineWidth = 4;
+            const pore_size = 8;
+            const num_pores = 15;
+            let last_y = 0;
+            for(let i=0; i<num_pores; i++) {
+                const pore_y = (i+1) * canvas.height / (num_pores+1);
+                ctx.beginPath();
+                ctx.moveTo(w2, last_y);
+                ctx.lineTo(w2, pore_y - pore_size);
+                ctx.stroke();
+                last_y = pore_y + pore_size;
+            }
+            ctx.beginPath(); ctx.moveTo(w2, last_y); ctx.lineTo(w2, canvas.height); ctx.stroke();
+
+            // Update UI
+            leftCountLabel.textContent = leftCount;
+            rightCountLabel.textContent = rightCount;
+
+            // Calculate pressure
+            const M_solute = simParams.numSolute / (simParams.numSolvent + simParams.numSolute);
+            const Pi = M_solute * 0.0821 * 298 * 50; // Scaled for effect
+            pressureVal.textContent = Math.max(0, (rightCount - leftCount) * Pi / simParams.numSolvent).toFixed(2);
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        resetBtn.addEventListener('click', setup);
+        soluteSlider.addEventListener('input', e => {
+            soluteLabel.textContent = e.target.value;
+        });
+        soluteSlider.addEventListener('change', setup);
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
