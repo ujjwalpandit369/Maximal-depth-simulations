@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Vacuum Fluctuations</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --field-color: #ffc107;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; min-width: 400px; }
+        canvas { width: 100%; height: auto; background-color: #111; border: 1px solid var(--secondary-color); border-radius: 4px; }
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 0.5rem; }
+        button:hover { background-color: #0077cc; }
+        #readout { font-size: 1.2rem; text-align: center; padding: 1rem; background-color: var(--control-bg); border-radius: 8px; margin-top: 1rem; }
+        #readout code { font-weight: bold; color: var(--primary-color); }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Visualizing Quantum Vacuum Fluctuations</h1>
+        <p>A simulation of the ever-present energy of "empty" space.</p>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In quantum field theory, the vacuum is not an empty void. Due to the Heisenberg Uncertainty Principle, it is a roiling sea of "virtual" particles and fluctuating fields. This simulation visualizes the ground state of a simple 1D quantum field. Even with zero particles present, the field's amplitude constantly fluctuates around zero. You can see this quantum "noise" and how its complexity changes based on how many field modes (ways the field can vibrate) are included in the simulation.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to the Quantum Vacuum</h2>
+            <h4>Step 1: "Empty" Space Isn't Empty</h4>
+            <p>In our everyday world, a vacuum is a space with nothing in it. In quantum field theory, this is not true. The "vacuum" is simply the state with the lowest possible energy, but it's still a busy place! Due to the Heisenberg Uncertainty Principle, fields can't be perfectly zero everywhere. Instead, they constantly fluctuate up and down around zero.</p>
+            <p><strong>Analogy: The Surface of the Ocean.</strong> Imagine the surface of a vast ocean. A big wave would be like a particle (an excitation of the water field). The vacuum is like the ocean on a perfectly calm day with no large waves. Even then, the surface isn't perfectly flat; it's always covered in tiny, random ripples. These ripples are like vacuum fluctuations.</p>
+
+            <h4>Step 2: Building a Field from Vibrations (Modes)</h4>
+            <p>Think of the 1D field in this simulation as a quantum guitar string. Any vibration of the string can be built by adding up its fundamental harmonics, or "modes."</p>
+            <ul>
+                <li>The <strong>1st mode</strong> is the string vibrating as a whole.</li>
+                <li>The <strong>2nd mode</strong> has a still point in the middle and vibrates in two sections.</li>
+                <li>...and so on.</li>
+            </ul>
+            <p>The vacuum is the state where none of these modes have been "plucked" to create a particle. However, each mode still has a tiny bit of "zero-point energy," and it is the sum of all these jiggling modes that creates the fluctuating field you see.</p>
+
+            <h4>Step 3: Using the Simulation</h4>
+            <ol>
+                <li>Press "Start" to see the field fluctuate over time.</li>
+                <li>Use the "Number of Modes" slider to change how many fundamental vibrations are included in the simulation. Notice how the fluctuations become more complex and "spiky" as you add more high-frequency modes.</li>
+                <li>Observe the "Vacuum Energy" readout. See how it increases as you add more modes to the sum.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div id="main-controls">
+                    <button id="start-pause-button">Pause</button>
+                    <button id="reset-button">Reset</button>
+                </div>
+                <div id="parameter-sliders"></div>
+                 <div id="export-buttons" style="margin-top: 1.5rem;">
+                    <h4>Export & Share</h4>
+                    <button id="export-png-button" title="Save current view as a PNG image">Export PNG</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="300" role="application" aria-label="Animation of a 1D quantum field fluctuating in the vacuum."></canvas>
+                <div id="readout">Vacuum Energy: <code>N/A</code></div>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: Zero-Point Energy</h2>
+            <p>The behavior of this simulation comes from decomposing a quantum field into an infinite set of independent quantum harmonic oscillators (QHOs), one for each vibrational mode.</p>
+
+            <h4>1. Energy of a Quantum Oscillator</h4>
+            <p>The allowed energy levels of a single QHO with frequency ω are quantized:</p>
+            <div class="equation">E<sub>n</sub> = (n + ½)ħω</div>
+            <p>where <code>n</code> is the number of particles (or "excitations") in that mode. The vacuum is defined as the state where <code>n=0</code> for all modes. As you can see, even when n=0, there is a non-zero "zero-point energy" of ½ħω.</p>
+
+            <h4>2. Total Vacuum Energy</h4>
+            <p>The total energy of the vacuum is the sum of the zero-point energies of all possible modes:</p>
+            <div class="equation">E<sub>vacuum</sub> = Σ<sub>k</sub> ½ħω<sub>k</sub></div>
+            <p>In theory, there are infinitely many modes, so this sum is infinite! This is a famous problem in physics. In practice and in this simulation, we assume a "cutoff," meaning we only sum up to a maximum number of modes. The value you see in the readout is this finite sum (with ħ=1).</p>
+
+            <h4>3. The Field Operator</h4>
+            <p>The value of the field at a point x is constructed by summing over all the modes. A simplified version of the field operator is:</p>
+            <div class="equation">φ(x, t) ∝ Σ<sub>k</sub> (a<sub>k</sub>e<sup>-i(ωt - kx)</sup> + a<sup>†</sup><sub>k</sub>e<sup>i(ωt - kx)</sup>)</div>
+            <p>Here, a and a<sup>†</sup> are operators that destroy and create particles in mode k. The vacuum fluctuations arise from the fact that these operators are never zero, even when acting on the vacuum state.</p>
+        </section>
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. If this energy is real, can we extract it to do work?</dt>
+                <dd>Generally, no. You can only extract energy from differences in energy levels. Since the vacuum is the lowest possible energy state, there's no lower state to fall into. However, the presence of this energy does have real, measurable consequences.</dd>
+                <dt>2. What is the Casimir Effect?</dt>
+                <dd>The Casimir effect is the most famous physical proof of vacuum energy. If you place two uncharged metal plates very close together in a vacuum, they restrict which field modes can exist between them. This changes the vacuum energy compared to the outside, resulting in a tiny attractive force between the plates that has been measured in experiments.</dd>
+                <dt>3. Why does the energy increase when I add more modes?</dt>
+                <dd>Because you are adding more positive terms (½ħω<sub>k</sub>) to the sum for the total vacuum energy. In the real world, this sum goes to infinity, and physicists have to use a sophisticated technique called "renormalization" to handle it.</dd>
+            </dl>
+        </section>
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="performance-meter"></div>
+             <div id="safety-warning" style="display:none; color: var(--danger-color); font-weight: bold; margin-top: 1rem;">
+                    Warning: High mode count may cause performance issues.
+                </div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const startPauseBtn = document.getElementById('start-pause-button');
+        const resetBtn = document.getElementById('reset-button');
+        const readoutEl = document.querySelector('#readout code');
+        const slidersContainer = document.getElementById('parameter-sliders');
+        const exportPngBtn = document.getElementById('export-png-button');
+        const devConsole = document.getElementById('developer-console');
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const perfMeter = document.getElementById('performance-meter');
+        const safetyWarningEl = document.getElementById('safety-warning');
+
+        const config = {
+            numPoints: 256,
+            maxModes: 50,
+            dt: 0.02,
+            L: 2 * Math.PI,
+        };
+        let state = {
+            numModes: 10,
+            isRunning: true,
+            time: 0,
+            field: new Float32Array(config.numPoints),
+            modes: [],
+        };
+        let lastFrameTime = 0, fps = 0;
+
+        function setup() {
+            logToDevConsole('Initializing simulation...');
+            runQualityCheck();
+            createControls();
+            addEventListeners();
+            reset();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function createControls() {
+            const slider = createSlider('numModes', 'Number of Modes', 1, config.maxModes, 1, state.numModes);
+            slider.slider.addEventListener('input', (e) => {
+                state.numModes = parseInt(e.target.value, 10);
+                slider.label.querySelector('span').textContent = state.numModes;
+                if(safetyWarningEl) safetyWarningEl.style.display = state.numModes > 40 ? 'block' : 'none';
+                reset();
+            });
+            slidersContainer.appendChild(slider.container);
+        }
+
+        function addEventListeners() {
+            startPauseBtn.addEventListener('click', () => {
+                state.isRunning = !state.isRunning;
+                startPauseBtn.textContent = state.isRunning ? 'Pause' : 'Start';
+            });
+            resetBtn.addEventListener('click', reset);
+            exportPngBtn.addEventListener('click', exportPNG);
+        }
+
+        function reset() {
+            state.time = 0;
+            state.modes = [];
+            let totalEnergy = 0;
+            for (let i = 1; i <= state.numModes; i++) {
+                const k = (2 * Math.PI / config.L) * i;
+                const omega = k;
+                state.modes.push({
+                    k: k,
+                    omega: omega,
+                    initialPhase: Math.random() * 2 * Math.PI,
+                    amplitude: 1 / Math.sqrt(omega)
+                });
+                totalEnergy += 0.5 * omega;
+            }
+            readoutEl.textContent = totalEnergy.toFixed(2);
+        }
+
+        function step() {
+            state.time += config.dt;
+            state.field.fill(0);
+
+            for (let i = 0; i < config.numPoints; i++) {
+                const x = (i / config.numPoints) * config.L;
+                let amplitude = 0;
+                for (const mode of state.modes) {
+                    amplitude += mode.amplitude * Math.cos(mode.omega * state.time + mode.initialPhase) * Math.cos(mode.k * x);
+                }
+                state.field[i] = amplitude;
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'var(--field-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < config.numPoints; i++) {
+                const x = (i / (config.numPoints - 1)) * canvas.width;
+                const y = canvas.height / 2 - state.field[i] * 50;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        function mainLoop(timestamp) {
+            if (state.isRunning) {
+                step();
+            }
+            draw();
+            if (perfMeter && timestamp - lastFrameTime > 500) {
+                fps = 1000 / (timestamp - lastFrameTime);
+                lastFrameTime = timestamp;
+                perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        function createSlider(id, label, min, max, step, value) {
+            const container = document.createElement('div');
+            container.className = 'slider-container';
+            const labelEl = document.createElement('label');
+            labelEl.htmlFor = id;
+            labelEl.innerHTML = `${label}: <span>${value}</span>`;
+            const slider = document.createElement('input');
+            slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+            container.append(labelEl, slider);
+            return { container, slider, label: labelEl };
+        }
+
+        function logToDevConsole(message) {
+            if (!devConsole) return;
+            const timestamp = new Date().toLocaleTimeString();
+            devConsole.textContent += `[${timestamp}] ${message}\n`;
+            devConsole.scrollTop = devConsole.scrollHeight;
+        }
+
+        function runQualityCheck() {
+            if (!qualityCheckPanel) return;
+            const checks = [ { el: 'main-canvas', name: 'Main Canvas' }, { el: 'simulation-controls', name: 'Controls Container' }];
+            let allPassed = true;
+            let report = 'Quality Check Report:\n';
+            checks.forEach(check => {
+                const found = document.getElementById(check.el);
+                report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+                if (!found) allPassed = false;
+            });
+            qualityCheckPanel.textContent = report;
+            qualityCheckPanel.style.color = allPassed ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+
+        function exportPNG() {
+            logToDevConsole('Exporting canvas to PNG...');
+            const link = document.createElement('a');
+            link.download = `qft-vacuum-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        setup();
+    });
+    </script>
+</body>
+</html>

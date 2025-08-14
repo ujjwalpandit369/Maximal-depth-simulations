@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conformal Transformations</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --grid-color: #666;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            min-width: 400px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #111;
+            border: 1px solid var(--secondary-color);
+            border-radius: 4px;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        .control-group:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+        }
+        button.active {
+            background-color: var(--success-color, #5cb85c);
+        }
+        button:hover:not(.active) {
+            background-color: #0077cc;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Conformal Transformations</h1>
+        <p>An interactive visualization of angle-preserving maps in the 2D plane.</p>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Conformal transformations are fundamental in many areas of physics and mathematics. They are transformations that preserve angles locally, but not necessarily lengths or straight lines. This simulation allows you to visualize the effects of different conformal maps on a simple grid. Watch how squares are mapped to other squares, or to beautiful curvilinear shapes, while always maintaining their right-angled corners, a defining feature of conformality.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Conformal Maps</h2>
+            <h4>Step 1: What is a "Conformal" Transformation?</h4>
+            <p>In simple terms, a conformal transformation is a way of mapping (or transforming) a space that preserves <strong>angles</strong>. It might stretch, shrink, or curve the space, but the angles at which lines cross will always remain the same. This is a very powerful property in geometry and physics.</p>
+            <p><strong>Everyday Analogy: A Mercator Map.</strong> The classic Mercator projection used for world maps is a conformal map. On the globe, lines of longitude and latitude cross at 90-degree angles. On the flat map, they also cross at 90-degree angles everywhere. However, areas are hugely distorted: Greenland looks as big as Africa, but it's actually 14 times smaller! The map preserves angles at the cost of distorting size.</p>
+
+            <h4>Step 2: Exploring the Transformations</h4>
+            <p>This simulation lets you play with the basic building blocks of 2D conformal maps.</p>
+            <ol>
+                <li><strong>Select a Transformation:</strong> Click a button like "Translation" or "Rotation" to choose a map.</li>
+                <li><strong>Use the Sliders:</strong> Once you select a transformation, sliders will appear. Move them to change the transformation's parameters.</li>
+                <li><strong>Observe the Grid:</strong> Watch how the grid changes. Notice that even when squares become curved or change size, their corners always remain perfect 90-degree angles. This is the angle-preserving property in action!</li>
+                <li><strong>Reset:</strong> Click "Identity" or "Reset Animation" to return the grid to its original state.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <h4>Transformation Type</h4>
+                    <div id="transform-buttons">
+                        <button data-transform="identity" class="active">Identity</button>
+                        <button data-transform="translation">Translation</button>
+                        <button data-transform="rotation">Rotation</button>
+                        <button data-transform="scaling">Scaling</button>
+                        <button data-transform="inversion">Inversion</button>
+                    </div>
+                </div>
+                <div id="parameter-sliders">
+                    <!-- Sliders will be dynamically added here -->
+                </div>
+                 <div class="control-group">
+                    <button id="reset-button">Reset Animation</button>
+                </div>
+                 <div class="control-group">
+                    <h4>Export & Share</h4>
+                    <button id="export-png-button" title="Save current view as a PNG image">Export PNG</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500" role="application" aria-label="Interactive visualization of a grid undergoing conformal transformations."></canvas>
+            </div>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <h4>Inverting a Line into a Circle</h4>
+            <p>Select the <strong>Inversion</strong> transformation. The grid lines that were straight are now mapped to circles passing through the origin. This is a fundamental feature of inversion.</p>
+            <h4>Translating after Inversion</h4>
+            <p>First, select <strong>Inversion</strong>. Then, select <strong>Translation</strong> and move the 'Translate X' slider. Notice how you are now moving the circular grid around. All conformal transformations can be built up from these basic operations.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Complex Plane</h2>
+            <p>The mathematics of 2D conformal transformations becomes much simpler by representing points (x, y) as complex numbers of the form <code>z = x + iy</code>. All the transformations in this simulation are simple functions acting on this complex number `z`.</p>
+            <ul>
+                <li><strong>Translation:</strong> <code>f(z) = z + c</code>, where c is a complex number representing the translation vector.</li>
+                <li><strong>Rotation & Scaling:</strong> <code>f(z) = a * z</code>, where `a` is a complex number. The magnitude of `a` controls scaling, and the angle of `a` controls rotation.</li>
+                <li><strong>Inversion:</strong> <code>f(z) = 1 / z</code>. This is the most interesting transformation, mapping the inside of the unit circle to the outside, and vice-versa.</li>
+            </ul>
+            <p>A key result from complex analysis is that any function that is "complex differentiable" (or analytic) is a conformal map at every point where its derivative is not zero. All of the functions above have this property.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why do straight lines become circles?</dt>
+                <dd>This is a property of the <strong>Inversion</strong> map (f(z) = 1/z). It maps lines that do not pass through the origin into circles that do pass through the origin.</dd>
+                <dt>2. Why do the squares change size?</dt>
+                <dd>Conformal maps preserve angles, but not necessarily lengths or areas. Scaling explicitly changes size, and Inversion dramatically changes size based on the distance from the origin.</dd>
+                <dt>3. What are these transformations used for?</dt>
+                <dd>They are incredibly important in many fields. In physics, they are used in electromagnetism, fluid dynamics, and are a cornerstone of string theory and certain approaches to quantum gravity. In engineering, they are used to solve problems by mapping a complex geometry to a simpler one.</dd>
+            </dl>
+        </section>
+
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="performance-meter"></div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const transformButtons = document.getElementById('transform-buttons');
+        const slidersContainer = document.getElementById('parameter-sliders');
+        const resetButton = document.getElementById('reset-button');
+        const exportPngBtn = document.getElementById('export-png-button');
+        const devConsole = document.getElementById('developer-console');
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const perfMeter = document.getElementById('performance-meter');
+
+        // --- Complex Number Helpers ---
+        const Complex = {
+            add: (z1, z2) => ({ x: z1.x + z2.x, y: z1.y + z2.y }),
+            multiply: (z1, z2) => ({ x: z1.x * z2.x - z1.y * z2.y, y: z1.x * z2.y + z1.y * z2.x }),
+            invert: (z) => {
+                const d = z.x * z.x + z.y * z.y;
+                if (d < 1e-9) return { x: Infinity, y: Infinity };
+                return { x: z.x / d, y: -z.y / d };
+            },
+            scale: (z, s) => ({ x: z.x * s, y: z.y * s })
+        };
+
+        // --- CONFIG & STATE ---
+        const config = {
+            gridSize: 20,
+            worldScale: 4,
+            animationDuration: 300,
+        };
+        let state = {
+            transformType: 'identity',
+            baseGrid: [],
+            currentGrid: [],
+            animation: { isActive: false, startTime: 0, startGrid: null, endGrid: null },
+            params: {
+                translation: { x: 0, y: 0 },
+                rotation: { angle: 0 },
+                scaling: { s: 1 },
+                inversion: {},
+                identity: {},
+            }
+        };
+        let lastFrameTime = 0, fps = 0;
+
+        // --- INITIALIZATION ---
+        function setup() {
+            logToDevConsole('Initializing Conformal Transformations simulation...');
+            runQualityCheck();
+            generateGrid();
+            state.currentGrid = deepCopy(state.baseGrid);
+            createControls();
+            addEventListeners();
+            updateAndAnimate();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function generateGrid() {
+            state.baseGrid = [];
+            const step = (config.worldScale * 2) / config.gridSize;
+            for (let i = 0; i <= config.gridSize; i++) {
+                const row = [];
+                for (let j = 0; j <= config.gridSize; j++) {
+                    row.push({
+                        x: -config.worldScale + j * step,
+                        y: -config.worldScale + i * step,
+                    });
+                }
+                state.baseGrid.push(row);
+            }
+        }
+
+        function addEventListeners() {
+            transformButtons.addEventListener('click', e => {
+                if (e.target.tagName === 'BUTTON') {
+                    const transformType = e.target.dataset.transform;
+                    if (transformType) setActiveTransform(transformType);
+                }
+            });
+            resetButton.addEventListener('click', () => {
+                // Reset parameters to defaults
+                state.params.translation = { x: 0, y: 0 };
+                state.params.rotation = { angle: 0 };
+                state.params.scaling = { s: 1 };
+                setActiveTransform('identity');
+            });
+            exportPngBtn.addEventListener('click', exportPNG);
+        }
+
+        function setActiveTransform(type) {
+            state.transformType = type;
+            transformButtons.querySelectorAll('button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.transform === type);
+            });
+            createControls();
+            updateAndAnimate();
+        }
+
+        function createControls() {
+            slidersContainer.innerHTML = '';
+            const params = state.params[state.transformType];
+            const addSlider = (prop, min, max, step, label) => {
+                const slider = createSlider(prop, label, min, max, step, params[prop]);
+                slider.slider.addEventListener('input', (e) => {
+                    params[prop] = parseFloat(e.target.value);
+                    slider.label.querySelector('span').textContent = params[prop].toFixed(2);
+                    updateAndAnimate();
+                });
+                slidersContainer.appendChild(slider.container);
+            };
+
+            switch (state.transformType) {
+                case 'translation':
+                    addSlider('x', -config.worldScale, config.worldScale, 0.1, 'Translate X');
+                    addSlider('y', -config.worldScale, config.worldScale, 0.1, 'Translate Y');
+                    break;
+                case 'rotation':
+                    addSlider('angle', -Math.PI, Math.PI, 0.01, 'Angle');
+                    break;
+                case 'scaling':
+                    addSlider('s', 0.1, 5, 0.1, 'Scale');
+                    break;
+            }
+        }
+
+        // --- TRANSFORMATION LOGIC ---
+        function applyTransform(point, type, params) {
+            switch (type) {
+                case 'translation': return Complex.add(point, params.translation);
+                case 'rotation':
+                    const rot = { x: Math.cos(params.rotation.angle), y: Math.sin(params.rotation.angle) };
+                    return Complex.multiply(point, rot);
+                case 'scaling': return Complex.scale(point, params.scaling.s);
+                case 'inversion': return Complex.invert(point);
+                case 'identity':
+                default: return point;
+            }
+        }
+
+        function updateAndAnimate() {
+            state.animation.startGrid = deepCopy(state.currentGrid);
+            const endGrid = state.baseGrid.map(row =>
+                row.map(p => applyTransform(p, state.transformType, state.params))
+            );
+            state.animation.endGrid = endGrid;
+            state.animation.startTime = performance.now();
+            state.animation.isActive = true;
+        }
+
+        // --- DRAWING ---
+        function worldToCanvas(point) {
+            const { width, height } = canvas;
+            const scale = Math.min(width, height) / (config.worldScale * 2);
+            return { x: point.x * scale + width / 2, y: -point.y * scale + height / 2 };
+        }
+
+        function drawGrid(grid) {
+            ctx.strokeStyle = getCssVar('--grid-color');
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < grid.length; i++) {
+                for (let j = 0; j < grid[i].length; j++) {
+                    const p = grid[i][j];
+                    if (isFinite(p.x) && isFinite(p.y)) {
+                        if (j < grid[i].length - 1) {
+                            const p_right = grid[i][j + 1];
+                            if (isFinite(p_right.x) && isFinite(p_right.y)) drawLine(p, p_right);
+                        }
+                        if (i < grid.length - 1) {
+                            const p_down = grid[i + 1][j];
+                            if (isFinite(p_down.x) && isFinite(p_down.y)) drawLine(p, p_down);
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawLine(p1, p2) {
+            const cp1 = worldToCanvas(p1);
+            const cp2 = worldToCanvas(p2);
+            ctx.beginPath();
+            ctx.moveTo(cp1.x, cp1.y);
+            ctx.lineTo(cp2.x, cp2.y);
+            ctx.stroke();
+        }
+
+        function mainLoop(timestamp) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (state.animation.isActive) {
+                const elapsed = timestamp - state.animation.startTime;
+                let t = elapsed / config.animationDuration;
+                if (t >= 1) {
+                    t = 1;
+                    state.animation.isActive = false;
+                    state.currentGrid = deepCopy(state.animation.endGrid);
+                }
+                const easedT = 1 - Math.pow(1 - t, 5);
+                const animatedGrid = state.animation.startGrid.map((row, i) =>
+                    row.map((startPoint, j) => {
+                        const endPoint = state.animation.endGrid[i][j];
+                        if (!isFinite(startPoint.x) || !isFinite(endPoint.x)) return endPoint;
+                        return {
+                            x: startPoint.x + (endPoint.x - startPoint.x) * easedT,
+                            y: startPoint.y + (endPoint.y - startPoint.y) * easedT,
+                        };
+                    })
+                );
+                drawGrid(animatedGrid);
+            } else {
+                drawGrid(state.currentGrid);
+            }
+
+            if (perfMeter && timestamp - lastFrameTime > 500) {
+                fps = 1000 / (timestamp - lastFrameTime);
+                lastFrameTime = timestamp;
+                perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+            }
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- UTILITY & HELPER FUNCTIONS ---
+        function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+        function getCssVar(varName) { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+
+        function createSlider(id, label, min, max, step, value) {
+            const container = document.createElement('div');
+            container.style.marginBottom = '0.5rem';
+            const labelEl = document.createElement('label');
+            labelEl.style.display = 'block';
+            labelEl.style.marginBottom = '0.25rem';
+            labelEl.htmlFor = id;
+            labelEl.innerHTML = `${label}: <span>${parseFloat(value).toFixed(2)}</span>`;
+            const slider = document.createElement('input');
+            slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+            slider.style.width = '100%';
+            container.append(labelEl, slider);
+            return { container, slider, label: labelEl };
+        }
+
+        function logToDevConsole(message) {
+            if (!devConsole) return;
+            const timestamp = new Date().toLocaleTimeString();
+            devConsole.textContent += `[${timestamp}] ${message}\n`;
+            devConsole.scrollTop = devConsole.scrollHeight;
+        }
+
+        function runQualityCheck() {
+            if (!qualityCheckPanel) return;
+            const checks = [ { el: 'main-canvas', name: 'Main Canvas' }, { el: 'simulation-controls', name: 'Controls Container' }];
+            let allPassed = true;
+            let report = 'Quality Check Report:\n';
+            checks.forEach(check => {
+                const found = document.getElementById(check.el);
+                report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+                if (!found) allPassed = false;
+            });
+            qualityCheckPanel.textContent = report;
+            qualityCheckPanel.style.color = allPassed ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+
+        function exportPNG() {
+            logToDevConsole('Exporting canvas to PNG...');
+            const link = document.createElement('a');
+            link.download = `conformal-transform-${state.transformType}-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        setup();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Space of All Possible Functions</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --danger-color: #d9534f;
+            --success-color: #5cb85c;
+            --user-function-color: #28a745;
+            --approx-function-color: #ffc107;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.2rem; }
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 400px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #111;
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+
+        button, .preset-button, .basis-button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover, .preset-button:hover, .basis-button:hover {
+            background-color: #0077cc;
+        }
+        .basis-button.active {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        #main-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        #presets, #export-buttons {
+            margin-top: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        th {
+            background-color: #333;
+        }
+
+        code {
+            background-color: #333;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+
+        pre {
+            background-color: #333;
+            padding: 1rem;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        dl dt {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 1rem;
+        }
+
+        dl dd {
+            margin-left: 1rem;
+        }
+
+        /* High Contrast Mode */
+        body.high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #ffc107;
+            --secondary-color: #aaa;
+            --header-bg: #111;
+            --control-bg: #222;
+        }
+        body.high-contrast button, body.high-contrast .preset-button {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+        body.high-contrast button:hover, body.high-contrast .preset-button:hover {
+            background-color: #ffeb3b;
+        }
+        body.high-contrast canvas {
+            background-color: #000;
+            border: 1px solid #fff;
+        }
+        body.high-contrast th {
+            background-color: #444;
+        }
+        body.high-contrast code, body.high-contrast pre {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box"></div>
+    <header>
+        <h1>The Space of All Possible Functions</h1>
+        <p>Approximating user-drawn functions with different mathematical basis sets.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Real-time</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 50 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation explores a powerful idea from mathematics and physics: that complex functions can be built by adding up simpler "basis" functions, much like any color can be made by mixing red, green, and blue light. Here, you can draw any function you like and then watch as the computer tries to approximate it using a chosen set of mathematical building blocks, like sine waves (Fourier Series) or special polynomials (Legendre Polynomials). By adjusting how many building blocks you use, you can see the approximation get closer and closer to your original drawing, visually demonstrating the concept of a function space.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Building Functions</h2>
+            <p>Welcome! This guide will introduce you to the powerful idea of "function spaces" using a simple, visual approach. Don't worry if these terms are new; we'll use helpful analogies along the way.</p>
+
+            <h4>Step 1: Thinking of Functions as Points in a "Space"</h4>
+            <p>You're probably used to thinking of a point in 3D space as a set of three coordinates: (x, y, z). These three numbers uniquely define a location. A function, like the ones you can draw in this simulation, can be thought of in a similar way. Instead of just three coordinates, a function has a coordinate for <em>every single point</em> along the x-axis. The value of the function at that x-point is its coordinate in that "direction".</p>
+            <p>Since there are infinitely many points on the x-axis, a function is like a point in an <strong>infinite-dimensional space</strong>. This is the mind-bending, core idea of a Hilbert Space. The green line you draw is a single "point" in this vast space!</p>
+
+            <h4>Step 2: Basis Functions - The Building Blocks</h4>
+            <p>In 3D space, we have special directions: the x-axis, the y-axis, and the z-axis. We can describe any point in space by saying "go 5 units along x, 3 units along y, and 10 units along z." These axes are our "basis vectors."</p>
+            <p>In function space, we have special functions called <strong>basis functions</strong> that act like our axes. We can build any other function by adding up the right amounts of these basis functions. This simulation lets you use two different sets of basis functions:</p>
+            <ul>
+                <li><strong>Fourier Series:</strong> Uses sines and cosines (wavy lines) as its building blocks. This is excellent for representing anything that is periodic or has wave-like features.</li>
+                <li><strong>Legendre Polynomials:</strong> Uses a special set of polynomials (smooth, curving lines like x², x³, etc.) as building blocks. This is very good at representing smooth, non-repeating shapes.</li>
+            </ul>
+            <p>The "amount" of each basis function we need is called its <strong>coefficient</strong>. The yellow line in the simulation is the sum of all the basis functions multiplied by their coefficients.</p>
+
+            <h4>Step 3: How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Draw a Function:</strong> Click and drag your mouse across the black canvas area. A green line will appear, representing your target function.</li>
+                <li><strong>Choose a Basis Set:</strong> Click the "Fourier Series" or "Legendre Polynomials" button to select your building blocks.</li>
+                <li><strong>Add More Terms:</strong> Use the "Number of Terms" slider. As you increase the number of terms, you are adding more basis functions to your approximation. Watch how the yellow line (the approximation) gets closer and closer to your green line.</li>
+                <li><strong>Check the Error:</strong> The "Error" readout below the canvas shows the average distance between your function and the approximation. As you add more terms, this number should get smaller, meaning the fit is getting better!</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div id="main-controls">
+                    <button id="reset-button" title="Clear the drawing (r)">Reset</button>
+                </div>
+                <div id="basis-controls">
+                    <h4>Basis Set</h4>
+                    <button id="fourier-button" class="basis-button active" data-basis="fourier">Fourier Series</button>
+                    <button id="legendre-button" class="basis-button" data-basis="legendre">Legendre Polynomials</button>
+                </div>
+                <div id="parameter-sliders"></div>
+                <div id="presets">
+                    <h4>Presets</h4>
+                    <button class="preset-button" data-preset="square">Square Wave</button>
+                    <button class="preset-button" data-preset="triangle">Triangle Wave</button>
+                    <button class="preset-button" data-preset="parabola">Parabola</button>
+                </div>
+                <div id="export-buttons">
+                    <h4>Export & Share</h4>
+                    <button id="export-png" title="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" title="Save drawn function and parameters as a JSON file (e)">Export JSON</button>
+                    <button id="share-preset" title="Copy a shareable link with current parameters">Share Parameters</button>
+                </div>
+                <div id="accessibility-controls">
+                    <h4>Accessibility & Performance</h4>
+                    <label>
+                        <input type="checkbox" id="contrast-toggle">
+                        High Contrast
+                    </label>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400" role="application" aria-label="Interactive canvas for drawing a function and viewing its approximation."></canvas>
+                <div id="info-readout" style="padding: 1rem; background-color: var(--control-bg); border-radius: 8px;">
+                    Error: <span id="error-metric">N/A</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>These parameters control how the approximation is constructed.</p>
+            <table id="params-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Control</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Number of Terms</td>
+                        <td>Slider</td>
+                        <td>5</td>
+                        <td>1 - 50</td>
+                        <td>Controls how many basis functions are used in the sum. More terms yield a better approximation but require more computation.</td>
+                    </tr>
+                    <tr>
+                        <td>Basis Set</td>
+                        <td>Buttons</td>
+                        <td>Fourier Series</td>
+                        <td>Fourier, Legendre</td>
+                        <td>Chooses the set of "building block" functions to use for the approximation.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <div class="preset-example">
+                <h4>1. The Square Wave (Sharp Edges)</h4>
+                <p><strong>Observation:</strong> Click the "Square Wave" preset button. Notice that the Fourier series approximation has little "wiggles" and overshoots the corners. This is a famous artifact called the <strong>Gibbs Phenomenon</strong>. Even with many terms, the overshoot never fully disappears!</p>
+                <button class="preset-button" data-preset="square">Load "Square Wave"</button>
+            </div>
+            <div class="preset-example">
+                <h4>2. The Triangle Wave (Sharp Point)</h4>
+                <p><strong>Observation:</strong> Click the "Triangle Wave" button. This function is continuous but not smooth. The Fourier series does a much better job here than with the square wave, as there are no sudden jumps. The approximation gets very close with only a moderate number of terms.</p>
+                <button class="preset-button" data-preset="triangle">Load "Triangle Wave"</button>
+            </div>
+            <div class="preset-example">
+                <h4>3. The Parabola (Smooth Curve)</h4>
+                <p><strong>Observation:</strong> Click the "Parabola" button and select the "Legendre Polynomials" basis set. Since the target function is a simple polynomial, the Legendre basis can approximate it almost perfectly with just 3 terms! Switch to Fourier to see how many more terms it takes to get a similar result.</p>
+                <button class="preset-button" data-preset="parabola">Load "Parabola"</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Walkthrough 1: The Gibbs Phenomenon</h4>
+            <ol>
+                <li>Load the "Square Wave" preset. Ensure the "Fourier Series" basis is selected.</li>
+                <li>Set the "Number of Terms" slider to <strong>1</strong>. The approximation is a single sine wave.</li>
+                <li>Slowly increase the number of terms. Notice how the approximation gets flatter and closer to the square shape, but the overshoot at the jump point remains. Even at <strong>50 terms</strong>, that overshoot is still there.</li>
+                <li><strong>Analogy:</strong> It's like trying to build a perfect square out of LEGO bricks; you'll always have a stepped edge, never a perfectly sharp vertical line.</li>
+            </ol>
+            <h4>Walkthrough 2: The Right Tool for the Job</h4>
+            <ol>
+                <li>Reset the simulation and draw a single, smooth hump in the middle of the canvas.</li>
+                <li>Select the "Legendre Polynomials" basis. Increase the terms to <strong>5</strong>. The approximation (yellow line) should match your drawing almost perfectly. Note the low "Error" value.</li>
+                <li>Now, switch the basis set to "Fourier Series". The approximation is likely much worse. Increase the terms to <strong>20</strong> or <strong>30</strong>. It gets closer, but it might struggle with the ends.</li>
+                <li><strong>Intuition:</strong> You're asking the Fourier basis (made of repeating waves) to build a shape that doesn't repeat. It's possible, but inefficient. Using the Legendre basis (made of non-repeating polynomials) is much more natural for this task.</li>
+            </ol>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li><strong>Approximating a Constant:</strong> Reset and draw a straight horizontal line above the axis. Which basis set is more efficient? (Expected: Legendre should do it in 1 term, Fourier will also be very fast).</li>
+                <li><strong>Error Target:</strong> Load the "Triangle Wave" preset. How many Fourier terms does it take to get the error below <strong>0.05</strong>? Now try with Legendre. Which is lower?</li>
+                <li><strong>The Odd One Out:</strong> Draw a function that is zero on the left half and a sine wave on the right. Compare how the two basis sets handle this combined shape.</li>
+                <li><strong>Symmetry Matters:</strong> Draw a perfectly symmetric function (like a "U" shape). Look at the Fourier approximation. Now draw an asymmetric function (like an "S" shape). Does the approximation behave differently?</li>
+                <li><strong>Maximum Error:</strong> For the "Square Wave" preset, at what number of terms is the error the highest? Does it always decrease as you add more terms?</li>
+                <li><strong>Polynomial Purity:</strong> Load the "Parabola" preset with the Legendre basis. Set terms to 1, then 2, then 3. What does each term add? (P₀ is a constant, P₁ is a line, P₂ is a parabola).</li>
+                <li><strong>Drawing a Sine Wave:</strong> Try to draw a single, clean sine wave. How many Fourier terms does it take to get a near-perfect match? (Expected: Just a few terms should work very well).</li>
+                <li><strong>Noise:</strong> Draw a smooth curve, then add a lot of small, jagged scribbles on top of it. How does the approximation change? Does it try to fit the noise or the underlying smooth shape?</li>
+            </ol>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: Projecting into a Function Space</h2>
+            <p>The magic of this simulation comes from a mathematical process called "projection." We are projecting your hand-drawn function onto each of our basis functions to find out how much of each one we need.</p>
+
+            <h4>1. The Inner Product (Measuring Alignment)</h4>
+            <p>First, we need a way to measure how "aligned" two functions, f(x) and g(x), are. In vector math, this is the dot product. In function space, it's the <strong>inner product</strong>, which is defined as an integral:</p>
+            <div class="equation"> ⟨f, g⟩ = ∫ f(x)g(x) dx </div>
+            <p><strong>Plain-English Translation:</strong> To get the inner product, you multiply the two functions together at every point and then find the total area under the curve of their product. A large positive value means they are very aligned; a value near zero means they are "orthogonal" (like the x and y axes are).</p>
+
+            <h4>2. Calculating the Coefficients (Finding the "Amount")</h4>
+            <p>The "amount" of each basis function (φₙ) we need is called the coefficient (cₙ). We find it by projecting your function (f) onto the basis function and normalizing it.</p>
+            <div class="equation"> cₙ = ⟨f, φₙ⟩ / ⟨φₙ, φₙ⟩ </div>
+            <p><strong>Plain-English Translation:</strong> The best "amount" of a basis function is found by taking the inner product of your function with the basis function (how aligned they are) and dividing by the inner product of the basis function with itself (its "length squared").</p>
+            <p><strong>Numeric Example:</strong> Imagine your function `f` has an inner product of <strong>1.5</strong> with the basis function `φ₁`, and `φ₁` has an inner product of <strong>2.0</strong> with itself. The coefficient would be `c₁ = 1.5 / 2.0 = 0.75`.</p>
+
+            <h4>3. Building the Approximation</h4>
+            <p>Once we have all the coefficients, we just add everything together.</p>
+            <div class="equation"> f_approx(x) = Σ cₙφₙ(x) </div>
+            <p><strong>Plain-English Translation:</strong> The final approximation is the sum of all your chosen basis functions, with each one scaled by its calculated coefficient. This is what the yellow line represents.</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <p><strong>Gibbs Phenomenon:</strong> When using a Fourier series to approximate a function with a jump discontinuity (like a square wave), the approximation always overshoots the jump by about 9% of the jump's height. This ringing artifact is called the Gibbs Phenomenon, and it doesn't go away no matter how many terms you add.</p>
+            <p><strong>Choice of Basis:</strong> The choice of basis is critical. Fourier series are a "complete" basis for periodic functions. Legendre polynomials are a complete basis for functions on the interval [-1, 1] and are particularly good for functions that are well-approximated by polynomials. Other famous orthogonal polynomials include Chebyshev (minimizes maximum error) and Hermite (used in quantum mechanics for the harmonic oscillator).</p>
+            <p><strong>Convergence:</strong> The error we are measuring is related to L² convergence, which means the integral of the squared difference between the function and its approximation goes to zero. This doesn't guarantee that the value at every single point converges, which is why the Gibbs phenomenon can exist.</p>
+            <p><strong>How to Extend This Simulation:</strong></p>
+            <ul>
+                <li><strong>Add More Bases:</strong> Implement Chebyshev polynomials. Their recursive definition is Tₙ₊₁(x) = 2xTₙ(x) - Tₙ₋₁(x).</li>
+                <li><strong>Visualize Coefficients:</strong> Add a bar chart showing the magnitude of each calculated coefficient cₙ. For a smooth function, you'd see these coefficients get very small, very fast.</li>
+                <li><strong>2D Approximation:</strong> Extend the concept to 2D to approximate an image. The basis functions would be 2D (e.g., products of sines and cosines), and you could try to reconstruct a simple user-drawn image.</li>
+            </ul>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. Vector Components (Mathematical Analogy)</h4>
+            <p>A function is like a vector in an infinite-dimensional space. The basis functions (sines, cosines, polynomials) are the orthogonal axes of this space. Calculating a coefficient is identical to finding the component of a vector along an axis by taking a dot product.</p>
+            <p><strong>Limitations:</strong> It's hard to visualize infinite dimensions, but the mathematical parallel is exact.</p>
+
+            <h4>2. Mixing Colors (Physical Analogy)</h4>
+            <p>Think of the basis functions as pure primary colors (Red, Green, Blue). Any color on your screen can be represented as a mix of these three, like (R=255, G=128, B=0). Your drawn function is the target color, and the coefficients are the brightness values for each primary color needed to match it.</p>
+            <p><strong>Limitations:</strong> This analogy only has three basis functions. Our simulation uses up to 50, and a true function space has infinitely many.</p>
+
+            <h4>3. Audio Equalizer (Computational Analogy)</h4>
+            <p>Any complex sound, like a piece of music, is a complex waveform. A Fourier series is exactly what an audio spectrum analyzer does: it breaks down the complex sound into the intensity of its fundamental frequencies (simple sine waves). The coefficients are the "volume sliders" for each frequency band on an equalizer.</p>
+            <p><strong>Limitations:</strong> This analogy is specific to the Fourier basis, but it's a very direct and practical application of the same mathematics.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why does the yellow line have ripples near the sharp edges of my drawing?</dt>
+                <dd>This is the Gibbs Phenomenon! It happens when you use a Fourier series (made of smooth waves) to approximate a function with a sudden jump. The approximation overshoots the jump, and the ripple doesn't go away even with many terms.</dd>
+                <dt>2. Which basis set is "better"?</dt>
+                <dd>Neither is better in general; it depends on the job! Use Fourier Series for things that are periodic (repeating) or wave-like. Use Legendre Polynomials for smooth, non-repeating shapes.</dd>
+                <dt>3. What is a "basis set"?</dt>
+                <dd>It's a set of "building block" functions that you can use to build up more complex functions. To be a valid basis, the functions should be "orthogonal" (not overlapping, in a mathematical sense) and "complete" (able to build any function in the space).</dd>
+                <dt>4. Why does the approximation get so slow when I use many terms?</dt>
+                <dd>For each term, the simulation has to do a lot of calculations (an entire numerical integral). The total work scales with the number of terms, so going from 40 to 50 terms is much more work than going from 1 to 10.</dd>
+                <dt>5. Why does the error never go to exactly zero?</dt>
+                <dd>Two reasons: 1) We are only using a finite number of basis functions, while a perfect fit might require infinitely many. 2) Your hand-drawn function is stored as a series of discrete points, and the math involves numerical approximations, not perfect symbolic integrals.</dd>
+                <dt>6. My drawing is messy. How do I start over?</dt>
+                <dd>Just click the "Reset" button in the control panel, or press the 'r' key on your keyboard.</dd>
+            </dl>
+        </section>
+
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="perf-safety-content">
+                <p>This simulation runs entirely in your browser. Drawing very complex functions or using a high number of terms may slow down the calculation.</p>
+                <div id="safety-warning" style="display:none; color: var(--danger-color); font-weight: bold; margin-top: 1rem;">
+                    Warning: A high number of terms may cause performance issues.
+                </div>
+            </div>
+            <div id="performance-meter"></div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    // --- CONFIG & STATE ---
+    const config = {
+        maxTerms: 50,
+        resolution: 512, // Number of points to store the user function
+        domain: { min: -1, max: 1 } // Mathematical domain
+    };
+    let state = {
+        basis: 'fourier', // 'fourier' or 'legendre'
+        numTerms: 5,
+        userFunction: [], // Array of y-values, index corresponds to x
+        approxFunction: [], // Approximated y-values
+        coefficients: [], // Store calculated coefficients
+        isDrawing: false,
+        isHighContrast: false,
+        lastDrawIndex: null,
+    };
+    // Memoization caches for performance
+    const legendreMemo = {};
+    const basisFuncMemo = {};
+
+    // --- DOM ELEMENTS ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const devConsole = document.getElementById('developer-console');
+    const qualityCheckPanel = document.getElementById('quality-check-panel');
+    const perfMeter = document.getElementById('performance-meter');
+    const errorMetricEl = document.getElementById('error-metric');
+    const safetyWarningEl = document.getElementById('safety-warning');
+
+    let numTermsSlider, resetButton, fourierButton, legendreButton;
+    let exportPngBtn, exportJsonBtn, contrastToggle, sharePresetBtn;
+
+    // --- INITIALIZATION ---
+    function setup() {
+        logToDevConsole('Initializing simulation...');
+        runQualityCheck();
+        createControls();
+        addEventListeners();
+        parseURLParameters();
+        reset(); // Reset to apply URL params if they exist
+        logToDevConsole('Initialization complete. Starting main loop.');
+        requestAnimationFrame(mainLoop);
+    }
+
+    // --- QUALITY & HELPERS ---
+    function logToDevConsole(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        devConsole.textContent += `[${timestamp}] ${message}\n`;
+        devConsole.scrollTop = devConsole.scrollHeight;
+    }
+
+    window.onerror = (message, source, lineno, colno, error) => {
+        logToDevConsole(`ERROR: ${message} at ${source.split('/').pop()}:${lineno}:${colno}`);
+    };
+
+    function runQualityCheck() {
+        const checks = [
+            { el: 'main-canvas', name: 'Main Canvas' },
+            { el: 'simulation-controls', name: 'Controls Container' },
+            { el: 'try-these-examples', name: 'Presets Section' }
+        ];
+        let allPassed = true;
+        let report = 'Quality Check Report:\n';
+        checks.forEach(check => {
+            const found = document.getElementById(check.el);
+            report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+            if (!found) allPassed = false;
+        });
+        qualityCheckPanel.textContent = report;
+        if (allPassed) {
+            qualityCheckPanel.style.color = 'var(--success-color)';
+            qualityCheckPanel.textContent += "\nAll checks passed. Simulation should be functional.";
+        } else {
+            qualityCheckPanel.style.color = 'var(--danger-color)';
+            qualityCheckPanel.textContent += "\nOne or more checks failed. The simulation may not work correctly. Please report this issue.";
+        }
+    }
+
+    function createControls() {
+        const sliderContainer = document.getElementById('parameter-sliders');
+        numTermsSlider = createSlider('numTerms', 'Number of Terms', 1, config.maxTerms, 1, state.numTerms);
+        sliderContainer.appendChild(numTermsSlider.container);
+
+        resetButton = document.getElementById('reset-button');
+        fourierButton = document.getElementById('fourier-button');
+        legendreButton = document.getElementById('legendre-button');
+
+        exportPngBtn = document.getElementById('export-png');
+        exportJsonBtn = document.getElementById('export-json');
+        sharePresetBtn = document.getElementById('share-preset');
+        contrastToggle = document.getElementById('contrast-toggle');
+    }
+
+    function addEventListeners() {
+        numTermsSlider.slider.addEventListener('input', e => {
+            state.numTerms = parseInt(e.target.value, 10);
+            numTermsSlider.label.querySelector('span').textContent = state.numTerms;
+            if (safetyWarningEl) {
+                safetyWarningEl.style.display = state.numTerms > 30 ? 'block' : 'none';
+            }
+            recalculateApproximation();
+        });
+
+        resetButton.addEventListener('click', reset);
+        fourierButton.addEventListener('click', () => setBasis('fourier'));
+        legendreButton.addEventListener('click', () => setBasis('legendre'));
+
+        document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click', handlePresetClick));
+
+        exportPngBtn.addEventListener('click', exportPNG);
+        exportJsonBtn.addEventListener('click', exportJSON);
+        sharePresetBtn.addEventListener('click', sharePreset);
+        contrastToggle.addEventListener('change', toggleContrastMode);
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        window.addEventListener('keydown', handleKeydown);
+    }
+
+    // --- CORE SIMULATION & DRAWING ---
+    function mainLoop(timestamp) {
+        if (lastFrameTime > 0) {
+            const deltaTime = timestamp - lastFrameTime;
+            fps = 1000 / deltaTime;
+            frameCount++;
+            if (frameCount % 30 === 0) {
+                perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+            }
+        }
+        lastFrameTime = timestamp;
+
+        render();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function render() {
+        const bgColor = getCssVar('--bg-color');
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawGrid();
+        const userFuncColor = getCssVar('--user-function-color');
+        const approxFuncColor = getCssVar('--approx-function-color');
+
+        drawFunction(state.userFunction, userFuncColor, 3);
+        drawFunction(state.approxFunction, approxFuncColor, 2);
+        drawLegend(userFuncColor, approxFuncColor);
+    }
+
+    function drawGrid() {
+        const { width, height } = canvas;
+        const midY = height / 2;
+        const midX = width / 2;
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+
+        // Minor grid lines
+        const numLinesX = 20;
+        const numLinesY = 10;
+        for (let i = 1; i <= numLinesX; i++) {
+            const x = (i / numLinesX) * width;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        }
+        for (let i = 1; i <= numLinesY; i++) {
+            const y = (i / numLinesY) * height;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+        }
+
+        // Major axes
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, midY);
+        ctx.lineTo(width, midY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(midX, 0);
+        ctx.lineTo(midX, height);
+        ctx.stroke();
+    }
+
+    function drawLegend(userFuncColor, approxFuncColor) {
+        ctx.font = '14px ' + getCssVar('--font-family');
+
+        // Your Function
+        ctx.fillStyle = userFuncColor;
+        ctx.fillText('Your Function', 10, 20);
+
+        // Approximation
+        ctx.fillStyle = approxFuncColor;
+        ctx.fillText('Approximation', 10, 40);
+    }
+
+    function drawFunction(funcData, color, lineWidth) {
+        if (!funcData || funcData.length < 2) return;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        let hasStarted = false;
+        for (let i = 0; i < funcData.length; i++) {
+            if (funcData[i] === null) {
+                hasStarted = false;
+                continue;
+            }
+            const x_pixel = (i / (config.resolution - 1)) * canvas.width;
+            const y_pixel = (1 - funcData[i]) * canvas.height / 2;
+
+            if (!hasStarted) {
+                ctx.moveTo(x_pixel, y_pixel);
+                hasStarted = true;
+            } else {
+                ctx.lineTo(x_pixel, y_pixel);
+            }
+        }
+        ctx.stroke();
+    }
+
+    // --- MATH IMPLEMENTATION ---
+
+    function legendrePolynomial(n, x) {
+        const key = `${n},${x}`;
+        if (legendreMemo[key]) return legendreMemo[key];
+
+        if (n === 0) return 1;
+        if (n === 1) return x;
+
+        const Pn_minus_1 = legendrePolynomial(n - 1, x);
+        const Pn_minus_2 = legendrePolynomial(n - 2, x);
+        const Pn = ((2 * n - 1) * x * Pn_minus_1 - (n - 1) * Pn_minus_2) / n;
+
+        legendreMemo[key] = Pn;
+        return Pn;
+    }
+
+    function getBasisFunction(n, basisType) {
+        const key = `${basisType}-${n}`;
+        if (basisFuncMemo[key]) return basisFuncMemo[key];
+
+        const func = new Array(config.resolution);
+        const dx = (config.domain.max - config.domain.min) / (config.resolution - 1);
+
+        for (let i = 0; i < config.resolution; i++) {
+            const x = config.domain.min + i * dx;
+            if (basisType === 'fourier') {
+                if (n === 0) {
+                    func[i] = 1; // DC component, constant function
+                } else {
+                    const k = Math.ceil(n / 2);
+                    if (n % 2 !== 0) { // Odd n for cosines
+                        func[i] = Math.cos(k * Math.PI * x);
+                    } else { // Even n for sines
+                        func[i] = Math.sin(k * Math.PI * x);
+                    }
+                }
+            } else if (basisType === 'legendre') {
+                func[i] = legendrePolynomial(n, x);
+            }
+        }
+        basisFuncMemo[key] = func;
+        return func;
+    }
+
+    function dot(f1, f2) {
+        if (!f1 || !f2 || f1.length !== f2.length) return 0;
+        const dx = (config.domain.max - config.domain.min) / (config.resolution - 1);
+        let sum = 0;
+        for (let i = 0; i < f1.length; i++) {
+            sum += (f1[i] || 0) * (f2[i] || 0);
+        }
+        return sum * dx;
+    }
+
+    function recalculateApproximation() {
+        if (state.userFunction.every(v => v === null)) return;
+        logToDevConsole(`Recalculating with ${state.numTerms} ${state.basis} terms.`);
+
+        state.approxFunction = new Array(config.resolution).fill(0);
+        state.coefficients = [];
+
+        for (let n = 0; n < state.numTerms; n++) {
+            const basisFunc = getBasisFunction(n, state.basis);
+            const numerator = dot(state.userFunction, basisFunc);
+            const denominator = dot(basisFunc, basisFunc);
+            const coeff = (denominator === 0) ? 0 : numerator / denominator;
+            state.coefficients.push(coeff);
+
+            for (let i = 0; i < config.resolution; i++) {
+                state.approxFunction[i] += coeff * basisFunc[i];
+            }
+        }
+        calculateError();
+    }
+
+    function calculateError() {
+        if (state.userFunction.length !== state.approxFunction.length) {
+            errorMetricEl.textContent = 'N/A';
+            return;
+        }
+        let error = 0;
+        let n_points = 0;
+        for (let i = 0; i < state.userFunction.length; i++) {
+            if (state.userFunction[i] !== null) {
+                error += (state.userFunction[i] - state.approxFunction[i])**2;
+                n_points++;
+            }
+        }
+        error = n_points > 0 ? Math.sqrt(error / n_points) : 0;
+        errorMetricEl.textContent = error.toFixed(4);
+    }
+
+    // --- UI HANDLERS ---
+    function createSlider(id, label, min, max, step, value) {
+        const container = document.createElement('div');
+        container.className = 'slider-container';
+        const labelEl = document.createElement('label');
+        labelEl.htmlFor = id;
+        labelEl.innerHTML = `${label}: <span id="${id}-value">${value}</span>`;
+        const slider = document.createElement('input');
+        slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+        container.append(labelEl, slider);
+        return { container, slider, label: labelEl };
+    }
+
+    function reset() {
+        logToDevConsole('Resetting simulation.');
+        clearMemoization();
+        state.userFunction = new Array(config.resolution).fill(null);
+        state.approxFunction = [];
+        errorMetricEl.textContent = 'N/A';
+        // Don't reset parameters when reset() is called, just the drawing
+    }
+
+    function setBasis(basis) {
+        if (state.basis === basis) return;
+        state.basis = basis;
+        fourierButton.classList.toggle('active', basis === 'fourier');
+        legendreButton.classList.toggle('active', basis === 'legendre');
+        logToDevConsole(`Basis set changed to ${basis}.`);
+        clearBasisMemoization();
+        recalculateApproximation();
+    }
+
+    function clearMemoization() {
+        Object.keys(legendreMemo).forEach(key => delete legendreMemo[key]);
+        clearBasisMemoization();
+    }
+    function clearBasisMemoization() {
+        Object.keys(basisFuncMemo).forEach(key => delete basisFuncMemo[key]);
+    }
+
+    function handlePresetClick(e) {
+        const preset = e.target.dataset.preset;
+        logToDevConsole(`Loading preset: ${preset}`);
+        reset();
+        if (preset === 'square') {
+            for(let i = 0; i < config.resolution; i++) {
+                const x = config.domain.min + i * (config.domain.max - config.domain.min) / (config.resolution - 1);
+                state.userFunction[i] = x < 0 ? 0.5 : -0.5;
+            }
+        } else if (preset === 'triangle') {
+            for(let i = 0; i < config.resolution; i++) {
+                const x = config.domain.min + i * (config.domain.max - config.domain.min) / (config.resolution - 1);
+                state.userFunction[i] = 1 - 2 * Math.abs(x);
+            }
+        } else if (preset === 'parabola') {
+            for(let i = 0; i < config.resolution; i++) {
+                const x = config.domain.min + i * (config.domain.max - config.domain.min) / (config.resolution - 1);
+                state.userFunction[i] = x * x * 1.5 - 0.5; // Scale and shift to fit nicely in the view
+            }
+        }
+        recalculateApproximation();
+    }
+
+    function handleKeydown(e) {
+        if (document.activeElement.type === 'range') return;
+        if (e.code === 'KeyR') { e.preventDefault(); reset(); }
+        if (e.code === 'KeyE') { e.preventDefault(); exportJSON(); }
+    }
+
+    function toggleContrastMode(e) {
+        state.isHighContrast = e.target.checked;
+        document.body.classList.toggle('high-contrast', state.isHighContrast);
+        logToDevConsole(`High contrast mode ${state.isHighContrast ? 'enabled' : 'disabled'}.`);
+    }
+
+    function exportPNG() {
+        logToDevConsole('Exporting canvas to PNG...');
+        const link = document.createElement('a');
+        link.download = `function-approx-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
+    function exportJSON() {
+        logToDevConsole('Exporting parameters to JSON...');
+        const data = JSON.stringify({
+            basis: state.basis,
+            numTerms: state.numTerms,
+            userFunction: state.userFunction
+        }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `function-preset.json`;
+        link.click();
+    }
+
+    function sharePreset() {
+        const params = new URLSearchParams({
+            basis: state.basis,
+            numTerms: state.numTerms,
+        }).toString();
+        const url = `${window.location.origin}${window.location.pathname}#${params}`;
+        navigator.clipboard.writeText(url).then(() => {
+            logToDevConsole('Shareable link copied to clipboard.');
+            alert('Shareable link copied to clipboard!');
+        }, () => {
+            logToDevConsole('Failed to copy shareable link.');
+            alert('Could not copy link to clipboard.');
+        });
+    }
+
+    function parseURLParameters() {
+        if (!window.location.hash) return;
+        logToDevConsole('URL hash found, parsing parameters.');
+        const params = new URLSearchParams(window.location.hash.substring(1));
+        const basis = params.get('basis');
+        const numTerms = parseInt(params.get('numTerms'), 10);
+
+        if (basis === 'fourier' || basis === 'legendre') {
+            state.basis = basis;
+            logToDevConsole(`Set basis to ${basis} from URL.`);
+        }
+        if (!isNaN(numTerms) && numTerms > 0 && numTerms <= config.maxTerms) {
+            state.numTerms = numTerms;
+            logToDevConsole(`Set numTerms to ${numTerms} from URL.`);
+        }
+
+        // Update controls to reflect loaded state
+        numTermsSlider.slider.value = state.numTerms;
+        numTermsSlider.label.querySelector('span').textContent = state.numTerms;
+        fourierButton.classList.toggle('active', state.basis === 'fourier');
+        legendreButton.classList.toggle('active', state.basis === 'legendre');
+    }
+
+    function getCssVar(varName) {
+        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    // --- DRAWING LOGIC ---
+    function getMousePos(evt) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top
+        };
+    }
+
+    function startDrawing(evt) {
+        state.isDrawing = true;
+        reset();
+        draw(evt);
+    }
+
+    function draw(evt) {
+        if (!state.isDrawing) return;
+        const pos = getMousePos(evt);
+        const x_index = Math.floor((pos.x / canvas.width) * config.resolution);
+        const y_val = -((pos.y / canvas.height) * 2 - 1);
+
+        if (x_index >= 0 && x_index < config.resolution) {
+            if (state.lastDrawIndex !== null && Math.abs(x_index - state.lastDrawIndex) > 1) {
+                const startIdx = Math.min(state.lastDrawIndex, x_index);
+                const endIdx = Math.max(state.lastDrawIndex, x_index);
+                const startVal = state.userFunction[startIdx];
+                const endVal = y_val;
+                for (let i = startIdx + 1; i < endIdx; i++) {
+                    const t = (i - startIdx) / (endIdx - startIdx);
+                    state.userFunction[i] = startVal * (1 - t) + endVal * t;
+                }
+            }
+            state.userFunction[x_index] = y_val;
+            state.lastDrawIndex = x_index;
+        }
+    }
+
+    function stopDrawing() {
+        if (!state.isDrawing) return;
+        state.isDrawing = false;
+
+        let firstVal = null, lastVal = null;
+        let firstIdx = -1, lastIdx = -1;
+
+        for(let i=0; i<state.userFunction.length; i++) {
+            if(state.userFunction[i] !== null) {
+                if (firstVal === null) {
+                    firstVal = state.userFunction[i];
+                    firstIdx = i;
+                }
+                lastVal = state.userFunction[i];
+                lastIdx = i;
+            }
+        }
+
+        if(firstVal !== null) {
+            for(let i=0; i<firstIdx; i++) state.userFunction[i] = firstVal;
+            for(let i=lastIdx+1; i<state.userFunction.length; i++) state.userFunction[i] = lastVal;
+        }
+
+        state.lastDrawIndex = null;
+        recalculateApproximation();
+    }
+
+    // --- START ---
+    setup();
+});
+    </script>
+</body>
+</html>

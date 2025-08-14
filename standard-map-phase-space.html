@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase Space of the Standard Map</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --danger-color: #d9534f;
+            --success-color: #5cb85c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.2rem; }
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 400px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #000;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+
+        button, .preset-button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover, .preset-button:hover {
+            background-color: #0077cc;
+        }
+
+        #main-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        th {
+            background-color: #333;
+        }
+
+        code {
+            background-color: #333;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Phase Space of the Standard Map</h1>
+        <p>An interactive visualization of one of the most famous models in chaos theory.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Real-time</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 40 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>The Standard Map, also known as the Chirikov-Taylor map, is a simple mathematical model that exhibits an incredibly rich and complex range of behaviors, from stable, predictable orbits to full-blown chaos. It describes a "kicked rotor"—imagine a pendulum that gets a periodic kick. This simulation lets you explore the map's phase space, a special kind of graph that shows all possible states of the system. By changing the strength of the kick (the chaos parameter, K), you can see beautiful, intricate structures called KAM tori dissolve into a "chaotic sea," providing a stunning visual introduction to the world of Hamiltonian chaos.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to the Standard Map</h2>
+            <h4>Step 1: What is Phase Space?</h4>
+            <p>Imagine you want to describe the state of a simple pendulum. You need to know two things: its position (angle) and its momentum (how fast it's swinging). A "phase space" is a special kind of graph where one axis is position (in our case, `x` from 0 to 2π) and the other is momentum (`p`, also 0 to 2π). A single point in this space tells you <em>everything</em> about the state of the system at one instant.</p>
+
+            <h4>Step 2: What is the Standard Map? (The "Kicked Rotor")</h4>
+            <p>The Standard Map describes a very simple system called a "kicked rotor." Think of it like this:</p>
+            <ol>
+                <li>You have a pendulum (a rotor) that swings around.</li>
+                <li>At regular intervals (once per second, for example), you give it a kick.</li>
+                <li>The strength of this kick depends on the pendulum's position when it's kicked. This is what the <code>sin(x)</code> term in the equation means.</li>
+                <li>The <strong>Chaos Parameter (K)</strong> that you control with the slider determines the overall strength of these kicks.</li>
+            </ol>
+            <p>The path a point takes through phase space is its "trajectory." This simulation calculates the trajectory step-by-step. The magic of the Standard Map is how these trajectories behave as you change K.</p>
+
+            <h4>Step 3: How to Read the Plot</h4>
+            <ul>
+                <li><strong>Click on the canvas</strong> to start a trajectory. Each new trajectory will have a different color.</li>
+                <li><strong>Clean, closed loops:</strong> These are <strong>stable orbits</strong> (also called KAM tori). If you start a point on one of these lines, it will trace that same line forever. The system is predictable.</li>
+                <li><strong>Messy, space-filling dots:</strong> This is a <strong>chaotic orbit</strong>. The point's future location is unpredictable, and it will eventually visit almost every part of that messy region.</li>
+                <li><strong>Islands of Stability:</strong> Notice how even in a chaotic sea, there are often stable "islands" where trajectories are still clean loops. This mixture of order and chaos is a hallmark of Hamiltonian systems.</li>
+            </ul>
+            <p>Try using the presets to see how the balance between order and chaos changes as you increase K!</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div id="main-controls">
+                    <button id="reset-button" title="Clear all trajectories (r)">Reset All</button>
+                    <button id="clear-last-button" title="Clear the last trajectory">Clear Last</button>
+                </div>
+                <div id="parameter-sliders"></div>
+                <div id="presets">
+                    <h4>Presets</h4>
+                    <button class="preset-button" data-preset="ordered">Ordered (K=0.5)</button>
+                    <button class="preset-button" data-preset="mixed">Mixed (K=0.97)</button>
+                    <button class="preset-button" data-preset="chaotic">Chaotic (K=2.0)</button>
+                </div>
+                <div id="export-buttons" style="margin-top: 1.5rem;">
+                    <h4>Export & Share</h4>
+                    <button id="export-png" title="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" title="Save trajectory starting points as a JSON file (e)">Export JSON</button>
+                    <button id="share-preset" title="Copy a shareable link with current parameters">Share Parameters</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500" role="application" aria-label="Phase space of the Standard Map. Click to start a trajectory."></canvas>
+            </div>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>The Standard Map's behavior is controlled by a single parameter.</p>
+            <table id="params-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Symbol</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Chaos Parameter</td>
+                        <td>K</td>
+                        <td>0.97</td>
+                        <td>0.0 - 4.0</td>
+                        <td>Controls the strength of the "kick" given to the system. Higher values lead to more chaotic behavior.</td>
+                    </tr>
+                    <tr>
+                        <td>Iterations / Frame</td>
+                        <td>N/A</td>
+                        <td>10</td>
+                        <td>1 - 100</td>
+                        <td>Controls how many points are calculated and drawn per animation frame. Higher values are faster but less responsive.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <div class="preset-example">
+                <h4>1. Ordered Motion (K = 0.5)</h4>
+                <p><strong>Observation:</strong> With a small kick strength, most of the phase space is filled with smooth, stable curves (KAM tori). Click in various places. You'll find that nearly every starting point belongs to a predictable, non-chaotic orbit.</p>
+                <button class="preset-button" data-preset="ordered">Load "Ordered"</button>
+            </div>
+            <div class="preset-example">
+                <h4>2. Mixed Phase Space (K = 0.97)</h4>
+                <p><strong>Observation:</strong> This is near the famous critical value where the last major torus breaks apart. You can see large regions of chaos, but also prominent "islands of stability" where orbits are still regular. This mix of order and chaos is typical of such systems.</p>
+                <button class="preset-button" data-preset="mixed">Load "Mixed"</button>
+            </div>
+            <div class="preset-example">
+                <h4>3. Largely Chaotic (K = 2.0)</h4>
+                <p><strong>Observation:</strong> For a large kick strength, almost all of the phase space is taken over by a single, large "chaotic sea." It is difficult to find stable islands. A single trajectory will eventually visit almost every part of the canvas.</p>
+                <button class="preset-button" data-preset="chaotic">Load "Chaotic"</button>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Standard Map Equations</h2>
+            <p>The Standard Map is defined by two simple-looking equations that are applied over and over. Starting with a point (xₙ, pₙ) in phase space, the next point (xₙ₊₁, pₙ₊₁) is:</p>
+            <div class="equation"> pₙ₊₁ = pₙ + K sin(xₙ) </div>
+            <div class="equation"> xₙ₊₁ = xₙ + pₙ₊₁ </div>
+            <p>... where both results are taken modulo 2π (meaning we wrap around if we go past 2π, like on a circle).</p>
+            <ul>
+                <li><strong>pₙ₊₁ = ...</strong>: The new momentum is the old momentum plus a "kick." The kick's strength is <strong>K sin(xₙ)</strong>, which depends on the chaos parameter K and the old position xₙ.</li>
+                <li><strong>xₙ₊₁ = ...</strong>: The new position is the old position plus the <em>new</em> momentum. This is what makes the system a "map" rather than a continuous flow.</li>
+            </ul>
+            <p>This system is area-preserving, which is a key property of Hamiltonian systems and is related to the conservation of energy in real physical systems.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What do the different colors mean?</dt>
+                <dd>Each color represents a different trajectory, starting from a different point that you clicked. This helps distinguish different orbits from each other.</dd>
+                <dt>2. Why do some dots form clean circles or islands?</dt>
+                <dd>These are stable, regular orbits called <strong>KAM tori</strong>. A point starting on one of these tori is confined to it and will trace it out over time. This represents predictable, non-chaotic motion.</dd>
+                <dt>3. Why do some dots seem to fill up a whole area randomly?</dt>
+                <dd>This is a chaotic trajectory. Its motion is highly sensitive to its starting conditions and is unpredictable over long times. It will eventually explore the entire connected "chaotic sea" it inhabits.</dd>
+                <dt>4. What happens if I set K = 0?</dt>
+                <dd>With K=0, there are no kicks. The momentum <code>p</code> never changes. All trajectories become simple horizontal lines, indicating perfectly stable, predictable motion.</dd>
+                <dt>5. The simulation is running slow.</dt>
+                <dd>Try reducing the "Iterations/Frame" using the slider. This will compute and draw fewer points per animation frame, which can make the interface more responsive, especially after many trajectories have been added.</dd>
+            </dl>
+        </section>
+
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="perf-safety-content">
+                <p>This simulation runs entirely in your browser. High iteration counts or many trajectories can slow down your browser.</p>
+                <div id="safety-warning" style="display:none; color: var(--danger-color); font-weight: bold; margin-top: 1rem;">
+                    Warning: High iteration count may cause performance issues.
+                </div>
+            </div>
+            <div id="performance-meter"></div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIG & STATE ---
+            const config = {
+                iterationsPerFrame: 10,
+                maxTrajectories: 100,
+            };
+            let state = {
+                k: 0.97, // Chaos parameter
+                trajectories: [], // Array of trajectory objects { points: [], color: '' }
+                isRunning: true,
+            };
+            let lastFrameTime = 0, fps = 0;
+
+            // --- DOM ELEMENTS ---
+            const canvas = document.getElementById('main-canvas');
+            const ctx = canvas.getContext('2d');
+            const devConsole = document.getElementById('developer-console');
+            const qualityCheckPanel = document.getElementById('quality-check-panel');
+            const perfMeter = document.getElementById('performance-meter');
+            const safetyWarningEl = document.getElementById('safety-warning');
+            let kSlider, iterSlider, exportPngBtn, exportJsonBtn, sharePresetBtn;
+
+            // --- INITIALIZATION ---
+            function setup() {
+                logToDevConsole('Initializing Standard Map simulation...');
+                runQualityCheck();
+                createControls();
+                addEventListeners();
+                parseURLParameters();
+                reset();
+                requestAnimationFrame(mainLoop);
+            }
+
+            function createControls() {
+                const sliderContainer = document.getElementById('parameter-sliders');
+                kSlider = createSlider('k', 'Chaos Parameter (K)', 0, 4, 0.01, state.k);
+                iterSlider = createSlider('iter', 'Iterations/Frame', 1, 100, 1, config.iterationsPerFrame);
+                sliderContainer.append(kSlider.container, iterSlider.container);
+
+                document.getElementById('reset-button').addEventListener('click', reset);
+                document.getElementById('clear-last-button').addEventListener('click', clearLastTrajectory);
+                document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click', handlePresetClick));
+
+                exportPngBtn = document.getElementById('export-png');
+                exportJsonBtn = document.getElementById('export-json');
+                sharePresetBtn = document.getElementById('share-preset');
+            }
+
+            function addEventListeners() {
+                kSlider.slider.addEventListener('input', e => {
+                    state.k = parseFloat(e.target.value);
+                    kSlider.label.querySelector('span').textContent = state.k.toFixed(2);
+                    reset();
+                });
+                iterSlider.slider.addEventListener('input', e => {
+                    config.iterationsPerFrame = parseInt(e.target.value, 10);
+                    iterSlider.label.querySelector('span').textContent = config.iterationsPerFrame;
+                    if (safetyWarningEl) safetyWarningEl.style.display = config.iterationsPerFrame > 50 ? 'block' : 'none';
+                });
+                canvas.addEventListener('click', handleCanvasClick);
+                window.addEventListener('keydown', handleKeydown);
+                exportPngBtn.addEventListener('click', exportPNG);
+                exportJsonBtn.addEventListener('click', exportJSON);
+                sharePresetBtn.addEventListener('click', sharePreset);
+            }
+
+            function handleKeydown(e) {
+                if (e.code === 'KeyR') reset();
+                if (e.code === 'KeyC') clearLastTrajectory();
+                if (e.code === 'KeyE') exportJSON();
+            }
+
+            function handleCanvasClick(e) {
+                if (state.trajectories.length >= config.maxTrajectories) {
+                    logToDevConsole('Max trajectories reached.');
+                    return;
+                }
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+
+                const twoPi = 2 * Math.PI;
+                const p0 = y * twoPi;
+                const x0 = x * twoPi;
+
+                state.trajectories.push({
+                    points: [{x: x0, p: p0}],
+                    color: `hsl(${Math.random() * 360}, 80%, 60%)`
+                });
+            }
+
+            // --- CORE SIMULATION & DRAWING ---
+            const twoPi = 2 * Math.PI;
+
+            function mainLoop(timestamp) {
+                if (state.isRunning) {
+                    update();
+                }
+                if (perfMeter && timestamp - lastFrameTime > 500) {
+                    fps = 1000 / (timestamp - lastFrameTime);
+                    lastFrameTime = timestamp;
+                    perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+                }
+                requestAnimationFrame(mainLoop);
+            }
+
+            function update() {
+                state.trajectories.forEach(traj => {
+                    ctx.fillStyle = traj.color;
+                    let lastPoint = traj.points[traj.points.length - 1];
+
+                    for (let i = 0; i < config.iterationsPerFrame; i++) {
+                        let p = lastPoint.p;
+                        let x = lastPoint.x;
+
+                        p = (p + state.k * Math.sin(x));
+                        x = (x + p);
+
+                        p = (p % twoPi + twoPi) % twoPi;
+                        x = (x % twoPi + twoPi) % twoPi;
+
+                        const newPoint = {x, p};
+                        traj.points.push(newPoint);
+                        lastPoint = newPoint;
+
+                        const canvasX = (x / twoPi) * canvas.width;
+                        const canvasY = (p / twoPi) * canvas.height;
+                        ctx.fillRect(canvasX, canvasY, 1, 1);
+                    }
+                });
+            }
+
+            function clearLastTrajectory() {
+                if (state.trajectories.length > 0) {
+                    state.trajectories.pop();
+                    redrawAll();
+                }
+            }
+
+            function redrawAll() {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                state.trajectories.forEach(traj => {
+                    ctx.fillStyle = traj.color;
+                    traj.points.forEach(point => {
+                        const canvasX = (point.x / twoPi) * canvas.width;
+                        const canvasY = (point.p / twoPi) * canvas.height;
+                        ctx.fillRect(canvasX, canvasY, 1, 1);
+                    });
+                });
+            }
+
+            function reset() {
+                state.trajectories = [];
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            function handlePresetClick(e) {
+                const k_val = { 'ordered': 0.5, 'mixed': 0.97, 'chaotic': 2.0 }[e.target.dataset.preset];
+                if (k_val !== undefined) {
+                    kSlider.slider.value = k_val;
+                    state.k = k_val;
+                    kSlider.label.querySelector('span').textContent = state.k.toFixed(2);
+                    reset();
+                }
+            }
+
+            // --- UTILITY & HELPER FUNCTIONS ---
+            function createSlider(id, label, min, max, step, value) {
+                const container = document.createElement('div');
+                container.className = 'slider-container';
+                const labelEl = document.createElement('label');
+                labelEl.htmlFor = id;
+                labelEl.innerHTML = `${label}: <span id="${id}-value">${parseFloat(value).toFixed(2)}</span>`;
+                const slider = document.createElement('input');
+                slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+                container.append(labelEl, slider);
+                return { container, slider, label: labelEl };
+            }
+
+            function logToDevConsole(message) {
+                if (!devConsole) return;
+                const timestamp = new Date().toLocaleTimeString();
+                devConsole.textContent += `[${timestamp}] ${message}\n`;
+                devConsole.scrollTop = devConsole.scrollHeight;
+            }
+
+            function runQualityCheck() {
+                if (!qualityCheckPanel) return;
+                const checks = [ { el: 'main-canvas', name: 'Main Canvas' }, { el: 'simulation-controls', name: 'Controls Container' }];
+                let allPassed = true;
+                let report = 'Quality Check Report:\n';
+                checks.forEach(check => {
+                    const found = document.getElementById(check.el);
+                    report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+                    if (!found) allPassed = false;
+                });
+                qualityCheckPanel.textContent = report;
+                qualityCheckPanel.style.color = allPassed ? 'var(--success-color)' : 'var(--danger-color)';
+            }
+
+            function exportPNG() {
+                logToDevConsole('Exporting canvas to PNG...');
+                const link = document.createElement('a');
+                link.download = `standard-map-k-${state.k}-${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            }
+
+            function exportJSON() {
+                logToDevConsole('Exporting parameters to JSON...');
+                const data = {
+                    k: state.k,
+                    iterationsPerFrame: config.iterationsPerFrame,
+                    startingPoints: state.trajectories.map(t => t.points[0])
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `standard-map-preset.json`;
+                link.click();
+            }
+
+            function sharePreset() {
+                const params = new URLSearchParams({ k: state.k, iter: config.iterationsPerFrame }).toString();
+                const url = `${window.location.origin}${window.location.pathname}#${params}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    logToDevConsole('Shareable link copied to clipboard.');
+                    alert('Shareable link copied to clipboard!');
+                }, () => {
+                    logToDevConsole('Failed to copy shareable link.');
+                    alert('Could not copy link.');
+                });
+            }
+
+            function parseURLParameters() {
+                if (!window.location.hash) return;
+                const params = new URLSearchParams(window.location.hash.substring(1));
+                const k = parseFloat(params.get('k'));
+                const iter = parseInt(params.get('iter'), 10);
+                if (!isNaN(k)) state.k = k;
+                if (!isNaN(iter)) config.iterationsPerFrame = iter;
+            }
+
+            setup();
+        });
+    </script>
+</body>
+</html>

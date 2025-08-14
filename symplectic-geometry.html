@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symplectic Geometry</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #00aaff;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --vector-a-color: #ffc107;
+            --vector-b-color: #28a745;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; min-width: 400px; }
+        canvas { width: 100%; height: auto; background-color: #111; border: 1px solid var(--secondary-color); border-radius: 4px; cursor: crosshair; }
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 0.5rem; }
+        button:hover { background-color: #0077cc; }
+        #readout { font-size: 1.2rem; text-align: center; padding: 1rem; background-color: var(--control-bg); border-radius: 8px; margin-top: 1rem; }
+        #readout code { font-weight: bold; color: var(--primary-color); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Symplectic Geometry and Phase Space</h1>
+        <p>Visualizing the conservation of symplectic area in a Hamiltonian system.</p>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In classical mechanics, the space of all possible states of a system is called "phase space." This space has a special, non-Euclidean structure called a symplectic geometry. A key consequence of this is that while the shape of a region in phase space may be distorted as the system evolves, its "symplectic area" is perfectly conserved. This simulation demonstrates this fundamental principle, a concept more general than the famous Liouville's theorem, using a simple harmonic oscillator.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Symplectic Geometry</h2>
+            <h4>Step 1: Phase Space and a Parallelogram</h4>
+            <p>The canvas shows the "phase space" for a simple harmonic oscillator (like a mass on a spring). The horizontal axis is position (x) and the vertical axis is momentum (p). A single point describes the complete state of the oscillator.</p>
+            <p>The interactive part of this simulation asks you to define a small parallelogram in this space. You do this with three clicks:</p>
+            <ol>
+                <li>The first click sets the starting point of the oscillator, which is also a corner of your parallelogram.</li>
+                <li>The next two clicks define two vectors (<strong>a</strong>, in yellow, and <strong>b</strong>, in green) starting from that point. These vectors form the sides of your parallelogram.</li>
+            </ol>
+
+            <h4>Step 2: The Conservation of "Symplectic Area"</h4>
+            <p>When you press "Start," the system evolves. The point travels along its circular path, and the parallelogram it's attached to is carried along with it. Notice how the parallelogram gets stretched and sheared! Its shape and normal (Euclidean) area change dramatically.</p>
+            <p>However, look at the "Symplectic Product" value. <strong>It stays constant.</strong> This value, <code>ω(a, b)</code>, represents a special kind of "oriented area." The fact that it is conserved is a fundamental feature of all Hamiltonian systems in classical mechanics and is a much deeper result than just conservation of energy.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <p id="instruction-text">Click three times on the canvas: once for a starting point, and twice more to define two vectors.</p>
+                <button id="start-pause-button">Start</button>
+                <button id="reset-button">Reset</button>
+                <div id="export-buttons" style="margin-top: 1.5rem;">
+                    <h4>Export & Share</h4>
+                    <button id="export-png-button" title="Save current view as a PNG image">Export PNG</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500" role="application" aria-label="Interactive visualization of a point and two vectors evolving in phase space."></canvas>
+                <div id="readout">Symplectic Product ω(a, b) = <code>N/A</code></div>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Symplectic Form</h2>
+            <p>The geometry of phase space is not Euclidean, but symplectic. This means that instead of the usual dot product, we use a different structure called a symplectic form, typically denoted by ω.</p>
+            <h4>1. The Symplectic Product</h4>
+            <p>For any two vectors <strong>a</strong> = (a<sub>x</sub>, a<sub>p</sub>) and <strong>b</strong> = (b<sub>x</sub>, b<sub>p</sub>) in our 2D phase space, the symplectic product is defined as:</p>
+            <div class="equation">ω(a, b) = a<sub>x</sub>b<sub>p</sub> - a<sub>p</sub>b<sub>x</sub></div>
+            <p>This value represents the "oriented area" of the parallelogram spanned by the two vectors. Unlike the standard Euclidean area, this value can be negative depending on the orientation of the vectors.</p>
+
+            <h4>2. Conservation Law</h4>
+            <p>The evolution of a system in phase space is described by a Hamiltonian H. The key result, demonstrated by this simulation, is that the symplectic product is conserved under Hamiltonian evolution. That is:</p>
+            <div class="equation">dω/dt = 0</div>
+            <p>This is because the time-evolution map is a "symplectomorphism," a transformation that preserves this structure. For this simulation, we use a simple harmonic oscillator, where H = ½(x² + p²), and a special numerical method called a symplectic integrator (Leapfrog) that is designed to respect this conservation law at the discrete level.</p>
+        </section>
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. The shape of the parallelogram is changing. Isn't area supposed to be conserved?</dt>
+                <dd>The standard, visual (Euclidean) area is <strong>not</strong> conserved. The simulation shows that the special <em>symplectic area</em>, calculated with the formula ω(a, b) = a<sub>x</sub>b<sub>p</sub> - a<sub>p</sub>b<sub>x</sub>, is what remains constant. This is the key insight of symplectic geometry.</dd>
+                <dt>2. What is a symplectic integrator and why is it important?</dt>
+                <dd>It's a numerical method for solving the equations of motion that is specially constructed to preserve the symplectic structure of phase space. A simpler method, like the standard Euler method, would introduce numerical errors that cause the symplectic product to drift over time, obscuring the conservation law.</dd>
+                <dt>3. How is this related to Liouville's Theorem?</dt>
+                <dd>Liouville's theorem, which states that phase space volume is conserved, is a direct consequence of this more general principle. The conservation of the symplectic form ω implies the conservation of phase space volume elements.</dd>
+            </dl>
+        </section>
+        <section id="performance-safety">
+            <h2>Performance & Safety</h2>
+            <div id="performance-meter"></div>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const startPauseBtn = document.getElementById('start-pause-button');
+        const resetBtn = document.getElementById('reset-button');
+        const readoutEl = document.querySelector('#readout code');
+        const instructionEl = document.getElementById('instruction-text');
+        const exportPngBtn = document.getElementById('export-png-button');
+        const devConsole = document.getElementById('developer-console');
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const perfMeter = document.getElementById('performance-meter');
+
+        const config = { dt: 0.02, worldScale: 3, stepsPerFrame: 1 };
+        let state = {};
+        let lastFrameTime = 0, fps = 0;
+
+        const worldToCanvas = (pos) => ({
+            x: (pos.x / config.worldScale) * (canvas.width / 2) + canvas.width / 2,
+            p: -(pos.p / config.worldScale) * (canvas.height / 2) + canvas.height / 2,
+        });
+
+        const canvasToWorld = (pos) => ({
+            x: ((pos.x - canvas.width / 2) / (canvas.width / 2)) * config.worldScale,
+            p: -((pos.y - canvas.height / 2) / (canvas.height / 2)) * config.worldScale,
+        });
+
+        function setup() {
+            logToDevConsole('Initializing Symplectic Geometry simulation...');
+            runQualityCheck();
+            addEventListeners();
+            reset();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function reset() {
+            state = {
+                clickCount: 0,
+                isRunning: false,
+                origin: null,
+                vecA: null,
+                vecB: null,
+                trajectory: [],
+                initialSymplecticProduct: null,
+            };
+            startPauseBtn.textContent = 'Start';
+            instructionEl.textContent = 'Click three times: for a starting point, and to define two vectors.';
+            readoutEl.textContent = 'N/A';
+            draw();
+        }
+
+        function addEventListeners() {
+            canvas.addEventListener('click', handleCanvasClick);
+            startPauseBtn.addEventListener('click', togglePause);
+            resetBtn.addEventListener('click', reset);
+            exportPngBtn.addEventListener('click', exportPNG);
+            window.addEventListener('keydown', e => { if (e.key === 'r') reset(); });
+        }
+
+        function handleCanvasClick(e) {
+            if (state.clickCount >= 3) return;
+            const rect = canvas.getBoundingClientRect();
+            const mousePos = canvasToWorld({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+
+            state.clickCount++;
+
+            if (state.clickCount === 1) {
+                state.origin = mousePos;
+                state.trajectory.push(state.origin);
+                instructionEl.textContent = 'Click to define the first vector (yellow).';
+            } else if (state.clickCount === 2) {
+                state.vecA = { x: mousePos.x - state.origin.x, p: mousePos.p - state.origin.p };
+                instructionEl.textContent = 'Click to define the second vector (green).';
+            } else if (state.clickCount === 3) {
+                state.vecB = { x: mousePos.x - state.origin.x, p: mousePos.p - state.origin.p };
+                instructionEl.textContent = 'Press Start to run the simulation.';
+                state.initialSymplecticProduct = calculateSymplecticProduct(state.vecA, state.vecB);
+                readoutEl.textContent = state.initialSymplecticProduct.toFixed(4);
+            }
+            draw();
+        }
+
+        function togglePause() {
+            if (state.clickCount < 3) return;
+            state.isRunning = !state.isRunning;
+            startPauseBtn.textContent = state.isRunning ? 'Pause' : 'Start';
+        }
+
+        function calculateSymplecticProduct(v1, v2) {
+            if (!v1 || !v2) return 0;
+            return v1.x * v2.p - v1.p * v2.x;
+        }
+
+        function step() {
+            const { dt } = config;
+            let { x, p } = state.origin;
+            p -= (-x) * dt / 2;
+            x += p * dt;
+            p -= (-x) * dt / 2;
+            state.origin = { x, p };
+            state.trajectory.push(state.origin);
+
+            const cos_dt = Math.cos(dt);
+            const sin_dt = Math.sin(dt);
+            state.vecA = {
+                x: state.vecA.x * cos_dt + state.vecA.p * sin_dt,
+                p: -state.vecA.x * sin_dt + state.vecA.p * cos_dt,
+            };
+            state.vecB = {
+                x: state.vecB.x * cos_dt + state.vecB.p * sin_dt,
+                p: -state.vecB.x * sin_dt + state.vecB.p * cos_dt,
+            };
+            readoutEl.textContent = calculateSymplecticProduct(state.vecA, state.vecB).toFixed(4);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const originC = worldToCanvas({x: 0, p: 0});
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, originC.p); ctx.lineTo(canvas.width, originC.p); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(originC.x, 0); ctx.lineTo(originC.x, canvas.height); ctx.stroke();
+
+            if (state.trajectory.length > 1) {
+                ctx.strokeStyle = '#00aaff';
+                ctx.beginPath();
+                const startPoint = worldToCanvas(state.trajectory[0]);
+                ctx.moveTo(startPoint.x, startPoint.p);
+                for (let i = 1; i < state.trajectory.length; i++) {
+                    const pointC = worldToCanvas(state.trajectory[i]);
+                    ctx.lineTo(pointC.x, pointC.p);
+                }
+                ctx.stroke();
+            }
+
+            if (state.origin) {
+                const originCanvas = worldToCanvas(state.origin);
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(originCanvas.x, originCanvas.p, 5, 0, 2 * Math.PI); ctx.fill();
+
+                if (state.vecA) drawVector(originCanvas, state.vecA, 'var(--vector-a-color)');
+                if (state.vecB) drawVector(originCanvas, state.vecB, 'var(--vector-b-color)');
+            }
+        }
+
+        function drawVector(originC, vec, color) {
+            const vecCanvas = {
+                x: (vec.x / config.worldScale) * (canvas.width / 2),
+                p: -(vec.p / config.worldScale) * (canvas.height / 2),
+            };
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(originC.x, originC.p);
+            ctx.lineTo(originC.x + vecCanvas.x, originC.p + vecCanvas.p);
+            ctx.stroke();
+        }
+
+        function mainLoop(timestamp) {
+            if (state.isRunning) {
+                for(let i=0; i < config.stepsPerFrame; i++) step();
+            }
+            draw();
+
+            if (perfMeter && timestamp - lastFrameTime > 500) {
+                fps = 1000 / (timestamp - lastFrameTime);
+                lastFrameTime = timestamp;
+                perfMeter.textContent = `FPS: ${fps.toFixed(1)}`;
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        function logToDevConsole(message) {
+            if (!devConsole) return;
+            const timestamp = new Date().toLocaleTimeString();
+            devConsole.textContent += `[${timestamp}] ${message}\n`;
+            devConsole.scrollTop = devConsole.scrollHeight;
+        }
+
+        function runQualityCheck() {
+            if (!qualityCheckPanel) return;
+            const checks = [ { el: 'main-canvas', name: 'Main Canvas' }, { el: 'simulation-controls', name: 'Controls Container' }];
+            let allPassed = true;
+            let report = 'Quality Check Report:\n';
+            checks.forEach(check => {
+                const found = document.getElementById(check.el);
+                report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+                if (!found) allPassed = false;
+            });
+            qualityCheckPanel.textContent = report;
+            qualityCheckPanel.style.color = allPassed ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+
+        function exportPNG() {
+            logToDevConsole('Exporting canvas to PNG...');
+            const link = document.createElement('a');
+            link.download = `symplectic-geometry-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        setup();
+    });
+    </script>
+</body>
+</html>
