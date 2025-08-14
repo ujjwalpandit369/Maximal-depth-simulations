@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Sled with Variable Mass</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --header-color: #d32f2f;
+            --accent-color: #f44336;
+            --accent-hover: #d32f2f;
+            --control-bg: #fff;
+            --control-border: #ffcdd2;
+            --canvas-bg: #ffebee;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 250px; }
+        .graph-container { min-height: 250px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .controls { grid-column: 1 / -1; }
+
+        .readouts { display: flex; justify-content: space-around; font-weight: bold; font-family: monospace; font-size: 1.1em; margin-top: 10px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; }
+        button:hover { background-color: var(--accent-hover); }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Rocket Sled with Variable Mass</h1>
+            <p class="subtitle">Demonstrating Newton's Second Law when mass isn't constant.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>We often learn Newton's Second Law as <code>F=ma</code>, but this assumes mass (m) is constant. What happens when the mass of an object changes, like a rocket burning fuel? This simulation explores this scenario with a rocket sled. The sled has a fixed thrust, but its total mass decreases as it consumes fuel. According to the rearranged formula, <code>a = F/m</code>, a decreasing mass results in an increasing acceleration. This is a fundamental principle of rocketry and explains why rockets accelerate faster as they fly.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <label>Sled Mass: <span id="sled-mass-value">1000</span> kg</label>
+                <input type="range" id="sled-mass-slider" min="500" max="2000" step="100" value="1000">
+                <label>Fuel Mass: <span id="fuel-mass-value">1000</span> kg</label>
+                <input type="range" id="fuel-mass-slider" min="100" max="2000" step="100" value="1000">
+                <label>Thrust: <span id="thrust-value">50000</span> N</label>
+                <input type="range" id="thrust-slider" min="10000" max="100000" step="5000" value="50000">
+                <button id="go-btn" style="margin-left: 20px;">Go!</button>
+            </div>
+
+            <div class="sim-container">
+                <h3>Sled on Track</h3>
+                <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="graph-container">
+                <h3>Acceleration vs. Time</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+            </div>
+
+            <div class="readouts" style="grid-column: 1 / -1;">
+                <span>Time: <span id="time-readout">0.0</span> s</span>
+                <span>Velocity: <span id="vel-readout">0.0</span> m/s</span>
+                <span>Acceleration: <span id="acc-readout">0.0</span> m/s²</span>
+                <span>Total Mass: <span id="mass-readout">2000</span> kg</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const simCanvas = document.getElementById('sim-canvas');
+        const sCtx = simCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            sledMass: document.getElementById('sled-mass-slider'),
+            fuelMass: document.getElementById('fuel-mass-slider'),
+            thrust: document.getElementById('thrust-slider'),
+            go: document.getElementById('go-btn'),
+        };
+        const values = {
+            sledMass: document.getElementById('sled-mass-value'),
+            fuelMass: document.getElementById('fuel-mass-value'),
+            thrust: document.getElementById('thrust-value'),
+            time: document.getElementById('time-readout'),
+            vel: document.getElementById('vel-readout'),
+            acc: document.getElementById('acc-readout'),
+            mass: document.getElementById('mass-readout'),
+        };
+
+        let state = {};
+        let history = [];
+        let animationFrameId;
+
+        function reset() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+            state = {
+                isRunning: false,
+                time: 0,
+                x: 20, v: 0, a: 0,
+                m_sled: parseFloat(controls.sledMass.value),
+                m_fuel_initial: parseFloat(controls.fuelMass.value),
+                m_fuel: parseFloat(controls.fuelMass.value),
+                thrust: parseFloat(controls.thrust.value),
+                burnRate: 50, // kg/s
+            };
+
+            history = [];
+            values.sledMass.textContent = state.m_sled;
+            values.fuelMass.textContent = state.m_fuel_initial;
+            values.thrust.textContent = state.thrust;
+            updateReadouts();
+            draw();
+        }
+
+        function update(dt) {
+            if (!state.isRunning || state.m_fuel <= 0) {
+                state.isRunning = false;
+                return;
+            }
+
+            state.time += dt;
+            const fuelBurned = state.burnRate * dt;
+            state.m_fuel -= fuelBurned;
+
+            const totalMass = state.m_sled + state.m_fuel;
+            state.a = state.thrust / totalMass;
+            state.v += state.a * dt;
+            state.x += state.v * dt;
+
+            history.push({t: state.time, a: state.a});
+            updateReadouts();
+        }
+
+        function updateReadouts() {
+            values.time.textContent = state.time.toFixed(1);
+            values.vel.textContent = state.v.toFixed(1);
+            values.acc.textContent = state.a.toFixed(1);
+            values.mass.textContent = (state.m_sled + state.m_fuel).toFixed(0);
+        }
+
+        function draw() {
+            sCtx.clearRect(0,0,simCanvas.width, simCanvas.height);
+            // Track
+            sCtx.fillStyle = '#bdbdbd';
+            sCtx.fillRect(0, simCanvas.height - 40, simCanvas.width, 10);
+
+            // Sled
+            const sledX = state.x % simCanvas.width;
+            const sledY = simCanvas.height - 40 - 50;
+            sCtx.fillStyle = '#607d8b';
+            sCtx.fillRect(sledX, sledY, 100, 50);
+
+            // Fuel tank
+            const fuelRatio = state.m_fuel / state.m_fuel_initial;
+            sCtx.fillStyle = '#ffc107';
+            sCtx.fillRect(sledX + 10, sledY + 10, 80 * fuelRatio, 30);
+
+            // Exhaust
+            if (state.isRunning) {
+                for(let i=0; i<20; i++) {
+                    sCtx.fillStyle = `rgba(255, 152, 0, ${Math.random()})`;
+                    sCtx.beginPath();
+                    sCtx.arc(sledX - 10 - Math.random()*40, sledY + 25 + (Math.random()-0.5)*20, Math.random()*5, 0, Math.PI*2);
+                    sCtx.fill();
+                }
+            }
+
+            // Graph
+            gCtx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
+            gCtx.strokeStyle = '#333';
+            gCtx.strokeRect(0,0,graphCanvas.width, graphCanvas.height);
+            if(history.length > 1) {
+                const max_a = state.thrust / state.m_sled * 1.1;
+                const max_t = state.m_fuel_initial / state.burnRate;
+
+                gCtx.strokeStyle = '#d32f2f';
+                gCtx.lineWidth = 2;
+                gCtx.beginPath();
+                history.forEach((p, i) => {
+                    const x = (p.t / max_t) * graphCanvas.width;
+                    const y = graphCanvas.height - (p.a / max_a) * graphCanvas.height;
+                    if(i===0) gCtx.moveTo(x,y);
+                    else gCtx.lineTo(x,y);
+                });
+                gCtx.stroke();
+            }
+        }
+
+        let lastTime = 0;
+        function animate(time) {
+            if (!lastTime) lastTime = time;
+            const dt = (time - lastTime) / 1000;
+            lastTime = time;
+
+            update(dt);
+            draw();
+
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        controls.go.addEventListener('click', () => {
+            reset();
+            state.isRunning = true;
+            lastTime = 0;
+            animate(0);
+        });
+
+        Object.values(controls).forEach(c => c.addEventListener('input', () => {
+            if (c.id.includes('slider')) {
+                const valueEl = document.getElementById(c.id.replace('slider','value'));
+                valueEl.textContent = c.value;
+            }
+        }));
+
+        reset();
+    });
+    </script>
+</body>
+</html>

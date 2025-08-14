@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Dynamics with Dyes</title>
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #111; color: #eee; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2 { text-align: center; color: #4dd0e1; }
+        .main-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        #sim-canvas { background-color: #000; border-radius: 4px; cursor: crosshair; }
+        .controls { background: #222; padding: 15px; border-radius: 8px; min-width: 250px; }
+        .control-group { margin-bottom: 1em; }
+        .control-group label { display: block; margin-bottom: 0.5em; }
+        .color-palette button { width: 30px; height: 30px; border: 2px solid #555; cursor: pointer; margin-right: 5px; border-radius: 50%; }
+        .color-palette button.active { border-color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fluid Dynamics with Dyes</h1>
+        <div class="main-container">
+            <canvas id="sim-canvas" width="600" height="600"></canvas>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <button id="reset-btn">Reset</button>
+                    <button id="pause-btn">Pause</button>
+                </div>
+                <div class="control-group">
+                    <label for="viscosity-slider">Viscosity: <span id="visc-value">0.0001</span></label>
+                    <input type="range" id="viscosity-slider" min="0" max="0.001" step="0.00001" value="0.0001">
+                </div>
+                <div class="control-group">
+                    <label for="flow-slider">Inflow Speed: <span id="flow-value">1.0</span></label>
+                    <input type="range" id="flow-slider" min="0" max="5" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Interaction Mode:</label>
+                    <select id="mode-select">
+                        <option value="dye">Add Dye</option>
+                        <option value="force">Apply Force (Stir)</option>
+                        <option value="obstacle">Add Obstacle</option>
+                        <option value="clear">Clear Obstacles</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Dye Color:</label>
+                    <div class="color-palette" id="color-palette">
+                        <button style="background-color:red;" data-color="r" class="active"></button>
+                        <button style="background-color:green;" data-color="g"></button>
+                        <button style="background-color:blue;" data-color="b"></button>
+                    </div>
+                </div>
+                 <div class="control-group">
+                    <label><input type="checkbox" id="vectors-toggle"> Show Velocity Vectors</label>
+                </div>
+            </div>
+        </div>
+        <section>
+            <h2>Guide to the Fluid Sandbox</h2>
+            <p>This is an interactive fluid dynamics simulation based on a simplified Navier-Stokes solver. It allows you to visualize how fluids flow, mix, and interact with obstacles.</p>
+            <ul>
+                <li><strong>Add Dye:</strong> Select a color and click on the canvas to add a continuous source of dye. The dye is passive and is simply carried along by the fluid's velocity.</li>
+                <li><strong>Apply Force (Stir):</strong> Click and drag on the canvas to apply forces to the fluid, creating swirls and vortices.</li>
+                <li><strong>Add Obstacle:</strong> Click and drag to draw solid, immovable obstacles. Watch how the fluid flows around them. Try creating a cylinder in the middle of the inflow to see a <a href="https://en.wikipedia.org/wiki/Kármán_vortex_street" target="_blank" style="color: #4dd0e1;">von Kármán vortex street</a> form behind it.</li>
+                <li><strong>Viscosity:</strong> This slider controls the "thickness" of the fluid. At low viscosity, you can create complex, turbulent-like patterns. At high viscosity, the flow becomes thick and syrupy, and vortices quickly dissipate.</li>
+                <li><strong>Inflow Speed:</strong> This controls a constant flow of fluid from the left side of the simulation.</li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Simplified Stable Fluids solver based on Jos Stam's work.
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const N = 128; // Grid size
+        const size = N + 2;
+
+        let u, v, u_prev, v_prev;
+        let dens, dens_prev;
+        let obstacles;
+
+        function initArrays() {
+            u = new Float32Array(size * size).fill(0);
+            v = new Float32Array(size * size).fill(0);
+            u_prev = new Float32Array(size * size).fill(0);
+            v_prev = new Float32Array(size * size).fill(0);
+            dens = {
+                r: new Float32Array(size * size).fill(0),
+                g: new Float32Array(size * size).fill(0),
+                b: new Float32Array(size * size).fill(0)
+            };
+            dens_prev = {
+                r: new Float32Array(size * size).fill(0),
+                g: new Float32Array(size * size).fill(0),
+                b: new Float32Array(size * size).fill(0)
+            };
+            obstacles = new Uint8Array(size * size).fill(0);
+        }
+
+        const IX = (i, j) => i + j * size;
+
+        let config = {
+            visc: 0.0001,
+            dt: 0.1,
+            inflow: 1.0,
+            showVectors: false,
+            isPaused: false,
+        };
+
+        function addSource(x, s, dt) {
+            for (let i = 0; i < x.length; i++) x[i] += dt * s[i];
+        }
+
+        function set_bnd(b, x) {
+            for (let i = 1; i <= N; i++) {
+                x[IX(0, i)] = b === 1 ? -x[IX(1, i)] : x[IX(1, i)];
+                x[IX(N + 1, i)] = b === 1 ? -x[IX(N, i)] : x[IX(N, i)];
+                x[IX(i, 0)] = b === 2 ? -x[IX(i, 1)] : x[IX(i, 1)];
+                x[IX(i, N + 1)] = b === 2 ? -x[IX(i, N)] : x[IX(i, N)];
+            }
+            x[IX(0, 0)] = 0.5 * (x[IX(1, 0)] + x[IX(0, 1)]);
+            // ... and other corners
+        }
+
+        function lin_solve(b, x, x0, a, c, iter) {
+            const cRecip = 1.0 / c;
+            for (let k = 0; k < iter; k++) {
+                for (let j = 1; j <= N; j++) {
+                    for (let i = 1; i <= N; i++) {
+                        if (obstacles[IX(i, j)]) continue;
+                        x[IX(i, j)] = (x0[IX(i, j)] + a * (x[IX(i + 1, j)] + x[IX(i - 1, j)] + x[IX(i, j + 1)] + x[IX(i, j - 1)])) * cRecip;
+                    }
+                }
+                set_bnd(b, x);
+            }
+        }
+
+        function diffuse(b, x, x0, diff, dt, iter) {
+            const a = dt * diff * N * N;
+            lin_solve(b, x, x0, a, 1 + 4 * a, iter);
+        }
+
+        function advect(b, d, d0, velocX, velocY, dt) {
+            let i0, i1, j0, j1;
+            const dtx = dt * N;
+            const dty = dt * N;
+            for (let j = 1; j <= N; j++) {
+                for (let i = 1; i <= N; i++) {
+                    let tmp1 = dtx * velocX[IX(i, j)];
+                    let tmp2 = dty * velocY[IX(i, j)];
+                    let x = i - tmp1;
+                    let y = j - tmp2;
+                    if (x < 0.5) x = 0.5;
+                    if (x > N + 0.5) x = N + 0.5;
+                    i0 = Math.floor(x);
+                    i1 = i0 + 1.0;
+                    if (y < 0.5) y = 0.5;
+                    if (y > N + 0.5) y = N + 0.5;
+                    j0 = Math.floor(y);
+                    j1 = j0 + 1.0;
+                    const s1 = x - i0;
+                    const s0 = 1.0 - s1;
+                    const t1 = y - j0;
+                    const t0 = 1.0 - t1;
+                    d[IX(i, j)] = s0 * (t0 * d0[IX(i0, j0)] + t1 * d0[IX(i0, j1)]) + s1 * (t0 * d0[IX(i1, j0)] + t1 * d0[IX(i1, j1)]);
+                }
+            }
+            set_bnd(b, d);
+        }
+
+        function project(velocX, velocY, p, div, iter) {
+            for (let j = 1; j <= N; j++) {
+                for (let i = 1; i <= N; i++) {
+                    div[IX(i, j)] = -0.5 * (velocX[IX(i + 1, j)] - velocX[IX(i - 1, j)] + velocY[IX(i, j + 1)] - velocY[IX(i, j - 1)]) / N;
+                    p[IX(i, j)] = 0;
+                }
+            }
+            set_bnd(0, div);
+            set_bnd(0, p);
+            lin_solve(0, p, div, 1, 4, iter);
+            for (let j = 1; j <= N; j++) {
+                for (let i = 1; i <= N; i++) {
+                    if (obstacles[IX(i, j)]) continue;
+                    velocX[IX(i, j)] -= 0.5 * (p[IX(i + 1, j)] - p[IX(i - 1, j)]) * N;
+                    velocY[IX(i, j)] -= 0.5 * (p[IX(i, j + 1)] - p[IX(i, j - 1)]) * N;
+                }
+            }
+            set_bnd(1, velocX);
+            set_bnd(2, velocY);
+        }
+
+        function step() {
+            addSource(u, u_prev, config.dt);
+            addSource(v, v_prev, config.dt);
+
+            [u_prev, u] = [u, u_prev];
+            [v_prev, v] = [v, v_prev];
+            diffuse(1, u, u_prev, config.visc, config.dt, 4);
+            diffuse(2, v, v_prev, config.visc, config.dt, 4);
+
+            project(u, v, u_prev, v_prev, 4);
+
+            [u_prev, u] = [u, u_prev];
+            [v_prev, v] = [v, v_prev];
+            advect(1, u, u_prev, u_prev, v_prev, config.dt);
+            advect(2, v, v_prev, u_prev, v_prev, config.dt);
+
+            project(u, v, u_prev, v_prev, 4);
+
+            Object.keys(dens).forEach(key => {
+                const d = dens[key];
+                const d0 = dens_prev[key];
+                addSource(d, d0, config.dt);
+                [d0, d] = [d, d0];
+                diffuse(0, d, d0, 0, config.dt, 4);
+                [d0, d] = [d, d0];
+                advect(0, d, d0, u, v, config.dt);
+            });
+        }
+
+        function draw() {
+            const cellW = canvas.width / size;
+            const cellH = canvas.height / size;
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+
+            for (let j = 0; j < size; j++) {
+                for (let i = 0; i < size; i++) {
+                    const r = Math.min(255, dens.r[IX(i, j)] * 255);
+                    const g = Math.min(255, dens.g[IX(i, j)] * 255);
+                    const b = Math.min(255, dens.b[IX(i, j)] * 255);
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    if (obstacles[IX(i,j)]) ctx.fillStyle = '#888';
+                    ctx.fillRect(i * cellW, j * cellH, cellW, cellH);
+                }
+            }
+
+            if (config.showVectors) {
+                ctx.strokeStyle = 'white';
+                for (let j = 1; j <= N; j+=4) {
+                    for (let i = 1; i <= N; i+=4) {
+                        const x = (i + 0.5) * cellW;
+                        const y = (j + 0.5) * cellH;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + u[IX(i,j)] * 20, y + v[IX(i,j)] * 20);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            if (!config.isPaused) {
+                for (let i = 0; i < size * size; i++) {
+                    u_prev[i] = v_prev[i] = dens_prev.r[i] = dens_prev.g[i] = dens_prev.b[i] = 0;
+                }
+                addInflow();
+                step();
+            }
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        function addInflow() {
+            const speed = config.inflow;
+            for (let j = 1; j <= N; j++) {
+                u_prev[IX(1, j)] = speed;
+            }
+        }
+
+        // --- UI ---
+        initArrays();
+
+        let mouse = { x: 0, y: 0, down: false, mode: 'dye', color: 'r' };
+        canvas.addEventListener('mousedown', () => mouse.down = true);
+        canvas.addEventListener('mouseup', () => mouse.down = false);
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+
+        setInterval(() => { // Mouse interaction loop
+            if (!mouse.down) return;
+            const i = Math.floor(mouse.x / canvas.width * size);
+            const j = Math.floor(mouse.y / canvas.height * size);
+            if (i<1 || i>N || j<1 || j>N) return;
+
+            if (mouse.mode === 'dye') {
+                dens_prev[mouse.color][IX(i,j)] = 10;
+            } else if (mouse.mode === 'force') {
+                u_prev[IX(i,j)] += (mouse.x - (i*canvas.width/size)) * 0.1;
+                v_prev[IX(i,j)] += (mouse.y - (j*canvas.height/size)) * 0.1;
+            } else if (mouse.mode === 'obstacle') {
+                 obstacles[IX(i,j)] = 1;
+                 u[IX(i,j)] = v[IX(i,j)] = 0;
+            }
+        }, 50);
+
+        document.getElementById('viscosity-slider').addEventListener('input', e => {
+            config.visc = parseFloat(e.target.value);
+            document.getElementById('visc-value').textContent = config.visc.toExponential(1);
+        });
+        document.getElementById('flow-slider').addEventListener('input', e => {
+            config.inflow = parseFloat(e.target.value);
+            document.getElementById('flow-value').textContent = config.inflow.toFixed(1);
+        });
+        document.getElementById('vectors-toggle').addEventListener('change', e => config.showVectors = e.target.checked);
+        document.getElementById('pause-btn').addEventListener('click', () => {
+            config.isPaused = !config.isPaused;
+            document.getElementById('pause-btn').textContent = config.isPaused ? 'Play' : 'Pause';
+        });
+        document.getElementById('reset-btn').addEventListener('click', initArrays);
+        document.getElementById('mode-select').addEventListener('change', e => {
+            if (e.target.value === 'clear') {
+                obstacles.fill(0);
+                document.getElementById('mode-select').value = 'obstacle';
+            } else {
+                mouse.mode = e.target.value;
+            }
+        });
+        document.getElementById('color-palette').addEventListener('click', e => {
+            if (e.target.tagName === 'BUTTON') {
+                mouse.color = e.target.dataset.color;
+                document.querySelectorAll('#color-palette button').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+
+        animate();
+    });
+    </script>
+</body>
+</html>

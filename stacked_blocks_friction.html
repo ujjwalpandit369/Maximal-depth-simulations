@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System of Blocks with Friction</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --header-color: #6d4c41;
+            --accent-color: #8d6e63;
+            --accent-hover: #6d4c41;
+            --control-bg: #fff;
+            --control-border: #d7ccc8;
+            --canvas-bg: #efebe9;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 300px; position: relative; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .controls { padding: 10px; border-left: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1em; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; width: 100%; }
+        button:hover { background-color: var(--accent-hover); }
+        .readouts { margin-top: 20px; }
+        .readout { font-weight: bold; margin-bottom: 10px; }
+        #status-readout { font-size: 1.2em; text-align: center; padding: 10px; border-radius: 5px; }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>System of Blocks with Friction</h1>
+            <p class="subtitle">An interactive simulation of static and kinetic friction.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation explores the dynamics of two stacked blocks where a force is applied to the bottom block. The interaction is governed by the friction between the two blocks. If the applied force is small, the force of <strong>static friction</strong> is strong enough to "glue" the blocks together, and they accelerate as a single unit. However, there is a limit to how much force static friction can provide. If the applied force is large enough to require an acceleration greater than this limit, the top block will slip. Its motion will then be governed by the weaker <strong>kinetic friction</strong> as it slides across the surface of the bottom block.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="mass-a-slider">Mass A (Top): <span id="mass-a-value">5</span> kg</label>
+                    <input type="range" id="mass-a-slider" min="1" max="20" step="1" value="5">
+                </div>
+                <div class="control-group">
+                    <label for="mass-b-slider">Mass B (Bottom): <span id="mass-b-value">10</span> kg</label>
+                    <input type="range" id="mass-b-slider" min="1" max="20" step="1" value="10">
+                </div>
+                 <div class="control-group">
+                    <label for="force-slider">Applied Force (F): <span id="force-value">50</span> N</label>
+                    <input type="range" id="force-slider" min="0" max="200" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label for="mus-slider">Static Friction (μs): <span id="mus-value">0.5</span></label>
+                    <input type="range" id="mus-slider" min="0" max="1" step="0.05" value="0.5">
+                </div>
+                <div class="control-group">
+                    <label for="muk-slider">Kinetic Friction (μk): <span id="muk-value">0.3</span></label>
+                    <input type="range" id="muk-slider" min="0" max="1" step="0.05" value="0.3">
+                </div>
+                <button id="run-btn">Run</button>
+                <div class="readouts">
+                    <div id="status-readout">STATUS</div>
+                    <div class="readout">a_A: <span id="a-a-value">0.00</span> m/s²</div>
+                    <div class="readout">a_B: <span id="a-b-value">0.00</span> m/s²</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            mA: document.getElementById('mass-a-slider'),
+            mB: document.getElementById('mass-b-slider'),
+            F: document.getElementById('force-slider'),
+            mus: document.getElementById('mus-slider'),
+            muk: document.getElementById('muk-slider'),
+            run: document.getElementById('run-btn'),
+        };
+        const values = {
+            mA: document.getElementById('mass-a-value'),
+            mB: document.getElementById('mass-b-value'),
+            F: document.getElementById('force-value'),
+            mus: document.getElementById('mus-value'),
+            muk: document.getElementById('muk-value'),
+            status: document.getElementById('status-readout'),
+            aA: document.getElementById('a-a-value'),
+            aB: document.getElementById('a-b-value'),
+        };
+
+        let state = { isRunning: false };
+        let blocks = { a: {x:0, v:0, a:0}, b: {x:0, v:0, a:0} };
+        const g = 9.81;
+
+        function calculateAccelerations() {
+            const mA = parseFloat(controls.mA.value);
+            const mB = parseFloat(controls.mB.value);
+            const F = parseFloat(controls.F.value);
+            const mus = parseFloat(controls.mus.value);
+            const muk = parseFloat(controls.muk.value);
+
+            const a_max_static = mus * g;
+            const a_system = F / (mA + mB);
+
+            if (a_system <= a_max_static) {
+                // Blocks move together
+                blocks.a.a = a_system;
+                blocks.b.a = a_system;
+                values.status.textContent = "Blocks Move Together";
+                values.status.style.backgroundColor = '#c8e6c9';
+            } else {
+                // Blocks slip
+                blocks.a.a = muk * g;
+                blocks.b.a = (F - muk * mA * g) / mB;
+                 values.status.textContent = "Block A is Slipping!";
+                 values.status.style.backgroundColor = '#ffcdd2';
+            }
+
+            values.aA.textContent = blocks.a.a.toFixed(2);
+            values.aB.textContent = blocks.b.a.toFixed(2);
+        }
+
+        function reset() {
+            state.isRunning = false;
+            blocks = { a: {x: 50, v:0, a:0}, b: {x: 50, v:0, a:0} };
+            Object.values(controls).forEach(c => {
+                if (c.id.includes('slider')) {
+                    const valueEl = document.getElementById(c.id.replace('slider','value'));
+                    valueEl.textContent = c.value;
+                }
+            });
+            values.status.textContent = "Ready";
+            values.status.style.backgroundColor = '#e0e0e0';
+            values.aA.textContent = "0.00";
+            values.aB.textContent = "0.00";
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,width,height);
+            const floorY = height - 50;
+            const scale = 1.0;
+
+            // Floor
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(0, floorY, width, 50);
+
+            // Block B
+            const hB = 50;
+            const wB = 150;
+            ctx.fillStyle = '#795548';
+            ctx.fillRect(blocks.b.x, floorY - hB, wB, hB);
+
+            // Block A
+            const hA = 40;
+            const wA = 100;
+            ctx.fillStyle = '#a1887f';
+            ctx.fillRect(blocks.a.x + (wB-wA)/2, floorY - hB - hA, wA, hA);
+
+            // Force Arrow
+            const F = parseFloat(controls.F.value);
+            if (F > 0 && state.isRunning) {
+                const arrowY = floorY - hB / 2;
+                ctx.strokeStyle = '#d32f2f';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(blocks.b.x - F/2 - 10, arrowY);
+                ctx.lineTo(blocks.b.x, arrowY);
+                ctx.lineTo(blocks.b.x - 15, arrowY - 5);
+                ctx.moveTo(blocks.b.x, arrowY);
+                ctx.lineTo(blocks.b.x - 15, arrowY + 5);
+                ctx.stroke();
+            }
+        }
+
+        let lastTime = 0;
+        function animate(time) {
+            if (!lastTime) lastTime = time;
+            const dt = (time - lastTime) / 1000;
+            lastTime = time;
+
+            if (state.isRunning) {
+                blocks.a.v += blocks.a.a * dt;
+                blocks.b.v += blocks.b.a * dt;
+                blocks.a.x += blocks.a.v * dt * 10; // 10 is visual scaling
+                blocks.b.x += blocks.b.v * dt * 10;
+            }
+
+            draw();
+
+            if(blocks.b.x > width) reset();
+
+            requestAnimationFrame(animate);
+        }
+
+        controls.run.addEventListener('click', () => {
+            reset();
+            calculateAccelerations();
+            state.isRunning = true;
+        });
+
+        Object.values(controls).forEach(c => {
+            if(c.id.includes('slider')) c.addEventListener('input', () => {
+                const valueEl = document.getElementById(c.id.replace('slider','value'));
+                valueEl.textContent = c.value;
+            });
+        });
+
+        reset();
+        animate();
+    });
+    </script>
+</body>
+</html>

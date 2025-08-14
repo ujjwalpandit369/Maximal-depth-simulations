@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Center of Percussion (The "Sweet Spot")</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --header-color: #6d4c41;
+            --accent-color: #8d6e63;
+            --accent-hover: #6d4c41;
+            --control-bg: #fff;
+            --control-border: #d7ccc8;
+            --canvas-bg: #efebe9;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { text-align: center; width: 100%; max-width: 800px; }
+        .control-group { margin: 1em 0; }
+
+        .readout { text-align: center; font-weight: bold; font-size: 1.5em; margin-top: 10px; height: 2em; }
+        .readout span { color: var(--header-color); font-family: monospace; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; }
+        button:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Center of Percussion: The "Sweet Spot"</h1>
+            <p class="subtitle">An interactive demonstration of impact dynamics.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why does hitting a baseball off the end of the bat sting your hands, while hitting it just right feels effortless? The answer is the <strong>Center of Percussion (COP)</strong>, also known as the "sweet spot." For any rigid object held at a pivot point (like a batter's hands), the COP is a special location where an impact will produce zero reactive shock at the pivot. This simulation lets you change the impact point of a ball on a bat to find this sweet spot, visualizing the jarring reaction force when you miss and the smooth, perfect transfer of energy when you hit it just right.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <div class="readout">Reaction Force at Pivot: <span id="force-readout">0.00</span></div>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="impact-slider">Impact Position on Bat (from handle)</label><br>
+                    <input type="range" id="impact-slider" min="0.1" max="1.0" step="0.01" value="0.75" style="width: 80%;">
+                </div>
+                <button id="swing-btn">Swing!</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Physics of the Sweet Spot</h2>
+            <p>When an object is struck, it undergoes two types of motion simultaneously: a <strong>translational motion</strong>, where the whole object moves in the direction of the hit, and a <strong>rotational motion</strong>, where it rotates around its center of mass.</p>
+            <ul>
+                <li><strong>Translational Motion:</strong> The impact causes the entire bat, including the handle, to accelerate forward.</li>
+                <li><strong>Rotational Motion:</strong> The impact also causes the bat to rotate. This rotation makes the end of the bat fly forward, but it makes the handle fly <em>backward</em>.</li>
+            </ul>
+            <p>The reaction force felt at the pivot (your hands) is the sum of these two motions. There is a unique point on the bat—the Center of Percussion—where the forward jolt from translation is perfectly cancelled out by the backward jolt from rotation. The net acceleration at the pivot is zero, and you feel no sting.</p>
+            <ul>
+                <li><strong>Hit below the sweet spot (closer to hands):</strong> The backward jolt from rotation is weak. The forward translational jolt dominates, and the handle is pushed back into your hands.</li>
+                <li><strong>Hit above the sweet spot (closer to the end):</strong> The backward jolt from rotation is very strong. It overpowers the forward translation, and the handle is yanked forward out of your hands.</li>
+            </ul>
+            <p>In the simulation, the red arrow at the pivot shows this reaction force. Try to adjust the slider to make it disappear!</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            impact: document.getElementById('impact-slider'),
+            swing: document.getElementById('swing-btn'),
+        };
+        const values = {
+            force: document.getElementById('force-readout'),
+        };
+
+        const bat = {
+            length: 400,
+            pivot: {x: 50, y: height/2},
+            cm_dist: 200, // distance from pivot to center of mass
+            // Moment of inertia for a rod rotated about one end is (1/3)ML^2
+            // Shifted by 'a' from pivot: I = I_cm + ma^2. For a rod, I_cm = 1/12 ML^2
+            // For simplicity, we'll just use a value.
+            I_pivot: 1.5e5, // Moment of inertia about pivot (arbitrary units)
+            mass: 1, // kg
+            angle: 0,
+        };
+        bat.cop_dist = bat.I_pivot / (bat.mass * bat.cm_dist);
+
+        let state = {
+            impactPos: 0.75,
+            isSwinging: false,
+            animFrame: 0,
+        };
+
+        function drawBat(reactionForce) {
+            ctx.save();
+            ctx.translate(bat.pivot.x, bat.pivot.y);
+            ctx.rotate(bat.angle);
+
+            // Bat
+            ctx.fillStyle = '#8d6e63';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(bat.length * 0.8, -25);
+            ctx.lineTo(bat.length, 0);
+            ctx.lineTo(bat.length * 0.8, 25);
+            ctx.lineTo(0, 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Sweet spot marker
+            ctx.fillStyle = '#ffca28';
+            ctx.beginPath();
+            ctx.arc(bat.cop_dist, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Pivot point
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(bat.pivot.x, bat.pivot.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Reaction force
+            if(state.isSwinging && state.animFrame > 10 && state.animFrame < 30) {
+                ctx.strokeStyle = '#d32f2f';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(bat.pivot.x, bat.pivot.y);
+                ctx.lineTo(bat.pivot.x + reactionForce * 5, bat.pivot.y);
+                ctx.stroke();
+            }
+        }
+
+        function drawBall(impactPos, animFrame) {
+            if (!state.isSwinging) return;
+            const impactFrame = 10;
+            const hitX = bat.pivot.x + impactPos * bat.length;
+
+            let ballX, ballY;
+            if (animFrame <= impactFrame) {
+                ballX = hitX - (impactFrame - animFrame) * 20;
+                ballY = bat.pivot.y - 30;
+            } else {
+                ballX = hitX + (animFrame - impactFrame) * 20;
+                ballY = bat.pivot.y - 30 - (animFrame - impactFrame) * 2;
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, 15, 0, Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function animate() {
+            ctx.clearRect(0,0,width,height);
+
+            let reactionForce = 0;
+            if (state.isSwinging) {
+                state.animFrame++;
+
+                const impactDist = state.impactPos * bat.length;
+                // Simplified physics: reaction is zero at COP, linear otherwise
+                reactionForce = (impactDist - bat.cop_dist) * 0.1;
+
+                if (state.animFrame > 10 && state.animFrame < 15) {
+                    bat.angle = -reactionForce * 0.01;
+                } else {
+                    bat.angle *= 0.9;
+                }
+
+                values.force.textContent = Math.abs(reactionForce).toFixed(2);
+                if (state.animFrame > 50) {
+                    state.isSwinging = false;
+                    state.animFrame = 0;
+                    bat.angle = 0;
+                }
+            }
+
+            drawBat(reactionForce);
+            drawBall(state.impactPos, state.animFrame);
+
+            requestAnimationFrame(animate);
+        }
+
+        controls.swing.addEventListener('click', () => {
+            if (!state.isSwinging) {
+                state.isSwinging = true;
+                state.animFrame = 0;
+            }
+        });
+        controls.impact.addEventListener('input', e => {
+            state.impactPos = parseFloat(e.target.value);
+            const impactDist = state.impactPos * bat.length;
+            const reactionForce = (impactDist - bat.cop_dist) * 0.1;
+            values.force.textContent = Math.abs(reactionForce).toFixed(2);
+        });
+
+        // Initial draw
+        state.impactPos = parseFloat(controls.impact.value);
+        const initialReaction = (state.impactPos * bat.length - bat.cop_dist) * 0.1;
+        values.force.textContent = Math.abs(initialReaction).toFixed(2);
+        animate();
+    });
+    </script>
+</body>
+</html>

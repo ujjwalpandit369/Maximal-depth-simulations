@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siphon Mechanics</title>
+    <style>
+        :root {
+            --bg-color: #e3f2fd;
+            --text-color: #0d47a1;
+            --header-color: #0d47a1;
+            --accent-color: #1976d2;
+            --accent-hover: #1565c0;
+            --control-bg: #fff;
+            --control-border: #bbdefb;
+            --canvas-bg: #e3f2fd;
+            --water-color: #42a5f5;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #1565c0; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { text-align: center; }
+        .control-group { display: inline-block; margin: 0 15px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Siphon Mechanics</h1>
+            <p class="subtitle">An interactive animation demonstrating how a siphon works.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>A siphon is a seemingly magical device that allows a liquid to flow "uphill" without any pump. As this simulation demonstrates, the effect is not magic, but a clever application of gravity and pressure. A siphon works because the weight of the liquid in the longer, downward-flowing leg of the tube creates a pressure difference that effectively "pulls" the liquid up the shorter leg. As long as the exit of the tube is lower than the surface of the liquid in the source container, the flow will continue.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <div class="controls">
+                 <div class="control-group">
+                    <label for="h1-slider">Source Height: <span id="h1-value">0.7</span></label><br>
+                    <input type="range" id="h1-slider" min="0.3" max="0.9" step="0.05" value="0.7">
+                </div>
+                <div class="control-group">
+                    <label for="h2-slider">Destination Height: <span id="h2-value">0.2</span></label><br>
+                    <input type="range" id="h2-slider" min="0.1" max="0.6" step="0.05" value="0.2">
+                </div>
+                <button id="start-btn">Start Siphon</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Chain Model Analogy</h2>
+            <p>One of the best ways to understand a siphon is to forget about pressure for a moment and think about a simple chain. Imagine draping a heavy chain over a smooth, frictionless peg. If the two ends of the chain are hanging at the same level, nothing happens. But if one end hangs lower than the other, the weight of the longer section will be greater, and it will pull the entire chain down on its side.</p>
+            <p>A siphon works exactly the same way. The continuous column of water in the tube acts like the chain. The "peg" is the bend at the top of the tube. The weight of the water in the longer leg (from the apex to the destination beaker) is greater than the weight in the shorter leg (from the source beaker to the apex). This weight difference creates a net downward pull that drives the flow. The cohesion of the water molecules (holding the "chain" together) allows this pull to be transmitted up the shorter leg.</p>
+
+            <h3>Does a Siphon Push or Pull?</h3>
+            <p>This is a common point of confusion. Many people think atmospheric pressure "pushes" the water up the tube. While atmospheric pressure is necessary to prevent the water column from breaking (forming a vacuum bubble at the top), it is not the driving force. The driving force is gravity acting on the unbalanced liquid column. You can prove this by noting that a siphon works perfectly well inside a sealed vacuum chamber, as long as the liquid itself doesn't boil away.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            h1: document.getElementById('h1-slider'),
+            h2: document.getElementById('h2-slider'),
+            start: document.getElementById('start-btn'),
+        };
+        const values = {
+            h1: document.getElementById('h1-value'),
+            h2: document.getElementById('h2-value'),
+        };
+
+        let state = {
+            h1: 0.7, h2: 0.2, apexH: 0.9,
+            waterLevel1: 0.7, waterLevel2: 0.2,
+            isRunning: false,
+        };
+
+        const tubePath = [];
+        const particles = [];
+        const NUM_PARTICLES = 300;
+
+        function defineTubePath() {
+            tubePath.length = 0;
+            const beaker1_x = width * 0.2;
+            const beaker2_x = width * 0.8;
+            const apex_y = height * (1 - state.apexH);
+
+            tubePath.push({x: beaker1_x, y: height * (1 - state.h1)});
+            tubePath.push({x: beaker1_x, y: apex_y});
+            tubePath.push({x: beaker2_x, y: apex_y});
+            tubePath.push({x: beaker2_x, y: height * (1 - state.h2)});
+        }
+
+        function reset() {
+            state.isRunning = false;
+            state.h1 = parseFloat(controls.h1.value);
+            state.h2 = parseFloat(controls.h2.value);
+            state.waterLevel1 = state.h1;
+            state.waterLevel2 = state.h2;
+            particles.length = 0;
+            defineTubePath();
+            draw();
+        }
+
+        function startSiphon() {
+            reset();
+            state.isRunning = true;
+            // Prime the pump
+            for(let i=0; i<NUM_PARTICLES; i++) {
+                particles.push({
+                    pathIndex: Math.floor(Math.random() * (tubePath.length - 1)),
+                    pathDist: Math.random(),
+                    offset: (Math.random() - 0.5) * 18
+                });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,width,height);
+            const beakerWidth = 100;
+
+            // Beakers
+            ctx.strokeStyle = '#607d8b';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(width*0.2 - beakerWidth/2, height*(1-state.h1), beakerWidth, height*state.h1);
+            ctx.strokeRect(width*0.8 - beakerWidth/2, height*(1-state.h2), beakerWidth, height*state.h2);
+
+            // Water levels
+            ctx.fillStyle = 'rgba(66, 165, 245, 0.7)';
+            ctx.fillRect(width*0.2 - beakerWidth/2, height*(1-state.waterLevel1), beakerWidth, height*state.waterLevel1);
+            ctx.fillRect(width*0.8 - beakerWidth/2, height*(1-state.waterLevel2), beakerWidth, height*state.waterLevel2);
+
+            // Tube
+            ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(tubePath[0].x, tubePath[0].y);
+            for(let i=1; i<tubePath.length; i++) {
+                ctx.lineTo(tubePath[i].x, tubePath[i].y);
+            }
+            ctx.stroke();
+
+            // Particles
+            particles.forEach(p => {
+                const seg_start = tubePath[p.pathIndex];
+                const seg_end = tubePath[p.pathIndex+1];
+                const x = seg_start.x + (seg_end.x - seg_start.x) * p.pathDist;
+                const y = seg_start.y + (seg_end.y - seg_start.y) * p.pathDist;
+
+                // Add perpendicular offset for tube thickness
+                const dx = seg_end.x - seg_start.x;
+                const dy = seg_end.y - seg_start.y;
+                const mag = Math.hypot(dx, dy);
+                const nx = -dy/mag;
+                const ny = dx/mag;
+
+                ctx.fillStyle = '#1e88e5';
+                ctx.beginPath();
+                ctx.arc(x + nx * p.offset, y + ny * p.offset, 3, 0, Math.PI*2);
+                ctx.fill();
+            });
+        }
+
+        function update(dt) {
+            if(!state.isRunning) return;
+
+            const h_diff = state.waterLevel1 - (state.h2 + (1-state.waterLevel2));
+            if (h_diff <= 0 || state.waterLevel1 < state.h1 - tubePath[0].y/height) {
+                state.isRunning = false;
+                return;
+            }
+
+            const flowSpeed = Math.sqrt(Math.max(0, h_diff)) * 0.1;
+
+            particles.forEach(p => {
+                p.pathDist += flowSpeed * dt;
+                if (p.pathDist >= 1) {
+                    p.pathDist = 0;
+                    p.pathIndex = (p.pathIndex + 1) % (tubePath.length - 1);
+                    if (p.pathIndex === 0) { // Cycled through
+                        p.pathIndex = 0;
+                        p.pathDist = 0;
+                    }
+                }
+            });
+
+            const volumeChange = flowSpeed * dt * 0.05;
+            state.waterLevel1 -= volumeChange;
+            state.waterLevel2 += volumeChange;
+        }
+
+        let lastTime = 0;
+        function animate(time) {
+            if (!lastTime) lastTime = time;
+            const deltaTime = (time - lastTime) / 16;
+            lastTime = time;
+
+            update(deltaTime);
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        controls.start.addEventListener('click', startSiphon);
+        controls.h1.addEventListener('input', e => {
+            values.h1.textContent = e.target.value;
+            reset();
+        });
+        controls.h2.addEventListener('input', e => {
+            values.h2.textContent = e.target.value;
+            reset();
+        });
+
+        window.addEventListener('resize', () => {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            reset();
+        });
+
+        reset();
+        animate();
+    });
+    </script>
+</body>
+</html>
