@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Space and KL Divergence</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #003049;
+            --p-color: #d62828;
+            --q-color: #f77f00;
+            --border-color: #e9ecef;
+            --canvas-bg: #fff;
+            --code-bg: #f1f1f1;
+        }
+        .dark-mode {
+            --bg-color: #0d1b2a;
+            --text-color: #e0e1dd;
+            --primary-color: #778da9;
+            --p-color: #ff6d00;
+            --q-color: #40916c;
+            --border-color: #415a77;
+            --canvas-bg: #1b263b;
+            --code-bg: #2a3a52;
+        }
+        body {
+            font-family: 'Merriweather', 'Georgia', serif;
+            line-height: 1.8;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            font-family: 'Lato', sans-serif;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 1.5rem;
+        }
+        .control-panel {
+            padding: 1rem;
+            border-radius: 5px;
+        }
+        #p-controls { border: 2px solid var(--p-color); }
+        #q-controls { border: 2px solid var(--q-color); }
+        .slider-group { display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+        .slider-group label { font-weight: bold; min-width: 40px; }
+        .results-area {
+            width: 100%;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.2rem;
+            padding: 1rem;
+            background-color: var(--code-bg);
+            border-radius: 5px;
+        }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Information Space & KL Divergence</h1>
+            <p>Visualizing the "distance" between two probability distributions.</p>
+            <div style="text-align:center; margin-top: 1rem;">
+                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                In statistics and machine learning, we often need to compare how different one probability distribution is from another. The <strong>Kullback-Leibler (KL) Divergence</strong> is a fundamental tool for this. It measures the "information loss" when we use an approximate distribution (Q) to model a true distribution (P). Think of it as a kind of "distance," but with a twist: the distance from P to Q is not the same as the distance from Q to P! This simulation lets you control two probability distributions, <strong style="color:var(--p-color)">P (in red)</strong> and <strong style="color:var(--q-color)">Q (in orange)</strong>, and see how the KL Divergence changes as you make them more or less similar.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="800" height="300"></canvas>
+            <div class="results-area">
+                <div id="kl-results">D<sub>KL</sub>(P || Q) = 0.00 | D<sub>KL</sub>(Q || P) = 0.00</div>
+            </div>
+            <div class="controls-area">
+                <div id="p-controls" class="control-panel">
+                    <h3>Distribution P (True)</h3>
+                    <div class="slider-group">
+                        <label for="mu-p-slider">&mu;:</label>
+                        <input type="range" id="mu-p-slider" min="-3" max="3" step="0.1" value="0">
+                        <span id="mu-p-value">0.0</span>
+                    </div>
+                     <div class="slider-group">
+                        <label for="sigma-p-slider">&sigma;:</label>
+                        <input type="range" id="sigma-p-slider" min="0.5" max="3" step="0.1" value="1">
+                        <span id="sigma-p-value">1.0</span>
+                    </div>
+                </div>
+                 <div id="q-controls" class="control-panel">
+                    <h3>Distribution Q (Approx.)</h3>
+                     <div class="slider-group">
+                        <label for="mu-q-slider">&mu;:</label>
+                        <input type="range" id="mu-q-slider" min="-3" max="3" step="0.1" value="0">
+                        <span id="mu-q-value">0.0</span>
+                    </div>
+                     <div class="slider-group">
+                        <label for="sigma-q-slider">&sigma;:</label>
+                        <input type="range" id="sigma-q-slider" min="0.5" max="3" step="0.1" value="1">
+                        <span id="sigma-q-value">1.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. What is KL Divergence?</h3>
+            <p>
+                KL Divergence measures the "surprise" or inefficiency of using a simplified model when you know the true state of the world. Let's say <strong style="color:var(--p-color)">P</strong> is the true probability distribution of weather patterns. You, as a forecaster, create a simplified model, <strong style="color:var(--q-color)">Q</strong>. KL Divergence <code>D<sub>KL</sub>(P || Q)</code> quantifies how much "information" you lose by using your model Q instead of the true distribution P.
+            </p>
+            <ul>
+                <li>If your model Q is identical to the true distribution P, the KL Divergence is <strong>zero</strong>. You lose no information.</li>
+                <li>The more Q differs from P, the larger the KL Divergence becomes.</li>
+            </ul>
+            <p>Try it in the simulation: Set the sliders for P and Q to be identical. The KL divergence will be 0. Now, slowly change the mean (µ) or standard deviation (σ) of Q. You'll see the <code>D<sub>KL</sub>(P || Q)</code> value increase.</p>
+
+            <h3>2. The Asymmetry: Why D<sub>KL</sub>(P || Q) &ne; D<sub>KL</sub>(Q || P)</h3>
+            <p>
+                This is the trickiest but most important property of KL Divergence. It is <strong>not a true distance</strong> like meters or miles, because the distance from A to B is not always the same as the distance from B to A.
+            </p>
+            <p>
+                Consider the term <code>D<sub>KL</sub>(P || Q)</code>. Here, P is the "true" distribution. We are measuring the penalty for using Q when the truth is P. The penalty is high where <code>p(x)</code> is high and <code>q(x)</code> is low. This is like being very surprised: an event happened that you thought was impossible according to your model Q.
+            </p>
+            <p>
+                Now consider <code>D<sub>KL</sub>(Q || P)</code>. Here, we pretend Q is the truth and P is our model. The penalty is high where <code>q(x)</code> is high and <code>p(x)</code> is low.
+            </p>
+            <p>
+                <strong>Try this in the simulation:</strong>
+                <ol>
+                    <li>Set P to have a small sigma (a narrow, spiky peak), like <code>&sigma;<sub>P</sub> = 0.5</code>.</li>
+                    <li>Set Q to have a large sigma (a wide, flat peak), like <code>&sigma;<sub>Q</sub> = 3.0</code>.</li>
+                    <li>Look at <code>D<sub>KL</sub>(P || Q)</code>. It will be very large. This is because Q fails to model the high-probability event at the peak of P. It's very "surprised" by the certainty of P.</li>
+                    <li>Now look at <code>D<sub>KL</sub>(Q || P)</code>. It will be much smaller. This is because P does a decent job of modeling events from Q. If you pick a point from the wide Q distribution, it's likely to be somewhere P already assigns some probability. P is rarely "surprised" by Q.</li>
+                </ol>
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>The Formula for KL Divergence</h2>
+            <p>For two continuous probability distributions p(x) and q(x), the KL divergence is defined as the integral:</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                D<sub>KL</sub>(P || Q) = &int; p(x) log( p(x) / q(x) ) dx
+            </p>
+            <p>
+                This integral can be difficult to compute for arbitrary distributions. Fortunately, for two 1D Gaussian (Normal) distributions, <code>P ~ N(&mu;<sub>1</sub>, &sigma;<sub>1</sub><sup>2</sup>)</code> and <code>Q ~ N(&mu;<sub>2</sub>, &sigma;<sub>2</sub><sup>2</sup>)</code>, there is a convenient closed-form solution, which is what this simulation uses:
+            </p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                D<sub>KL</sub>(P || Q) = log(&sigma;<sub>2</sub>/&sigma;<sub>1</sub>) + (&sigma;<sub>1</sub><sup>2</sup> + (&mu;<sub>1</sub>-&mu;<sub>2</sub>)<sup>2</sup>) / (2&sigma;<sub>2</sub><sup>2</sup>) - &frac12;
+            </p>
+            <p>
+                This formula directly shows the non-symmetry. If you swap the roles of P and Q (i.e., swap all the 1's and 2's), you will get a different mathematical expression.
+            </p>
+        </section>
+
+        <section id="faq">
+             <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. If it's not a distance, what is it?</dt>
+                <dd>It's a "divergence." It measures how one distribution diverges from another. It's also known as "relative entropy," as it measures the entropy of P relative to Q.</dd>
+
+                <dt>2. Why does the value sometimes become "Infinity"?</dt>
+                <dd>This happens if there is a place where p(x) > 0 but q(x) = 0. This corresponds to an event that is possible under the true distribution P but which your model Q said was absolutely impossible. The "surprise" is infinite, and the KL divergence reflects that. In our simulation, this doesn't happen because Gaussian distributions are never exactly zero.</dd>
+
+                <dt>3. What is this used for in practice?</dt>
+                <dd>KL Divergence is fundamental to machine learning and statistics. It's used in Variational Autoencoders (VAEs) to ensure the learned latent space resembles a simple distribution (like a standard normal distribution). It's also used to compare the performance of different statistical models.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const themeToggle = document.getElementById('theme-toggle');
+        const klResults = document.getElementById('kl-results');
+
+        const controls = {
+            p: {
+                muSlider: document.getElementById('mu-p-slider'),
+                sigmaSlider: document.getElementById('sigma-p-slider'),
+                muValue: document.getElementById('mu-p-value'),
+                sigmaValue: document.getElementById('sigma-p-value'),
+                color: '#d62828',
+            },
+            q: {
+                muSlider: document.getElementById('mu-q-slider'),
+                sigmaSlider: document.getElementById('sigma-q-slider'),
+                muValue: document.getElementById('mu-q-value'),
+                sigmaValue: document.getElementById('sigma-q-value'),
+                color: '#f77f00',
+            }
+        };
+
+        const params = {
+            p: { mu: 0, sigma: 1 },
+            q: { mu: 0, sigma: 1 }
+        };
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#1b263b' : '#fff',
+            grid: document.body.classList.contains('dark-mode') ? '#415a7744' : '#33333322',
+            text: document.body.classList.contains('dark-mode') ? '#e0e1dd' : '#212529',
+            p: document.body.classList.contains('dark-mode') ? '#ff6d00' : '#d62828',
+            q: document.body.classList.contains('dark-mode') ? '#40916c' : '#f77f00',
+        });
+
+        // --- PDF for Gaussian ---
+        const gaussianPDF = (x, mu, sigma) => {
+            const sigma2 = sigma * sigma;
+            const term1 = 1 / Math.sqrt(2 * Math.PI * sigma2);
+            const term2 = Math.exp(-Math.pow(x - mu, 2) / (2 * sigma2));
+            return term1 * term2;
+        };
+
+        // --- KL Divergence Calculation ---
+        const klDivergence = (p1, p2) => {
+            const { mu: mu1, sigma: sigma1 } = p1;
+            const { mu: mu2, sigma: sigma2 } = p2;
+
+            const term1 = Math.log(sigma2 / sigma1);
+            const term2 = (sigma1 * sigma1 + Math.pow(mu1 - mu2, 2)) / (2 * sigma2 * sigma2);
+            const term3 = -0.5;
+
+            return term1 + term2 + term3;
+        };
+
+        // --- Drawing ---
+        function draw() {
+            const colors = getColors();
+            const width = canvas.width;
+            const height = canvas.height;
+            const xMin = -6, xMax = 6;
+            const yMax = 0.8;
+
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw grid
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for(let i=xMin; i<=xMax; i++){
+                const x = (i-xMin)/(xMax-xMin) * width;
+                ctx.moveTo(x,0); ctx.lineTo(x,height);
+            }
+            ctx.stroke();
+
+            // Draw distributions
+            const drawDist = (distParams, color) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let i = 0; i < width; i++) {
+                    const x = xMin + (i / width) * (xMax - xMin);
+                    const y = gaussianPDF(x, distParams.mu, distParams.sigma);
+                    const canvasY = height - (y / yMax) * height;
+                    if (i === 0) ctx.moveTo(i, canvasY);
+                    else ctx.lineTo(i, canvasY);
+                }
+                ctx.stroke();
+            };
+
+            drawDist(params.p, colors.p);
+            drawDist(params.q, colors.q);
+        }
+
+        function update() {
+            // Update params from sliders
+            params.p.mu = parseFloat(controls.p.muSlider.value);
+            params.p.sigma = parseFloat(controls.p.sigmaSlider.value);
+            params.q.mu = parseFloat(controls.q.muSlider.value);
+            params.q.sigma = parseFloat(controls.q.sigmaSlider.value);
+
+            // Update text values
+            controls.p.muValue.textContent = params.p.mu.toFixed(1);
+            controls.p.sigmaValue.textContent = params.p.sigma.toFixed(1);
+            controls.q.muValue.textContent = params.q.mu.toFixed(1);
+            controls.q.sigmaValue.textContent = params.q.sigma.toFixed(1);
+
+            // Update colors on dark mode
+            controls.p.color = getColors().p;
+            controls.q.color = getColors().q;
+            document.getElementById('p-controls').style.borderColor = getColors().p;
+            document.getElementById('q-controls').style.borderColor = getColors().q;
+
+            // Calculate KL
+            const kl_pq = klDivergence(params.p, params.q);
+            const kl_qp = klDivergence(params.q, params.p);
+
+            klResults.innerHTML = `D<sub>KL</sub>(<span style="color:${getColors().p}">P</span> || <span style="color:${getColors().q}">Q</span>) = ${kl_pq.toFixed(4)} | D<sub>KL</sub>(<span style="color:${getColors().q}">Q</span> || <span style="color:${getColors().p}">P</span>) = ${kl_qp.toFixed(4)}`;
+
+            draw();
+        }
+
+        // --- Event Listeners ---
+        Object.values(controls).forEach(c => {
+            c.muSlider.addEventListener('input', update);
+            c.sigmaSlider.addEventListener('input', update);
+        });
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            update();
+        });
+
+        update();
+    });
+    </script>
+</body>
+</html>

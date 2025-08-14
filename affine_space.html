@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Affine Space</title>
+    <style>
+        :root {
+            --bg-color: #f9f9f9;
+            --text-color: #333;
+            --primary-color: #4CAF50;
+            --secondary-color: #0077b6;
+            --vector-color: #0077b6;
+            --point-color: #4CAF50;
+            --error-color: #f44336;
+            --success-color: #4CAF50;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --code-bg: #f1f1f1;
+        }
+        .dark-mode {
+            --bg-color: #1e1e1e;
+            --text-color: #f1f1f1;
+            --primary-color: #66bb6a;
+            --secondary-color: #00b4d8;
+            --vector-color: #00b4d8;
+            --point-color: #66bb6a;
+            --error-color: #ef5350;
+            --success-color: #66bb6a;
+            --border-color: #424242;
+            --canvas-bg: #2c2c2c;
+            --code-bg: #333;
+        }
+        body {
+            font-family: 'Georgia', serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        button {
+            border: 1px solid;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        #point-btn { border-color: var(--point-color); color: var(--point-color); background-color: transparent; }
+        #point-btn:hover, #point-btn.active { background-color: var(--point-color); color: var(--canvas-bg); }
+        #vector-btn { border-color: var(--vector-color); color: var(--vector-color); background-color: transparent; }
+        #vector-btn:hover, #vector-btn.active { background-color: var(--vector-color); color: var(--canvas-bg); }
+        #reset-btn { border-color: var(--text-color); color: var(--text-color); background-color: transparent; }
+        #reset-btn:hover { background-color: var(--text-color); color: var(--bg-color); }
+
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            width: 100%;
+            cursor: default;
+        }
+        .status-bar {
+            width: 100%;
+            padding: 0.8rem;
+            margin-top: 1rem;
+            border-radius: 5px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+            height: 2em;
+            line-height: 2em;
+        }
+        .status-error { background-color: var(--error-color); color: white; }
+        .status-success { background-color: var(--success-color); color: white; }
+        .status-info { background-color: var(--code-bg); color: var(--text-color); }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; background-color: var(--bg-color); max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        .error-panel { display: none; background-color: var(--error-color); color: white; padding: 1rem; border-radius: 5px; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+    <main>
+        <div id="quality-check-panel" class="error-panel"></div>
+        <header>
+            <h1>The Affine Space: A Vector Space that Forgot its Origin</h1>
+            <p>An interactive simulation to distinguish an affine space from a vector space.</p>
+            <div style="text-align:center; margin: 1rem 0;">
+                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                In mathematics, a <strong>vector space</strong> is a familiar concept: a world of arrows (vectors) anchored to a special spot called the <strong>origin</strong>. An <strong>affine space</strong> is what you get if you take a vector space and "forget" where the origin is. You're left with a collection of points and vectors, but no special reference point. This simulation lets you play in an affine space. You can create points and vectors and try to combine them. You'll discover that some operations, like adding a vector to a point, make perfect sense. But others, like trying to add two points together, are fundamentally meaningless without an origin, and the simulation will stop you from performing them.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <div class="controls-area">
+                <div class="button-group">
+                    <button id="point-btn" title="Create a new Point">Create Point</button>
+                    <button id="vector-btn" title="Create a new Vector">Create Vector</button>
+                    <button id="reset-btn" title="Clear the canvas">Reset</button>
+                </div>
+            </div>
+            <canvas id="main-canvas" width="800" height="500"></canvas>
+            <div id="status-bar" class="status-bar status-info">Drag objects near each other to see available operations.</div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Affine Geometry</h2>
+            <h3>1. What are Points and Vectors?</h3>
+            <p>In this simulation, we make a crucial distinction:</p>
+            <ul>
+                <li><strong style="color:var(--point-color)">Points (Green Dots):</strong> A point represents a <strong>location</strong>. It just *is*. Think of it as a specific spot on a map, like "the Eiffel Tower." It doesn't have a size or direction.</li>
+                <li><strong style="color:var(--vector-color)">Vectors (Blue Arrows):</strong> A vector represents a <strong>displacement</strong> or a <strong>translation</strong>. Think of it as instructions like "go 3 miles northeast." It has both a length (magnitude) and a direction, but no fixed starting position. You can apply this displacement from any starting point.</li>
+            </ul>
+            <p>A vector space is full of vectors, all starting from a single origin. An affine space has points scattered everywhere, and a separate "palette" of vectors that can be applied to them.</p>
+
+            <h3>2. The Allowed Operations</h3>
+            <p>By dragging the objects on the canvas, you can discover the fundamental rules of affine geometry. The simulation will highlight valid operations in green.</p>
+            <ol>
+                <li>
+                    <strong>Point - Point = Vector:</strong> Drag one point (P₂) over another (P₁). A new vector will appear, representing the displacement from P₁ to P₂. This makes intuitive sense: the difference between two locations is a displacement.
+                </li>
+                <li>
+                    <strong>Point + Vector = Point:</strong> Drag the tail of a vector (v) over a point (P₁). A new point (P₂) will appear. This is like starting at a location (P₁) and following displacement instructions (v) to arrive at a new location (P₂).
+                </li>
+            </ol>
+
+            <h3>3. The Forbidden Operation: Point + Point</h3>
+            <p>What happens if you try to add two points, P₁ + P₂? The simulation will show an error. Why? Because the operation is meaningless without a reference origin. Imagine P₁ is the Eiffel Tower and P₂ is the Statue of Liberty. What is "Eiffel Tower + Statue of Liberty"? The question doesn't make sense.</p>
+            <p>To perform this addition, you would first need to define an origin (say, London). Then you could define P₁ and P₂ as vectors <em>from that origin</em>. But if you changed the origin to Tokyo, the resulting vectors and their sum would be completely different. Since the result depends on an arbitrary choice of origin, the operation isn't a fundamental property of the space itself, so it is disallowed in affine geometry.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h3>1. Locations vs. Displacements (Physical Analogy)</h3>
+            <p>This is the most direct analogy.
+                <ul>
+                    <li><strong>Points are Locations:</strong> "My house," "The grocery store."</li>
+                    <li><strong>Vectors are Displacements:</strong> "One mile east," "Up 3 flights of stairs."</li>
+                </ul>
+                You can find the displacement between two locations ("The grocery store" - "My house" = "One mile east"). You can start at a location and apply a displacement ("My house" + "Up 3 flights of stairs" = "My bedroom"). But you cannot add two locations ("My house" + "The grocery store" = ???).
+            </p>
+            <h3>2. Dates vs. Durations (Computational Analogy)</h3>
+            <p>
+                Think about how dates and times are handled in software.
+                <ul>
+                    <li><strong>Points are specific moments in time (timestamps):</strong> `October 26, 1985, 01:22 AM`.</li>
+                    <li><strong>Vectors are durations of time:</strong> `88 miles per hour`... wait, no. A vector is a duration, like `30 minutes` or `52 weeks`.</li>
+                </ul>
+                You can subtract two timestamps to get a duration (`10:30 AM` - `10:00 AM` = `30 minutes`). You can add a duration to a timestamp (`10:00 AM` + `30 minutes` = `10:30 AM`). But you cannot add two timestamps (`10:00 AM` + `10:30 AM` = ???). The concept is identical to affine geometry.
+            </p>
+             <h3>3. An Infinite, Unmarked Map (Visualization Analogy)</h3>
+            <p>
+                Imagine an infinitely large sheet of blank paper. This is an <strong>affine space</strong>. You can mark points on it. You can also draw arrows anywhere on the sheet to represent vectors. You can pick up an arrow and place its tail on a point to find a new point. You can draw a new arrow from one point to another.
+                <br><br>
+                Now, pick one special point on the paper, mark it with a big "O", and declare it the <strong>origin</strong>. You have just created a <strong>vector space</strong>. Now, every other point on the sheet can be described by a unique vector starting from O. The concept of "adding" two points now has a meaning: you can add their corresponding vectors from the origin to get a new vector, which defines a new point. The key is that this meaning only exists because you made an arbitrary choice of an origin. The affine space is the more fundamental concept, existing before any such choice is made.
+            </p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. How do I perform an operation?</dt>
+                <dd>Create at least two objects (points or vectors). Click and drag one object so it overlaps with another. The status bar at the bottom will tell you what operation is possible. Release the mouse to complete it.</dd>
+                <dt>2. Why are vectors blue and points green?</dt>
+                <dd>To visually distinguish between the two fundamental types of objects in the space. Points are locations, and vectors are displacements.</dd>
+                <dt>3. What is the difference between this and a normal graph?</dt>
+                <dd>A normal graph (a Cartesian plane) is an example of a vector space. It has a pre-defined origin at (0,0). This simulation intentionally has no visible grid or origin to emphasize that these are not necessary for the geometry to work.</dd>
+                <dt>4. Can I add two vectors?</dt>
+                <dd>Yes! Vector+Vector addition is a fundamental operation of the associated vector space. Drag the tail of one vector to the head of another to perform "head-to-tail" vector addition and see the resulting vector.</dd>
+                <dt>5. The simulation seems simple. What's the point?</dt>
+                <dd>Its purpose is to make a very specific and fundamental mathematical distinction tangible. This distinction is crucial in fields like computer graphics (affine transformations), physics (spacetime is an affine space), and geometry.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <p>Runtime metrics and errors will appear here.</p>
+                <ul id="log-output"></ul>
+            </div>
+        </details>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality Checks ---
+        const qcPanel = document.getElementById('quality-check-panel');
+        if (!document.getElementById('main-canvas')) {
+            qcPanel.textContent = 'ERROR: Main canvas not found.';
+            qcPanel.style.display = 'block';
+            return;
+        }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        const log = (message) => {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        };
+        log('Simulation initialized.');
+
+        // --- Canvas & State ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const statusBar = document.getElementById('status-bar');
+
+        let objects = []; // { type: 'point'/'vector', x, y, vx, vy, id }
+        let nextId = 0;
+        let dragging = null; // The object being dragged
+        let dragOffset = {x:0, y:0};
+        let activeTool = 'point';
+
+        // --- Colors & Styles ---
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#2c2c2c' : '#fff',
+            point: document.body.classList.contains('dark-mode') ? '#66bb6a' : '#4CAF50',
+            vector: document.body.classList.contains('dark-mode') ? '#00b4d8' : '#0077b6',
+            text: document.body.classList.contains('dark-mode') ? '#f1f1f1' : '#333',
+        });
+
+        // --- Core Functions ---
+        function draw() {
+            const colors = getColors();
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            objects.forEach(obj => {
+                if (obj.type === 'point') {
+                    ctx.fillStyle = colors.point;
+                    ctx.beginPath();
+                    ctx.arc(obj.x, obj.y, 8, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else if (obj.type === 'vector') {
+                    ctx.strokeStyle = colors.vector;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    const head_x = obj.x + obj.vx;
+                    const head_y = obj.y + obj.vy;
+                    ctx.moveTo(obj.x, obj.y);
+                    ctx.lineTo(head_x, head_y);
+                    // Arrowhead
+                    const angle = Math.atan2(obj.vy, obj.vx);
+                    ctx.moveTo(head_x, head_y);
+                    ctx.lineTo(head_x - 12 * Math.cos(angle - Math.PI / 6), head_y - 12 * Math.sin(angle - Math.PI / 6));
+                    ctx.moveTo(head_x, head_y);
+                    ctx.lineTo(head_x - 12 * Math.cos(angle + Math.PI / 6), head_y - 12 * Math.sin(angle + Math.PI / 6));
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function addObject(type, x, y) {
+            if (type === 'point') {
+                objects.push({ type: 'point', x, y, id: nextId++ });
+            } else if (type === 'vector') {
+                objects.push({ type: 'vector', x: x - 50, y, vx: 100, vy: 0, id: nextId++ });
+            }
+            log(`Added ${type} at (${x}, ${y})`);
+            draw();
+        }
+
+        function getObjectAt(x, y) {
+            for (let i = objects.length - 1; i >= 0; i--) {
+                const obj = objects[i];
+                const dist = Math.hypot(x - obj.x, y - obj.y);
+                if (obj.type === 'point' && dist < 10) return obj;
+                if (obj.type === 'vector' && dist < 15) return obj; // Check tail of vector
+            }
+            return null;
+        }
+
+        function checkOperations() {
+            if (!dragging) return;
+            let foundOp = false;
+
+            for(const target of objects) {
+                if (target.id === dragging.id) continue;
+                const dist = Math.hypot(dragging.x - target.x, dragging.y - target.y);
+                if (dist > 30) continue;
+
+                // Point - Point
+                if (dragging.type === 'point' && target.type === 'point') {
+                    updateStatus('SUCCESS: P₂ - P₁ = v. Release to create Vector.', 'success');
+                    foundOp = true; break;
+                }
+                // Point + Vector
+                if (dragging.type === 'point' && target.type === 'vector' || dragging.type === 'vector' && target.type === 'point') {
+                    updateStatus('SUCCESS: P + v = P\'. Release to create Point.', 'success');
+                    foundOp = true; break;
+                }
+                // Vector + Vector
+                if (dragging.type === 'vector' && target.type === 'vector') {
+                     const distHeadToTail = Math.hypot((dragging.x + dragging.vx) - target.x, (dragging.y + dragging.vy) - target.y);
+                     if (distHeadToTail < 30) {
+                        updateStatus('SUCCESS: v₁ + v₂ = v\'. Release to create Vector.', 'success');
+                        foundOp = true; break;
+                     }
+                }
+                // Point + Point (INVALID)
+                if (dragging.type === 'point' && target.type === 'point') { // This is already covered but let's be explicit
+                     updateStatus('INVALID: Cannot add Point + Point.', 'error');
+                     foundOp = true; break;
+                }
+            }
+
+            if (!foundOp) {
+                updateStatus('Drag objects near each other to see available operations.', 'info');
+            }
+        }
+
+        function handleOperation() {
+            if (!dragging) return;
+            let opHandled = false;
+            for(const target of objects) {
+                if (target.id === dragging.id) continue;
+                const dist = Math.hypot(dragging.x - target.x, dragging.y - target.y);
+                if (dist > 30) continue;
+
+                const p1 = target, p2 = dragging;
+                if (p1.type === 'point' && p2.type === 'point') {
+                    objects.push({type:'vector', x:p1.x, y:p1.y, vx: p2.x-p1.x, vy:p2.y-p1.y, id:nextId++});
+                    opHandled = true; break;
+                }
+                const point = p1.type === 'point' ? p1 : p2;
+                const vector = p1.type === 'vector' ? p1 : p2;
+                if(point && vector) {
+                    objects.push({type:'point', x: point.x + vector.vx, y: point.y + vector.vy, id:nextId++});
+                    opHandled = true; break;
+                }
+            }
+            // Vector + Vector
+            for(const v2 of objects) {
+                 if(dragging.type !== 'vector' || v2.type !== 'vector' || dragging.id === v2.id) continue;
+                 const distHeadToTail = Math.hypot((dragging.x + dragging.vx) - v2.x, (dragging.y + dragging.vy) - v2.y);
+                 if (distHeadToTail < 30) {
+                     const v1 = dragging;
+                     objects.push({type:'vector', x: v1.x, y: v1.y, vx: v1.vx+v2.vx, vy: v1.vy+v2.vy, id:nextId++});
+                     opHandled = true; break;
+                 }
+            }
+
+            if (opHandled) {
+                // remove the dragged object to avoid clutter
+                objects = objects.filter(obj => obj.id !== dragging.id);
+            }
+        }
+
+        function updateStatus(message, type) {
+            statusBar.textContent = message;
+            statusBar.className = `status-bar status-${type}`;
+        }
+
+        // --- Event Listeners ---
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const clickedObject = getObjectAt(x, y);
+            if (clickedObject) {
+                dragging = clickedObject;
+                dragOffset.x = dragging.x - x;
+                dragOffset.y = dragging.y - y;
+            } else {
+                addObject(activeTool, x, y);
+            }
+        });
+        canvas.addEventListener('mousemove', e => {
+            if (dragging) {
+                const rect = canvas.getBoundingClientRect();
+                dragging.x = e.clientX - rect.left + dragOffset.x;
+                dragging.y = e.clientY - rect.top + dragOffset.y;
+                checkOperations();
+                draw();
+            }
+        });
+        window.addEventListener('mouseup', e => {
+            if (dragging) {
+                handleOperation();
+                dragging = null;
+                updateStatus('Drag objects near each other to see available operations.', 'info');
+                draw();
+            }
+        });
+
+        document.getElementById('point-btn').addEventListener('click', () => { activeTool = 'point'; });
+        document.getElementById('vector-btn').addEventListener('click', () => { activeTool = 'vector'; });
+        document.getElementById('reset-btn').addEventListener('click', () => { objects = []; draw(); log('Canvas cleared.'); });
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+            log(`Theme toggled to ${document.body.classList.contains('dark-mode') ? 'dark' : 'light'}.`);
+        });
+
+        // --- Init ---
+        draw();
+    });
+    </script>
+</body>
+</html>
