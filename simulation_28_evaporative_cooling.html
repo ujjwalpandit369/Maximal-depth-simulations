@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaporative Cooling</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff; /* Blue for the liquid */
+            --secondary-color: #6c757d; /* Grey for the container */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #58a6ff;
+            --secondary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 4 / 3; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 150px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Evaporative Cooling</h1>
+            <p class="subtitle">Why sweating cools you down: a microscopic perspective.</p>
+            <p class="meta-bar">
+                Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Why does sweating cool you down on a hot day, or why do you feel cold getting out of a pool? The answer is evaporative cooling. This simulation provides a microscopic view of a liquid's surface to reveal the secret. The temperature of a liquid is related to the *average* speed of its molecules, but some molecules are moving much faster than others. It is only these fastest, most energetic molecules that have enough energy to break free from the surface and escape as a gas (evaporate). When they leave, the average speed—and thus the temperature—of the molecules left behind drops. You'll see this process in action, watching the fastest particles fly away and the liquid's thermometer fall.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Great Escape</h2>
+
+            <h3>Step 1: Temperature is Average Speed</h3>
+            <p>The first key idea is that temperature is a measure of the average kinetic energy (energy of motion) of the molecules in a substance. In a liquid, the molecules are all whizzing around and bumping into each other. Some are moving slowly, some are moving at an average speed, and a few, just by chance, are moving very, very fast. The thermometer measures the average of all these speeds.</p>
+
+            <h3>Step 2: The Sticky Liquid Surface</h3>
+            <p>Molecules in a liquid are attracted to each other by weak intermolecular forces. Think of them as being slightly sticky. A molecule deep inside the liquid is being pulled equally in all directions by its neighbors. But a molecule at the surface is only being pulled by the molecules below and beside it. There is a net inward pull, which creates surface tension.</p>
+
+            <h3>Step 3: The Escape Plan</h3>
+            <p>For a molecule to evaporate, it must do two things:
+            <ol>
+                <li>It must be moving in the right direction (upwards, towards the surface).</li>
+                <li>It must have enough kinetic energy to overcome the "sticky" intermolecular forces pulling it back into the liquid.</li>
+            </ol>
+            Only the most energetic molecules—the ones in the "high-speed tail" of the energy distribution—meet these criteria. In the simulation, these are the particles colored red.</p>
+
+            <h3>Step 4: The Cooling Effect</h3>
+            <p>This is the crucial step. When the fastest, highest-energy particles escape, the average energy of the remaining population of molecules must go down. Since temperature is just a measure of this average energy, the temperature of the liquid drops. The liquid has cooled itself by sacrificing its most energetic members. This process will continue as long as there is liquid to evaporate.</p>
+
+            <h3>Analogy: Dismissing the Fastest Runners</h3>
+            <p>Imagine a physical education class running laps around a track. The "temperature" of the class is their average running speed. The teacher announces that anyone who can run a lap in under 60 seconds gets to leave early.
+            <ul>
+                <li>Only the fastest, most athletic students will be able to meet this requirement and leave.</li>
+                <li>As these top runners are removed from the group, what happens to the average speed of the students still running? It goes down.</li>
+                <li>The class as a whole has "cooled down" because its highest-energy members have been removed.</li>
+            </ul>
+            Evaporation works in exactly the same way, but with molecules, energy, and intermolecular forces instead of students, speed, and a teacher's rule.
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="play-pause-btn" aria-label="Play/Pause">Run</button>
+                    <button id="reset-btn" aria-label="Reset">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label for="temp-slider">Initial Temperature: <span id="temp-value">50</span></label>
+                    <input type="range" id="temp-slider" min="10" max="100" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label for="area-slider">Surface Area: <span id="area-value">100</span>%</label>
+                    <input type="range" id="area-slider" min="20" max="100" step="10" value="100">
+                </div>
+                <div class="control-group">
+                    <label for="bond-slider">Bonding Energy: <span id="bond-value">100</span></label>
+                    <input type="range" id="bond-slider" min="50" max="200" step="10" value="100">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — The Maxwell-Boltzmann Distribution (Click to expand)</button>
+        <div class="content">
+            <h3>Distribution of Speeds</h3>
+            <p>The speeds of molecules in a gas or liquid at a certain temperature are not all the same. They follow a statistical pattern called the <strong>Maxwell-Boltzmann distribution</strong>. This distribution has a characteristic shape: it starts at zero, rises to a peak at the most probable speed, and then has a long "tail" extending to very high speeds.
+            <br><br>
+            It is the particles in this high-energy tail that are responsible for evaporation. The plot below the main simulation shows a histogram of the particle speeds. As the simulation runs, you can see the red bars on the far right of the histogram (the fastest particles) shrink as those particles escape, causing the peak of the distribution to shift to the left (a lower average speed and thus lower temperature).
+            </p>
+            <h3>Condition for Escape</h3>
+            <p>A particle can escape the liquid if its kinetic energy is greater than the potential energy of the intermolecular bonds holding it to the surface. We can write this condition as:</p>
+            <p><code>(1/2)mv² > E_bond</code></p>
+            <p>Where `m` is the particle's mass, `v` is its speed, and `E_bond` is the bonding energy. In the simulation, the "Bonding Energy" slider directly sets this threshold. A higher bonding energy means fewer particles will have the necessary speed to escape, and the rate of cooling will be slower.</p>
+            <h3>Temperature and Average Kinetic Energy</h3>
+            <p>The macroscopic temperature `T` is directly proportional to the average kinetic energy of all the `N` particles in the system:</p>
+            <p><code>(3/2)kT = ⟨E_k⟩ = (1/N) * Σ_i (1/2)mv_i²</code></p>
+            <p>When we selectively remove particles with high `v_i` from the sum, the average `⟨E_k⟩` must decrease. This forces the temperature `T` to decrease as well.</p>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>Net Evaporation and Humidity</h3>
+            <p>This simulation only shows particles leaving the liquid. In reality, the process is a two-way street. Molecules from the vapor above the liquid can also hit the surface and be captured, re-entering the liquid phase (condensation).
+            <ul>
+                <li><strong>Net Evaporation</strong> occurs when the rate of evaporation is greater than the rate of condensation. This happens when the air above the liquid is not saturated with vapor (i.e., when the relative humidity is less than 100%).</li>
+                <li><strong>Equilibrium</strong> is reached when the rate of evaporation equals the rate of condensation. At this point, there is no net cooling. This is why you don't cool down effectively by sweating on a very humid day.</li>
+            </ul>
+            </p>
+            <h3>Applications</h3>
+            <p>Evaporative cooling is a ubiquitous and powerful process in both nature and technology.
+            <ul>
+                <li><strong>Biology:</strong> Most mammals use sweating as their primary means of thermoregulation. Dogs pant, using evaporative cooling from their tongues and respiratory tracts.</li>
+                <li><strong>Technology:</strong> Cooling towers at power plants use massive-scale evaporative cooling to shed waste heat. "Swamp coolers" (evaporative coolers) are an energy-efficient alternative to air conditioners in dry climates.</li>
+                <li><strong>Cryogenics:</strong> A technique called "evaporative cooling of atoms" is used in physics labs to create Bose-Einstein condensates, a state of matter that exists at temperatures just billionths of a degree above absolute zero. In this process, the hottest atoms in a magnetically trapped cloud are selectively allowed to escape, drastically cooling the remaining atoms.</li>
+            </ul>
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx, plotCanvas, plotCtx;
+    let isRunning = false;
+    let animationFrameId;
+
+    let config = {
+        temp: 50,
+        area: 1.0,
+        bond: 100,
+    };
+
+    let particles = [];
+    const numParticles = 300;
+
+    function resetSimulation() {
+        isRunning = false;
+        document.getElementById('play-pause-btn').textContent = 'Run';
+
+        particles = [];
+        const { width, height } = canvas;
+        const initialSpeed = Math.sqrt(config.temp);
+
+        for (let i = 0; i < numParticles; i++) {
+            // Maxwell-Boltzmann-like distribution (simplified using Box-Muller transform)
+            const u1 = Math.random();
+            const u2 = Math.random();
+            const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
+
+            particles.push({
+                x: Math.random() * width * config.area,
+                y: height * 0.5 + Math.random() * height * 0.5,
+                vx: z1 * initialSpeed * 0.5,
+                vy: z2 * initialSpeed * 0.5,
+                r: 3,
+            });
+        }
+
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        gameLoop();
+    }
+
+    function simulationStep() {
+        const { width, height } = canvas;
+        const surfaceLevel = height * 0.5;
+        const containerWidth = width * config.area;
+
+        const escapeEnergy = config.bond;
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+
+            p.x += p.vx * 0.1;
+            p.y += p.vy * 0.1;
+
+            // Evaporation
+            if (p.y < surfaceLevel && p.vy < 0) {
+                const kineticEnergy = 0.5 * (p.vx**2 + p.vy**2);
+                if (kineticEnergy > escapeEnergy) {
+                    particles.splice(i, 1); // Particle escapes
+                    continue;
+                }
+            }
+
+            // Wall collisions
+            if (p.x < p.r || p.x > containerWidth - p.r) p.vx *= -1;
+            if (p.y < surfaceLevel || p.y > height - p.r) p.vy *= -1;
+        }
+    }
+
+    function gameLoop() {
+        if (isRunning) {
+            simulationStep();
+        }
+        draw();
+        drawPlot();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        const containerWidth = width * config.area;
+
+        // Draw container
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, height/2, containerWidth, height/2);
+
+        // Draw particles
+        const avgSpeed = Math.sqrt(getCurrentTemp());
+        particles.forEach(p => {
+            const speed = Math.sqrt(p.vx**2 + p.vy**2);
+            const speedRatio = Math.min(2, speed / avgSpeed);
+            const hue = 240 - speedRatio * 120; // Blue (slow) to Red (fast)
+            ctx.fillStyle = `hsl(${hue}, 90%, 60%)`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+
+        // Draw thermometer
+        const tempRatio = getCurrentTemp() / config.temp;
+        const meterH = height * 0.4;
+        const meterY = height * 0.55;
+        const meterX = containerWidth + 20;
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.strokeRect(meterX, meterY, 20, meterH);
+        ctx.fillStyle = '#dc3545';
+        const fillH = meterH * tempRatio;
+        ctx.fillRect(meterX, meterY + meterH - fillH, 20, fillH);
+    }
+
+    function getCurrentTemp() {
+        if (particles.length === 0) return 0;
+        let totalKE = 0;
+        particles.forEach(p => { totalKE += p.vx**2 + p.vy**2; });
+        return totalKE / particles.length;
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        const speeds = particles.map(p => Math.sqrt(p.vx**2 + p.vy**2));
+        const maxSpeed = Math.sqrt(config.temp) * 3;
+        const numBins = 20;
+        const bins = new Array(numBins).fill(0);
+
+        speeds.forEach(s => {
+            const binIndex = Math.floor((s / maxSpeed) * numBins);
+            if (binIndex < numBins) bins[binIndex]++;
+        });
+
+        const maxCount = Math.max(...bins, 1);
+        const barWidth = width / numBins;
+
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        bins.forEach((count, i) => {
+            const barHeight = (count / maxCount) * height;
+            plotCtx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+        });
+
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.font = '12px Arial';
+        plotCtx.fillText('Speed ->', width - 40, height - 5);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            isRunning = !isRunning;
+            document.getElementById('play-pause-btn').textContent = isRunning ? 'Pause' : 'Run';
+        });
+        document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+
+        document.getElementById('temp-slider').addEventListener('change', e => {
+            config.temp = parseInt(e.target.value, 10);
+            document.getElementById('temp-value').textContent = config.temp;
+            resetSimulation();
+        });
+         document.getElementById('temp-slider').addEventListener('input', e => {
+            document.getElementById('temp-value').textContent = e.target.value;
+        });
+        document.getElementById('area-slider').addEventListener('input', e => {
+            config.area = parseFloat(e.target.value) / 100;
+            document.getElementById('area-value').textContent = e.target.value;
+            draw();
+        });
+        document.getElementById('bond-slider').addEventListener('input', e => {
+            config.bond = parseInt(e.target.value, 10);
+            document.getElementById('bond-value').textContent = config.bond;
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+
+        resetSimulation();
+    };
+    </script>
+</body>
+</html>

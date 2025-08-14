@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boltzmann's Factor and State Occupancy</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #ff6f00; /* Orange for energy/thermal */
+            --secondary-color: #37474f; /* Dark grey for levels */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #263238;
+            --text-color: #eceff1;
+            --primary-color: #ffab40;
+            --secondary-color: #b0bec5;
+            --border-color: #546e7a;
+            --canvas-bg: #37474f;
+            --code-bg: #455a64;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; gap: 10px; }
+        #ladderCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 60%; aspect-ratio: 2 / 3; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 40%; aspect-ratio: 1 / 3; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Boltzmann's Factor and State Occupancy</h1>
+            <p class="subtitle">How temperature tells particles which energy levels to occupy.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>In the quantum world, particles can only have specific, discrete amounts of energy, like being on the rungs of a ladder but not in between. The Boltzmann factor is a fundamental rule that describes the probability of finding a particle on a particular rung. It states that it's always most likely to find particles on the lowest rung (the "ground state"), and exponentially less likely to find them on higher rungs. This simulation visualizes this principle, showing how a collection of particles distributes itself among energy levels. As you increase the "temperature," you give the particles more thermal energy, allowing them to jump to higher rungs, but the lower levels always remain the most populated.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Energy Ladder</h2>
+
+            <h3>Step 1: Quantized Energy Levels</h3>
+            <p>In our everyday world, a car can have any speed and thus any kinetic energy. But in the quantum realm of atoms and molecules, energy is often "quantized." This means a particle can only exist in specific energy states. We can visualize this as a ladder: a particle can be on the first rung, or the second rung, but never hovering halfway between them. The lowest-energy rung is called the <strong>ground state</strong>.</p>
+
+            <h3>Step 2: The Path of Least Resistance</h3>
+            <p>Like a ball rolling downhill, physical systems tend to seek the lowest possible energy state. This means that, by default, all the particles in our system would "prefer" to be in the ground state. But there's another factor at play: temperature.</p>
+
+            <h3>Step 3: Temperature as Random Energy</h3>
+            <p>Temperature is a measure of the average thermal energy in a system. This energy causes particles to be randomly "kicked" and jostled. A sufficiently energetic kick can knock a particle from a lower energy level up to a higher one. So, there is a competition: the natural tendency to fall to the ground state versus the random thermal kicks trying to push particles up the ladder.</p>
+
+            <h3>Step 4: The Boltzmann Factor - The Rule of the Game</h3>
+            <p>The final distribution of particles is not random; it follows a precise statistical rule governed by the <strong>Boltzmann factor</strong>: <code>e<sup>-E/kT</sup></code>.
+            <ul>
+                <li><code>E</code> is the energy of the level.</li>
+                <li><code>k</code> is a fundamental constant (Boltzmann's constant).</li>
+                <li><code>T</code> is the temperature.</li>
+            </ul>
+            The key part is the negative sign in the exponent. This means that as the energy `E` of a level gets higher, the probability of finding a particle there gets <strong>exponentially smaller</strong>.
+            <ul>
+                <li><strong>At Low Temperature:</strong> `T` is small, so `-E/kT` is a large negative number. The exponential factor is tiny for any `E` greater than zero. Result: Almost all particles are found in the ground state.</li>
+                <li><strong>At High Temperature:</strong> `T` is large. It's much easier for thermal energy to overcome the energy gap `E`. More particles are kicked up to higher levels. However, the exponential rule still applies, so there will always be fewer particles on level 2 than on level 1, and fewer on level 1 than on level 0.</li>
+            </ul>
+            </p>
+
+            <h3>Analogy: People in a Skyscraper</h3>
+            <p>Imagine a skyscraper with many floors (the energy levels) and a large group of people inside (the particles).
+            <ul>
+                <li><strong>Energy:</strong> It takes energy (effort) to climb the stairs to a higher floor. People are naturally lazy and would prefer to stay on the ground floor (the ground state).</li>
+                <li><strong>Temperature:</strong> This is like a "motivation fund" that randomly gives people bursts of energy.</li>
+            </ul>
+            At <strong>low temperature</strong> (low motivation), very few people bother to climb any stairs. You'll find almost everyone on the ground floor.
+            <br><br>
+            At <strong>high temperature</strong> (high motivation), many people will have the energy to climb to the 1st, 2nd, or 3rd floors. But climbing to the 50th floor still takes a huge amount of effort, so you'd expect to find very few people up there. The Boltzmann factor is the rule that predicts exactly how the crowd of people will thin out as you go up the skyscraper.
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="ladderCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (kT): <span id="temp-value">1.0</span></label>
+                    <input type="range" id="temp-slider" min="0.1" max="10" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label for="gap-slider">Energy Gap (ΔE): <span id="gap-value">1.0</span></label>
+                    <input type="range" id="gap-slider" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label for="particles-slider">Number of Particles: <span id="particles-value">200</span></label>
+                    <input type="range" id="particles-slider" min="50" max="500" step="10" value="200">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — The Boltzmann Distribution (Click to expand)</button>
+        <div class="content">
+            <h3>The Boltzmann Factor</h3>
+            <p>The heart of the simulation is the Boltzmann factor, `w_i`, for each energy level `i` with energy `E_i`:</p>
+            <p><code>w_i = exp(-E_i / kT)</code></p>
+            <p>Here, `k` is Boltzmann's constant and `T` is the absolute temperature. This factor gives the *relative* probability of a state being occupied. To get the absolute probability, we need to normalize it.</p>
+            <h3>The Partition Function (Z)</h3>
+            <p>The normalization constant is called the partition function, `Z`. It is the sum of the Boltzmann factors over all possible states.</p>
+            <p><code>Z = Σ_i exp(-E_i / kT)</code></p>
+            <p>The partition function is a cornerstone of statistical mechanics because it contains all the thermodynamic information about the system. For our simple ladder where `E_i = i * ΔE`, this is a geometric series.</p>
+            <h3>The Probability Distribution</h3>
+            <p>The absolute probability, `P(E_i)`, of finding a particle in state `i` is the Boltzmann factor for that state divided by the partition function:</p>
+            <p><code>P(E_i) = exp(-E_i / kT) / Z</code></p>
+            <p>The simulation calculates this probability for each energy level and then distributes the total number of particles, `N`, according to these probabilities: `N_i = N * P(E_i)`.
+            <br><br>
+            <strong>Example:</strong> Consider the ratio of the population of the first excited state (`E₁=ΔE`) to the ground state (`E₀=0`).
+            <br>
+            <code>N₁ / N₀ = P(E₁) / P(E₀) = exp(-ΔE / kT) / exp(0 / kT) = exp(-ΔE / kT)</code>
+            <br>
+            If the thermal energy `kT` is equal to the energy gap `ΔE`, then `N₁ / N₀ = exp(-1) ≈ 0.37`. This means you would expect to find about 37% as many particles on the first rung as you find on the ground floor.
+            </p>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>Deriving Thermodynamics from Z</h3>
+            <p>The partition function `Z` is incredibly powerful. Once you have calculated `Z` for a system as a function of temperature and other variables (like volume), you can derive all of its macroscopic thermodynamic properties:
+            <ul>
+                <li><strong>Average Energy ⟨E⟩:</strong> <code>⟨E⟩ = kT² * (∂(ln Z) / ∂T)</code></li>
+                <li><strong>Heat Capacity C_V:</strong> <code>C_V = ∂⟨E⟩ / ∂T</code></li>
+                <li><strong>Entropy S:</strong> <code>S = k * ln(Z) + ⟨E⟩ / T</code></li>
+                <li><strong>Free Energy F:</strong> <code>F = -kT * ln(Z)</code></li>
+            </ul>
+            This provides a powerful bridge from the microscopic quantum details of a system (its energy levels) to the macroscopic, measurable properties we observe in the lab.
+            </p>
+            <h3>Different Kinds of Statistics</h3>
+            <p>This simulation assumes the particles are "distinguishable," following Maxwell-Boltzmann statistics. In reality, fundamental particles are indistinguishable.
+            <ul>
+                <li><strong>Fermions</strong> (e.g., electrons) obey the Pauli Exclusion Principle and follow Fermi-Dirac statistics. Only one fermion can occupy a given quantum state.</li>
+                <li><strong>Bosons</strong> (e.g., photons) follow Bose-Einstein statistics. Multiple bosons can and "prefer" to occupy the same quantum state, leading to phenomena like Bose-Einstein condensates and lasers.</li>
+            </ul>
+            While the statistics are different, the Boltzmann factor `exp(-E/kT)` remains a central component in all of them, governing the energetic likelihood of occupying a state.
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let ladderCanvas, ladderCtx, plotCanvas, plotCtx;
+    let animationFrameId;
+
+    let config = {
+        T: 1.0,  // Temperature in units of k
+        dE: 1.0, // Energy gap
+        N: 200,  // Number of particles
+    };
+
+    const numLevels = 10;
+    let levelPopulations = new Array(numLevels).fill(0);
+    let particles = [];
+
+    function setup() {
+        ladderCanvas = document.getElementById('ladderCanvas');
+        ladderCtx = ladderCanvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+        createParticles();
+        recalculateDistribution();
+    }
+
+    function createParticles() {
+        particles = [];
+        for (let i = 0; i < config.N; i++) {
+            particles.push({
+                x: Math.random(), // initial x position
+                y: 1.0, // initial y position (normalized)
+                targetY: 1.0,
+                level: 0,
+            });
+        }
+    }
+
+    function recalculateDistribution() {
+        const weights = [];
+        let Z = 0; // Partition function
+        for (let i = 0; i < numLevels; i++) {
+            const energy = i * config.dE;
+            const weight = Math.exp(-energy / config.T);
+            weights.push(weight);
+            Z += weight;
+        }
+
+        const probabilities = weights.map(w => w / Z);
+
+        let assignedParticles = 0;
+        for (let i = 0; i < numLevels - 1; i++) {
+            const count = Math.round(config.N * probabilities[i]);
+            levelPopulations[i] = count;
+            assignedParticles += count;
+        }
+        levelPopulations[numLevels-1] = Math.max(0, config.N - assignedParticles);
+
+        // Assign new target levels to particles
+        let particleIndex = 0;
+        for (let i = 0; i < numLevels; i++) {
+            for (let j = 0; j < levelPopulations[i]; j++) {
+                if (particles[particleIndex]) {
+                    particles[particleIndex].level = i;
+                    particles[particleIndex].targetY = 1.0 - (i + 0.5) / numLevels;
+                }
+                particleIndex++;
+            }
+        }
+
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        gameLoop();
+    }
+
+    function gameLoop() {
+        let allInPlace = true;
+        // Animate particles moving to their new levels
+        particles.forEach(p => {
+            const dy = p.targetY - p.y;
+            if (Math.abs(dy) > 0.001) {
+                p.y += dy * 0.1; // Easing
+                allInPlace = false;
+            } else {
+                p.y = p.targetY;
+            }
+        });
+
+        draw();
+        drawPlot();
+
+        if (!allInPlace) {
+            animationFrameId = requestAnimationFrame(gameLoop);
+        } else {
+            animationFrameId = null;
+        }
+    }
+
+    function draw() {
+        if (!ladderCtx) return;
+        const { width, height } = ladderCanvas;
+        ladderCtx.clearRect(0, 0, width, height);
+
+        // Draw energy levels
+        ladderCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ladderCtx.lineWidth = 2;
+        for (let i = 0; i < numLevels; i++) {
+            const y = height * (1.0 - (i + 0.5) / numLevels);
+            ladderCtx.beginPath();
+            ladderCtx.moveTo(0, y);
+            ladderCtx.lineTo(width, y);
+            ladderCtx.stroke();
+        }
+
+        // Draw particles
+        ladderCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        particles.forEach(p => {
+            const xPos = p.x * width;
+            const yPos = p.y * height;
+            ladderCtx.beginPath();
+            ladderCtx.arc(xPos, yPos, 4, 0, 2 * Math.PI);
+            ladderCtx.fill();
+        });
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        const maxPop = Math.max(...levelPopulations, 1);
+        const barWidth = width / numLevels;
+
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        levelPopulations.forEach((pop, i) => {
+            const barHeight = (pop / maxPop) * height;
+            plotCtx.fillRect((numLevels - 1 - i) * barWidth + 2, height - barHeight, barWidth - 4, barHeight);
+        });
+
+        // Draw axes labels
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.font = '12px Arial';
+        plotCtx.textAlign = 'center';
+        plotCtx.fillText('Population', width / 2, 15);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('temp-slider').addEventListener('input', e => {
+            config.T = parseFloat(e.target.value);
+            document.getElementById('temp-value').textContent = config.T.toFixed(1);
+            recalculateDistribution();
+        });
+        document.getElementById('gap-slider').addEventListener('input', e => {
+            config.dE = parseFloat(e.target.value);
+            document.getElementById('gap-value').textContent = config.dE.toFixed(1);
+            recalculateDistribution();
+        });
+        document.getElementById('particles-slider').addEventListener('input', e => {
+            config.N = parseInt(e.target.value, 10);
+            document.getElementById('particles-value').textContent = config.N;
+            createParticles();
+            recalculateDistribution();
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+        drawPlot();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        setup();
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+    };
+    </script>
+</body>
+</html>

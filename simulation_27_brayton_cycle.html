@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Brayton Cycle (Jet Engine)</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #495057; /* Grey for engine parts */
+            --cold-color: #007bff; /* Blue for cold air */
+            --hot-color: #dc3545; /* Red for hot gas */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --cold-color: #58a6ff;
+            --hot-color: #ff7b72;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--hot-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 2; min-width: 300px; }
+        .canvas-container { flex: 3; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #mainCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 16 / 9; }
+        #pvCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 250px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Brayton Cycle (Jet Engine)</h1>
+            <p class="subtitle">The ideal thermodynamic cycle for a gas turbine engine.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>A jet engine is a marvel of engineering that takes in cool air, burns fuel to make it incredibly hot, and uses the resulting high-pressure gas to generate immense thrust. The Brayton Cycle is the idealized physics model that describes this process. It consists of four key steps: compressing the air, adding heat at constant pressure, expanding the hot gas through a turbine, and finally exhausting the gas. This simulation visualizes these four steps, both in a schematic of an engine and on a Pressure-Volume (P-V) diagram, showing how engineers can analyze and optimize the engine's performance.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Four-Stroke Gas Turbine</h2>
+            <p>The Brayton cycle breaks down the complex operation of a jet engine into four distinct thermodynamic processes.</p>
+
+            <h3>1. Isentropic Compression (The Compressor)</h3>
+            <p>Air from the atmosphere is drawn into the front of the engine. A series of fan blades, called the compressor, rapidly squeezes this air into a much smaller volume. This compression increases the air's pressure and temperature significantly. In the ideal cycle, this process is assumed to be "isentropic," meaning it happens so fast that there's no time for heat to be lost, and it's perfectly efficient (no friction).</p>
+
+            <h3>2. Isobaric Heat Addition (The Combustion Chamber)</h3>
+            <p>The hot, high-pressure air flows into the combustion chamber. Here, a steady stream of fuel is injected and ignited, continuously burning and adding a tremendous amount of heat energy to the air. This causes the air to expand dramatically, but because it's free to move out the back, the process occurs at a nearly constant pressure. This is "isobaric" heat addition.</p>
+
+            <h3>3. Isentropic Expansion (The Turbine)</h3>
+            <p>The now extremely hot, high-pressure gas rushes out of the combustion chamber and through another set of fan blades called the turbine. As the gas expands and pushes on the turbine blades, it does work, causing the turbine to spin at high speed. This expansion cools the gas and lowers its pressure. The primary job of the turbine is to power the compressor from Step 1, to which it is connected by a shaft. The remaining energy in the expanding gas provides the engine's thrust.</p>
+
+            <h3>4. Isobaric Heat Rejection (The Exhaust)</h3>
+            <p>In an open cycle like a jet engine, the hot gas is simply exhausted into the atmosphere. To analyze it as a closed cycle, we imagine this final step as the gas cooling down at constant pressure back to its initial state, rejecting its remaining heat into the surroundings. On the P-V diagram, this closes the loop.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+                <canvas id="pvCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="pr-slider">Pressure Ratio (r_p): <span id="pr-value">8.0</span></label>
+                    <input type="range" id="pr-slider" min="2" max="20" step="0.5" value="8.0">
+                </div>
+                <div class="control-group">
+                    <label for="t3-slider">Turbine Inlet Temp (T₃ K): <span id="t3-value">1200</span></label>
+                    <input type="range" id="t3-slider" min="800" max="2000" step="50" value="1200">
+                </div>
+                <div class="readout">
+                    <h4>Performance</h4>
+                    <p><strong>Thermal Efficiency (η):</strong> <span id="efficiency-value">--</span>%</p>
+                    <p><strong>Net Work Output (W_net):</strong> <span id="work-value">--</span> kJ/kg</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — Efficiency and the P-V Diagram (Click to expand)</button>
+        <div class="content">
+            <h3>The P-V Diagram</h3>
+            <p>The Pressure-Volume (P-V) diagram is a key tool for visualizing thermodynamic cycles.
+            <ul>
+                <li><strong>1 → 2 (Isentropic Compression):</strong> The volume decreases as the pressure increases. This is a steep upward curve.</li>
+                <li><strong>2 → 3 (Isobaric Heat Addition):</strong> The pressure remains constant while the heat from combustion causes the volume to expand. This is a horizontal line to the right.</li>
+                <li><strong>3 → 4 (Isentropic Expansion):</strong> The gas expands through the turbine, so its volume increases as its pressure drops. This is a steep downward curve.</li>
+                <li><strong>4 → 1 (Isobaric Heat Rejection):</strong> The cycle closes as the gas cools at constant pressure, its volume decreasing back to the start. This is a horizontal line to the left.</li>
+            </ul>
+            The net work done by the engine in one cycle is represented by the <strong>area enclosed by the curve</strong> on the P-V diagram.
+            </p>
+            <h3>Thermal Efficiency (η)</h3>
+            <p>The thermal efficiency of an ideal Brayton cycle depends only on the pressure ratio (`r_p = P₂/P₁`) and the properties of the gas, specifically its heat capacity ratio `γ` (gamma), which is about 1.4 for air.</p>
+            <p><code>η_th = 1 - (1 / r_p^((γ-1)/γ))</code></p>
+            <p><strong>Example:</strong> For our default pressure ratio `r_p = 8.0` and `γ = 1.4`:
+            <br>The exponent is `(1.4-1)/1.4 ≈ 0.2857`.
+            <br><code>η_th = 1 - (1 / 8.0^0.2857) = 1 - (1 / 1.81) ≈ 1 - 0.552 = 0.448</code>
+            <br>This means the ideal efficiency is <strong>44.8%</strong>. This shows that higher pressure ratios lead to higher ideal efficiencies.</p>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>Real vs. Ideal Cycles</h3>
+            <p>The ideal Brayton cycle provides an upper limit on performance. Real gas turbines differ in several key ways:
+                <ul>
+                    <li><strong>Component Inefficiencies:</strong> The compressor and turbine are not perfectly isentropic. Frictional effects and turbulence mean that the entropy increases during these stages, reducing the net work output. This is accounted for by "isentropic efficiencies," which are typically 80-90% for modern engines.</li>
+                    <li><strong>Pressure Drops:</strong> There are unavoidable pressure losses in the combustion chamber and exhaust due to fluid friction, meaning the heat addition and rejection are not perfectly isobaric.</li>
+                    <li><strong>Variable Specific Heats:</strong> The specific heat of air changes with temperature. For more accurate calculations, this variation must be taken into account, which is typically done using standardized air tables.</li>
+                </ul>
+            </p>
+            <h3>Cycle Modifications for Power Generation</h3>
+            <p>While jet engines use an open cycle, gas turbines for ground-based power generation often use modified closed cycles to improve efficiency:
+            <ul>
+                <li><strong>Regeneration:</strong> The hot exhaust gas from the turbine is used to pre-heat the air coming out of the compressor before it enters the combustion chamber. This reduces the amount of fuel needed.</li>
+                <li><strong>Intercooling and Reheating:</strong> Using multiple stages of compression with cooling in between (intercooling) reduces the work required for compression. Similarly, using multiple turbine stages with reheating in between increases the work output of the turbines. A combination of these can significantly boost the efficiency and power output of large power plants.</li>
+            </ul>
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let mainCanvas, mainCtx, pvCanvas, pvCtx;
+    let animationFrameId;
+
+    let config = { rp: 8.0, T3: 1200 };
+    let statePoints = [];
+    let particles = [];
+    const numParticles = 50;
+
+    const path = [ {x:100,y:200}, {x:300,y:200}, {x:500,y:200}, {x:700,y:200} ];
+
+    function resetSimulation() {
+        particles = [];
+        for (let i = 0; i < numParticles; i++) {
+            particles.push({
+                dist: (i / numParticles) * 1000,
+                offset: (Math.random() - 0.5) * 40
+            });
+        }
+        updateStatePoints();
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        gameLoop();
+    }
+
+    function updateStatePoints() {
+        const gamma = 1.4;
+        const R = 287; // J/kgK for air
+        const Cp = 1005; // J/kgK for air
+
+        // State 1: Inlet
+        const T1 = 300; // K
+        const P1 = 101; // kPa
+        const v1 = R * T1 / (P1 * 1000);
+
+        // State 2: Compressor Exit
+        const P2 = P1 * config.rp;
+        const T2 = T1 * Math.pow(config.rp, (gamma - 1) / gamma);
+        const v2 = R * T2 / (P2 * 1000);
+
+        // State 3: Turbine Inlet
+        const T3 = config.T3;
+        const P3 = P2;
+        const v3 = R * T3 / (P3 * 1000);
+
+        // State 4: Turbine Exit
+        const P4 = P1;
+        const T4 = T3 / Math.pow(config.rp, (gamma - 1) / gamma);
+        const v4 = R * T4 / (P4 * 1000);
+
+        statePoints = [ {p:P1, v:v1}, {p:P2, v:v2}, {p:P3, v:v3}, {p:P4, v:v4} ];
+
+        // Update readouts
+        const W_comp = Cp * (T2 - T1);
+        const W_turb = Cp * (T3 - T4);
+        const W_net = (W_turb - W_comp) / 1000; // in kJ/kg
+        const Qin = Cp * (T3 - T2);
+        const efficiency = (W_net * 1000) / Qin * 100;
+
+        document.getElementById('efficiency-value').textContent = `${efficiency.toFixed(1)}%`;
+        document.getElementById('work-value').textContent = `${W_net.toFixed(1)} kJ/kg`;
+    }
+
+    function simulationStep() {
+        particles.forEach(p => {
+            p.dist = (p.dist + 2) % 1000;
+        });
+    }
+
+    function gameLoop() {
+        simulationStep();
+        draw();
+        drawPVDiagram();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!mainCtx) return;
+        const { width, height } = mainCanvas;
+        mainCtx.clearRect(0, 0, width, height);
+
+        // Draw engine casing
+        mainCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        mainCtx.beginPath();
+        mainCtx.moveTo(0, 100);
+        mainCtx.lineTo(200, 120);
+        mainCtx.lineTo(600, 120);
+        mainCtx.lineTo(800, 100);
+        mainCtx.lineTo(800, 300);
+        mainCtx.lineTo(600, 280);
+        mainCtx.lineTo(200, 280);
+        mainCtx.lineTo(0, 300);
+        mainCtx.closePath();
+        mainCtx.fill();
+
+        // Draw labels
+        mainCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        mainCtx.font = '16px Arial';
+        mainCtx.textAlign = 'center';
+        mainCtx.fillText("Compressor", 200, 80);
+        mainCtx.fillText("Combustor", 400, 80);
+        mainCtx.fillText("Turbine", 600, 80);
+
+        // Draw particles
+        particles.forEach(p => {
+            const pathProgress = p.dist / 1000;
+            const x = pathProgress * width;
+            const y = height/2 + p.offset * (1 - 0.5 * pathProgress); // Funnel effect
+
+            let color, radius;
+            if (pathProgress < 0.33) { // Compressor
+                color = getComputedStyle(document.documentElement).getPropertyValue('--cold-color');
+                radius = 2 + 3 * pathProgress;
+            } else if (pathProgress < 0.66) { // Combustor
+                color = getComputedStyle(document.documentElement).getPropertyValue('--hot-color');
+                radius = 5;
+            } else { // Turbine
+                color = `rgba(220, 53, 69, ${1 - (pathProgress - 0.66)*2})`;
+                radius = 5 - 3 * (pathProgress - 0.66);
+            }
+
+            mainCtx.fillStyle = color;
+            mainCtx.beginPath();
+            mainCtx.arc(x, y, radius, 0, 2 * Math.PI);
+            mainCtx.fill();
+        });
+    }
+
+    function drawPVDiagram() {
+        if (!pvCtx || statePoints.length < 4) return;
+        const { width, height } = pvCanvas;
+        pvCtx.clearRect(0, 0, width, height);
+
+        const v_min = 0, v_max = statePoints[0].v * 1.1;
+        const p_min = 0, p_max = statePoints[1].p * 1.1;
+
+        const to_x = v => (v - v_min) / (v_max - v_min) * (width - 60) + 50;
+        const to_y = p => height - ((p - p_min) / (p_max - p_min) * (height - 40) + 30);
+
+        // Draw cycle path
+        // Adiabatic curves P*v^gamma = const
+        const gamma = 1.4;
+        const c1 = statePoints[0].p * Math.pow(statePoints[0].v, gamma);
+        const c2 = statePoints[2].p * Math.pow(statePoints[2].v, gamma);
+
+        pvCtx.beginPath();
+        // 1 -> 2
+        for(let v = statePoints[0].v; v > statePoints[1].v; v -= 0.01) {
+            pvCtx.lineTo(to_x(v), to_y(c1 / Math.pow(v, gamma)));
+        }
+        pvCtx.lineTo(to_x(statePoints[1].v), to_y(statePoints[1].p));
+        // 2 -> 3
+        pvCtx.lineTo(to_x(statePoints[2].v), to_y(statePoints[2].p));
+        // 3 -> 4
+        for(let v = statePoints[2].v; v < statePoints[3].v; v += 0.01) {
+            pvCtx.lineTo(to_x(v), to_y(c2 / Math.pow(v, gamma)));
+        }
+        pvCtx.lineTo(to_x(statePoints[3].v), to_y(statePoints[3].p));
+        // 4 -> 1
+        pvCtx.closePath();
+
+        pvCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--hot-color') + '40';
+        pvCtx.fill();
+        pvCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--hot-color');
+        pvCtx.lineWidth = 2;
+        pvCtx.stroke();
+
+        // Draw state points
+        statePoints.forEach((pt, i) => {
+            pvCtx.fillStyle = 'white';
+            pvCtx.strokeStyle = 'black';
+            pvCtx.beginPath();
+            pvCtx.arc(to_x(pt.v), to_y(pt.p), 5, 0, 2 * Math.PI);
+            pvCtx.fill();
+            pvCtx.stroke();
+            pvCtx.fillStyle = 'black';
+            pvCtx.fillText(i+1, to_x(pt.v)-3, to_y(pt.p)+4);
+        });
+
+        // Draw axes
+        pvCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        pvCtx.lineWidth = 1;
+        pvCtx.beginPath();
+        pvCtx.moveTo(to_x(0), to_y(p_max*1.1));
+        pvCtx.lineTo(to_x(0), to_y(0));
+        pvCtx.lineTo(to_x(v_max*1.1), to_y(0));
+        pvCtx.stroke();
+        pvCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        pvCtx.fillText('Volume (v)', width-30, height-5);
+        pvCtx.fillText('Pressure (P)', 5, 15);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('pr-slider').addEventListener('input', e => {
+            config.rp = parseFloat(e.target.value);
+            document.getElementById('pr-value').textContent = config.rp.toFixed(1);
+            updateStatePoints();
+        });
+        document.getElementById('t3-slider').addEventListener('input', e => {
+            config.T3 = parseInt(e.target.value, 10);
+            document.getElementById('t3-value').textContent = config.T3;
+            updateStatePoints();
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        mainCanvas = document.getElementById('mainCanvas');
+        mainCtx = mainCanvas.getContext('2d');
+        pvCanvas = document.getElementById('pvCanvas');
+        pvCtx = pvCanvas.getContext('2d');
+
+        setupControls();
+
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+
+        resetSimulation();
+    };
+    </script>
+</body>
+</html>
