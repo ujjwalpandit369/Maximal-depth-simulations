@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaos Theory: Phase Space of the Lorenz Attractor</title>
+    <style>
+        /* General Body and Typography */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --text-color: #212529;
+            --bg-color: #f8f9fa;
+            --section-bg: #ffffff;
+            --border-color: #dee2e6;
+            --subtle-bg: #e9ecef;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* High Contrast Theme */
+        body.high-contrast {
+            --primary-color: #00ffff;
+            --primary-hover: #00cccc;
+            --text-color: #ffffff;
+            --bg-color: #000000;
+            --section-bg: #111111;
+            --border-color: #555555;
+            --subtle-bg: #333333;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        body.high-contrast .subtitle {
+            color: #bbbbbb;
+        }
+        #metadata-bar {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        body.high-contrast #metadata-bar {
+            color: #bbbbbb;
+        }
+        #metadata-bar span {
+            margin: 0 10px;
+        }
+
+        /* Main Layout */
+        .layout-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .content-column {
+            flex: 1;
+            min-width: 300px;
+        }
+        .sim-column {
+            flex: 1.5;
+            min-width: 450px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .layout-container {
+                flex-direction: column;
+            }
+            .sim-column {
+                position: static;
+                order: -1;
+            }
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--section-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Controls Styling */
+        #controls {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group .label-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .control-group label {
+            font-weight: bold;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .control-group output {
+            font-family: monospace;
+            background: var(--subtle-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        #controls .button-group {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        button, .button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border: 1px solid var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s, color 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        body.high-contrast button, body.high-contrast .button {
+            color: black;
+        }
+        button:hover, .button:hover, button:focus, .button:focus {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            outline: 2px solid var(--primary-hover);
+            outline-offset: 2px;
+        }
+        button:active, .button:active {
+            transform: scale(0.98);
+        }
+        button.active {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        body.high-contrast button.active {
+            color: white;
+        }
+
+        /* Canvas */
+        #simulation-canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--border-color);
+            background-color: var(--section-bg);
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        th {
+            background-color: var(--subtle-bg);
+        }
+        code {
+            font-family: "SF Mono", "Fira Code", "Source Code Pro", monospace;
+            background-color: var(--subtle-bg);
+            padding: .2em .4em;
+            border-radius: 3px;
+            font-size: 85%;
+        }
+
+        /* Suggestion Box */
+        #suggestion-box {
+            background-color: #eef7ff;
+            border: 1px solid var(--primary-color);
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        body.high-contrast #suggestion-box {
+            background-color: #1a1a1a;
+        }
+        #suggestion-box p {
+            margin: 0 0 0.5rem 0;
+        }
+        #suggestion-box .button-group button {
+            background-color: var(--section-bg);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        #suggestion-box .button-group button.selected {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        body.high-contrast #suggestion-box .button-group button.selected {
+             color: black;
+        }
+
+
+        /* Footer & Dev Console */
+        footer {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        #dev-console {
+            margin-top: 1rem;
+            background: var(--subtle-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-align: left;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #dev-console-header {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            margin: 0;
+            background: var(--subtle-bg);
+            border-radius: 8px 8px 0 0;
+        }
+        #dev-console-content {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem 1rem;
+            display: none; /* Hidden by default */
+        }
+        #dev-console-content.open {
+            display: block;
+        }
+        #dev-log {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        #dev-log li {
+            padding: 2px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        body.high-contrast #dev-log li {
+            border-bottom-color: #444;
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none;
+        }
+        .equation {
+            background-color: var(--subtle-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-family: "SF Mono", "Fira Code", "Source Code Pro", monospace;
+            text-align: center;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <p>Tune this simulation to your liking:</p>
+        <div class="button-group">
+            <button data-pref="audience" data-value="beginner">Audience: Beginner</button>
+            <button data-pref="audience" data-value="intermediate">Audience: Intermediate</button>
+            <button data-pref="audience" data-value="advanced">Audience: Advanced</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>The Lorenz Attractor</h1>
+        <p class="subtitle">An interactive visualization of a chaotic system in phase space.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span>
+            <span>Recommended Device: Desktop</span>
+            <span id="html-size"></span>
+            <button id="theme-toggle-btn" aria-label="Toggle high contrast theme">Toggle Contrast</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <div class="layout-container">
+            <div class="content-column">
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>This simulation visualizes the <strong>Lorenz Attractor</strong>, a landmark system in chaos theory. The looping, butterfly-shaped path represents the evolution of a simplified model of atmospheric convection. Although the rules governing the path are simple and deterministic, the long-term behavior is impossible to predict, a key feature of chaos. Use the sliders to change the system's parameters and press "Launch Twin" to see the famous "butterfly effect"—where a tiny change in the starting point leads to a vastly different future—in action.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide</h2>
+                    <h3>1. What is a "System"?</h3>
+                    <p>In physics, a "system" is just a set of things that interact with each other according to certain rules. The weather is a system. The solar system is another. The Lorenz system is a very, very simple mathematical model of the weather—specifically, air rolling around in a box that's heated from the bottom. It was created by Edward Lorenz in 1963 when he was trying to understand why weather forecasting is so difficult.</p>
+
+                    <h3>2. A Map of All Possible Weathers: Phase Space</h3>
+                    <p>To understand a system, we want to know its <strong>state</strong> at any given time. For this simplified weather, the state is described by three numbers:
+                    <ul>
+                        <li><code>x</code>: How fast the air is rotating.</li>
+                        <li><code>y</code>: The temperature difference between the rising and falling air.</li>
+                        <li><code>z</code>: The distortion of the vertical temperature profile from a straight line.</li>
+                    </ul>
+                    The 3D space you see in the simulation, with axes for x, y, and z, is called <strong>phase space</strong>. A single point in this space tells you the <em>complete state</em> of the weather system at one instant. As the system evolves, that point moves, tracing a path called a trajectory. This simulation shows that trajectory.</p>
+
+                    <h3>3. The Butterfly Effect in Action</h3>
+                    <p>The most famous discovery from the Lorenz system is <strong>sensitive dependence on initial conditions</strong>, often called the "butterfly effect." It means that even an infinitesimally small change in the starting state will lead to a completely different outcome in the long run.
+                    <br><br>
+                    This is the core reason why long-term weather forecasting is impossible. Even if our measurements of today's weather are 99.999% accurate, that tiny 0.001% of uncertainty is enough to make a forecast for two weeks from now completely wrong.
+                    <br><br>
+                    <strong>Try it:</strong> Click the "Launch Twin" button. This starts a second trajectory (in blue) at a position that is almost identical to the first one (it's just 0.00001 units away on the x-axis). Watch how they stick together at first, but after a few loops around the "wings," they end up on completely different paths.</p>
+
+                    <h3>4. The Strange Attractor</h3>
+                    <p>If the system is chaotic, why doesn't the path just fly off to infinity? The trajectory is drawn towards a specific region, which is called an <strong>attractor</strong>. Because the path never repeats itself and has a complex, fractal structure, it is known as a <strong>strange attractor</strong>. The particle is always confined to this butterfly-shaped region, but its exact path within it is never the same twice. It is a beautiful dance between order (the shape of the attractor) and chaos (the unpredictable path within it).</p>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory</h2>
+                    <h4>The Lorenz Equations</h4>
+                    <p>The entire simulation is governed by a system of three coupled ordinary differential equations. These equations describe how the state `(x, y, z)` changes over an infinitesimal time step `dt`.</p>
+                    <p class="equation">
+                        dx/dt = σ(y - x)<br>
+                        dy/dt = x(ρ - z) - y<br>
+                        dz/dt = xy - βz
+                    </p>
+                    <ul>
+                        <li><code>dx/dt</code> is the rate of change of x.</li>
+                        <li><code>σ, ρ, β</code> are the parameters you control with the sliders.</li>
+                    </ul>
+                    <h4>Numerical Integration (Euler Method)</h4>
+                    <p>A computer cannot solve these equations perfectly. Instead, it takes tiny steps in time (`dt`) and calculates the new position based on the old one. The simplest way to do this is the Euler method, which this simulation uses.</p>
+                    <p class="equation">
+                        x<sub>new</sub> = x<sub>old</sub> + dt * (dx/dt)<br>
+                        y<sub>new</sub> = y<sub>old</sub> + dt * (dy/dt)<br>
+                        z<sub>new</sub> = z<sub>old</sub> + dt * (dz/dt)
+                    </p>
+                    <p>The simulation calculates the rates of change (the right-hand side of the Lorenz equations) and then uses them to take a small step forward. By repeating this process thousands of times per second, it traces out the trajectory.</p>
+                </section>
+            </div>
+
+            <div class="sim-column">
+                <section id="interactive-simulation">
+                    <h2>Interactive Simulation</h2>
+                    <canvas id="simulation-canvas" width="600" height="500"></canvas>
+                    <div id="controls">
+                        <div class="button-group">
+                            <button id="play-pause-btn" class="active" title="Play or Pause the simulation (Spacebar)">Pause</button>
+                            <button id="step-btn" title="Advance the simulation by a single step (Right Arrow)">Step</button>
+                            <button id="reset-btn" title="Reset the trajectory to its starting point (R)">Reset</button>
+                            <button id="launch-twin-btn" title="Launch a second trajectory with a tiny difference">Launch Twin</button>
+                            <button id="perf-mode-btn" title="Toggle Performance Mode (reduces tail length)">Perf. Mode</button>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="label-container">
+                                <label for="sigma-slider">σ (sigma)</label>
+                                <output id="sigma-value">10.0</output>
+                            </div>
+                            <input type="range" id="sigma-slider" min="0" max="50" step="0.1" value="10">
+                        </div>
+                        <div class="control-group">
+                            <div class="label-container">
+                                <label for="rho-slider">ρ (rho)</label>
+                                <output id="rho-value">28.0</output>
+                            </div>
+                            <input type="range" id="rho-slider" min="0" max="100" step="0.1" value="28">
+                        </div>
+                        <div class="control-group">
+                            <div class="label-container">
+                                <label for="beta-slider">β (beta)</label>
+                                <output id="beta-value">2.67</output>
+                            </div>
+                            <input type="range" id="beta-slider" min="0" max="10" step="0.01" value="2.6667">
+                        </div>
+
+                        <div class="control-group" style="grid-column: 1 / -1;">
+                            <div class="label-container">
+                                <label for="speed-slider">Speed</label>
+                                <output id="speed-value">5</output>
+                            </div>
+                            <input type="range" id="speed-slider" min="1" max="20" step="1" value="5">
+                        </div>
+
+                        <div class="button-group" style="grid-column: 1 / -1;">
+                            <button id="export-png-btn" title="Download the current view as a PNG image (E)">Export PNG</button>
+                            <button id="export-json-btn" title="Download parameters as a JSON file">Export JSON</button>
+                            <button id="share-btn" title="Copy a shareable link to the clipboard">Share Preset</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>The Lorenz system is defined by three parameters that you can control with the sliders.</p>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Symbol</th><th>Physical Meaning</th><th>Classic Value</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Sigma</strong></td>
+                        <td>σ</td>
+                        <td>Relates to the viscosity of the fluid.</td>
+                        <td>10</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rho</strong></td>
+                        <td>ρ</td>
+                        <td>Relates to the temperature difference between the top and bottom of the box. This is the main control for chaos.</td>
+                        <td>28</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Beta</strong></td>
+                        <td>β</td>
+                        <td>Relates to the geometry of the box.</td>
+                        <td>8/3 (≈ 2.67)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Other controls let you manage the simulation itself.</p>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group">
+                <h4>1. Classic Chaos</h4>
+                <p>The standard parameters (σ=10, ρ=28, β=8/3) that produce the famous butterfly-shaped strange attractor.</p>
+                <p><strong>Observe:</strong> The trajectory loops around two central points (called fixed points) without ever settling down or repeating its path. This is the classic chaotic regime.</p>
+                <button onclick="window.setPreset(10, 28, 8/3)">Set to Classic Chaos</button>
+            </div>
+            <div class="example-group">
+                <h4>2. A Stable Point</h4>
+                <p>By lowering the ρ (rho) parameter, you can make the system non-chaotic. Here, ρ is set to 15.</p>
+                <p><strong>Observe:</strong> Instead of looping forever, the trajectory spirals into one of two stable points. The "attractor" is no longer strange; it's just a single point. The weather would be stable and predictable in this state.</p>
+                <button onclick="window.setPreset(10, 15, 8/3)">Set to Stable Point</button>
+            </div>
+            <div class="example-group">
+                <h4>3. A Periodic Orbit</h4>
+                <p>At very specific parameter values, the system can become periodic, meaning its path repeats exactly. Here ρ is set to 100.</p>
+                <p><strong>Observe:</strong> The path settles into a stable, repeating loop. This is a "limit cycle" attractor. It's predictable, but not static.</p>
+                <button onclick="window.setPreset(10, 100, 8/3)">Set to Periodic Orbit</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>The Route to Chaos</h4>
+            <p>The parameter <strong>ρ (rho)</strong> is the key to understanding how this system can switch from simple to chaotic behavior. It represents the "driving force" of the system (like the heat from the stove under a pot of water).</p>
+            <ol>
+                <li>Click "Reset", then set the <strong>ρ</strong> slider to a low value, like <strong>10</strong>. Press "Play". You'll see the trajectory spiral in and stop at a single point. The system is stable.</li>
+                <li>Slowly increase <strong>ρ</strong> to around <strong>24</strong>. The system still spirals into one of two fixed points, but it takes longer to settle down.</li>
+                <li>Nudge <strong>ρ</strong> just past <strong>24.74</strong>. Suddenly, the behavior changes completely! The trajectory no longer settles down. It starts looping around both points, switching between them unpredictably. You have entered the chaotic regime.</li>
+                <li>Increase <strong>ρ</strong> further to <strong>28</strong> (the classic value). The attractor grows larger and the motion becomes more complex. This is the strange attractor in its most famous form.</li>
+            </ol>
+            <p>This sudden change from predictable to chaotic behavior is a hallmark of many complex systems.</p>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li>Set ρ to 28. Click "Launch Twin". How many loops does it take before the two paths are on opposite sides of the attractor?</li>
+                <li>Find the "edge" of chaos. What is the lowest value of ρ (to one decimal place) where the system seems to be chaotic? (Hint: It's near 24.7).</li>
+                <li>Set the parameters to the "Stable Point" preset. Click on the left side of the canvas to start a new trajectory. Which point does it spiral into? Now click on the right side. Can you find the dividing line?</li>
+                <li>Try a very high ρ value, like 200. Does the shape of the attractor change?</li>
+                <li>Set β (beta) to a very low value, like 0.1. What happens to the shape of the attractor? How does this affect the "wings" of the butterfly?</li>
+                <li>Set σ (sigma) to a high value like 40. How does this change the motion? Does it seem faster or more "stiff"?</li>
+                <li>Can you make the trajectory fly off to infinity? (Hint: No, it's always confined to the attractor).</li>
+                <li><strong>Start from the center:</strong> Reset the simulation, then click exactly in the middle of the canvas to start the trajectory at or near (0,0,0). What happens? Why? (Hint: The origin is a fixed point of the system).</li>
+            </ol>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>Fractal Dimension</h4>
+            <p>A key property of strange attractors is that they have a <strong>fractal dimension</strong>. While a simple point has dimension 0, a line has dimension 1, and a surface has dimension 2, the Lorenz attractor has a dimension of about <strong>2.06</strong>. This means it is more than a surface, but less than a solid volume. It is an infinitely detailed structure of nested surfaces, which is why the trajectory can loop forever without ever crossing itself.</p>
+            <h4>Connection to Turbulence</h4>
+            <p>The Lorenz system was one of the first simple mathematical systems to exhibit behavior reminiscent of fluid turbulence. The unpredictable, swirling, yet structured motion of the trajectory has parallels with the eddies and whorls in a turbulent river or plume of smoke. While it's too simple to be a real model of turbulence, it was a crucial first step in understanding that complex, turbulent-like behavior could arise from very simple, deterministic rules.</p>
+            <h4>Other Chaotic Systems</h4>
+            <p>The Lorenz system is just one of many systems that exhibit chaos. Others you might be interested in exploring include the Rössler attractor, the Chua circuit, or even the motion of a simple double pendulum.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. The Double Pendulum (Physical Analogy)</h4>
+            <p>A simple pendulum swings back and forth predictably. But if you attach a second pendulum to the bottom of the first one, the resulting motion is wildly chaotic. For some starting positions, it will swing simply, but for most, it will flip and spin in a way that is impossible to predict, even though its motion is governed by Newton's laws. The Lorenz attractor is a different system, but it shares this property of deterministic chaos.</p>
+            <ul>
+                <li><strong>Analogy:</strong> The double pendulum's unpredictable yet deterministic motion is a perfect physical example of chaos.</li>
+                <li><strong>Limitation:</strong> The double pendulum's phase space is 4-dimensional, not 3, and it doesn't have the same "attractor" structure.</li>
+            </ul>
+            <h4>2. A Pinball Machine (Mechanical Analogy)</h4>
+            <p>Imagine a pinball machine. The path of the ball is completely determined by the laws of physics. However, a tiny, millimeter-sized difference in where you launch the ball can result in it hitting a completely different set of bumpers and ending up with a wildly different score. The system is deterministic, but sensitive to initial conditions.</p>
+            <ul>
+                <li><strong>Analogy:</strong> Excellent for illustrating sensitivity to initial conditions.</li>
+                <li><strong>Limitation:</strong> The pinball's motion eventually stops. The Lorenz attractor, on the other hand, evolves forever without settling down.</li>
+            </ul>
+            <h4>3. A Turbulent River (Visualization Analogy)</h4>
+            <p>Place two tiny drops of ink right next to each other at the top of a fast-moving, turbulent river. For the first few feet, they will travel side-by-side. But soon, small eddies and currents will start to separate them. After a hundred feet, one drop might be near the left bank, and the other might be near the right bank. Their final destinations are unpredictable.</p>
+            <ul>
+                <li><strong>Analogy:</strong> This beautifully captures the exponential divergence of nearby trajectories, which is the essence of the "Launch Twin" experiment.</li>
+                <li><strong>Limitation:</strong> A real river is an incredibly complex system with many sources of randomness. The Lorenz system is much simpler and is purely deterministic.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Is the path truly random?</dt>
+                <dd>No. This is the most important concept in chaos theory. The system is <strong>100% deterministic</strong>. If you start from the exact same initial point, you will get the exact same path every single time. The "unpredictability" comes from the fact that if you change the starting point by even an infinitesimal amount, the resulting path will be completely different after a short time.</dd>
+                <dt>2. What do the two "wings" of the butterfly mean?</dt>
+                <dd>They represent two different semi-stable behaviors of the system. For the weather analogy, one wing might represent a clockwise rotation of the air, and the other a counter-clockwise rotation. The system unpredictably switches between these two modes of convection.</dd>
+                <dt>3. Why does the path never cross itself?</dt>
+                <dd>Because the system is deterministic. If the path were to cross itself, it would mean that two different trajectories led to the same point in phase space. From that point on, the path would have to be identical to the one it crossed, meaning the motion would become periodic. For a chaotic attractor, this never happens.</dd>
+                <dt>4. What happens if I set ρ (rho) to a very low number?</dt>
+                <dd>If ρ is less than 1, the origin (0,0,0) becomes a stable attractor. This corresponds to a state where the air in the box doesn't move at all and any temperature differences die out. The system is completely stable and predictable.</dd>
+                <dt>5. The simulation is running slow. What can I do?</dt>
+                <dd>Try reducing the "Speed" slider. This computes fewer steps per animation frame, which will ease the load on your computer. You can also try the "Performance Mode" toggle if one is available, which might reduce the number of points in the tail of the trajectory.</dd>
+                <dt>6. Why does the simulation start at (0.1, 0, 0) and not (0, 0, 0)?</dt>
+                <dd>The point (0, 0, 0) is a "fixed point" of the system. If you start there, the rates of change (dx/dt, dy/dt, dz/dt) are all zero, so the state never evolves. The trajectory would be stuck at the origin forever. We start it just slightly off the origin to kickstart the motion.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sim = {
+            canvas: null, ctx: null, width: 600, height: 500,
+            isRunning: true,
+            sigma: 10, rho: 28, beta: 8 / 3, dt: 0.01,
+            x: 0.1, y: 0, z: 0,
+            trajectory: [],
+            x_twin: null, y_twin: null, z_twin: null,
+            twin_trajectory: [],
+            rotationX: 0.3, rotationY: -0.5, zoom: 12,
+            isDragging: false, lastMouseX: 0, lastMouseY: 0,
+            stepsPerFrame: 5,
+            maxPoints: 3000,
+            perfMode: false,
+            lastFrameTime: 0,
+            fpsAvg: 60,
+        };
+
+        const elements = {};
+
+        function init() {
+            getDOMElements();
+            sim.canvas = elements.canvas;
+            sim.ctx = sim.canvas.getContext('2d');
+            addEventListeners();
+            loadStateFromURL();
+            updateUI();
+            reset();
+            populateMetadata();
+            runQualityChecks();
+            requestAnimationFrame(mainLoop);
+            log("Lorenz Attractor simulation initialized.");
+        }
+
+        function getDOMElements() {
+            const ids = [
+                'canvas', 'play-pause-btn', 'step-btn', 'reset-btn', 'launch-twin-btn', 'perf-mode-btn',
+                'sigma-slider', 'rho-slider', 'beta-slider', 'speed-slider',
+                'sigma-value', 'rho-value', 'beta-value', 'speed-value',
+                'export-png-btn', 'export-json-btn', 'share-btn',
+                'quality-check-panel', 'html-size', 'theme-toggle-btn',
+                'dev-console-header', 'dev-console-content', 'dev-log', 'performance-meter'
+            ];
+            ids.forEach(id => {
+                if (!id) return;
+                const camelCaseId = id.replace(/-./g, x => x[1].toUpperCase());
+                elements[camelCaseId] = document.getElementById(id);
+            });
+            elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+        }
+
+        function addEventListeners() {
+            // Canvas interaction
+            elements.canvas.addEventListener('mousedown', (e) => {
+                sim.isDragging = true;
+                sim.lastMouseX = e.clientX;
+                sim.lastMouseY = e.clientY;
+            });
+            elements.canvas.addEventListener('mousemove', (e) => {
+                if (!sim.isDragging) return;
+                const dx = e.clientX - sim.lastMouseX;
+                const dy = e.clientY - sim.lastMouseY;
+                sim.rotationY += dx * 0.01;
+                sim.rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, sim.rotationX + dy * 0.01));
+                sim.lastMouseX = e.clientX;
+                sim.lastMouseY = e.clientY;
+            });
+            elements.canvas.addEventListener('mouseup', () => sim.isDragging = false);
+            elements.canvas.addEventListener('mouseleave', () => sim.isDragging = false);
+            elements.canvas.addEventListener('click', (e) => {
+                if (!sim.isDragging) { // Avoid firing on drag end
+                    const rect = elements.canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const newX = (mouseX / sim.width - 0.5) * 50;
+                    reset({x: newX, y: 0, z: 20});
+                }
+            });
+
+            // Controls
+            elements.playPauseBtn.addEventListener('click', togglePlayPause);
+            elements.stepBtn.addEventListener('click', doStep);
+            elements.resetBtn.addEventListener('click', () => reset());
+            elements.launchTwinBtn.addEventListener('click', launchTwin);
+            elements.perfModeBtn.addEventListener('click', togglePerfMode);
+
+            elements.sigmaSlider.addEventListener('input', () => { sim.sigma = parseFloat(elements.sigmaSlider.value); updateUI(); reset(); });
+            elements.rhoSlider.addEventListener('input', () => { sim.rho = parseFloat(elements.rhoSlider.value); updateUI(); reset(); });
+            elements.betaSlider.addEventListener('input', () => { sim.beta = parseFloat(elements.betaSlider.value); updateUI(); reset(); });
+            elements.speedSlider.addEventListener('input', () => { sim.stepsPerFrame = parseInt(elements.speedSlider.value); updateUI(); });
+
+            elements.exportPngBtn.addEventListener('click', exportPNG);
+            elements.exportJsonBtn.addEventListener('click', exportJSON);
+            elements.shareBtn.addEventListener('click', shareState);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+                if (e.code === 'ArrowRight') { e.preventDefault(); doStep(); }
+                if (e.key.toLowerCase() === 'r') { e.preventDefault(); reset(); }
+                if (e.key.toLowerCase() === 'e') { e.preventDefault(); exportPNG(); }
+            });
+        }
+
+        function updateUI() {
+            elements.sigmaValue.textContent = sim.sigma.toFixed(1);
+            elements.rhoValue.textContent = sim.rho.toFixed(1);
+            elements.betaValue.textContent = sim.beta.toFixed(2);
+            elements.speedValue.textContent = sim.stepsPerFrame;
+            elements.sigmaSlider.value = sim.sigma;
+            elements.rhoSlider.value = sim.rho;
+            elements.betaSlider.value = sim.beta;
+            elements.speedSlider.value = sim.stepsPerFrame;
+            elements.playPauseBtn.textContent = sim.isRunning ? 'Pause' : 'Play';
+            elements.playPauseBtn.classList.toggle('active', sim.isRunning);
+        }
+
+        function togglePlayPause() {
+            sim.isRunning = !sim.isRunning;
+            updateUI();
+        }
+
+        function doStep() {
+            sim.isRunning = false;
+            step();
+            updateUI();
+        }
+
+        function reset(initial = {x: 0.1, y: 0, z: 0}) {
+            sim.x = initial.x;
+            sim.y = initial.y;
+            sim.z = initial.z;
+            sim.trajectory = [{x: sim.x, y: sim.y, z: sim.z}];
+            sim.twin_trajectory = [];
+            sim.x_twin = null;
+        }
+
+        function launchTwin() {
+            if (sim.x_twin !== null) { // If twin exists, remove it
+                sim.x_twin = null;
+                sim.twin_trajectory = [];
+            } else {
+                const epsilon = 1e-5;
+                sim.x_twin = sim.x + epsilon;
+                sim.y_twin = sim.y;
+                sim.z_twin = sim.z;
+                sim.twin_trajectory = [{x: sim.x_twin, y: sim.y_twin, z: sim.z_twin}];
+            }
+        }
+
+        function lorenz(x, y, z, sigma, rho, beta) {
+            return { dx: sigma * (y - x), dy: x * (rho - z) - y, dz: x * y - beta * z };
+        }
+
+        function step() {
+            const { dx, dy, dz } = lorenz(sim.x, sim.y, sim.z, sim.sigma, sim.rho, sim.beta);
+            sim.x += dx * sim.dt;
+            sim.y += dy * sim.dt;
+            sim.z += dz * sim.dt;
+            sim.trajectory.push({ x: sim.x, y: sim.y, z: sim.z });
+
+            if (sim.x_twin !== null) {
+                const { dx: dx_t, dy: dy_t, dz: dz_t } = lorenz(sim.x_twin, sim.y_twin, sim.z_twin, sim.sigma, sim.rho, sim.beta);
+                sim.x_twin += dx_t * sim.dt;
+                sim.y_twin += dy_t * sim.dt;
+                sim.z_twin += dz_t * sim.dt;
+                sim.twin_trajectory.push({ x: sim.x_twin, y: sim.y_twin, z: sim.z_twin });
+            }
+
+            if (sim.trajectory.length > sim.maxPoints) {
+                sim.trajectory.shift();
+                if(sim.twin_trajectory.length > 0) sim.twin_trajectory.shift();
+            }
+        }
+
+        function project(point3d) {
+            const rotY_x = Math.cos(sim.rotationY) * point3d.x - Math.sin(sim.rotationY) * point3d.z;
+            const rotY_z = Math.sin(sim.rotationY) * point3d.x + Math.cos(sim.rotationY) * point3d.z;
+            const rotX_y = Math.cos(sim.rotationX) * point3d.y - Math.sin(sim.rotationX) * rotY_z;
+            const rotX_z = Math.sin(sim.rotationX) * point3d.y + Math.cos(sim.rotationX) * rotY_z;
+            const scale = sim.zoom / (sim.zoom + rotX_z + 50);
+            return { x: sim.width / 2 + rotY_x * scale, y: sim.height / 2 - rotX_y * scale };
+        }
+
+        function drawTrajectory(path, color) {
+            if (path.length < 2) return;
+            sim.ctx.beginPath();
+            const p0 = project(path[0]);
+            sim.ctx.moveTo(p0.x, p0.y);
+            for (let i = 1; i < path.length; i++) {
+                const p = project(path[i]);
+                sim.ctx.lineTo(p.x, p.y);
+            }
+            sim.ctx.strokeStyle = color;
+            sim.ctx.stroke();
+        }
+
+        function draw() {
+            const isHighContrast = document.body.classList.contains('high-contrast');
+            const bgColor = isHighContrast ? '#000' : '#FFF';
+            const primaryColor = isHighContrast ? 'rgba(255, 0, 128, 0.8)' : 'rgba(200, 0, 100, 0.8)';
+            const twinColor = isHighContrast ? 'rgba(0, 255, 255, 0.8)' : 'rgba(0, 150, 200, 0.8)';
+
+            sim.ctx.fillStyle = bgColor;
+            sim.ctx.fillRect(0, 0, sim.width, sim.height);
+            sim.ctx.lineWidth = 1;
+
+            drawTrajectory(sim.trajectory, primaryColor);
+            if (sim.twin_trajectory.length > 0) {
+                drawTrajectory(sim.twin_trajectory, twinColor);
+            }
+        }
+
+        function mainLoop() {
+            if (sim.isRunning) {
+                for (let i = 0; i < sim.stepsPerFrame; i++) {
+                    step();
+                }
+            }
+            draw();
+            updatePerfMeter();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function togglePerfMode() {
+            sim.perfMode = !sim.perfMode;
+            sim.maxPoints = sim.perfMode ? 1000 : 3000;
+            elements.perfModeBtn.classList.toggle('active', sim.perfMode);
+            log(`Performance mode ${sim.perfMode ? 'enabled' : 'disabled'}. Trajectory length now ${sim.maxPoints}.`);
+        }
+
+        function exportPNG() {
+            const wasRunning = sim.isRunning;
+            sim.isRunning = false;
+            draw(); // Ensure final state is drawn
+            const url = sim.canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'lorenz_attractor.png';
+            link.href = url;
+            link.click();
+            sim.isRunning = wasRunning;
+        }
+
+        function exportJSON() {
+            const state = {
+                sigma: sim.sigma, rho: sim.rho, beta: sim.beta,
+                initialConditions: { x: sim.trajectory[0].x, y: sim.trajectory[0].y, z: sim.trajectory[0].z }
+            };
+            const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'lorenz_parameters.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function shareState() {
+            const state = { s: sim.sigma, r: sim.rho, b: sim.beta.toFixed(2) };
+            const encoded = btoa(JSON.stringify(state));
+            const url = `${window.location.origin}${window.location.pathname}#params=${encoded}`;
+            navigator.clipboard.writeText(url).then(() => {
+                const originalText = elements.shareBtn.textContent;
+                elements.shareBtn.textContent = 'Copied!';
+                setTimeout(() => { elements.shareBtn.textContent = originalText; }, 2000);
+            });
+        }
+
+        function loadStateFromURL() {
+            if (!window.location.hash.startsWith('#params=')) return;
+            try {
+                const encoded = window.location.hash.substring(8);
+                const state = JSON.parse(atob(encoded));
+                if (state.s) sim.sigma = parseFloat(state.s);
+                if (state.r) sim.rho = parseFloat(state.r);
+                if (state.b) sim.beta = parseFloat(state.b);
+                log("Loaded parameters from URL.");
+            } catch (e) {
+                logError("Failed to load state from URL: " + e.message);
+            }
+        }
+
+        window.setPreset = function(sigma, rho, beta) {
+            sim.sigma = sigma;
+            sim.rho = rho;
+            sim.beta = beta;
+            updateUI();
+            reset();
+        }
+
+        // --- Utility & Quality ---
+        function log(message) {
+            if (elements.devLog) {
+                const li = document.createElement('li');
+                li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                elements.devLog.prepend(li);
+            }
+        }
+        function logError(message) {
+            if (elements.devLog) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`;
+                elements.devLog.prepend(li);
+            }
+            console.error(message);
+        }
+
+        function populateMetadata() {
+            const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            const htmlSizeKB = (htmlSize / 1024).toFixed(1);
+            if (elements.htmlSize) {
+                elements.htmlSize.textContent = `Size: ${htmlSizeKB} KB`;
+            }
+
+            elements.suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pref = button.dataset.pref;
+                    const value = button.dataset.value;
+                    button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                    button.classList.add('selected');
+                    log(`User preference selected: ${pref}=${value}. (Note: This is a demo and does not alter the content).`);
+                });
+            });
+        }
+
+        function updatePerfMeter() {
+            const now = performance.now();
+            const delta = now - (sim.lastFrameTime || now);
+            sim.lastFrameTime = now;
+            const fps = 1000 / delta;
+            sim.fpsAvg = (sim.fpsAvg || fps) * 0.95 + fps * 0.05;
+            if (elements.performanceMeter) {
+                elements.performanceMeter.textContent = `FPS: ${sim.fpsAvg.toFixed(1)}`;
+            }
+        }
+
+        function runQualityChecks() {
+            let errors = [];
+            for (const key in elements) {
+                if (elements[key] === null) {
+                    errors.push(`Required element with ID '#${key.replace(/([A-Z])/g, "-$1").toLowerCase()}' not found.`);
+                }
+            }
+            if (errors.length > 0) {
+                elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                elements.qualityCheckPanel.style.display = 'block';
+            } else {
+                log("Quality checks passed.");
+            }
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
