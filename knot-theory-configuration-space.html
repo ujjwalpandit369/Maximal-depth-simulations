@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Space of Knots</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 1000px; margin: auto; }
+        h1, h2 { text-align: center; border-bottom: 1px solid #d9d9d9; padding-bottom: 0.5em; }
+        canvas { border: 1px solid #ccc; background-color: #fff; width: 100%; height: auto; aspect-ratio: 4 / 3; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        .controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; margin: 20px 0; }
+        button { cursor: pointer; padding: 10px 20px; font-size: 1em; margin: 5px; border: 1px solid #3498db; background-color: #3498db; color: white; border-radius: 5px; }
+        button:hover { background-color: #2980b9; }
+        .readout { text-align: center; font-size: 1.5em; margin-bottom: 20px; }
+        .readout strong { color: #e74c3c; }
+        .dev-console, .quality-check-panel { margin-top: 20px; border: 1px solid #d9d9d9; border-radius: 5px; text-align: left; }
+        .dev-console summary { cursor: pointer; padding: 10px; background-color: #eee; }
+        .dev-console-content { padding: 10px; max-height: 150px; overflow-y: auto; font-family: monospace; }
+        .quality-check-panel { padding: 15px; background-color: #f8d7da; color: #721c24; display: none; }
+        .high-contrast { background-color: #000; color: #fff; }
+        .high-contrast canvas { background-color: #222; border-color: #444; }
+        .high-contrast h1, .high-contrast h2 { border-color: #444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Configuration Space of Knots</h1>
+            <p class="subtitle">An interactive simulation of a physical rope that can be tied into different knots.</p>
+        </header>
+
+        <div class="readout">Current Crossings: <strong id="crossings-readout">0</strong></div>
+        <canvas id="knotCanvas" width="800" height="600"></canvas>
+        <div class="controls">
+            <button id="reset-unknot-btn">Reset to Unknot</button>
+            <button id="reset-trefoil-btn">Reset to Trefoil</button>
+            <label><input type="checkbox" id="self-avoid-check" checked> Self-Avoidance</label>
+            <button id="export-png-btn" style="background-color:#28a745;">Export PNG</button>
+            <label><input type="checkbox" id="theme-toggle"> High Contrast</label>
+        </div>
+
+        <section>
+            <h2>What is This?</h2>
+            <p>This is a simulation of a flexible, self-avoiding rope whose ends are fixed. You can grab any point on the rope and drag it around. The number displayed above the canvas is the "crossing number"—a simple count of how many times the rope crosses over itself in this 2D view. This number is a simplified stand-in for a true mathematical <strong>knot invariant</strong>.</p>
+            <h3>The Configuration Space of Knots</h3>
+            <p>In mathematics, two knots are considered the same if you can wiggle, stretch, and bend one to look like the other *without ever passing the rope through itself*. This continuous deformation is called an "ambient isotopy." A true knot invariant is a quantity (often a number or a polynomial) that remains exactly the same during this wiggling. The only way to change a knot invariant is to fundamentally change the knot, for example by cutting it or passing it through itself.</p>
+            <p>This means that all possible configurations of a rope that form a trefoil knot live in one "region" of the total space of all possible rope shapes. All unknots live in a completely separate, disconnected region. You cannot get from one region to another by continuous deformation. This simulation demonstrates this concept:</p>
+            <ol>
+                <li>Start with the "Unknot." Drag it around. The crossing number may change as you wiggle it, but you can always get it back to 0 crossings without passing the rope through itself.</li>
+                <li>Reset to the "Trefoil Knot" (a simple overhand knot). It has 3 crossings. No matter how much you wiggle and pull the rope, you will never be able to reduce the number of crossings to 0. The configuration is "stuck" in the trefoil knot region of configuration space.</li>
+                <li>Uncheck the "Self-Avoidance" box. This turns off the physics that prevents the rope from passing through itself. Now you can drag one part of the rope through another, fundamentally changing the knot type. You will see the crossing number jump, and you can now transform the trefoil knot into an unknot.</li>
+            </ol>
+            <h3>A Note on the "Invariant"</h3>
+            <p>Calculating a true knot invariant like the Jones or Alexander polynomial is extremely complex. This simulation uses the simple <strong>crossing number</strong> as an educational tool. Unlike a true invariant, the crossing number of a specific 2D projection *can* change during wiggling. However, the *minimum possible* crossing number for all possible wiggles *is* a true invariant. The key takeaway is that for a non-trivial knot like the trefoil, this minimum number is greater than zero.</p>
+        </section>
+
+        <div id="quality-check-panel" class="quality-check-panel"></div>
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content" id="dev-console-content"></div>
+        </details>
+    </div>
+
+    <script>
+    (function() {
+        // --- Setup ---
+        const get = (id) => document.getElementById(id);
+        const logToConsole = (message) => {
+            const consoleContent = get('dev-console-content');
+            if (consoleContent) consoleContent.innerHTML += `<div>${message}</div>`;
+        };
+        const runQualityChecks = () => {
+            const panel = get('quality-check-panel');
+            if (!get('knotCanvas')) {
+                panel.style.display = 'block';
+                panel.textContent = 'Error: Critical canvas element is missing.';
+                return false;
+            }
+            return true;
+        };
+
+        const canvas = get('knotCanvas');
+        const ctx = canvas.getContext('2d');
+        const readout = get('crossings-readout');
+        const unknotBtn = get('reset-unknot-btn');
+        const trefoilBtn = get('reset-trefoil-btn');
+        const avoidCheck = get('self-avoid-check');
+        const exportPngBtn = get('export-png-btn');
+        const themeToggle = get('theme-toggle');
+
+        // --- Rope Simulation ---
+        const numPoints = 50;
+        const rope = {
+            points: [],
+            oldPoints: [],
+            stiffness: 0.1,
+            repulsion: 2000,
+            damping: 0.95,
+            segmentLength: 15,
+            draggedPoint: null
+        };
+
+        function resetRope(type) {
+            rope.points = [];
+            rope.oldPoints = [];
+            const center = { x: canvas.width / 2, y: canvas.height / 2 };
+
+            for (let i = 0; i < numPoints; i++) {
+                let p;
+                const angle = (i / (numPoints -1)) * Math.PI * 2;
+                if (type === 'unknot') {
+                    const r = 200;
+                    p = { x: center.x + r * Math.cos(angle), y: center.y + r * Math.sin(angle) };
+                } else if (type === 'trefoil') {
+                    const r = 150;
+                    const trefoil_x = (2 + Math.cos(3 * angle)) * Math.cos(2 * angle);
+                    const trefoil_y = (2 + Math.cos(3 * angle)) * Math.sin(2 * angle);
+                    p = { x: center.x + r * trefoil_x/3, y: center.y + r * trefoil_y/3 };
+                }
+                rope.points.push(p);
+                rope.oldPoints.push({...p});
+            }
+        }
+
+        function simulate() {
+            // Verlet integration
+            for (let i = 1; i < numPoints - 1; i++) {
+                if (i === rope.draggedPoint) continue;
+                const p = rope.points[i];
+                const op = rope.oldPoints[i];
+                const vx = (p.x - op.x) * rope.damping;
+                const vy = (p.y - op.y) * rope.damping;
+                rope.oldPoints[i] = {...p};
+                p.x += vx;
+                p.y += vy;
+            }
+
+            // Constraints
+            for (let iter = 0; iter < 5; iter++) {
+                // Self-avoidance
+                if (avoidCheck.checked) {
+                    for (let i = 0; i < numPoints; i++) {
+                        for (let j = i + 2; j < numPoints; j++) {
+                            if (Math.abs(i-j) < 2) continue;
+                             const p1 = rope.points[i];
+                             const p2 = rope.points[j];
+                             const dx = p1.x - p2.x;
+                             const dy = p1.y - p2.y;
+                             const distSq = dx*dx + dy*dy;
+                             if(distSq < 100) {
+                                 const dist = Math.sqrt(distSq);
+                                 const force = rope.repulsion / (distSq + 10);
+                                 const moveX = (dx/dist) * force;
+                                 const moveY = (dy/dist) * force;
+                                 if(i > 0 && i < numPoints-1) { p1.x += moveX; p1.y += moveY; }
+                                 if(j > 0 && j < numPoints-1) { p2.x -= moveX; p2.y -= moveY; }
+                             }
+                        }
+                    }
+                }
+                // Stick constraints (maintain segment length)
+                for (let i = 0; i < numPoints - 1; i++) {
+                    const p1 = rope.points[i];
+                    const p2 = rope.points[i+1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dist = Math.hypot(dx, dy);
+                    const diff = rope.segmentLength - dist;
+                    const percent = diff / dist / 2 * rope.stiffness;
+                    const offsetX = dx * percent;
+                    const offsetY = dy * percent;
+
+                    if (i > 0) {
+                        p1.x -= offsetX; p1.y -= offsetY;
+                    }
+                    if (i < numPoints - 2) {
+                        p2.x += offsetX; p2.y += offsetY;
+                    }
+                }
+            }
+        }
+
+        // --- Invariant Calculation ---
+        function calculateCrossings() {
+            let crossings = 0;
+            for (let i = 0; i < numPoints - 1; i++) {
+                for (let j = i + 2; j < numPoints - 1; j++) {
+                    if (Math.abs(i-j) < 2) continue;
+                    const p1 = rope.points[i], p2 = rope.points[i+1];
+                    const p3 = rope.points[j], p4 = rope.points[j+1];
+                    if (lineSegmentsIntersect(p1, p2, p3, p4)) {
+                        crossings++;
+                    }
+                }
+            }
+            return crossings;
+        }
+
+        function lineSegmentsIntersect(p1, p2, p3, p4) {
+            function orientation(p, q, r) {
+                const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+                if (val == 0) return 0; // Collinear
+                return (val > 0) ? 1 : 2; // Clockwise or Counterclockwise
+            }
+            const o1 = orientation(p1, p2, p3);
+            const o2 = orientation(p1, p2, p4);
+            const o3 = orientation(p3, p4, p1);
+            const o4 = orientation(p3, p4, p2);
+            return (o1 != o2 && o3 != o4);
+        }
+
+        // --- Drawing ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            ctx.beginPath();
+            ctx.moveTo(rope.points[0].x, rope.points[0].y);
+            for(let i=1; i<numPoints-2; i++) {
+                const xc = (rope.points[i].x + rope.points[i+1].x) / 2;
+                const yc = (rope.points[i].y + rope.points[i+1].y) / 2;
+                ctx.quadraticCurveTo(rope.points[i].x, rope.points[i].y, xc, yc);
+            }
+            ctx.quadraticCurveTo(rope.points[numPoints-2].x, rope.points[numPoints-2].y, rope.points[numPoints-1].x, rope.points[numPoints-1].y);
+            ctx.stroke();
+        }
+
+        // --- Main Loop & Interaction ---
+        function mainLoop() {
+            simulate();
+            draw();
+            readout.textContent = calculateCrossings();
+            requestAnimationFrame(mainLoop);
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            let closestDist = Infinity;
+            let closestIdx = -1;
+            rope.points.forEach((p, i) => {
+                const dist = Math.hypot(p.x - mousePos.x, p.y - mousePos.y);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestIdx = i;
+                }
+            });
+            if (closestIdx > 0 && closestIdx < numPoints - 1) {
+                rope.draggedPoint = closestIdx;
+            }
+        });
+
+        window.addEventListener('mouseup', () => rope.draggedPoint = null);
+        window.addEventListener('mousemove', e => {
+            if (rope.draggedPoint !== null) {
+                const rect = canvas.getBoundingClientRect();
+                const p = rope.points[rope.draggedPoint];
+                p.x = e.clientX - rect.left;
+                p.y = e.clientY - rect.top;
+            }
+        });
+
+        unknotBtn.addEventListener('click', () => { resetRope('unknot'); logToConsole("Rope reset to Unknot."); });
+        trefoilBtn.addEventListener('click', () => { resetRope('trefoil'); logToConsole("Rope reset to Trefoil knot."); });
+        themeToggle.addEventListener('change', () => document.body.classList.toggle('high-contrast'));
+        exportPngBtn.addEventListener('click', () => {
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = `knot_simulation_${Date.now()}.png`;
+            a.click();
+            logToConsole("PNG exported.");
+        });
+
+        // --- Init ---
+        function init() {
+            if (!runQualityChecks()) return;
+            logToConsole("Initializing Knot Theory simulation.");
+            resetRope('unknot');
+            mainLoop();
+            logToConsole("Simulation running.");
+        }
+        init();
+    })();
+    </script>
+</body>
+</html>
