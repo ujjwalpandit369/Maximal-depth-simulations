@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symplectic Integrators for Phase Space</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: #f8f9fa; color: #212529; }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2 { text-align: center; border-bottom: 1px solid #dee2e6; padding-bottom: 0.5em; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        canvas { border: 1px solid #dee2e6; background-color: #fff; width: 100%; height: auto; aspect-ratio: 1 / 1; }
+        .controls { text-align: center; margin-top: 20px; }
+        button { cursor: pointer; padding: 10px 20px; font-size: 1.2em; margin: 5px; border: 1px solid #007bff; background-color: #007bff; color: white; border-radius: 5px; }
+        button:hover { background-color: #0056b3; }
+        .legend { display: flex; justify-content: center; margin-top: 10px; }
+        .legend-item { margin: 0 15px; }
+        .legend-color { display: inline-block; width: 20px; height: 10px; vertical-align: middle; margin-right: 5px; }
+        @media (max-width: 800px) {
+            .simulation-container { grid-template-columns: 1fr; }
+        }
+        .dev-console, .quality-check-panel { margin-top: 20px; border: 1px solid #dee2e6; border-radius: 5px; text-align: left; }
+        .dev-console summary { cursor: pointer; padding: 10px; background-color: #e9ecef; }
+        .dev-console-content { padding: 10px; max-height: 150px; overflow-y: auto; font-family: monospace; }
+        .quality-check-panel { padding: 15px; background-color: #f8d7da; color: #721c24; display: none; }
+        .high-contrast { background-color: #000; color: #fff; }
+        .high-contrast canvas { background-color: #222; border-color: #444; }
+        .high-contrast h1, .high-contrast h2 { border-color: #444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Symplectic Integrators vs. Standard Integrators</h1>
+            <p class="subtitle">A demonstration of long-term stability in orbital simulations.</p>
+        </header>
+
+        <section>
+            <h2>Plain-Language Overview</h2>
+            <p>When simulating physical systems like planets orbiting a star, computers have to calculate the motion in small, discrete time steps. The method used for this calculation is called an "integrator." Standard, intuitive integrators (like the one shown in red) are often very accurate in the short term, but they have a fatal flaw: they don't perfectly conserve energy. Over thousands of orbits, tiny errors accumulate, causing the simulated planet's orbit to be unstable, spiraling outwards or inwards. <strong>Symplectic integrators</strong> (shown in blue) are a special class of methods designed for physics. They don't conserve energy perfectly at every instant, but they do conserve a related quantity in "phase space," which prevents any long-term energy drift. As you can see in the energy plot, the symplectic method's energy oscillates around the true value but never strays, leading to a perfectly stable orbit over millions of years.</p>
+        </section>
+
+        <div class="simulation-container">
+            <div class="canvas-container">
+                <h3>Orbital Simulation</h3>
+                <canvas id="orbitCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="canvas-container">
+                <h3>Total System Energy vs. Time</h3>
+                <canvas id="energyCanvas" width="600" height="600"></canvas>
+            </div>
+        </div>
+        <div class="legend">
+            <div class="legend-item"><span class="legend-color" style="background-color: #007bff;"></span>Leapfrog (Symplectic)</div>
+            <div class="legend-item"><span class="legend-color" style="background-color: #dc3545;"></span>Runge-Kutta 4 (Standard)</div>
+        </div>
+
+        <div class="controls">
+            <button id="start-btn">Start</button>
+            <button id="pause-btn">Pause</button>
+            <button id="reset-btn">Reset</button>
+            <button id="export-btn" style="background-color: #28a745;">Export PNG</button>
+        </div>
+
+        <section>
+            <h2>A Deeper Dive into Numerical Integrators</h2>
+            <h3>What is an Integrator?</h3>
+            <p>In physics, the laws of motion are often expressed as differential equations (like `F=ma`). To simulate this on a computer, we can't solve the motion continuously. Instead, we take small time steps (`dt`). An integrator is the mathematical recipe used to calculate the system's state at the next time step based on its current state. The accuracy and stability of a simulation depend almost entirely on the quality of the integrator.</p>
+            <h3>The Standard Approach: Runge-Kutta (RK4)</h3>
+            <p>The red orbit is calculated using the Runge-Kutta 4th Order method. It's a very popular and generally accurate method. It works by "probing" the force at several points between the current time and the next time step to make a very good guess for the next position and velocity. However, it knows nothing about the underlying structure of physical laws. It just solves the equations. Over many steps, tiny floating-point errors accumulate in a way that violates energy conservation, causing the total energy to drift. This makes it unsuitable for long-term simulations where conservation laws are critical.</p>
+            <h3>The Physics-Aware Approach: Leapfrog (Symplectic)</h3>
+            <p>The blue orbit uses a Leapfrog integrator (a type of Verlet integration). It is called "symplectic" because it is derived from Hamiltonian mechanics and is designed to exactly preserve a geometric property of phase space called the "symplectic 2-form." In simpler terms, while it doesn't perfectly conserve energy at every instant, it ensures that the energy value only oscillates around the true value without any long-term drift. This property makes it incredibly stable and reliable for simulations that run for very long periods, such as modeling the solar system or molecular dynamics.</p>
+        </section>
+
+        <section>
+            <h2>FAQ</h2>
+            <dl>
+                <dt><strong>1. If the red orbit is "wrong," why is it so commonly used?</strong></dt>
+                <dd>RK4 is an excellent general-purpose solver. For problems where you only need high accuracy over a short period and don't care about long-term conservation laws (like in many engineering or short-term trajectory problems), it is often more accurate than a simple symplectic integrator for the same step size.</dd>
+                <dt><strong>2. Why does the blue energy curve oscillate?</strong></dt>
+                <dd>The symplectic integrator doesn't conserve the true energy (the Hamiltonian) perfectly. Instead, it perfectly conserves a "shadow" Hamiltonian which is very close to the true one. As the simulation evolves, the state moves along the surface of this shadow Hamiltonian, causing its true energy to oscillate. The key is that the amplitude of these oscillations does not grow over time.</dd>
+                <dt><strong>3. Can you just "fix" the energy drift in the red orbit?</strong></dt>
+                <dd>One could manually rescale the velocities at each step to force the energy to be constant. However, this is an artificial fix that violates the laws of motion and can lead to other, less obvious errors in the simulation's trajectory.</dd>
+            </dl>
+        </section>
+        <footer>
+             <div class="legend" style="margin-top: 20px;">
+                <label for="theme-toggle">High Contrast Mode:</label>
+                <input type="checkbox" id="theme-toggle" style="vertical-align: middle; margin-left: 5px;">
+            </div>
+        </footer>
+        <div id="quality-check-panel" class="quality-check-panel"></div>
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content" id="dev-console-content"></div>
+        </details>
+    </div>
+
+    <script>
+    (function() {
+        // --- DOM & Setup ---
+        const get = (id) => document.getElementById(id);
+        const logToConsole = (message) => {
+            const consoleContent = get('dev-console-content');
+            if (consoleContent) consoleContent.innerHTML += `<div>${message}</div>`;
+        };
+        const runQualityChecks = () => {
+            const panel = get('quality-check-panel');
+            if (!get('orbitCanvas') || !get('energyCanvas')) {
+                panel.style.display = 'block';
+                panel.textContent = 'Error: Critical canvas element is missing.';
+                return false;
+            }
+            return true;
+        };
+
+        // --- Canvas Setup ---
+        const orbitCanvas = document.getElementById('orbitCanvas');
+        const oCtx = orbitCanvas.getContext('2d');
+        const energyCanvas = document.getElementById('energyCanvas');
+        const eCtx = energyCanvas.getContext('2d');
+
+        // --- Simulation State ---
+        let running = false;
+        const G = 1; // Gravitational constant
+        const M = 1000; // Star mass
+        const initialState = {
+            pos: { x: 150, y: 0 },
+            vel: { x: 0, y: 2.7 }
+        };
+
+        let sim1, sim2; // sim1 = symplectic, sim2 = standard
+        let energyData1 = [], energyData2 = [];
+        let trails1 = [], trails2 = [];
+
+        // --- Physics & Integrators ---
+        function get_accel(pos) {
+            const r2 = pos.x * pos.x + pos.y * pos.y;
+            const r3 = Math.pow(r2, 1.5);
+            return {
+                x: -G * M * pos.x / r3,
+                y: -G * M * pos.y / r3
+            };
+        }
+
+        function leapfrogStep(planet, dt) {
+            const a = get_accel(planet.pos);
+            planet.vel.x += a.x * dt;
+            planet.vel.y += a.y * dt;
+            planet.pos.x += planet.vel.x * dt;
+            planet.pos.y += planet.vel.y * dt;
+        }
+
+        function rk4Step(planet, dt) {
+            function evaluate(initial, dt, derivative) {
+                return {
+                    dx: derivative.vel.x, dy: derivative.vel.y,
+                    dvx: get_accel({x: initial.pos.x + derivative.pos.x*dt, y: initial.pos.y + derivative.pos.y*dt}).x,
+                    dvy: get_accel({x: initial.pos.x + derivative.pos.x*dt, y: initial.pos.y + derivative.pos.y*dt}).y
+                };
+            }
+            const k1 = evaluate(planet, 0, {pos:{x:0,y:0}, vel:{x:0,y:0}});
+            const k2 = evaluate(planet, dt*0.5, {pos:{x:k1.dx,y:k1.dy}, vel:{x:k1.dvx, y:k1.dvy}});
+            const k3 = evaluate(planet, dt*0.5, {pos:{x:k2.dx,y:k2.dy}, vel:{x:k2.dvx, y:k2.dvy}});
+            const k4 = evaluate(planet, dt, {pos:{x:k3.dx,y:k3.dy}, vel:{x:k3.dvx, y:k3.dvy}});
+
+            planet.pos.x += (dt/6) * (k1.dx + 2*k2.dx + 2*k3.dx + k4.dx);
+            planet.pos.y += (dt/6) * (k1.dy + 2*k2.dy + 2*k3.dy + k4.dy);
+            planet.vel.x += (dt/6) * (k1.dvx + 2*k2.dvx + 2*k3.dvx + k4.dvx);
+            planet.vel.y += (dt/6) * (k1.dvy + 2*k2.dvy + 2*k3.dvy + k4.dvy);
+        }
+
+        function getTotalEnergy(planet) {
+            const r = Math.hypot(planet.pos.x, planet.pos.y);
+            const v2 = planet.vel.x * planet.vel.x + planet.vel.y * planet.vel.y;
+            const kinetic = 0.5 * v2; // assuming planet mass is 1
+            const potential = -G * M / r;
+            return kinetic + potential;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            // Orbit Canvas
+            oCtx.clearRect(0, 0, orbitCanvas.width, orbitCanvas.height);
+            oCtx.save();
+            oCtx.translate(orbitCanvas.width / 2, orbitCanvas.height / 2);
+            // Star
+            oCtx.fillStyle = 'orange';
+            oCtx.beginPath();
+            oCtx.arc(0, 0, 10, 0, 2 * Math.PI);
+            oCtx.fill();
+            // Trails
+            drawTrail(oCtx, trails1, '#007bff');
+            drawTrail(oCtx, trails2, '#dc3545');
+            // Planets
+            oCtx.fillStyle = '#007bff';
+            oCtx.beginPath();
+            oCtx.arc(sim1.pos.x, sim1.pos.y, 5, 0, 2 * Math.PI);
+            oCtx.fill();
+            oCtx.fillStyle = '#dc3545';
+            oCtx.beginPath();
+            oCtx.arc(sim2.pos.x, sim2.pos.y, 5, 0, 2 * Math.PI);
+            oCtx.fill();
+            oCtx.restore();
+
+            // Energy Canvas
+            drawEnergyGraph();
+        }
+
+        function drawTrail(ctx, trail, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            if (trail.length > 0) {
+                ctx.moveTo(trail[0].x, trail[0].y);
+                for (let i = 1; i < trail.length; i++) {
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        function drawEnergyGraph() {
+            eCtx.clearRect(0, 0, energyCanvas.width, energyCanvas.height);
+            const w = energyCanvas.width, h = energyCanvas.height;
+            const maxPoints = 500;
+
+            function plot(data, color) {
+                if(data.length < 2) return;
+                const energies = data.map(d => d.energy);
+                const minE = Math.min(...energies);
+                const maxE = Math.max(...energies);
+                const rangeE = maxE - minE;
+
+                eCtx.strokeStyle = color;
+                eCtx.lineWidth = 2;
+                eCtx.beginPath();
+                for(let i=0; i<data.length; i++) {
+                    const x = (i / Math.min(data.length, maxPoints)) * w;
+                    const y = h - ((data[i].energy - minE) / rangeE) * h;
+                    if(i===0) eCtx.moveTo(x,y);
+                    else eCtx.lineTo(x,y);
+                }
+                eCtx.stroke();
+            }
+
+            plot(energyData1, '#007bff');
+            plot(energyData2, '#dc3545');
+        }
+
+        // --- Main Loop ---
+        let frameCount = 0;
+        function update() {
+            if (!running) return;
+            const dt = 0.1;
+            const stepsPerFrame = 10;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                leapfrogStep(sim1, dt);
+                rk4Step(sim2, dt);
+            }
+
+            if (frameCount % 5 === 0) {
+                energyData1.push({ time: frameCount, energy: getTotalEnergy(sim1) });
+                energyData2.push({ time: frameCount, energy: getTotalEnergy(sim2) });
+                trails1.push({...sim1.pos});
+                trails2.push({...sim2.pos});
+
+                if (energyData1.length > 500) {
+                    energyData1.shift();
+                    energyData2.shift();
+                }
+                 if (trails1.length > 200) {
+                    trails1.shift();
+                    trails2.shift();
+                }
+            }
+
+            frameCount++;
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        // --- Controls ---
+        function exportPNG() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = orbitCanvas.width + energyCanvas.width;
+            tempCanvas.height = orbitCanvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.fillStyle = document.body.classList.contains('high-contrast') ? '#000' : '#f8f9fa';
+            tempCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(orbitCanvas, 0, 0);
+            tempCtx.drawImage(energyCanvas, orbitCanvas.width, 0);
+
+            const a = document.createElement('a');
+            a.href = tempCanvas.toDataURL('image/png');
+            a.download = `integrator_comparison_${Date.now()}.png`;
+            a.click();
+            logToConsole("PNG exported.");
+        }
+
+        function reset() {
+            running = false;
+            logToConsole("Simulation reset.");
+            sim1 = JSON.parse(JSON.stringify(initialState));
+            sim2 = JSON.parse(JSON.stringify(initialState));
+            energyData1 = [ { time: 0, energy: getTotalEnergy(sim1) } ];
+            energyData2 = [ { time: 0, energy: getTotalEnergy(sim2) } ];
+            trails1 = [];
+            trails2 = [];
+            frameCount = 0;
+            draw();
+        }
+
+        // --- Init ---
+        function init() {
+            if(!runQualityChecks()) return;
+            logToConsole("Initializing simulation.");
+            get('start-btn').addEventListener('click', () => {
+                if (!running) {
+                    running = true;
+                    logToConsole("Simulation started.");
+                    requestAnimationFrame(update);
+                }
+            });
+            get('pause-btn').addEventListener('click', () => {
+                running = false;
+                logToConsole("Simulation paused.");
+            });
+            get('reset-btn').addEventListener('click', reset);
+            get('export-btn').addEventListener('click', exportPNG);
+            get('theme-toggle').addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+            reset();
+            logToConsole("Ready.");
+        }
+        init();
+    })();
+    </script>
+</body>
+</html>
