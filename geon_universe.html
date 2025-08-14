@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Geon Universe: A Simulation</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #333;
+            --header-color: #1e2a3a;
+            --accent-color: #007bff;
+            --accent-hover: #0056b3;
+            --control-bg: #fff;
+            --control-border: #ccc;
+            --table-border: #ddd;
+            --code-bg: #e9e9e9;
+            --error-bg: #ffebee;
+            --error-text: #c62828;
+            --warn-bg: #fff3e0;
+            --warn-text: #ef6c00;
+            --success-bg: #e8f5e9;
+            --success-text: #2e7d32;
+        }
+
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --header-color: #fff;
+            --accent-color: #0ff;
+            --accent-hover: #0aa;
+            --control-bg: #222;
+            --control-border: #888;
+            --table-border: #555;
+            --code-bg: #333;
+            --error-bg: #5c0000;
+            --error-text: #ff9999;
+            --warn-bg: #6c3a00;
+            --warn-text: #ffcc80;
+            --success-bg: #003a03;
+            --success-text: #99ff9c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+            margin-top: 1.5em;
+        }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+        .high-contrast .subtitle { color: #aaa; }
+
+        .meta-bar {
+            text-align: center;
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 2em;
+        }
+        .high-contrast .meta-bar { color: #bbb; }
+
+        .suggestion-box {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            padding: 10px;
+            margin: 1em 0;
+            font-size: 0.9em;
+            border-radius: 5px;
+        }
+
+        section {
+            margin-bottom: 2em;
+        }
+
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--control-border);
+        }
+        #simulation-canvas {
+            background-color: #000;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .controls {
+            flex: 1;
+            min-width: 250px;
+        }
+        .control-group {
+            margin-bottom: 1em;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 0.25em;
+            font-weight: 500;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .control-buttons, .preset-buttons, .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+        .preset-buttons button { background-color: #6c757d; }
+        .preset-buttons button:hover { background-color: #5a6268; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1em;
+        }
+        th, td {
+            border: 1px solid var(--table-border);
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: var(--control-bg);
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+        .warning-box {
+            background-color: var(--warn-bg);
+            color: var(--warn-text);
+            border: 1px solid var(--warn-text);
+            padding: 1em;
+            border-radius: 5px;
+            margin: 1em 0;
+        }
+        .error-panel {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid var(--error-text);
+            padding: 1em;
+            border-radius: 5px;
+            margin: 1em 0;
+            display: none; /* Hidden by default */
+        }
+        .dev-console {
+            margin-top: 2em;
+        }
+        .dev-console details {
+            background: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .dev-console summary { cursor: pointer; font-weight: bold; }
+        #dev-console-output {
+            margin-top: 10px;
+            background: var(--code-bg);
+            color: var(--text-color);
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.8em;
+        }
+        .performance-meter {
+            margin-top: 1em;
+            font-size: 0.8em;
+            color: #666;
+        }
+        .high-contrast .performance-meter { color: #aaa; }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -70px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2em; }
+            .simulation-area { flex-direction: column; }
+            .controls { min-width: unset; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="quality-check-panel" class="error-panel">
+            <strong>Quality Check Failed!</strong>
+            <p>Some parts of this simulation might not be working as expected. Please check the following:</p>
+            <ul id="quality-check-list"></ul>
+            <p>If you are the developer, please check the browser console for errors. You can report a bug by providing the information from the Developer Console at the bottom of the page.</p>
+        </div>
+
+        <header>
+            <h1>The Geon Universe</h1>
+            <p class="subtitle">A simulation of a "star" made of pure, self-gravitating energy.</p>
+            <div class="meta-bar">
+                Estimated Runtime: 1-5 mins | Recommended Device: Desktop | Approx. HTML Size: 30 KB
+            </div>
+        </header>
+
+        <div class="suggestion-box">
+            <strong>Tune Your Experience:</strong>
+            Quickly adjust the simulation's style. (Note: These are illustrative; the simulation is built for a general audience but contains deep-dives.)
+            <br>
+            <label><input type="radio" name="audience" value="beginner" checked> Audience: Beginner</label>
+            <label><input type="radio" name="audience" value="intermediate"> Intermediate</label>
+            <label><input type="radio" name="audience" value="advanced"> Advanced</label>
+        </div>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Imagine a star not made of matter, but of pure energy. This is the core idea of a <strong>Geon</strong>, a theoretical object proposed by physicist John A. Wheeler in 1955. A Geon (short for <strong>G</strong>ravitational <strong>E</strong>lectromagnetic <strong>O</strong>bject<strong>n</strong>) is a collection of waves—either light (electromagnetic) or ripples in spacetime (gravitational)—that are so energetic they create a powerful gravitational field. This field is strong enough to trap the waves themselves, forcing them to orbit a common center. In essence, a Geon is a bundle of energy held together by its own gravity, a fascinating and purely relativistic concept.</p>
+        </section>
+
+        <section id="simulation">
+            <h2>Interactive Simulation</h2>
+            <div class="simulation-area">
+                <canvas id="simulation-canvas" width="600" height="600"></canvas>
+                <div class="controls">
+                    <div class="control-buttons">
+                        <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                        <button id="step-btn" aria-label="Step Forward (Right Arrow)">Step</button>
+                        <button id="reset-btn" aria-label="Reset (R)">Reset</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="speed-slider">Speed: <span id="speed-value">1.0</span>x</label>
+                        <input type="range" id="speed-slider" min="0.1" max="10" step="0.1" value="1" aria-label="Simulation Speed">
+                    </div>
+                    <hr>
+                    <div class="control-group">
+                        <label for="central-energy-slider">Binding Energy (Gravity Strength): <span id="central-energy-value">50</span></label>
+                        <input type="range" id="central-energy-slider" min="1" max="200" value="50" aria-label="Binding Energy">
+                    </div>
+                    <div class="control-group">
+                        <label for="particle-count-slider">Particle Count: <span id="particle-count-value">100</span></label>
+                        <input type="range" id="particle-count-slider" min="10" max="500" value="100" aria-label="Particle Count">
+                    </div>
+                    <div class="control-group">
+                        <label for="leakage-slider">Instability (Leakage Rate %): <span id="leakage-value">1</span>%</label>
+                        <input type="range" id="leakage-slider" min="0" max="20" step="0.1" value="1" aria-label="Instability/Leakage Rate">
+                    </div>
+                    <hr>
+                    <div class="preset-buttons">
+                        <button id="preset-stable-btn">Preset: Stable</button>
+                        <button id="preset-leaky-btn">Preset: Leaky</button>
+                        <button id="preset-swarm-btn">Preset: Photon Swarm</button>
+                    </div>
+                    <div class="export-buttons">
+                        <button id="export-png-btn" aria-label="Export PNG (E)">Export PNG</button>
+                        <button id="export-json-btn">Export JSON</button>
+                        <button id="share-btn">Share Preset</button>
+                    </div>
+                    <div class="performance-meter" id="performance-meter">
+                        FPS: -- | Particles: --
+                    </div>
+                    <div class="control-group">
+                        <label><input type="checkbox" id="perf-mode-toggle"> Performance Mode</label>
+                        <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide to Geons</h2>
+            <p>Welcome! This guide will walk you through the mind-bending concept of a Geon, step by step.</p>
+
+            <h3>1. Energy Has "Weight"</h3>
+            <p>The most famous equation in physics is Einstein's <code>E = mc²</code>. It means that energy (E) and mass (m) are two sides of the same coin. Mass is a form of concentrated energy. This also means that pure energy, like a beam of light, has a gravitational effect. It's an incredibly tiny effect in our everyday lives, but when you concentrate enormous amounts of energy, the gravity becomes significant.</p>
+
+            <h3>2. Light Can Be Bent by Gravity</h3>
+            <p>Because energy creates gravity, a massive object like our Sun can bend the path of light that passes near it. This was one of the first major confirmations of Einstein's theory of General Relativity. Think of it like a bowling ball on a trampoline; the heavy ball creates a dip, and a marble rolling past will have its path curved by that dip. Light follows a similar curved path through spacetime.</p>
+
+            <h3>3. What if Light Bends... Itself?</h3>
+            <p>Now, let's put these two ideas together. What if you have so much light packed into a small space that its own energy creates a powerful gravitational field? Could that gravity be strong enough to bend the path of the light *itself*? This is the wild idea behind the Geon. The light rays are moving so fast they want to fly out in a straight line, but the gravity they collectively create is constantly pulling them back in, forcing them into orbits.
+            </p>
+
+            <h3>Analogy 1: The Skater Vortex (Everyday Analogy)</h3>
+            <p>Imagine a group of ice skaters all holding hands and spinning in a circle. Their outward momentum wants to fling them apart. Now, imagine they are on a giant, flexible rubber sheet. Their combined weight creates a deep pit in the center. This pit makes it easier for them to stay together; they are constantly "skating downhill" toward the center, which counteracts their tendency to fly apart. The Geon is similar: the light's momentum is the skaters' outward motion, and the gravity from their own energy is the pit they create, holding the system together.</p>
+
+            <h3>4. A Star Made of Light</h3>
+            <p>If such an object could exist and be stable, it would be a "star" with no matter at all. Its mass would come entirely from the kinetic energy of the trapped light waves. This simulation shows a conceptual model of this. The bright particles are "packets" of light energy. Their combined energy creates the central gravitational pull (which we control with the "Binding Energy" slider). That pull, in turn, is what keeps the particles from flying away.</p>
+
+            <h3>Analogy 2: A Whirlpool of Light (Visualization Analogy)</h3>
+            <p>Think of a whirlpool or vortex in water. Water is constantly flowing into it, but it's also moving sideways fast enough to be trapped in a spiral motion. A Geon is like a vortex made of light, where the "drain" at the center is the gravitational pull created by the light itself. The light is both the substance of the whirlpool and the cause of its existence.</p>
+
+            <h3>5. Are Geons Stable?</h3>
+            <p>This is the million-dollar question. Most physicists believe that in our classical universe, Geons are not perfectly stable. The interactions between the waves would cause them to gradually "leak" energy, and the Geon would slowly evaporate over a very long time. In the simulation, the "Instability (Leakage Rate)" slider lets you model this. A setting of 0% is a perfectly stable, idealized Geon. A higher value means particles have a chance to escape the gravitational trap, and the Geon will dissolve.</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description & Worked Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Binding Energy</strong></td>
+                        <td>Arbitrary units of gravitational strength</td>
+                        <td>50</td>
+                        <td>1 - 200</td>
+                        <td>Controls the strength of the central gravitational pull that holds the Geon together. Higher values create a more tightly bound Geon.
+                        <br><strong>Example:</strong> In our simplified model, the force is proportional to this value. If Force ~ BindingEnergy / r², a particle at distance r=10 with BindingEnergy=<strong>50</strong> experiences a force proportional to 50 / 100 = <strong>0.5</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Particle Count</strong></td>
+                        <td>Number of particles</td>
+                        <td>100</td>
+                        <td>10 - 500</td>
+                        <td>The number of energy packets (photons) in the simulation. This primarily affects the visual density.
+                        <br><strong>Example:</strong> At <strong>100</strong> particles, if each has 1 unit of energy, the total energy is 100 units. The simulation visuals are based on this count.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Instability (Leakage)</strong></td>
+                        <td>Percent chance per second</td>
+                        <td>1%</td>
+                        <td>0 - 20%</td>
+                        <td>The probability that a particle will escape the Geon's gravity. Represents the theoretical instability of classical Geons.
+                        <br><strong>Example:</strong> At <strong>1%</strong> instability, a particle has a 1% chance of being ejected each second. With 100 particles, you'd expect about <strong>1</strong> particle to escape per second on average.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="presets">
+            <h2>Try These Examples</h2>
+            <div class="preset-buttons">
+                <button onclick="applyPreset('stable')">Apply Stable Geon</button>
+                <button onclick="applyPreset('leaky')">Apply Leaky Geon</button>
+                <button onclick="applyPreset('swarm')">Apply Photon Swarm</button>
+            </div>
+            <h3>1. Stable Geon</h3>
+            <p><strong>Parameters:</strong> Binding Energy: 80, Particle Count: 150, Instability: 0%.
+            <br><strong>Observe:</strong> A dense, stable ball of light. The particles orbit in tight, almost circular paths, and none escape. This is an idealized, perfectly stable Geon.</p>
+
+            <h3>2. Leaky Geon</h3>
+            <p><strong>Parameters:</strong> Binding Energy: 40, Particle Count: 200, Instability: 5%.
+            <br><strong>Observe:</strong> A larger, more diffuse cloud. Particles are constantly "leaking" away, showing how a real Geon might slowly evaporate its energy over time.</p>
+
+            <h3>3. Photon Swarm</h3>
+            <p><strong>Parameters:</strong> Binding Energy: 10, Particle Count: 300, Instability: 15%.
+            <br><strong>Observe:</strong> A barely-contained swarm of particles. The weak gravity can't hold on to the particles effectively, and the structure quickly dissolves. This shows what happens when the energy is not concentrated enough to form a stable Geon.</p>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+
+            <h3>Changing Binding Energy</h3>
+            <p>This parameter is the heart of the Geon. Increasing it makes the Geon's self-gravity stronger.</p>
+            <ul>
+                <li><strong>Example:</strong> Set Binding Energy to <strong>20</strong>. The particles orbit in wide, lazy circles. Now, slide it up to <strong>150</strong>. The particles are immediately pulled into tight, fast orbits, forming a much smaller and brighter-looking Geon. The difference in orbital radius is dramatic.</li>
+                <li><strong>Analogy:</strong> This is like swapping the Earth for the Sun. The much stronger gravity of the Sun would pull any orbiting satellite into a much tighter and faster path.</li>
+            </ul>
+
+            <h3>Changing Instability (Leakage)</h3>
+            <p>This shows the difference between a perfect theoretical object and a more realistic one.</p>
+            <ul>
+                <li><strong>Example:</strong> Set Instability to <strong>0%</strong> and run the simulation. The particle count remains constant. Now, set it to <strong>10%</strong>. You will see the particle count in the performance meter steadily decrease as particles escape the Geon's pull. The numeric difference is a loss of about 10% of particles per second.</li>
+                <li><strong>Analogy:</strong> This is like a leaky bucket. With 0% leakage, the water level stays the same. With 10% leakage, you can visibly watch the water level drop over time.</li>
+            </ul>
+
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li><strong>Critical Gravity:</strong> Set Particle Count to 200 and Instability to 5%. Start with Binding Energy at 1. Press Play. The Geon dissolves. Reset and increase the energy to 10. Repeat until you find the minimum Binding Energy required to hold most of the particles for at least 10 seconds. What value is it?</li>
+                <li><strong>Escape Velocity:</strong> Apply the "Stable Geon" preset. Watch the tight orbits. Now, slowly decrease the Binding Energy. Observe how the orbits get wider and wider until particles start to escape even with 0% instability, because their velocity is too high for the weak gravity to contain.</li>
+                <li><strong>Evaporation Rate:</strong> Apply the "Leaky Geon" preset (Instability 5%). Let it run for 20 seconds. Note the final particle count. Reset, change Instability to 10%, and run for another 20 seconds. Is the final particle count roughly half of the previous experiment?</li>
+                <li><strong>Performance Test:</strong> Set Binding Energy to 100. Start with 50 particles. Slowly slide the Particle Count up to its maximum of 500. Watch the FPS meter. How does the performance of your machine change? (This is a test of the computer, not the physics).</li>
+                <li><strong>The Edge of Stability:</strong> Set Particle Count to 100 and Binding Energy to 50. Set Instability to 2%. A few particles will leak. Does the Geon re-stabilize at a lower particle count, or does the leakage run away and cause it to dissolve completely?</li>
+            </ol>
+        </section>
+
+        <section id="theory">
+            <h2>Core Theory</h2>
+            <p>The simulation is a conceptual model, not a precise calculation of Einstein's field equations. However, it's based on real principles.</p>
+
+            <h3>1. Mass-Energy Equivalence</h3>
+            <p>The foundation of the Geon concept.</p>
+            <code>E = mc²</code>
+            <p><strong>Translation:</strong> Energy (E) is equal to mass (m) times the speed of light squared (c²). This means energy has mass-like properties, including gravity.</p>
+            <p><strong>Numeric Example:</strong> The speed of light c ≈ 300,000,000 m/s. So c² ≈ 9 x 10¹⁶. A tiny amount of mass is equivalent to a huge amount of energy. In our simulation, we simplify this: the "Binding Energy" value is a direct stand-in for the gravitational mass `M` of the Geon.</p>
+
+            <h3>2. Simplified Gravity</h3>
+            <p>We model gravity as a simple inverse-square force pulling particles to the center.</p>
+            <code>F ∝ M / r²</code>
+            <p><strong>Translation:</strong> The force of gravity (F) is proportional to the mass (M) and inversely proportional to the square of the distance (r) from the center.</p>
+            <p><strong>Numeric Example:</strong> If we double the distance from r=5 to r=10, the force of gravity becomes 4 times weaker (from 1/25 to 1/100). In the simulation, setting Binding Energy (our M) to <strong>100</strong> at a distance of <strong>10</strong> units gives a force proportional to 100 / 10² = <strong>1</strong>.</p>
+
+            <h3>Approximations and Limits</h3>
+            <p>This simulation is <strong>not</strong> a solution to the Einstein Field Equations. It's a Newtonian-style approximation. It doesn't account for the bending of spacetime itself, gravitational time dilation, or the complex, non-linear interactions of gravitational waves. It's a visual analogy to aid intuition.</p>
+        </section>
+
+        <section id="advanced">
+            <h2>Advanced Notes & Extensions</h2>
+            <ul>
+                <li><strong>Numerical Stability:</strong> In this simple Euler integration model, if the speed or gravity is too high, particles can "overshoot" the center, leading to chaotic and unrealistic behavior. A more advanced simulation would use a Runge-Kutta or symplectic integrator for better stability.</li>
+                <li><strong>Increasing Fidelity:</strong> A more realistic Geon would have its gravitational field calculated from the real-time position of all energy packets, not a fixed central point. This would be computationally expensive (an N-body problem) and would likely show the Geon to be unstable as clumps of energy would form and be ejected.</li>
+                <li><strong>Quantum Geons:</strong> While classical Geons are likely unstable, some theories propose that quantum effects could stabilize them. A "graviball" (a quantum Geon) made of interacting gravitons could be stable and is even a candidate for dark matter. Our simulation cannot model these quantum effects.</li>
+                <li><strong>Extension Idea:</strong> To extend this simulation, one could give particles a lifetime. When a particle "decays", its energy is transferred to nearby particles, giving them a velocity boost. This could model energy exchange within the Geon.</li>
+            </ul>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+
+            <h3>1. Physical Analogy: The "Skater Vortex"</h3>
+            <p>Imagine a group of ice skaters on a vast, flexible rubber sheet. Their combined weight creates a significant dip. As they skate, they try to move in straight lines, but the curve of the rubber sheet constantly guides them back toward the center. They are trapped by a gravity well of their own making.
+            <br><strong>Limitation:</strong> This analogy is 2D and involves friction, whereas Geons are 3D and frictionless. The skaters also have mass separate from their motion, whereas in a Geon, the "mass" *is* the energy of motion.</p>
+
+            <h3>2. Visualization Analogy: A Self-Sustaining Whirlpool</h3>
+            <p>Think of a whirlpool in a bathtub. It's a stable structure of moving water. Now imagine that the water's circular motion is what magically creates the drain it's flowing into. If the water stops spinning, the drain vanishes. This self-causation is key to the Geon: the energy's motion creates the gravity that sustains the motion.
+            <br><strong>Limitation:</strong> A water whirlpool requires an external force (like draining water) to get started and is a collective flow. A Geon is composed of individual waves/particles that are distinct but interacting.
+            </p>
+
+            <h3>3. Computational Analogy: A Self-Referential Data Structure</h3>
+            <p>In computer science, you can have a data structure that points to itself, creating a closed loop that can't be reached from the outside. A Geon is like a physical manifestation of this. It's a region of spacetime that is causally "closed off" in a sense, containing a set of fields that endlessly act upon each other, holding the structure together without needing any external matter.
+            <br><strong>Limitation:</strong> This is a purely structural analogy. It captures the self-contained idea but misses all the dynamics and physics of energy and gravity.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt><strong>1. Is a Geon a type of black hole?</strong></dt>
+                <dd>No, but they are related. A Geon is energy trapped in orbit *without* an event horizon. If you pack even more energy into the same space (making the gravity stronger), it could collapse further and form a black hole, creating an event horizon from which nothing can escape. This is called a Kugelblitz.</dd>
+
+                <dt><strong>2. Have we ever seen a Geon?</strong></dt>
+                <dd>No. They remain completely theoretical. Their existence is allowed by General Relativity, but they may be too unstable to form or last for long in the real universe.</dd>
+
+                <dt><strong>3. Why is it called a "Gravitational Electromagnetic Entity"?</strong></dt>
+                <dd>Because it can be made of either gravitational waves (ripples in spacetime) or electromagnetic waves (light). The name covers both possibilities.</dd>
+
+                <dt><strong>4. Why do particles escape in the simulation?</strong></dt>
+                <dd>This models the theoretical instability of Geons. Tiny imperfections in the orbits would likely build up over time, eventually giving a wave packet enough energy to achieve "escape velocity" and fly away from the group.</dd>
+
+                <dt><strong>5. What does the "Binding Energy" slider really do?</strong></dt>
+                <dd>In our simulation, it's a simple stand-in for the total mass-energy of the Geon. It directly sets the strength of the central gravity point. In a real Geon, this value would emerge from the sum of the energy of all the particles.</dd>
+
+                <dt><strong>6. The simulation is running slow. What can I do?</strong></dt>
+                <dd>Try ticking the "Performance Mode" checkbox. This reduces some visual effects. You can also lower the "Particle Count" using its slider. Fewer particles means less work for your computer.</dd>
+
+                <dt><strong>7. The canvas is blank or the simulation is frozen.</strong></dt>
+                <dd>This can happen on some devices if the settings are too high. Try clicking the "Reset" button or refreshing the page. If the problem persists, reduce the "Particle Count" to a low value like 50 before clicking "Play". If you see an error panel at the top, the simulation failed its self-check.</dd>
+            </dl>
+        </section>
+
+        <div class="dev-console">
+            <details>
+                <summary>Developer Console</summary>
+                <div id="dev-console-output">
+                    Log messages will appear here...
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Quality Check ---
+            const qcPanel = document.getElementById('quality-check-panel');
+            const qcList = document.getElementById('quality-check-list');
+            let qcPassed = true;
+            const checks = {
+                'Canvas element #simulation-canvas': document.getElementById('simulation-canvas'),
+                'Play/Pause button #play-pause-btn': document.getElementById('play-pause-btn'),
+                'Reset button #reset-btn': document.getElementById('reset-btn'),
+                'Stable preset button #preset-stable-btn': document.getElementById('preset-stable-btn'),
+            };
+            for (const [name, el] of Object.entries(checks)) {
+                if (!el) {
+                    qcPassed = false;
+                    const li = document.createElement('li');
+                    li.textContent = `Failed to find element: ${name}`;
+                    qcList.appendChild(li);
+                }
+            }
+            if (!qcPassed) {
+                qcPanel.style.display = 'block';
+            }
+
+            // --- Dev Console ---
+            const devConsole = document.getElementById('dev-console-output');
+            const log = (message, type = 'log') => {
+                const time = new Date().toLocaleTimeString();
+                const line = document.createElement('div');
+                line.textContent = `[${time}] ${message}`;
+                if (type === 'error') line.style.color = 'red';
+                if (type === 'warn') line.style.color = 'orange';
+                devConsole.appendChild(line);
+                devConsole.scrollTop = devConsole.scrollHeight;
+            };
+            log('Dev console initialized.');
+            window.onerror = function(message, source, lineno, colno, error) {
+                log(`ERROR: ${message} at ${source.split('/').pop()}:${lineno}:${colno}`, 'error');
+            };
+
+            // --- Simulation Logic ---
+            const canvas = document.getElementById('simulation-canvas');
+            const ctx = canvas.getContext('2d');
+
+            const config = {
+                bindingEnergy: 50,
+                particleCount: 100,
+                leakageRate: 1, // in percent
+                speed: 1,
+                perfMode: false,
+            };
+
+            let particles = [];
+            let isPlaying = false;
+            let animationFrameId;
+            let lastTime = 0;
+            let fps = 0;
+
+            class Particle {
+                constructor(x, y, vx, vy) {
+                    this.x = x;
+                    this.y = y;
+                    this.vx = vx;
+                    this.vy = vy;
+                    this.life = 0;
+                }
+
+                move(dt) {
+                    const center = { x: canvas.width / 2, y: canvas.height / 2 };
+                    const dx = center.x - this.x;
+                    const dy = center.y - this.y;
+                    const distSq = dx * dx + dy * dy;
+                    const dist = Math.sqrt(distSq);
+
+                    if (dist > 1) {
+                        const force = (config.bindingEnergy * 100) / distSq;
+                        const ax = (dx / dist) * force;
+                        const ay = (dy / dist) * force;
+
+                        this.vx += ax * dt;
+                        this.vy += ay * dt;
+                    }
+
+                    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    const maxSpeed = 3; // a simplified "speed of light"
+                    if (speed > maxSpeed) {
+                        this.vx = (this.vx / speed) * maxSpeed;
+                        this.vy = (this.vy / speed) * maxSpeed;
+                    }
+
+                    this.x += this.vx * dt * config.speed;
+                    this.y += this.vy * dt * config.speed;
+                    this.life += dt;
+                }
+
+                draw(ctx) {
+                    ctx.beginPath();
+                    const alpha = Math.min(1, this.life * 2);
+                    if(config.perfMode) {
+                         ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                         ctx.rect(this.x, this.y, 2, 2);
+                    } else {
+                        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 3);
+                        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+                        gradient.addColorStop(0.5, `rgba(255, 255, 0, ${alpha * 0.8})`);
+                        gradient.addColorStop(1, `rgba(255, 165, 0, 0)`);
+                        ctx.fillStyle = gradient;
+                        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                }
+            }
+
+            function resetSimulation() {
+                log('Resetting simulation.');
+                particles = [];
+                const center = { x: canvas.width / 2, y: canvas.height / 2 };
+                for (let i = 0; i < config.particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const radius = 50 + Math.random() * 100;
+                    const x = center.x + Math.cos(angle) * radius;
+                    const y = center.y + Math.sin(angle) * radius;
+
+                    // Give it a tangential velocity
+                    const speed = 2 + Math.random() * 0.5;
+                    const vx = -Math.sin(angle) * speed;
+                    const vy = Math.cos(angle) * speed;
+
+                    particles.push(new Particle(x, y, vx, vy));
+                }
+                updateUIFromConfig();
+            }
+
+            function update(timestamp) {
+                if (!lastTime) lastTime = timestamp;
+                const deltaTime = (timestamp - lastTime) / 1000; // in seconds
+                fps = 1 / deltaTime;
+                lastTime = timestamp;
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // Fading trails
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                particles.forEach(p => {
+                    p.move(deltaTime);
+                    p.draw(ctx);
+                });
+
+                // Handle leakage
+                const leakagePerSecond = config.leakageRate / 100;
+                if (Math.random() < leakagePerSecond * deltaTime * particles.length) {
+                    if (particles.length > 0) {
+                        particles.splice(Math.floor(Math.random() * particles.length), 1);
+                    }
+                }
+
+                // Remove particles that fly too far away
+                const maxDist = Math.max(canvas.width, canvas.height);
+                particles = particles.filter(p => {
+                    const dist = Math.hypot(p.x - canvas.width/2, p.y - canvas.height/2);
+                    return dist < maxDist;
+                });
+
+                updatePerformanceMeter();
+
+                if (isPlaying) {
+                    animationFrameId = requestAnimationFrame(update);
+                }
+            }
+
+            function play() {
+                if (isPlaying) return;
+                isPlaying = true;
+                playPauseBtn.textContent = 'Pause';
+                playPauseBtn.setAttribute('aria-label', 'Pause (Space)');
+                lastTime = 0; // Reset time to avoid a large jump
+                animationFrameId = requestAnimationFrame(update);
+                log('Simulation started.');
+            }
+
+            function pause() {
+                if (!isPlaying) return;
+                isPlaying = false;
+                playPauseBtn.textContent = 'Play';
+                playPauseBtn.setAttribute('aria-label', 'Play (Space)');
+                cancelAnimationFrame(animationFrameId);
+                log('Simulation paused.');
+            }
+
+            function step() {
+                if (isPlaying) pause();
+                requestAnimationFrame(update);
+                log('Simulation stepped forward.');
+            }
+
+            // --- UI Controls ---
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const stepBtn = document.getElementById('step-btn');
+            const resetBtn = document.getElementById('reset-btn');
+
+            const speedSlider = document.getElementById('speed-slider');
+            const speedValue = document.getElementById('speed-value');
+
+            const energySlider = document.getElementById('central-energy-slider');
+            const energyValue = document.getElementById('central-energy-value');
+
+            const particleSlider = document.getElementById('particle-count-slider');
+            const particleValue = document.getElementById('particle-count-value');
+
+            const leakageSlider = document.getElementById('leakage-slider');
+            const leakageValue = document.getElementById('leakage-value');
+
+            const perfMeter = document.getElementById('performance-meter');
+            const perfToggle = document.getElementById('perf-mode-toggle');
+            const contrastToggle = document.getElementById('contrast-toggle');
+
+            const warningBox = document.createElement('div');
+            warningBox.className = 'warning-box';
+            warningBox.style.display = 'none';
+            particleSlider.parentElement.appendChild(warningBox);
+
+            function updateUIFromConfig() {
+                energySlider.value = config.bindingEnergy;
+                energyValue.textContent = config.bindingEnergy;
+                particleSlider.value = config.particleCount;
+                particleValue.textContent = config.particleCount;
+                leakageSlider.value = config.leakageRate;
+                leakageValue.textContent = config.leakageRate;
+                speedSlider.value = config.speed;
+                speedValue.textContent = config.speed.toFixed(1);
+                perfToggle.checked = config.perfMode;
+            }
+
+            function updatePerformanceMeter() {
+                perfMeter.textContent = `FPS: ${Math.round(fps)} | Particles: ${particles.length}`;
+            }
+
+            playPauseBtn.addEventListener('click', () => isPlaying ? pause() : play());
+            stepBtn.addEventListener('click', step);
+            resetBtn.addEventListener('click', () => {
+                pause();
+                resetSimulation();
+                // Draw one frame after reset
+                ctx.clearRect(0,0,canvas.width, canvas.height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0,0,canvas.width, canvas.height);
+                particles.forEach(p => p.draw(ctx));
+            });
+
+            speedSlider.addEventListener('input', e => {
+                config.speed = parseFloat(e.target.value);
+                speedValue.textContent = config.speed.toFixed(1);
+            });
+            energySlider.addEventListener('input', e => {
+                config.bindingEnergy = parseInt(e.target.value);
+                energyValue.textContent = config.bindingEnergy;
+            });
+            leakageSlider.addEventListener('input', e => {
+                config.leakageRate = parseFloat(e.target.value);
+                leakageValue.textContent = config.leakageRate;
+            });
+            particleSlider.addEventListener('input', e => {
+                const oldValue = config.particleCount;
+                config.particleCount = parseInt(e.target.value);
+                particleValue.textContent = config.particleCount;
+
+                if (config.particleCount > 350) {
+                    warningBox.textContent = 'Warning: High particle counts may reduce performance.';
+                    warningBox.style.display = 'block';
+                } else {
+                    warningBox.style.display = 'none';
+                }
+
+                // Add or remove particles to match new count
+                if (config.particleCount > oldValue) {
+                    for(let i=0; i < config.particleCount - oldValue; i++) {
+                         const angle = Math.random() * Math.PI * 2;
+                         const radius = 50 + Math.random() * 100;
+                         const x = canvas.width/2 + Math.cos(angle) * radius;
+                         const y = canvas.height/2 + Math.sin(angle) * radius;
+                         const speed = 2 + Math.random() * 0.5;
+                         const vx = -Math.sin(angle) * speed;
+                         const vy = Math.cos(angle) * speed;
+                         particles.push(new Particle(x, y, vx, vy));
+                    }
+                } else {
+                    particles.splice(0, oldValue - config.particleCount);
+                }
+            });
+
+            perfToggle.addEventListener('change', e => {
+                config.perfMode = e.target.checked;
+                log(`Performance mode ${config.perfMode ? 'enabled' : 'disabled'}.`);
+            });
+            contrastToggle.addEventListener('change', e => {
+                document.body.classList.toggle('high-contrast', e.target.checked);
+                log(`High contrast mode ${e.target.checked ? 'enabled' : 'disabled'}.`);
+            });
+
+            // --- Presets ---
+            const presets = {
+                stable: { bindingEnergy: 80, particleCount: 150, leakageRate: 0 },
+                leaky: { bindingEnergy: 40, particleCount: 200, leakageRate: 5 },
+                swarm: { bindingEnergy: 10, particleCount: 300, leakageRate: 15 },
+            };
+            window.applyPreset = function(name) {
+                const preset = presets[name];
+                if (!preset) return;
+                log(`Applying preset: ${name}`);
+                Object.assign(config, preset);
+                pause();
+                resetSimulation();
+                play();
+            };
+            document.getElementById('preset-stable-btn').addEventListener('click', () => applyPreset('stable'));
+            document.getElementById('preset-leaky-btn').addEventListener('click', () => applyPreset('leaky'));
+            document.getElementById('preset-swarm-btn').addEventListener('click', () => applyPreset('swarm'));
+
+            // --- Export ---
+            document.getElementById('export-png-btn').addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `geon_simulation_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                log('Exported canvas as PNG.');
+            });
+            document.getElementById('export-json-btn').addEventListener('click', () => {
+                const data = JSON.stringify(config, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `geon_params_${Date.now()}.json`;
+                link.click();
+                log('Exported parameters as JSON.');
+            });
+             document.getElementById('share-btn').addEventListener('click', () => {
+                const data = JSON.stringify(config);
+                const url = `${window.location.href.split('#')[0]}#${btoa(data)}`;
+                navigator.clipboard.writeText(url).then(() => {
+                    log('Shareable URL copied to clipboard.');
+                    alert('Shareable link copied to clipboard!');
+                }, () => {
+                    log('Failed to copy URL.', 'error');
+                    alert('Failed to copy link.');
+                });
+            });
+
+            // --- Keyboard Shortcuts ---
+            window.addEventListener('keydown', e => {
+                if (e.target.tagName === 'INPUT') return; // Ignore inputs
+                switch(e.code) {
+                    case 'Space': e.preventDefault(); isPlaying ? pause() : play(); break;
+                    case 'ArrowRight': e.preventDefault(); step(); break;
+                    case 'KeyR': e.preventDefault(); resetBtn.click(); break;
+                    case 'KeyE': e.preventDefault(); document.getElementById('export-png-btn').click(); break;
+                }
+            });
+
+            // --- Initialization ---
+            function checkUrlForParams() {
+                if (window.location.hash) {
+                    try {
+                        const decoded = atob(window.location.hash.substring(1));
+                        const params = JSON.parse(decoded);
+                        Object.assign(config, params);
+                        log('Loaded parameters from URL hash.');
+                    } catch (e) {
+                        log('Failed to parse params from URL hash.', 'error');
+                    }
+                }
+            }
+
+            checkUrlForParams();
+            resetSimulation();
+            // Initial draw
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            particles.forEach(p => p.draw(ctx));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Universe with Two Species of Time</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --header-color: #343a40;
+            --accent-color: #d63384;
+            --accent-hover: #b02a6d;
+            --control-bg: #fff;
+            --control-border: #dee2e6;
+            --table-border: #e9ecef;
+            --code-bg: #e9ecef;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+        }
+
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --header-color: #fff;
+            --accent-color: #f0f;
+            --accent-hover: #c0c;
+            --control-bg: #222;
+            --control-border: #888;
+            --table-border: #555;
+            --code-bg: #333;
+            --error-bg: #5c0000;
+            --error-text: #ff9999;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #6c757d; margin-top: 0; }
+
+        .meta-bar { text-align: center; font-size: 0.8em; color: #6c757d; margin-bottom: 2em; }
+
+        section { margin-bottom: 2em; }
+
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--control-border); align-items: flex-start; }
+        .canvas-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+        }
+        #simulation-canvas-3d, #simulation-canvas-2d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: transparent;
+        }
+        #simulation-canvas-3d { z-index: 1; }
+        #simulation-canvas-2d { z-index: 2; pointer-events: none; } /* 2D overlay on top */
+
+        .controls { flex: 1; min-width: 250px; }
+        .control-group { margin-bottom: 1em; }
+        .control-group label { display: block; margin-bottom: 0.25em; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid var(--table-border); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-text); padding: 1em; border-radius: 5px; margin: 1em 0; }
+        .dev-console { margin-top: 2em; }
+        .dev-console details { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: 5px; padding: 10px; }
+        .dev-console summary { cursor: pointer; font-weight: bold; }
+
+        @media (max-width: 992px) {
+            h1 { font-size: 2em; }
+            .simulation-area { flex-direction: column; align-items: center; }
+            .canvas-container { width: 100%; max-width: 600px; padding-bottom: 100%; height: auto; }
+            .controls { width: 100%; max-width: 600px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>A Universe with Two Species of Time</h1>
+            <p class="subtitle">An interactive visualization of Itzhak Bars' 2T-Physics model.</p>
+            <div class="meta-bar">
+                Estimated Runtime: 1-5 mins | Recommended Device: Desktop | Approx. HTML Size: 25 KB
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>What if our single dimension of time is just a "shadow" of a richer, two-dimensional time? This is the core idea of <strong>2T-Physics</strong>, a model developed by physicist Itzhak Bars. It proposes that the universe fundamentally has one extra time dimension (and one extra space dimension), but that a special kind of symmetry, called a "gauge symmetry," makes this structure hidden from us. This simulation provides a conceptual look at this idea, showing how a particle's path in a 2T universe can look like normal physics in our 1T universe, and how many different paths in the "real" 2T spacetime can correspond to the exact same history from our limited perspective.</p>
+        </section>
+
+        <section id="simulation">
+            <h2>Interactive Simulation</h2>
+            <div class="simulation-area">
+                <div class="canvas-container">
+                    <canvas id="simulation-canvas-3d" width="600" height="600"></canvas>
+                    <canvas id="simulation-canvas-2d" width="600" height="600"></canvas>
+                </div>
+                <div class="controls">
+                    <div class="control-buttons">
+                        <button id="reset-btn" aria-label="Reset (R)">Reset</button>
+                    </div>
+                    <hr>
+                    <div class="control-group">
+                        <label for="vx-slider">Velocity in Space (v<sub>x</sub>): <span id="vx-value">0.5</span> c</label>
+                        <input type="range" id="vx-slider" min="-0.9" max="0.9" step="0.05" value="0.5">
+                    </div>
+                    <div class="control-group">
+                        <label for="vt2-slider">Velocity in Hidden Time (v<sub>t2</sub>): <span id="vt2-value">0.5</span></label>
+                        <input type="range" id="vt2-slider" min="-1.5" max="1.5" step="0.05" value="0.5">
+                    </div>
+                    <hr>
+                    <div class="control-group">
+                        <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                    </div>
+                    <div class="info-box">
+                        <h3>What you are seeing:</h3>
+                        <p><strong>3D View (Faint Grid):</strong> Shows the "real" spacetime with one space (x) and two time (t1, t2) dimensions. The magenta line is the particle's true path.</p>
+                        <p><strong>2D View (Bright Axes):</strong> The bright white axes show our familiar 1T spacetime (x, t). The bright yellow line is the "shadow" or projection of the true path onto our spacetime. This is the history we would observe.</p>
+                        <p><strong>Try this:</strong> Move the "Velocity in Hidden Time" slider. Notice how the magenta path changes dramatically, but the yellow path (our observed reality) stays exactly the same! This is the gauge symmetry at work.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide to 2T-Physics</h2>
+
+            <h3>1. More Dimensions?</h3>
+            <p>Physicists have long played with the idea of extra dimensions. String theory, for example, requires extra *spatial* dimensions. 2T-Physics instead proposes one extra dimension of space and one extra dimension of time. So instead of our familiar (3+1) dimensional world (3 space, 1 time), the fundamental reality is (4+2) dimensional.</p>
+
+            <h3>2. The Problem of Two Times</h3>
+            <p>Having two time dimensions immediately creates problems. It could lead to paradoxes like causality violations (effects happening before their cause) or particles decaying into things heavier than themselves. So, if there is a second time, it must be hidden from us in a very clever way.</p>
+
+            <h3>3. Hiding a Dimension with Symmetry</h3>
+            <p>This is where the key idea of 2T-Physics comes in: a <strong>gauge symmetry</strong>. In physics, a symmetry means you can change something about your description of a system without changing the system's physical behavior. A gauge symmetry is a particularly powerful type that can make entire dimensions "unphysical" or unobservable.</p>
+
+            <h3>Analogy: The Shadow Puppet (Visualization Analogy)</h3>
+            <p>Imagine you are watching a shadow puppet show. You see a 2D shadow of a rabbit on the screen. This is your "observed reality." However, in the 3D space behind the screen, the puppeteer could be making that rabbit shadow with their hands, a cardboard cutout, or a complex sculpture. Many different 3D objects can cast the exact same 2D shadow.</p>
+            <p>2T-Physics is like this. Our 1T universe is the 2D shadow. The "real" physics is happening in a 2T spacetime behind the screen. The gauge symmetry is the principle that ensures that no matter what the puppeteer uses (hands, cutout, etc.), the shadow you see remains consistent. In the simulation, the yellow line is the shadow, and the magenta line is the "hand" in the higher dimension. The "Velocity in Hidden Time" slider is you telling the puppeteer to use a different hand shape—the shadow doesn't change!</p>
+
+            <h3>4. What's the Point?</h3>
+            <p>Why go through all this trouble? Because the higher-dimensional 2T theory has more symmetry, it allows physicists to unify many different 1T theories into a single, more elegant parent theory. It provides new perspectives on the Standard Model of particle physics and could solve some long-standing puzzles. The price is introducing a hidden world, but the payoff is a potentially deeper understanding of the world we can see.</p>
+        </section>
+
+        <section id="theory">
+            <h2>Core Theory (Conceptual)</h2>
+            <p>The mathematics of 2T-physics is complex, but the core constraint can be understood conceptually.</p>
+
+            <h3>The Constraint in Spacetime</h3>
+            <p>In normal special relativity (1T), the path of a light particle follows:</p>
+            <code>(Δx)² - c²(Δt)² = 0</code>
+            <p>In the simplified 2T model shown here (with one space and two time dimensions, and c=1), the "true" path in the higher dimension is constrained by a similar-looking equation:</p>
+            <code>(Δx)² - (Δt1)² + (Δt2)² = 0</code>
+            <p><strong>Translation:</strong> This equation defines a "cone" in the (x, t1, t2) space. A particle's worldline must always stay on the surface of this cone. The velocity in the second time dimension (t2) is linked to the velocities in space (x) and the first time dimension (t1).</p>
+            <p><strong>Our Simulation's Math:</strong> From the equation above, we can write `(Δt1)² = (Δx)² + (Δt2)²`. Taking the derivative with respect to our emergent time `t`, we get `v_t1² = v_x² + v_t2²`. This means:</p>
+            <code>v_t1 = sqrt(v_x² + v_t2²)</code>
+            <p>This is the core equation used in the simulation. When you set <code>v_x</code> and <code>v_t2</code> with the sliders, we calculate the required <code>v_t1</code> to keep the particle on the constraint surface. Since our observed time is just `t1`, the observed velocity `v_x / v_t1` depends on `v_t2`, but the total *path* traced in the `x-t1` plane does not.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt><strong>1. Why is the "real" path in 3D a spiral?</strong></dt>
+                <dd>The spiral shape comes from the particle having velocity in all three dimensions (x, t1, and t2). As it moves forward in t1 (up the screen) and x (across the screen), it is also moving "in and out" in the t2 dimension, tracing a helix.</dd>
+
+                <dt><strong>2. What happens when "Velocity in Hidden Time" is zero?</strong></dt>
+                <dd>When v_t2 is 0, the magenta line becomes a straight line that lies flat on the bright 2D plane. In this case, the "shadow" and the "real object" are identical. This is a special case where there is no motion in the hidden dimension.</dd>
+
+                <dt><strong>3. What does "c" mean in the velocity slider?</strong></dt>
+                <dd>"c" is the speed of light, the universal speed limit in our 1T universe. The slider lets you set the particle's observed velocity as a fraction of this speed.</dd>
+
+                <dt><strong>4. Is this related to imaginary time?</strong></dt>
+                <dd>It's a different concept. Imaginary time is a mathematical tool used in some areas of physics where time is treated as a complex number. 2T-physics proposes two real time dimensions, governed by a specific symmetry.</dd>
+
+                <dt><strong>5. Has any of this been proven?</strong></dt>
+                <dd>No. Like string theory, 2T-physics is a speculative, theoretical framework. It is mathematically consistent and offers intriguing possibilities, but there is currently no experimental evidence for a second dimension of time.</dd>
+            </dl>
+        </section>
+
+        <div class="dev-console">
+            <details><summary>Developer Console</summary><div id="dev-console-output"></div></details>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas3d = document.getElementById('simulation-canvas-3d');
+        const ctx3d = canvas3d.getContext('2d');
+        const canvas2d = document.getElementById('simulation-canvas-2d');
+        const ctx2d = canvas2d.getContext('2d');
+
+        const config = {
+            vx: 0.5,
+            vt2: 0.5,
+            steps: 2000,
+            camDist: 5,
+        };
+
+        function project(x, y, z) {
+            const fov = canvas3d.width * 0.8;
+            const scale = fov / (fov + z);
+            return {
+                x: x * scale + canvas3d.width / 2,
+                y: y * scale + canvas3d.height / 2,
+                scale: scale
+            };
+        }
+
+        function drawAxes3D() {
+            ctx3d.clearRect(0, 0, canvas3d.width, canvas3d.height);
+            ctx3d.strokeStyle = 'rgba(128, 128, 128, 0.2)';
+            ctx3d.lineWidth = 1;
+
+            const size = 300;
+            const origin = project(0, 0, 0);
+
+            // x-axis
+            let p = project(size, 0, 0);
+            ctx3d.beginPath();
+            ctx3d.moveTo(origin.x, origin.y);
+            ctx3d.lineTo(p.x, p.y);
+            ctx3d.stroke();
+
+            // t1-axis
+            p = project(0, -size, 0);
+            ctx3d.beginPath();
+            ctx3d.moveTo(origin.x, origin.y);
+            ctx3d.lineTo(p.x, p.y);
+            ctx3d.stroke();
+
+            // t2-axis
+            p = project(0, 0, size);
+            ctx3d.beginPath();
+            ctx3d.moveTo(origin.x, origin.y);
+            ctx3d.lineTo(p.x, p.y);
+            ctx3d.stroke();
+        }
+
+        function drawAxes2D() {
+            ctx2d.clearRect(0, 0, canvas2d.width, canvas2d.height);
+            const w = canvas2d.width;
+            const h = canvas2d.height;
+            const origin = { x: w / 2, y: h / 2 };
+
+            ctx2d.strokeStyle = document.body.classList.contains('high-contrast') ? '#fff' : '#333';
+            ctx2d.fillStyle = document.body.classList.contains('high-contrast') ? '#fff' : '#333';
+            ctx2d.lineWidth = 2;
+
+            // x-axis
+            ctx2d.beginPath();
+            ctx2d.moveTo(origin.x - 200, origin.y);
+            ctx2d.lineTo(origin.x + 200, origin.y);
+            ctx2d.stroke();
+            ctx2d.fillText("x (space)", origin.x + 210, origin.y + 5);
+
+            // t-axis (t1)
+            ctx2d.beginPath();
+            ctx2d.moveTo(origin.x, origin.y - 200);
+            ctx2d.lineTo(origin.x, origin.y + 200);
+            ctx2d.stroke();
+            ctx2d.fillText("t (our time)", origin.x + 5, origin.y - 210);
+        }
+
+        function drawWorldlines() {
+            const vt1 = Math.sqrt(config.vx * config.vx + config.vt2 * config.vt2);
+
+            let x = 0, t1 = 0, t2 = 0;
+            const scale = 250;
+
+            // 3D Path
+            ctx3d.beginPath();
+            let p3d = project(x, -t1, t2);
+            ctx3d.moveTo(p3d.x, p3d.y);
+
+            // 2D Path
+            ctx2d.beginPath();
+            ctx2d.moveTo(canvas2d.width/2 + x, canvas2d.height/2 - t1);
+
+            for (let i = 0; i < config.steps; i++) {
+                const stepScale = 1/vt1 * 0.5;
+                x += config.vx * stepScale;
+                t1 += vt1 * stepScale;
+                t2 += config.vt2 * stepScale;
+
+                if (t1 > scale) break;
+
+                // 3D Path
+                p3d = project(x, -t1, t2);
+                ctx3d.lineTo(p3d.x, p3d.y);
+
+                // 2D Path
+                const observed_x = x * scale / vt1;
+                const observed_t = t1 * scale / vt1;
+                ctx2d.lineTo(canvas2d.width/2 + observed_x, canvas2d.height/2 - observed_t);
+            }
+
+            ctx3d.strokeStyle = 'magenta';
+            ctx3d.lineWidth = 2;
+            ctx3d.stroke();
+
+            ctx2d.strokeStyle = 'yellow';
+            ctx2d.lineWidth = 4;
+            ctx2d.stroke();
+        }
+
+        function draw() {
+            drawAxes3D();
+            drawAxes2D();
+            drawWorldlines();
+        }
+
+        // --- UI Controls ---
+        const vxSlider = document.getElementById('vx-slider');
+        const vt2Slider = document.getElementById('vt2-slider');
+        const vxValue = document.getElementById('vx-value');
+        const vt2Value = document.getElementById('vt2-value');
+        const resetBtn = document.getElementById('reset-btn');
+        const contrastToggle = document.getElementById('contrast-toggle');
+
+        vxSlider.addEventListener('input', e => {
+            config.vx = parseFloat(e.target.value);
+            vxValue.textContent = config.vx.toFixed(2);
+            draw();
+        });
+
+        vt2Slider.addEventListener('input', e => {
+            config.vt2 = parseFloat(e.target.value);
+            vt2Value.textContent = config.vt2.toFixed(2);
+            draw();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            vxSlider.value = 0.5;
+            vt2Slider.value = 0.5;
+            config.vx = 0.5;
+            config.vt2 = 0.5;
+            vxValue.textContent = '0.50';
+            vt2Value.textContent = '0.50';
+            draw();
+        });
+
+        contrastToggle.addEventListener('change', e => {
+            document.body.classList.toggle('high-contrast', e.target.checked);
+            draw(); // Redraw axes with new colors
+        });
+
+        window.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.code === 'KeyR') { e.preventDefault(); resetBtn.click(); }
+        });
+
+        // Initial Draw
+        draw();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The UTP Universe: A Simulation</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --header-color: #2c3e50;
+            --accent-color: #2980b9;
+            --accent-hover: #2471a3;
+            --control-bg: #fff;
+            --control-border: #ccc;
+            --table-border: #ddd;
+            --code-bg: #e9e9e9;
+            --error-bg: #ffebee;
+            --error-text: #c62828;
+            --warn-bg: #fff3e0;
+            --warn-text: #ef6c00;
+        }
+
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --header-color: #fff;
+            --accent-color: #21b3ff;
+            --accent-hover: #008fcc;
+            --control-bg: #222;
+            --control-border: #888;
+            --table-border: #555;
+            --code-bg: #333;
+            --error-bg: #5c0000;
+            --error-text: #ff9999;
+            --warn-bg: #6c3a00;
+            --warn-text: #ffcc80;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+        .high-contrast .subtitle { color: #aaa; }
+
+        .meta-bar { text-align: center; font-size: 0.8em; color: #888; margin-bottom: 2em; }
+        .high-contrast .meta-bar { color: #bbb; }
+
+        .suggestion-box { background-color: var(--control-bg); border: 1px solid var(--control-border); padding: 10px; margin: 1em 0; font-size: 0.9em; border-radius: 5px; }
+
+        section { margin-bottom: 2em; }
+
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--control-border); }
+        #simulation-canvas { border-radius: 4px; cursor: pointer; }
+        .controls { flex: 1; min-width: 250px; }
+        .control-group { margin-bottom: 1em; }
+        .control-group label { display: block; margin-bottom: 0.25em; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-buttons, .preset-buttons, .export-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+        .preset-buttons button { background-color: #6c757d; }
+        .preset-buttons button:hover { background-color: #5a6268; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid var(--table-border); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        .warning-box { background-color: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn-text); padding: 1em; border-radius: 5px; margin: 1em 0; }
+        .error-panel { background-color: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-text); padding: 1em; border-radius: 5px; margin: 1em 0; display: none; }
+        .dev-console { margin-top: 2em; }
+        .dev-console details { background: var(--control-bg); border: 1px solid var(--control-border); border-radius: 5px; padding: 10px; }
+        .dev-console summary { cursor: pointer; font-weight: bold; }
+        #dev-console-output { margin-top: 10px; background: var(--code-bg); color: var(--text-color); padding: 10px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; font-size: 0.8em; }
+        .performance-meter { margin-top: 1em; font-size: 0.8em; color: #666; }
+        .high-contrast .performance-meter { color: #aaa; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2em; }
+            .simulation-area { flex-direction: column; }
+            .controls { min-width: unset; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="quality-check-panel" class="error-panel"></div>
+
+        <header>
+            <h1>The "UTP" Universe</h1>
+            <p class="subtitle">A simulation of the String Theory Landscape and the search for our universe.</p>
+            <div class="meta-bar">
+                Estimated Runtime: 1-5 mins | Recommended Device: Desktop | Approx. HTML Size: 28 KB
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why are the laws of physics what they are? Why do fundamental constants have the specific values we observe? String theory offers a radical answer: our universe is just one of a near-infinite number of possibilities, a single bubble in a vast cosmic "landscape" of other universes, each with different laws. This simulation explores this idea, showing how, out of all these possibilities, universes like ours might be statistically favored to arise and be observed. It's a conceptual model of the "statistical cartography" of the multiverse.</p>
+        </section>
+
+        <section id="simulation">
+            <h2>Interactive Simulation</h2>
+            <div class="simulation-area">
+                <canvas id="simulation-canvas" width="600" height="600"></canvas>
+                <div class="controls">
+                    <div class="control-buttons">
+                        <button id="redraw-btn" aria-label="Redraw Landscape (R)">Redraw</button>
+                    </div>
+                    <hr>
+                    <div class="control-group">
+                        <label for="complexity-slider">Landscape Complexity: <span id="complexity-value">5</span></label>
+                        <input type="range" id="complexity-slider" min="1" max="10" step="1" value="5" aria-label="Landscape Complexity">
+                    </div>
+                    <div class="control-group">
+                        <label for="bias-slider">Inflationary Bias Strength: <span id="bias-value">0.3</span></label>
+                        <input type="range" id="bias-slider" min="0" max="1" step="0.05" value="0.3" aria-label="Inflationary Bias Strength">
+                    </div>
+                    <div class="control-group">
+                        <label for="anthropic-slider">Anthropic Cutoff: <span id="anthropic-value">0.15</span></label>
+                        <input type="range" id="anthropic-slider" min="0" max="0.5" step="0.01" value="0.15" aria-label="Anthropic Cutoff">
+                    </div>
+                    <hr>
+                    <div class="preset-buttons">
+                        <button id="preset-simple-btn">Preset: Simple</button>
+                        <button id="preset-biased-btn">Preset: Biased</button>
+                        <button id="preset-anthropic-btn">Preset: Anthropic</button>
+                    </div>
+                    <div class="export-buttons">
+                        <button id="export-png-btn" aria-label="Export PNG (E)">Export PNG</button>
+                    </div>
+                    <div class="control-group">
+                        <label><input type="checkbox" id="show-vacua-toggle" checked> Show Vacua Landscape</label>
+                        <label><input type="checkbox" id="show-prob-toggle" checked> Show Probability Distribution</label>
+                        <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide to the Cosmic Landscape</h2>
+            <p>This concept is one of the most debated in modern physics. Let's break it down.</p>
+
+            <h3>1. A Landscape of Possibilities</h3>
+            <p>String theory, a leading candidate for a "theory of everything," has a strange feature: its equations don't point to just one type of universe. Instead, they suggest a colossal number of possible solutions, perhaps 10⁵⁰⁰ or more. Each solution represents a stable "vacuum" or a possible universe with its own set of physical constants and laws. Physicists call this vast collection of possibilities the <strong>String Theory Landscape</strong>.</p>
+            <p>In our simulation, the background terrain represents this landscape. The two axes (left-to-right and bottom-to-top) represent two hypothetical physical constants (imagine one is the strength of gravity, the other the mass of the electron). The brightness of the terrain shows how many possible universes (vacua) exist with that specific combination of constants.</p>
+
+            <h3>2. The Problem: Why *This* Universe?</h3>
+            <p>If there are so many possibilities, why do we live in this particular one, with the constants so finely tuned for life? This is a huge puzzle. If the cosmological constant (a sort of "energy of empty space") were slightly different, galaxies would never have formed. If other constants were off, stars wouldn't work. So how did we get so lucky?</p>
+
+            <h3>3. A Statistical Answer: Not All Universes Are Created Equal</h3>
+            <p>The theory of cosmic inflation, which describes the universe's explosive birth, provides a potential answer. During inflation, the universe expanded at a furious rate, creating "bubble universes" all over the landscape. However, the process might not be uniform. Some types of vacua might be much easier to "fall into" and expand than others. This creates a statistical bias.</p>
+            <p>In the simulation, this is represented by the <strong>Inflationary Bias</strong> slider. It pushes the red "Probability Distribution" overlay, showing that some regions of the landscape become much more probable than others, regardless of how many raw vacua exist there.</p>
+
+            <h3>Analogy: The Bumpy, Magnetic Parking Lot</h3>
+            <p>Imagine a giant, hilly parking lot (the landscape). Each parking spot is a possible universe (a vacuum). You release a million steel balls (bubble universes) from the top of the highest hill. They will tend to roll downhill and settle in the lowest spots. This is the basic landscape. Now, add giant magnets (inflationary bias) under some sections of the lot. The balls will now be strongly pulled towards the magnets, even if those spots are not the lowest. The final distribution of balls will be a combination of the landscape's shape and the magnets' pull. This is how physicists think about the probability of our universe.</p>
+
+            <h3>4. The "Ultimate Turtle Power" and the Anthropic Principle</h3>
+            <p>The name of this simulation refers to the old story of the world resting on the back of a giant turtle, which rests on another, and so on, leading to the question, "What's at the bottom?" The landscape idea is a potential "bottom turtle" for physics: not a single answer, but a statistical one. The term "Ultimate Turtle Power" itself is a humorous, informal name for this powerful idea that statistics can explain our origins.</p>
+            <p>There's one final ingredient: the <strong>Anthropic Principle</strong>. This isn't a physical law, but a logical filter. It states that we can only observe a universe whose laws allow for observers to exist. Even if universes with wildly different constants are more probable, we couldn't be there to see them. The <strong>Anthropic Cutoff</strong> slider models this by greying out parts of the landscape where life (as we know it) would be impossible, effectively removing them from the set of universes we could possibly inhabit.</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Units</th><th>Default</th><th>Range</th><th>Description & Worked Example</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Landscape Complexity</strong></td>
+                        <td>Integer</td>
+                        <td>5</td>
+                        <td>1 - 10</td>
+                        <td>Controls the "ruggedness" of the underlying landscape of possible universes (vacua). Higher values create more peaks and valleys.
+                        <br><strong>Example:</strong> At a complexity of <strong>2</strong>, the landscape is smooth with few features. At <strong>10</strong>, it's a chaotic terrain with many potential homes for universes.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inflationary Bias</strong></td>
+                        <td>Strength (0-1)</td>
+                        <td>0.3</td>
+                        <td>0 - 1</td>
+                        <td>Models how cosmic inflation might prefer to create universes in certain regions of the landscape, shifting the peak of the probability distribution.
+                        <br><strong>Example:</strong> With a bias of <strong>0</strong>, the probability peak aligns with the most numerous vacua. With a bias of <strong>0.8</strong>, the peak is strongly pulled toward a specific point (the upper-left in this sim), even if few vacua exist there.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Anthropic Cutoff</strong></td>
+                        <td>Threshold (0-0.5)</td>
+                        <td>0.15</td>
+                        <td>0 - 0.5</td>
+                        <td>Sets a "habitable zone". It grays out regions where physical parameters are too extreme for complex structures (like us) to exist.
+                        <br><strong>Example:</strong> A cutoff of <strong>0.05</strong> allows most of the landscape. A cutoff of <strong>0.4</strong> makes the habitable zone very small, centered around the ideal point we label "Our Universe".</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="presets">
+            <h2>Try These Examples</h2>
+            <h3>1. Simple Landscape</h3>
+            <p><strong>Parameters:</strong> Complexity: 3, Bias: 0, Cutoff: 0.
+            <br><strong>Observe:</strong> The probability distribution (red overlay) perfectly matches the landscape of vacua (bright areas). The most common universes are the most probable. "Our Universe" is in a moderately populated, but not the most populated, region.</p>
+
+            <h3>2. Biased Inflation</h3>
+            <p><strong>Parameters:</strong> Complexity: 7, Bias: 0.7, Cutoff: 0.
+            <br><strong>Observe:</strong> The probability peak is now strongly shifted towards the upper-left, away from the brightest regions of the landscape. This shows how inflationary dynamics could make a rare type of universe become the most common one to actually form.</p>
+
+            <h3>3. Anthropic Selection</h3>
+            <p><strong>Parameters:</strong> Complexity: 5, Bias: 0.3, Cutoff: 0.25.
+            <br><strong>Observe:</strong> Large areas of the landscape are grayed out. Notice that the highest peak of the probability distribution might fall in a non-habitable zone. The most likely observable universe is therefore a compromise between what's probable (red peak) and what's habitable (not grayed out).</p>
+        </section>
+
+        <section id="theory">
+            <h2>Core Theory</h2>
+            <p>This simulation visualizes a conceptual model based on probability densities.</p>
+
+            <h3>1. Landscape of Vacua</h3>
+            <p>The background is generated by summing several Perlin noise functions. This creates a semi-random but smooth "hilly" terrain.</p>
+            <code>V(x, y) = Σ Perlin(f_i * x, f_i * y)</code>
+            <p><strong>Translation:</strong> The number of vacua V at any point (x, y) is the sum of several noise functions with different frequencies (f_i). This is a common technique in procedural generation to create natural-looking landscapes.</p>
+
+            <h3>2. Probability Distribution</h3>
+            <p>The final probability is a product of the landscape density, an inflationary bias, and an anthropic filter.</p>
+            <code>P(x, y) = V(x, y) * B(x, y) * A(x, y)</code>
+            <p><strong>Translation:</strong> The probability P of observing a universe at (x, y) is the number of possible vacua V, multiplied by the inflationary bias B (which favors a certain spot), multiplied by the anthropic filter A (which is 1 if habitable, 0 otherwise).</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt><strong>1. Is the String Theory Landscape a real thing?</strong></dt>
+                <dd>It's a theoretical consequence of string theory. We have no way to prove it exists or to see the other "universes." It's one of the most controversial ideas in physics, with passionate supporters and detractors.</dd>
+
+                <dt><strong>2. What do the axes on the canvas represent?</strong></dt>
+                <dd>They are abstract representations of two fundamental constants of nature. For example, the x-axis could be the value of the cosmological constant and the y-axis could be the mass of the Higgs boson. The landscape shows how many possible universes exist for each pair of values.</dd>
+
+                <dt><strong>3. Why is "Our Universe" not at the highest peak?</strong></dt>
+                <dd>This is the core of the argument. It might be that the most *probable* universe is not one that allows life to exist. We might live in a region that is a compromise: rare enough to have life-friendly laws, but common enough to have actually been created during the Big Bang.</dd>
+
+                <dt><strong>4. Is this related to the Multiverse?</strong></dt>
+                <dd>Yes. The String Theory Landscape is one of the most prominent scientific arguments for the existence of a multiverse. Each point in the landscape is a potential universe with different laws.</dd>
+
+                <dt><strong>5. What does "Redraw" do?</strong></dt>
+                <dd>It generates a new random landscape of vacua, like exploring a different region of the 10⁵⁰⁰ possibilities. The statistical principles remain the same, but the specific layout of peaks and valleys will change.</dd>
+            </dl>
+        </section>
+
+        <div class="dev-console">
+            <details><summary>Developer Console</summary><div id="dev-console-output"></div></details>
+        </div>
+    </div>
+
+    <script>
+        // A simple Perlin noise generator for the landscape
+        const Perlin = {
+            rand_vect: function(){
+                let theta = Math.random() * 2 * Math.PI;
+                return {x: Math.cos(theta), y: Math.sin(theta)};
+            },
+            dot_prod_grid: function(x, y, vx, vy){
+                let g_vect;
+                let d_vect = {x: x - vx, y: y - vy};
+                if (this.gradients[[vx,vy]]){
+                    g_vect = this.gradients[[vx,vy]];
+                } else {
+                    g_vect = this.rand_vect();
+                    this.gradients[[vx,vy]] = g_vect;
+                }
+                return d_vect.x * g_vect.x + d_vect.y * g_vect.y;
+            },
+            smootherstep: function(x){
+                return 6*x**5 - 15*x**4 + 10*x**3;
+            },
+            interp: function(x, a, b){
+                return a + this.smootherstep(x) * (b-a);
+            },
+            seed: function(){
+                this.gradients = {};
+                this.memory = {};
+            },
+            get: function(x, y) {
+                if (this.memory.hasOwnProperty([x,y]))
+                    return this.memory[[x,y]];
+                let xf = Math.floor(x);
+                let yf = Math.floor(y);
+                //interpolate
+                let tl = this.dot_prod_grid(x, y, xf,   yf);
+                let tr = this.dot_prod_grid(x, y, xf+1, yf);
+                let bl = this.dot_prod_grid(x, y, xf,   yf+1);
+                let br = this.dot_prod_grid(x, y, xf+1, yf+1);
+                let xt = this.interp(x-xf, tl, tr);
+                let xb = this.interp(x-xf, bl, br);
+                let v = this.interp(y-yf, xt, xb);
+                this.memory[[x,y]] = v;
+                return v;
+            }
+        };
+        Perlin.seed();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('simulation-canvas');
+            const ctx = canvas.getContext('2d');
+
+            const config = {
+                complexity: 5,
+                biasStrength: 0.3,
+                anthropicCutoff: 0.15,
+                showVacua: true,
+                showProb: true,
+            };
+
+            const OUR_UNIVERSE_POS = { x: 0.65, y: 0.6 };
+            const BIAS_POS = { x: 0.25, y: 0.2 };
+
+            function generateLandscape() {
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                const data = imageData.data;
+                const land = new Float32Array(canvas.width * canvas.height);
+                let maxLand = 0;
+
+                Perlin.seed();
+
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        let value = 0;
+                        let freq = 4;
+                        let amp = 1;
+                        for(let i=0; i<config.complexity; i++) {
+                            value += Perlin.get(x * freq / canvas.width, y * freq / canvas.height) * amp;
+                            freq *= 2;
+                            amp /= 2;
+                        }
+                        value = (value + 1) / 2; // Normalize to 0-1
+                        land[y * canvas.width + x] = value;
+                        if(value > maxLand) maxLand = value;
+                    }
+                }
+                // Normalize again
+                if(maxLand > 0) {
+                    for(let i=0; i<land.length; i++) land[i] /= maxLand;
+                }
+                return land;
+            }
+
+            let landscapeData = generateLandscape();
+
+            function draw() {
+                const imageData = ctx.createImageData(canvas.width, canvas.height);
+                const data = imageData.data;
+
+                // Calculate probability distribution
+                const prob = new Float32Array(canvas.width * canvas.height);
+                let maxProb = 0;
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const idx = y * canvas.width + x;
+                        const nx = x / canvas.width;
+                        const ny = y / canvas.height;
+
+                        // Inflationary bias
+                        const distToBias = Math.hypot(nx - BIAS_POS.x, ny - BIAS_POS.y);
+                        const biasFactor = 1 - distToBias * config.biasStrength;
+
+                        let val = landscapeData[idx] * biasFactor;
+
+                        prob[idx] = val;
+                        if(val > maxProb) maxProb = val;
+                    }
+                }
+                if(maxProb > 0) {
+                     for(let i=0; i<prob.length; i++) prob[i] /= maxProb;
+                }
+
+                // Render to canvas
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const idx = y * canvas.width + x;
+                        const dataIdx = idx * 4;
+
+                        const nx = x / canvas.width;
+                        const ny = y / canvas.height;
+
+                        const isHabitable = Math.hypot(nx - OUR_UNIVERSE_POS.x, ny - OUR_UNIVERSE_POS.y) < config.anthropicCutoff;
+
+                        let r=0, g=0, b=0;
+
+                        if (config.showVacua) {
+                            const l = landscapeData[idx];
+                            g = l * 200;
+                            b = l * 255;
+                        }
+
+                        if (config.showProb) {
+                            const p = prob[idx];
+                            r = Math.max(r, p * 255);
+                        }
+
+                        if (!isHabitable) {
+                            const avg = (r+g+b) / 3;
+                            r = g = b = avg * 0.5; // Desaturate and darken
+                        }
+
+                        data[dataIdx] = r;
+                        data[dataIdx + 1] = g;
+                        data[dataIdx + 2] = b;
+                        data[dataIdx + 3] = 255;
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                // Draw Our Universe marker
+                ctx.beginPath();
+                ctx.arc(OUR_UNIVERSE_POS.x * canvas.width, OUR_UNIVERSE_POS.y * canvas.height, 8, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.fill();
+                ctx.font = "bold 12px sans-serif";
+                ctx.fillStyle = "#fff";
+                ctx.textAlign = "center";
+                ctx.fillText("★", OUR_UNIVERSE_POS.x * canvas.width, OUR_UNIVERSE_POS.y * canvas.height + 4);
+                ctx.fillText("You Are Here", OUR_UNIVERSE_POS.x * canvas.width, OUR_UNIVERSE_POS.y * canvas.height + 22);
+            }
+
+            function redraw() {
+                landscapeData = generateLandscape();
+                draw();
+            }
+
+            // --- UI Controls ---
+            const redrawBtn = document.getElementById('redraw-btn');
+            redrawBtn.addEventListener('click', redraw);
+
+            const complexitySlider = document.getElementById('complexity-slider');
+            complexitySlider.addEventListener('input', e => {
+                config.complexity = parseInt(e.target.value);
+                document.getElementById('complexity-value').textContent = config.complexity;
+                redraw();
+            });
+
+            const biasSlider = document.getElementById('bias-slider');
+            biasSlider.addEventListener('input', e => {
+                config.biasStrength = parseFloat(e.target.value);
+                document.getElementById('bias-value').textContent = config.biasStrength.toFixed(2);
+                draw();
+            });
+
+            const anthropicSlider = document.getElementById('anthropic-slider');
+            anthropicSlider.addEventListener('input', e => {
+                config.anthropicCutoff = parseFloat(e.target.value);
+                document.getElementById('anthropic-value').textContent = config.anthropicCutoff.toFixed(2);
+                draw();
+            });
+
+            document.getElementById('show-vacua-toggle').addEventListener('change', e => {
+                config.showVacua = e.target.checked;
+                draw();
+            });
+            document.getElementById('show-prob-toggle').addEventListener('change', e => {
+                config.showProb = e.target.checked;
+                draw();
+            });
+
+            document.getElementById('contrast-toggle').addEventListener('change', e => {
+                document.body.classList.toggle('high-contrast', e.target.checked);
+            });
+
+            // --- Presets ---
+            const presets = {
+                simple: { complexity: 3, biasStrength: 0, anthropicCutoff: 0 },
+                biased: { complexity: 7, biasStrength: 0.7, anthropicCutoff: 0 },
+                anthropic: { complexity: 5, biasStrength: 0.3, anthropicCutoff: 0.25 },
+            };
+            function applyPreset(name) {
+                const preset = presets[name];
+                Object.assign(config, preset);
+
+                complexitySlider.value = config.complexity;
+                document.getElementById('complexity-value').textContent = config.complexity;
+                biasSlider.value = config.biasStrength;
+                document.getElementById('bias-value').textContent = config.biasStrength.toFixed(2);
+                anthropicSlider.value = config.anthropicCutoff;
+                document.getElementById('anthropic-value').textContent = config.anthropicCutoff.toFixed(2);
+
+                redraw();
+            }
+            document.getElementById('preset-simple-btn').addEventListener('click', () => applyPreset('simple'));
+            document.getElementById('preset-biased-btn').addEventListener('click', () => applyPreset('biased'));
+            document.getElementById('preset-anthropic-btn').addEventListener('click', () => applyPreset('anthropic'));
+
+            // --- Export ---
+            document.getElementById('export-png-btn').addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = `utp_universe_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+
+            // --- Keyboard Shortcuts ---
+            window.addEventListener('keydown', e => {
+                if (e.target.tagName === 'INPUT') return;
+                if (e.code === 'KeyR') { e.preventDefault(); redrawBtn.click(); }
+                if (e.code === 'KeyE') { e.preventDefault(); document.getElementById('export-png-btn').click(); }
+            });
+
+            // Initial Draw
+            draw();
+        });
+    </script>
+</body>
+</html>
