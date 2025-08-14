@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Quantum Tunneling & Uncertainty Principle</title>
+    <style>
+        /* Using the same robust CSS framework from previous simulations */
+        :root {
+            --bg-color: #fcfcff;
+            --text-color: #333333;
+            --primary-color: #2a62c9;
+            --secondary-color: #6c757d;
+            --accent-color: #8e44ad;
+            --border-color: #dee2e6;
+            --code-bg: #f1f3f5;
+            --error-color: #dc3545;
+            --font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-theme {
+            --bg-color: #1a1d21;
+            --text-color: #e9ecef;
+            --primary-color: #5d8bff;
+            --secondary-color: #8a9299;
+            --accent-color: #b37acc;
+            --border-color: #495057;
+            --code-bg: #2c3036;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.7;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        p { margin-bottom: 1rem; }
+        a { color: var(--primary-color); }
+
+        code {
+            background-color: var(--code-bg);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover { opacity: 0.9; }
+        button.secondary { background-color: var(--secondary-color); }
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th { background-color: var(--code-bg); }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        @media (min-width: 992px) {
+            .main-layout {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .metadata-bar {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        #suggestion-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-size: 0.9em;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        #simulation-canvas {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .control-group span { font-family: "Courier New", Courier, monospace; }
+
+        .preset-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .error-panel {
+            display: none;
+            background-color: var(--error-color);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        #dev-console {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        .collapsible {
+            background-color: var(--code-bg);
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1rem;
+            margin-top: 10px;
+            border-radius: 5px;
+            color: var(--text-color);
+        }
+
+        .collapsible:after { content: '\\002B'; font-weight: bold; float: right; margin-left: 5px; }
+        .active:after { content: "\\2212"; }
+
+        .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: var(--bg-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Quantum Tunneling & The Uncertainty Principle</h1>
+            <p class="subtitle" style="text-align:center;">Visualizing a particle's wave function passing through the impossible.</p>
+            <div class="metadata-bar">
+                <span>Estimated Runtime: Real-time</span> |
+                <span>Recommended Device: Desktop</span> |
+                <span>Approx. Size: 180 KB</span>
+            </div>
+        </header>
+
+        <div id="suggestion-box">
+            <strong>Quick Tune:</strong>
+            <button class="secondary" onclick="alert('Audience set to Beginner')">Audience: Beginner</button>
+            <button class="secondary" onclick="alert('Analogy style set to Mechanical')">Analogy: Mechanical</button>
+            <button class="secondary" onclick="alert('Intensity set to Medium')">Intensity: Medium</button>
+        </div>
+
+        <section>
+            <h2>Overview</h2>
+            <p>This simulation demonstrates two foundational concepts of quantum mechanics. <strong>Quantum Tunneling</strong> is the bizarre phenomenon where a particle can pass through a potential barrier (like a hill) even if it doesn't have enough energy to climb over it. <strong>The Uncertainty Principle</strong> states that there is a fundamental limit to how precisely we can know certain pairs of properties, like a particle's position and its momentum. Here, you can build your own quantum wave packet, fire it at a barrier, and see these principles in action.</p>
+        </section>
+
+        <div class="main-layout">
+            <div class="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <canvas id="simulation-canvas" aria-label="1D plot of the wave function probability density and potential barrier"></canvas>
+            </div>
+            <div class="controls-area">
+                <h2>Controls</h2>
+                <div class="controls-grid">
+                    <button id="play-pause-btn" aria-label="Play or Pause Simulation (Space)">Play</button>
+                    <button id="reset-btn" aria-label="Reset Simulation (R)">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="particle-energy-slider">Particle Energy: <span id="particle-energy-value">0.7</span> (E/V₀)</label>
+                    <input type="range" id="particle-energy-slider" min="0.1" max="2.0" step="0.05" value="0.7">
+                </div>
+
+                <div class="control-group">
+                    <label for="barrier-height-slider">Barrier Height (V₀): <span id="barrier-height-value">1.0</span> (arbitrary units)</label>
+                    <input type="range" id="barrier-height-slider" min="0.5" max="5.0" step="0.1" value="1.0">
+                </div>
+
+                <div class="control-group">
+                    <label for="barrier-width-slider">Barrier Width: <span id="barrier-width-value">10</span> nm</label>
+                    <input type="range" id="barrier-width-slider" min="2" max="30" step="1" value="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="uncertainty-slider">Initial Position Uncertainty (Δx): <span id="uncertainty-value">20</span></label>
+                    <input type="range" id="uncertainty-slider" min="5" max="50" step="1" value="20">
+                </div>
+
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button id="preset-tunneling-btn">High Tunneling</button>
+                    <button id="preset-reflection-btn">Strong Reflection</button>
+                    <button id="preset-dispersion-btn">Rapid Dispersion</button>
+                </div>
+
+                <div class="control-group" style="margin-top: 20px;">
+                    <button id="export-png-btn" class="secondary" aria-label="Export current view as PNG (E)">Export PNG</button>
+                    <button id="export-json-btn" class="secondary">Export JSON</button>
+                </div>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide: Through the Wall</h2>
+            <p>Quantum mechanics often tells us that the world is not as solid as it seems. This simulation explores two ideas that show just how fuzzy and strange reality can be at the smallest scales: Quantum Tunneling and the Uncertainty Principle.</p>
+
+            <h3>Part 1: The Classical World (A Ball and a Hill)</h3>
+            <p>Imagine you are rolling a ball towards a small hill. If you give the ball a strong push, it has a lot of kinetic energy. It will roll up the hill, over the top, and down the other side. But what if you give it only a gentle push? The ball will roll part of the way up the hill, stop, and then roll back towards you. It doesn't have enough energy to overcome the potential energy of the hill.</p>
+            <p>In our everyday, "classical" world, this is the end of the story. You either have enough energy to get over the barrier, or you don't. There is zero chance the ball will just magically appear on the other side. The hill is a perfect wall. In this simulation, the "Particle Energy" is how hard you push the ball, and the "Barrier Height" is the height of the hill.</p>
+
+            <h3>Part 2: The Quantum Surprise (A Particle and a Barrier)</h3>
+            <p>Now, let's shrink down to the quantum world. Our "ball" is now an electron, and the "hill" is an energy barrier. We've learned from other experiments (like the double-slit) that we can't think of an electron as a solid little ball. Instead, we have to describe it as a <strong>wave function</strong>, which you see plotted in the simulation. This wave doesn't represent a physical wave like in water; it's a wave of probability. The higher the wave is at any point, the more likely you are to find the particle there if you were to measure its position.</p>
+            <p>So, we create a "wave packet" (a localized wave) and send it towards the energy barrier. Just like the ball, if the particle's energy is much higher than the barrier's height, the wave packet mostly passes over it. If the energy is much lower, most of the wave packet is reflected, just like the ball rolling back. </p>
+            <p>But look closely. Even when the particle has less energy than the barrier height, a tiny piece of the wave "leaks" through the barrier and appears on the other side. This isn't a mistake. This is <strong>quantum tunneling</strong>. Because the particle is a wave, it doesn't have a perfectly defined position. Its probabilistic nature means there's a small but non-zero chance that, upon measurement, it will be found on the far side of the barrier. It has effectively "tunneled" through a region it classically could not enter. The simulation shows this by having a small bump of probability emerge on the other side, representing the tunneled part of the wave function.</p>
+
+            <h3>Part 3: The Uncertainty Principle</h3>
+            <p>There's another layer of strangeness here, defined by Werner Heisenberg's famous Uncertainty Principle. It states that you cannot simultaneously know both the exact position (Δx) and the exact momentum (Δp) of a particle. The more precisely you know one, the less precisely you know the other.</p>
+            <p>Think of it like a musical note. A very short, sharp sound (like a clap) has a very precise position in time. But what is its musical pitch (frequency)? It's just a noise; its frequency is very uncertain. Conversely, a long, pure note from a flute has a very well-defined frequency, but its position in time is smeared out—it exists for a long duration.</p>
+            <p>In this simulation, the "Initial Position Uncertainty (Δx)" slider controls this trade-off for your starting wave packet.
+            <ul>
+                <li><strong>High Δx (wide packet):</strong> You are setting the initial position to be very "smeared out." The uncertainty principle says that its momentum must therefore be very well-defined. A well-defined momentum means the packet will travel along without spreading out too quickly.</li>
+                <li><strong>Low Δx (narrow packet):</strong> You are trying to "pinpoint" the particle's starting position very precisely. The consequence is that its momentum becomes highly uncertain. This means the wave packet is actually a mix of many different speeds. As you run the simulation, you will see it disperse and spread out very rapidly.</li>
+            </ul>
+            By playing with these sliders, you are directly exploring the fundamental rules that govern all matter and energy in the universe.</p>
+        </section>
+
+        <section id="params-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <p>This simulation evolves a quantum wave packet according to the time-dependent Schrödinger equation.</p>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Units</th><th>Default</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Particle Energy (E/V₀)</td>
+                        <td>Ratio</td>
+                        <td>0.7</td>
+                        <td>0.1 - 2.0</td>
+                        <td>The initial kinetic energy of the wave packet, expressed as a fraction of the barrier height. A value < 1 is classically forbidden from passing the barrier.</td>
+                    </tr>
+                    <tr>
+                        <td>Barrier Height (V₀)</td>
+                        <td>Energy</td>
+                        <td>1.0</td>
+                        <td>0.5 - 5.0</td>
+                        <td>The height of the potential energy barrier. This is the "hill" the particle must overcome.</td>
+                    </tr>
+                    <tr>
+                        <td>Barrier Width (L)</td>
+                        <td>nm</td>
+                        <td>10</td>
+                        <td>2 - 30</td>
+                        <td>The physical width of the barrier. A wider barrier is harder to tunnel through.</td>
+                    </tr>
+                    <tr>
+                        <td>Initial Position Uncertainty (Δx)</td>
+                        <td>σ</td>
+                        <td>20</td>
+                        <td>5 - 50</td>
+                        <td>The initial width (standard deviation) of the wave packet. A smaller value means a more localized particle, but a greater uncertainty in its momentum.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <p>Use these presets to see characteristic behaviors of a quantum wave packet.</p>
+            <div class="preset-buttons" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+                <div>
+                    <h4>High Tunneling</h4>
+                    <p>Parameters: <code>{Energy: 0.7, Barrier Width: 8, Uncertainty: 25}</code><br>
+                    <strong>Observation:</strong> With a relatively low and thin barrier, a significant portion of the wave packet will be seen tunneling through to the other side after the collision. Notice the reflected packet is smaller than the initial one.</p>
+                    <button onclick="document.getElementById('preset-tunneling-btn').click()">Run "High Tunneling"</button>
+                </div>
+                <hr style="width:100%; border-color:var(--border-color);">
+                <div>
+                    <h4>Strong Reflection</h4>
+                    <p>Parameters: <code>{Energy: 0.5, Barrier Width: 20, Uncertainty: 20}</code><br>
+                    <strong>Observation:</strong> The barrier is wide and the particle energy is low. Almost the entire wave packet reflects off the barrier, with only a minuscule, nearly invisible amount tunneling through. This is close to the classical limit.</p>
+                    <button onclick="document.getElementById('preset-reflection-btn').click()">Run "Strong Reflection"</button>
+                </div>
+                <hr style="width:100%; border-color:var(--border-color);">
+                <div>
+                    <h4>Rapid Dispersion</h4>
+                    <p>Parameters: <code>{Energy: 0.8, Barrier Width: 10, Uncertainty: 5}</code><br>
+                    <strong>Observation:</strong> The initial position uncertainty (Δx) is very small. Due to the Heisenberg Uncertainty Principle, the momentum uncertainty (Δp) must be large. You will see the packet spread out extremely quickly, even before it reaches the barrier.</p>
+                    <button onclick="document.getElementById('preset-dispersion-btn').click()">Run "Rapid Dispersion"</button>
+                </div>
+            </div>
+        </section>
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <p>Perform these small experiments to build your intuition about the parameters.</p>
+            <ol>
+                <li><strong>Energy Above the Barrier:</strong>
+                    <ul>
+                        <li>Set <strong>Particle Energy</strong> to <strong>1.5</strong>, so it's higher than the barrier.</li>
+                        <li><strong>Observe:</strong> The wave packet mostly passes *over* the barrier, as expected. However, notice that a small portion still reflects! In quantum mechanics, a change in potential can cause reflection even if the particle has enough energy to proceed.</li>
+                    </ul>
+                </li>
+                <li><strong>Barrier Width is Key:</strong>
+                    <ul>
+                        <li>Use the "High Tunneling" preset. Let it run and note how much of the packet tunnels.</li>
+                        <li>Reset, and increase the <strong>Barrier Width</strong> from 8 to 16.</li>
+                        <li><strong>Observe:</strong> The amount of tunneling decreases dramatically. The probability drops off exponentially with width, so doubling the width makes tunneling many times less likely.</li>
+                    </ul>
+                </li>
+                <li><strong>The Wall Becomes a Window:</strong>
+                    <ul>
+                        <li>Use the "Strong Reflection" preset. Very little tunneling occurs.</li>
+                        <li>Reset, and decrease the <strong>Barrier Height</strong> from 1.0 to 0.6 (so E/V₀ is now 0.5/0.6 ≈ 0.83).</li>
+                        <li><strong>Observe:</strong> A much larger portion of the wave now tunnels through. The closer the particle's energy is to the barrier height, the more likely it is to tunnel.</li>
+                    </ul>
+                </li>
+                <li><strong>The Uncertainty Race:</strong>
+                    <ul>
+                        <li>Use the "Rapid Dispersion" preset (Δx = 5). Press Play and watch how fast the packet flattens out.</li>
+                        <li>Reset, and set the <strong>Initial Position Uncertainty (Δx)</strong> to its maximum value (50).</li>
+                        <li><strong>Observe:</strong> This broad, "uncertain" packet holds its shape for much longer. This is because a large Δx implies a small Δp (momentum uncertainty), so all parts of the wave are moving at very similar speeds.</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Math of the Wave Function</h2>
+            <p>The simulation visualizes the probability density, <code>|Ψ(x, t)|²</code>, of a particle's wave function. The evolution of this function is governed by the Schrödinger Equation.</p>
+
+            <h3>1. The Time-Dependent Schrödinger Equation</h3>
+            <p>The heart of the simulation is a numerical solution to this fundamental equation of quantum mechanics:</p>
+            <pre><code>iħ * ∂Ψ(x,t)/∂t = [ -ħ²/2m * ∂²/∂x² + V(x) ] Ψ(x,t)</code></pre>
+            <p>In plain English: The rate of change of the wave function in time (left side) is determined by the sum of its kinetic energy (related to its curvature, ∂²/∂x²) and its potential energy (V(x)), which is the barrier.</p>
+
+            <h3>2. The Heisenberg Uncertainty Principle</h3>
+            <p>This principle provides a lower bound for the product of the uncertainties in position (Δx) and momentum (Δp).</p>
+            <pre><code>Δx * Δp ≥ ħ / 2</code></pre>
+            <p>Where <code>ħ</code> is the reduced Planck constant. This isn't just a limit of our measurement tools; it's an intrinsic property of nature. If you create a wave packet with a small standard deviation in position (<code>Δx</code>), it must be composed of a wide range of momentum waves, ensuring a large <code>Δp</code>.</p>
+            <p><strong>Numeric Example:</strong> If you set the "Initial Position Uncertainty" slider to a low value, you are creating a state with a small <code>Δx</code>. As a result, <code>Δp</code> must be large. You will observe this as the wave packet spreading out (dispersing) very quickly, as its component waves have a wide variety of speeds.</p>
+
+            <h3>3. Tunneling Probability (Transmission Coefficient)</h3>
+            <p>For a rectangular barrier, the probability that a particle will tunnel through can be approximated when the barrier is reasonably opaque. This is the Transmission Coefficient, T.</p>
+            <pre><code>T ≈ 16 * (E/V₀) * (1 - E/V₀) * e^(-2κL)</code></pre>
+            <p>The most important part is the exponential term. The coefficient <code>κ</code> (kappa) is given by:</p>
+            <pre><code>κ = sqrt(2m(V₀ - E)) / ħ</code></pre>
+            <p>In plain English: The tunneling probability decreases <strong>exponentially</strong> with the barrier width (<code>L</code>) and the square root of the energy deficit (<code>V₀ - E</code>). This is why even small changes to the barrier width or height can have a huge impact on the amount of tunneling you observe.</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes / Extensions</h2>
+            <p><strong>Numerical Method:</strong> The simulation uses the <strong>Split-Step Fourier Method</strong> to solve the time-dependent Schrödinger equation. This method is popular because it is relatively simple to implement, computationally efficient, and unconditionally stable. It works by splitting the evolution operator into two parts: one for kinetic energy (the "drift," handled in momentum space via FFT) and one for potential energy (the "kick," handled in position space).</p>
+            <p><strong>Simulation Units:</strong> The constants like `ħ` (hbar) and `mass` are set to 1. This is a common practice in computational physics to keep the numbers in the simulation within a reasonable range and avoid floating-point precision issues. The units are therefore "arbitrary" but are internally consistent.</p>
+            <p><strong>Numerical Artifacts:</strong> Because the simulation space is finite (it has edges), a wave packet that reaches the edge will "wrap around" and reappear on the other side. This is an artifact of using the Fast Fourier Transform, which assumes a periodic domain. A more advanced simulation might use "absorbing boundary conditions" to prevent this.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <p>Tunneling is purely quantum, so all analogies have strong limitations, but they can help build intuition.</p>
+
+            <h3>1. The Fraying Rope Analogy (Physical)</h3>
+            <p><strong>Analogy:</strong> Imagine a long, thick rope representing the total probability of the particle. You whip the rope to send a wave down its length. When the wave hits a wall (the barrier), most of it reflects back. However, imagine the wall has a tiny, sharp burr on it. As the wave hits, this burr catches a single thread from the rope and pulls it through to the other side. This single, frayed thread represents the tiny probability that has "tunneled" through.</p>
+            <p><strong>Strength:</strong> This helps visualize that only a very small fraction of the original "substance" makes it through the barrier.</p>
+            <p><strong>Limitation:</strong> This analogy completely fails to capture the wave nature, the role of energy, or the exponential dependence on barrier width and height. It's a purely mechanical metaphor.</p>
+
+            <h3>2. The Evanescent Wave Analogy (Optical)</h3>
+            <p><strong>Analogy:</strong> This is the closest classical analogue. When light inside a glass block hits the surface at a steep angle, it undergoes "total internal reflection." All the light reflects back into the glass. However, an electromagnetic field, called an evanescent wave, does "leak" a very short distance into the air. This field decays exponentially and carries no energy away. But, if you bring another piece of glass within a few wavelengths of the first one, this evanescent field can "jump" the gap and excite a propagating wave in the second block. Light will have tunneled across a gap it shouldn't have been able to cross. This is called frustrated total internal reflection.</p>
+            <p><strong>Strength:</strong> This is an excellent analogy. It correctly models the exponential decay inside the "forbidden" region and shows how the probability of tunneling drops off extremely quickly with distance (the air gap).</p>
+            <p><strong>Limitation:</strong> It's still a classical wave phenomenon. It doesn't describe the particle nature or the quantization of energy that is central to quantum tunneling.</p>
+
+            <h3>3. The Radio Station Analogy (Uncertainty Principle)</h3>
+            <p><strong>Analogy:</strong> Think of finding a radio station on an old analog dial. The "position" is the frequency on the dial (e.g., 98.7 MHz), and the "momentum" is the actual audio signal being broadcast. If you tune the dial very precisely, you get a crystal-clear signal (you know the "momentum" of the audio waves perfectly). But if you smear your finger across the dial, covering a wide range of frequencies (uncertain position), you get a mix of static and multiple stations—a very uncertain signal (uncertain "momentum"). The Uncertainty Principle is like nature's radio dial: a sharp, definite frequency position requires a fuzzy, uncertain signal, and vice versa.</p>
+            <p><strong>Strength:</strong> This correctly links the concepts of "spread" in two different but related domains (frequency space and time/signal space), which is the essence of Fourier analysis and the uncertainty principle.</p>
+            <p><strong>Limitation:</strong> The analogy is abstract and doesn't involve physical motion in the way position and momentum do for a particle.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. If the particle tunnels, is it moving faster than light inside the barrier?</dt>
+                <dd>No. This is a common misconception. The wave function can have a non-zero value across the whole barrier instantly, but this doesn't represent a physical object moving. The "peak" of the tunneled wave packet doesn't appear on the other side faster than light would travel the same distance. The effect is strange, but it does not violate relativity.</dd>
+
+                <dt>2. Where does the particle get the energy to pass the barrier?</dt>
+                <dd>It doesn't! This is the key point. The particle never has an energy equal to the barrier height. Due to the uncertainty principle, the particle's energy itself has a tiny uncertainty. For a very brief moment, it can "borrow" enough energy to exist in a state that would normally be forbidden, as long as it "pays it back" very quickly. The wave function is the mathematical description of this fuzzy reality.</dd>
+
+                <dt>3. Does tunneling happen in the real world?</dt>
+                <dd>Yes, all the time! It's essential for technology and nature. The transistors in your computer rely on electrons tunneling through thin insulating layers. Scanning Tunneling Microscopes use it to image individual atoms. Nuclear fusion in the sun is only possible because protons can tunnel through the electrostatic repulsion barrier that should keep them apart.</dd>
+
+                <dt>4. Why does the wave packet spread out over time?</dt>
+                <dd>This is called dispersion. The initial wave packet is made up of many different underlying momentum waves. The waves with higher momentum travel faster than the waves with lower momentum. Over time, these different speeds cause the components to separate, making the entire packet spread out. A packet with high momentum uncertainty (from being very localized in position) will disperse much faster.</dd>
+
+                <dt>5. Why can't I set the "Initial Position Uncertainty" to zero?</dt>
+                <dd>According to the uncertainty principle (Δx * Δp ≥ ħ/2), if you were to set Δx to exactly zero, the uncertainty in momentum Δp would have to be infinite. This would correspond to a wave packet that instantly disperses across the entire universe, which is not a physically meaningful state (and is impossible to simulate).</dd>
+
+                <dt>6. The simulation is not running or seems frozen.</dt>
+                <dd>This simulation is computationally intensive as it's solving a partial differential equation. Pressing the "Reset" button should always restore a working state. If it freezes, a simple refresh of the page (F5 or Cmd+R) will restart it with safe default parameters.</dd>
+            </dl>
+        </section>
+
+        <section id="accessibility-performance">
+             <h2>Accessibility & Performance</h2>
+             <div class="controls-grid">
+                <div class="control-group"><label><input type="checkbox" id="contrast-toggle"> High Contrast Mode</label></div>
+             </div>
+             <div id="perf-meter">FPS: ... | Time Step: 0</div>
+        </section>
+
+        <div id="error-panel" class="error-panel"><strong>Initialization Error:</strong> <span id="error-message"></span></div>
+
+        <button class="collapsible">Developer Console</button>
+        <div class="content"><div id="dev-console"><p>Runtime logs will appear here.</p></div></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const canvas = document.getElementById('simulation-canvas');
+            const ctx = canvas.getContext('2d');
+            const devConsole = document.getElementById('dev-console');
+
+            // --- Simulation State ---
+            const simState = {
+                isRunning: false,
+                particleEnergy: 0.7,
+                barrierHeight: 1.0,
+                barrierWidth: 10,
+                initialUncertainty: 20,
+
+                // Simulation data
+                psi: [], // Wave function [real, imag, real, imag, ...]
+                potential: [], // V(x)
+                time: 0,
+
+                // Constants
+                N: 512, // Grid size. MUST be a power of 2 for FFT.
+                hbar: 1,
+                mass: 1,
+                dt: 0.05, // Time step
+            };
+
+            // --- Logging ---
+            function log(message) {
+                const p = document.createElement('p');
+                p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                devConsole.insertBefore(p, devConsole.firstChild);
+            }
+
+            // --- FFT Implementation (Radix-2 Cooley-Tukey) ---
+            // This is a compact implementation for educational purposes.
+            // It operates in-place on a flat array of complex numbers: [re1, im1, re2, im2, ...]
+            function fft(data, N, inverse) {
+                const N_2 = N / 2;
+                const TWO_PI = Math.PI * 2;
+                const sign = inverse ? 1 : -1;
+
+                // Bit-reversal permutation
+                for (let i = 0, j = 0; i < N; i++) {
+                    if (j > i) {
+                        [data[i*2], data[j*2]] = [data[j*2], data[i*2]];
+                        [data[i*2+1], data[j*2+1]] = [data[j*2+1], data[i*2+1]];
+                    }
+                    let m = N_2;
+                    while (m >= 2 && j >= m) {
+                        j -= m;
+                        m /= 2;
+                    }
+                    j += m;
+                }
+
+                // Cooley-Tukey FFT
+                for (let size = 2; size <= N; size *= 2) {
+                    const halfSize = size / 2;
+                    const angle_step = TWO_PI / size;
+                    for (let i = 0; i < N; i += size) {
+                        for (let j = 0; j < halfSize; j++) {
+                            const angle = sign * j * angle_step;
+                            const w_re = Math.cos(angle);
+                            const w_im = Math.sin(angle);
+
+                            const i_even = i + j;
+                            const i_odd = i + j + halfSize;
+
+                            const t_re = w_re * data[i_odd*2] - w_im * data[i_odd*2+1];
+                            const t_im = w_re * data[i_odd*2+1] + w_im * data[i_odd*2];
+
+                            data[i_odd*2] = data[i_even*2] - t_re;
+                            data[i_odd*2+1] = data[i_even*2+1] - t_im;
+                            data[i_even*2] += t_re;
+                            data[i_even*2+1] += t_im;
+                        }
+                    }
+                }
+
+                // Normalization for iFFT
+                if (inverse) {
+                    for (let i = 0; i < N * 2; i++) {
+                        data[i] /= N;
+                    }
+                }
+            }
+
+            // --- Physics Engine ---
+            function setupSimulation() {
+                log(`Setting up simulation with N=${simState.N}`);
+                simState.psi = new Array(simState.N * 2).fill(0);
+                simState.potential = new Array(simState.N).fill(0);
+
+                // Create potential barrier
+                const barrier_start = Math.floor(simState.N / 2 - simState.barrierWidth / 2);
+                const barrier_end = Math.floor(simState.N / 2 + simState.barrierWidth / 2);
+                for (let i = barrier_start; i < barrier_end; i++) {
+                    simState.potential[i] = simState.barrierHeight;
+                }
+
+                // Create initial wave packet (Gaussian)
+                const sigma = simState.initialUncertainty;
+                const k0 = Math.sqrt(2 * simState.mass * (simState.particleEnergy * simState.barrierHeight)) / simState.hbar; // Momentum
+                const x0 = Math.floor(simState.N / 4); // Start position
+                let total_prob = 0;
+
+                for (let i = 0; i < simState.N; i++) {
+                    const x = i - x0;
+                    const gauss = Math.exp(-0.5 * (x * x) / (sigma * sigma));
+                    const plane_wave_re = Math.cos(k0 * x);
+                    const plane_wave_im = Math.sin(k0 * x);
+
+                    simState.psi[i*2] = gauss * plane_wave_re;
+                    simState.psi[i*2+1] = gauss * plane_wave_im;
+                    total_prob += simState.psi[i*2]**2 + simState.psi[i*2+1]**2;
+                }
+
+                // Normalize the wave function
+                const norm = Math.sqrt(total_prob);
+                for (let i = 0; i < simState.N * 2; i++) {
+                    simState.psi[i] /= norm;
+                }
+                log("Initial wave function created and normalized.");
+            }
+
+            // The Split-Step Fourier Method step
+            function evolve() {
+                const { N, dt, hbar, mass, psi, potential } = simState;
+
+                // 1. Potential Operator (Kick)
+                for (let i = 0; i < N; i++) {
+                    const V = potential[i];
+                    const angle = -V * dt / hbar;
+                    const cos_a = Math.cos(angle);
+                    const sin_a = Math.sin(angle);
+                    const re = psi[i*2];
+                    const im = psi[i*2+1];
+                    psi[i*2]   = re * cos_a - im * sin_a;
+                    psi[i*2+1] = re * sin_a + im * cos_a;
+                }
+
+                // 2. Kinetic Operator (Drift)
+                fft(psi, N, false); // To momentum space
+
+                for (let i = 0; i < N; i++) {
+                    let k;
+                    if (i < N / 2) k = i;
+                    else k = i - N;
+                    const p_squared = (2 * Math.PI * k / N)**2;
+                    const E_k = p_squared * hbar**2 / (2 * mass);
+
+                    const angle = -E_k * dt / hbar;
+                    const cos_a = Math.cos(angle);
+                    const sin_a = Math.sin(angle);
+                    const re = psi[i*2];
+                    const im = psi[i*2+1];
+                    psi[i*2]   = re * cos_a - im * sin_a;
+                    psi[i*2+1] = re * sin_a + im * cos_a;
+                }
+
+                fft(psi, N, true); // Back to position space
+            }
+
+            // --- Rendering ---
+            function draw() {
+                const { N, psi, potential } = simState;
+                const { width, height } = canvas;
+
+                const isDark = document.body.classList.contains('dark-theme');
+                ctx.fillStyle = isDark ? '#1a1d21' : '#fcfcff';
+                ctx.fillRect(0, 0, width, height);
+
+                const dx = width / N;
+
+                // Draw potential barrier
+                ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 2;
+                const barrier_start_x = (N / 2 - simState.barrierWidth / 2) * dx;
+                const barrier_width_x = simState.barrierWidth * dx;
+                const barrier_height_y = height * (1 - simState.barrierHeight / simState.barrierHeight / 5); // Scale for drawing
+                ctx.beginPath();
+                ctx.moveTo(barrier_start_x, height);
+                ctx.lineTo(barrier_start_x, height - height*0.5);
+                ctx.lineTo(barrier_start_x + barrier_width_x, height - height*0.5);
+                ctx.lineTo(barrier_start_x + barrier_width_x, height);
+                ctx.stroke();
+
+
+                // Draw wave function probability |Ψ(x)|²
+                ctx.beginPath();
+                ctx.moveTo(0, height);
+                let max_prob = 0;
+                for (let i = 0; i < N; i++) {
+                    const prob = psi[i*2]**2 + psi[i*2+1]**2;
+                    if (prob > max_prob) max_prob = prob;
+                }
+
+                const prob_scale = height / (max_prob * 1.5);
+
+                for (let i = 0; i < N; i++) {
+                    const prob = psi[i*2]**2 + psi[i*2+1]**2;
+                    ctx.lineTo(i * dx, height - prob * prob_scale);
+                }
+                ctx.lineTo(width, height);
+                ctx.closePath();
+
+                ctx.fillStyle = 'rgba(93, 139, 255, 0.5)';
+                ctx.fill();
+                ctx.strokeStyle = '#5d8bff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // --- Main Loop and Controls ---
+            let lastTime = 0;
+            let frameCount = 0;
+            const perfMeter = document.getElementById('perf-meter');
+
+            function mainLoop(timestamp) {
+                if (!simState.isRunning) return;
+
+                const stepsPerFrame = 2; // Evolve twice per frame for smoother animation
+                for(let i=0; i<stepsPerFrame; ++i){
+                    evolve();
+                }
+
+                draw();
+                simState.time += simState.dt * stepsPerFrame;
+
+                // Update performance meter
+                frameCount++;
+                if (!lastTime) lastTime = timestamp;
+                const delta = timestamp - lastTime;
+                if (delta >= 1000) {
+                    const fps = (frameCount * 1000 / delta).toFixed(0);
+                    perfMeter.textContent = `FPS: ${fps} | Time: ${simState.time.toFixed(1)}`;
+                    lastTime = timestamp;
+                    frameCount = 0;
+                }
+
+                requestAnimationFrame(mainLoop);
+            }
+
+            function resetSimulation() {
+                log("Resetting simulation.");
+                const wasRunning = simState.isRunning;
+                simState.isRunning = false;
+                document.getElementById('play-pause-btn').textContent = 'Play';
+                simState.time = 0;
+                setupSimulation();
+                draw();
+                if(wasRunning) { // If it was running, start it again after reset
+                   simState.isRunning = true;
+                   document.getElementById('play-pause-btn').textContent = 'Pause';
+                   requestAnimationFrame(mainLoop);
+                }
+            }
+
+            function setupCanvases() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                // We don't call reset here anymore, it's called by the param change handler
+            }
+
+            function initialize() {
+                log("Initializing simulation and wiring controls...");
+
+                const playPauseBtn = document.getElementById('play-pause-btn');
+                const resetBtn = document.getElementById('reset-btn');
+                const exportPngBtn = document.getElementById('export-png-btn');
+                const exportJsonBtn = document.getElementById('export-json-btn');
+                const contrastToggle = document.getElementById('contrast-toggle');
+
+                const sliders = {
+                    particleEnergy: document.getElementById('particle-energy-slider'),
+                    barrierHeight: document.getElementById('barrier-height-slider'),
+                    barrierWidth: document.getElementById('barrier-width-slider'),
+                    initialUncertainty: document.getElementById('uncertainty-slider'),
+                };
+
+                const presets = {
+                    tunneling: { particleEnergy: 0.7, barrierWidth: 8, initialUncertainty: 25 },
+                    reflection: { particleEnergy: 0.5, barrierWidth: 20, initialUncertainty: 20 },
+                    dispersion: { particleEnergy: 0.8, barrierWidth: 10, initialUncertainty: 5 },
+                };
+
+                function updateValueLabel(id, value, unit = '') {
+                    const el = document.getElementById(`${id}-value`);
+                    if (el) el.textContent = `${value}${unit}`;
+                }
+
+                function handleParamChange() {
+                    simState.particleEnergy = parseFloat(sliders.particleEnergy.value);
+                    simState.barrierHeight = parseFloat(sliders.barrierHeight.value);
+                    simState.barrierWidth = parseInt(sliders.barrierWidth.value);
+                    simState.initialUncertainty = parseInt(sliders.initialUncertainty.value);
+
+                    updateValueLabel('particle-energy', simState.particleEnergy.toFixed(2), ' (E/V₀)');
+                    updateValueLabel('barrier-height', simState.barrierHeight.toFixed(1), ' (arbitrary units)');
+                    updateValueLabel('barrier-width', simState.barrierWidth, ' nm');
+                    updateValueLabel('uncertainty', simState.initialUncertainty, '');
+
+                    resetSimulation();
+                }
+
+                playPauseBtn.addEventListener('click', () => {
+                    simState.isRunning = !simState.isRunning;
+                    playPauseBtn.textContent = simState.isRunning ? 'Pause' : 'Play';
+                    if (simState.isRunning) {
+                        lastTime = performance.now();
+                        mainLoop(lastTime);
+                    }
+                });
+
+                resetBtn.addEventListener('click', handleParamChange); // Reset to current slider values
+
+                Object.values(sliders).forEach(slider => slider.addEventListener('input', handleParamChange));
+
+                document.getElementById('preset-tunneling-btn').addEventListener('click', () => applyPreset(presets.tunneling));
+                document.getElementById('preset-reflection-btn').addEventListener('click', () => applyPreset(presets.reflection));
+                document.getElementById('preset-dispersion-btn').addEventListener('click', () => applyPreset(presets.dispersion));
+
+                function applyPreset(preset) {
+                    sliders.particleEnergy.value = preset.particleEnergy;
+                    sliders.barrierWidth.value = preset.barrierWidth;
+                    sliders.initialUncertainty.value = preset.initialUncertainty;
+                    handleParamChange();
+                }
+
+                contrastToggle.addEventListener('change', e => {
+                    document.body.classList.toggle('dark-theme', e.target.checked);
+                    log(`High contrast mode ${e.target.checked ? 'enabled' : 'disabled'}.`);
+                    draw(); // Redraw with new theme
+                });
+
+                exportPngBtn.addEventListener('click', () => {
+                    const link = document.createElement('a');
+                    link.download = 'quantum-tunneling.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    log("Exported PNG.");
+                });
+
+                exportJsonBtn.addEventListener('click', () => {
+                    const data = {
+                        particleEnergy: simState.particleEnergy,
+                        barrierHeight: simState.barrierHeight,
+                        barrierWidth: simState.barrierWidth,
+                        initialUncertainty: simState.initialUncertainty
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'qt-preset.json';
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    log("Exported JSON.");
+                });
+
+                window.addEventListener('resize', () => {
+                    setupCanvases();
+                    handleParamChange();
+                });
+                window.addEventListener('keydown', (e) => {
+                    if(e.target.type === 'range') return;
+                    if (e.code === 'Space') { e.preventDefault(); playPauseBtn.click(); }
+                    if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetBtn.click(); }
+                });
+
+                function runSelfChecks() {
+                    const errorPanel = document.getElementById('error-panel');
+                    const errorMessage = document.getElementById('error-message');
+                    let errors = [];
+
+                    if (!canvas || !ctx) errors.push("Main canvas could not be found.");
+                    if (!playPauseBtn || !sliders.particleEnergy) errors.push("A required UI control is missing.");
+                    if (typeof fft !== 'function') errors.push("The FFT algorithm failed to load.");
+                    if (simState.N & (simState.N - 1) !== 0) errors.push(`Grid size N (${simState.N}) must be a power of 2.`);
+
+                    if (errors.length > 0) {
+                        errorPanel.style.display = 'block';
+                        errorMessage.innerHTML = errors.join('<br>');
+                        log(`FATAL: Self-check failed: ${errors.join(', ')}`);
+                        return false;
+                    }
+                    log("Self-checks passed.");
+                    return true;
+                }
+
+                if (runSelfChecks()) {
+                    setupCanvases();
+                    handleParamChange(); // Initial setup with default slider values
+                }
+
+                const coll = document.querySelector(".collapsible");
+                coll.addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight){ content.style.maxHeight = null; }
+                    else { content.style.maxHeight = content.scrollHeight + "px"; }
+                });
+            }
+
+            initialize();
+        });
+    </script>
+</body>
+</html>
