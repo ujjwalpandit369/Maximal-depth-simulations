@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum: Position Space vs. Momentum Space</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --primary-color: #00aaff;
+            --secondary-color: #ff4500;
+            --container-bg: #2a2a2a;
+            --border-color: #444444;
+            --slider-track-color: #444;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #333;
+            --button-hover-bg: #444;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --header-color: #ffff00;
+            --primary-color: #00ffff;
+            --secondary-color: #ff00ff;
+            --container-bg: #111111;
+            --border-color: #666666;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #222;
+            --button-hover-bg: #444;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 1em;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1em;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin-top: 1.5em;}
+        h3 { font-size: 1.5em; color: var(--primary-color); }
+
+        p, li {
+            font-size: 1.1em;
+        }
+
+        a { color: var(--primary-color); }
+        code { background-color: #333; padding: 0.2em 0.4em; border-radius: 4px; }
+
+        .content-section {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5em;
+            margin-top: 1.5em;
+        }
+
+        .simulation-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+            margin-top: 1.5em;
+        }
+
+        .canvas-container {
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 3 / 1;
+        }
+
+        .simulation-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        #position-canvas-container {
+             cursor: crosshair;
+        }
+
+        #controls-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            padding: 1em;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1em;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+            align-items: center;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--button-hover-bg); }
+
+        #error-panel { display: none; background-color: #ff4500; color: white; padding: 1em; border-radius: 8px; }
+        #dev-console { display: none; background-color: #222; border: 1px solid var(--border-color); padding: 1em; margin-top: 1em; border-radius: 8px; }
+        #metadata-bar, #suggestion-box { text-align: center; font-size: 0.9em; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Quantum: Position Space vs. Momentum Space</h1>
+            <p class="subtitle" style="text-align: center;">An interactive demonstration of the Fourier Transform and the Uncertainty Principle.</p>
+            <div id="metadata-bar">
+                <span>Est. runtime: N/A (Real-time)</span> | <span>Device: Any</span> | <span>Approx. size: 60KB</span>
+            </div>
+            <div id="suggestion-box" class="content-section" style="padding: 1em; margin-top: 1em; font-size: 0.9em;">
+                 <h4 style="margin: 0 0 0.5em 0; color: var(--header-color);">Tune Your Experience:</h4>
+                <p id="audience-selector" style="margin: 0.2em 0;">Audience: <a href="#" onclick="setAudience('beginner'); return false;">Beginner</a> / <a href="#" onclick="setAudience('intermediate'); return false;">Intermediate</a> / <a href="#" onclick="setAudience('advanced'); return false;">Advanced</a></p>
+            </div>
+        </header>
+
+        <main>
+            <div class="simulation-layout">
+                <div class="canvas-container" id="position-canvas-container">
+                    <h3 style="position:absolute; top: 5px; left: 10px; margin: 0; font-weight: normal;">Position Space Ψ(x) - "Where the particle might be"</h3>
+                    <canvas id="position-canvas" class="simulation-canvas"></canvas>
+                </div>
+                <div class="canvas-container" id="momentum-canvas-container">
+                    <h3 style="position:absolute; top: 5px; left: 10px; margin: 0; font-weight: normal;">Momentum Space Φ(p) - "How fast the particle might be going"</h3>
+                     <canvas id="momentum-canvas" class="simulation-canvas"></canvas>
+                </div>
+                <div id="controls-panel">
+                    <div class="control-group">
+                        <label><b>Presets</b></label>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="preset-narrow-btn">Narrow Spike</button>
+                            <button id="preset-wide-btn">Wide Wave</button>
+                            <button id="preset-double-slit-btn">Double Slit</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label><b>Actions</b></label>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="reset-btn">Reset to Flat</button>
+                            <button id="export-png-btn">Export PNG</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="static-content">
+                <section id="overview" class="content-section">
+                    <h2>Plain-Language Overview</h2>
+                    <p>In the quantum world, a particle is not a simple point. It's a "wave of probability" that describes its properties. This simulation explores the two most fundamental ways to describe a particle: by its position (where it is) and by its momentum (where it's going). These two descriptions are deeply connected by a mathematical tool called the Fourier Transform. Here, you can "draw" a particle's wavefunction in position space and see how its momentum-space description instantly changes. This will allow you to discover for yourself one of the cornerstones of quantum mechanics: the Heisenberg Uncertainty Principle.</p>
+                </section>
+
+                <section id="beginners-guide" class="content-section">
+                    <h2>Beginner's Guide: The Two Sides of a Quantum Coin</h2>
+                    <h3>Step 1: Position Space Ψ(x) - The "Where" Wave</h3>
+                    <p>The top graph shows the particle's wavefunction in <strong>position space</strong>. You can think of this wave, called Ψ(x) (Psi), as representing the particle's uncertainty in location.
+                        <ul>
+                            <li>A <strong>tall peak</strong> in the wave means there's a <strong>high probability</strong> of finding the particle at that location if you were to measure it.</li>
+                            <li>A <strong>narrow spike</strong> means the particle's position is known very precisely.</li>
+                            <li>A <strong>wide, spread-out</strong> wave means the particle's position is very uncertain; it could be found over a large range of locations.</li>
+                        </ul>
+                    Try drawing on the top canvas with your mouse to create different wave shapes.
+                    </p>
+
+                    <h3>Step 2: Momentum Space Φ(p) - The "How Fast" Wave</h3>
+                    <p>The bottom graph shows the wavefunction for the <em>exact same particle</em>, but in <strong>momentum space</strong>. Momentum is a measure of an object's motion (related to its speed and direction). This wave, Φ(p) (Phi), represents the particle's uncertainty in momentum.
+                         <ul>
+                            <li>A <strong>tall peak</strong> means the particle has a <strong>high probability</strong> of having that specific momentum.</li>
+                            <li>A <strong>narrow spike</strong> means the particle's momentum is known very precisely (it has a definite speed).</li>
+                            <li>A <strong>wide, spread-out</strong> wave means the particle's momentum is very uncertain.</li>
+                        </ul>
+                    </p>
+
+                    <h3>Step 3: The Fourier Transform - The "Wave Recipe"</h3>
+                    <p>How are these two graphs connected? Through a beautiful mathematical idea called the <strong>Fourier Transform</strong>.
+                    <br><br>
+                    <strong>Analogy: A Graphic Equalizer.</strong> Imagine a complex sound, like a musical chord. Your ear hears it as a single, complex pressure wave over time (this is like the position wave). A graphic equalizer on a stereo takes that sound and breaks it down into its fundamental frequency components: how much bass, how much midrange, how much treble, etc. It shows you the "recipe" of simple frequencies that make up the complex sound. The Fourier Transform is the mathematical "equalizer" that connects the position wave to the momentum wave. The momentum wave shows the "recipe" of simple momentum "frequencies" that are added together to create the position wave.
+                    </p>
+
+                    <h3>Step 4: Discovering the Uncertainty Principle</h3>
+                    <p>Now you have everything you need to discover one of the most famous principles in all of physics.
+                        <ol>
+                            <li>Click the "Reset" button, then the "Narrow Spike" preset. This creates a sharp peak in the top (position) graph. The particle's position is known very precisely. Now look at the bottom (momentum) graph. It's very wide and spread out! By knowing the position precisely, we have lost almost all information about its momentum.</li>
+                            <li>Now click the "Wide Wave" preset. The position is now very uncertain. But look at the momentum graph—it has become a very sharp spike! By giving up knowledge of the particle's position, we now know its momentum with near-perfect certainty.</li>
+                        </ol>
+                    This is the <strong>Heisenberg Uncertainty Principle</strong>: you cannot simultaneously know both the position and the momentum of a quantum particle with perfect accuracy. The more you know about one, the less you know about the other.
+                    </p>
+                </section>
+
+                <section id="faq" class="content-section">
+                    <h2>FAQ & Troubleshooting</h2>
+                    <dl>
+                        <dt>Is the particle really a wave?</dt>
+                        <dd>The particle exhibits both wave-like and particle-like properties. The wavefunction is a mathematical tool that describes the probability of observing its particle-like properties (like position) upon measurement. It's best to think of the particle as a quantum object that is not truly a "wave" or a "ball" but something else entirely that we use these concepts to describe.</dd>
+                        <dt>Why is momentum related to frequency?</dt>
+                        <dd>This comes from a key relation in quantum mechanics proposed by Louis de Broglie, which states that a particle's momentum (p) is inversely proportional to its wavelength (λ). A specific momentum corresponds to a pure sine wave with a specific wavelength/frequency. The Fourier transform is the tool that decomposes a complex wave into its constituent pure sine waves.</dd>
+                         <dt>What does the "Double Slit" preset show?</dt>
+                        <dd>This shows the wavefunction for a particle that has passed through two narrow slits. The position graph shows that the particle is likely to be found in one of two places. The momentum graph shows a characteristic interference pattern, which is a hallmark of wave-like behavior.</dd>
+                    </dl>
+                </section>
+            </div>
+
+            <div id="error-panel"></div>
+            <div id="dev-console-container">
+                <button id="toggle-dev-console">Developer Console</button>
+                <div id="dev-console"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Simulation Constants ---
+        const WAVE_SIZE = 512; // Must be a power of 2 for FFT
+
+        // --- Simulation State ---
+        let waveState = {
+            positionWave: [], // Array of complex numbers [real, imag]
+            momentumWave: [],
+        };
+
+        // --- Visualization and Rendering ---
+        function render() {
+            renderPositionSpace();
+            renderMomentumSpace();
+        }
+
+        function renderWave(canvasId, waveData, probabilityData, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw axes
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+            ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+            ctx.stroke();
+
+            // Draw probability density |Ψ(x)|²
+            ctx.fillStyle = `rgba(${color}, 0.2)`;
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            let maxProb = 0;
+            for(let val of probabilityData) maxProb = Math.max(maxProb, val);
+            if (maxProb === 0) maxProb = 1;
+
+            for (let i = 0; i < probabilityData.length; i++) {
+                const x = (i / (probabilityData.length - 1)) * w;
+                const y = h - (probabilityData[i] / maxProb) * h;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw wavefunction Ψ(x)
+            ctx.strokeStyle = `rgb(${color})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            let maxVal = 0;
+            for(let val of waveData) maxVal = Math.max(maxVal, Math.abs(val));
+            if (maxVal === 0) maxVal = 1;
+
+            for (let i = 0; i < waveData.length; i++) {
+                const x = (i / (waveData.length - 1)) * w;
+                const y = h / 2 - (waveData[i] / maxVal) * (h / 2);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        function renderPositionSpace() {
+            const wave = waveState.positionWave.map(c => c[0]); // Real part
+            const prob = waveState.positionWave.map(c => c[0]*c[0] + c[1]*c[1]);
+            renderWave('position-canvas', wave, prob, '0, 170, 255');
+        }
+
+        function renderMomentumSpace() {
+            const N = waveState.momentumWave.length;
+            if (N === 0) return;
+
+            // FFT shift
+            const shiftedMomentum = new Array(N);
+            for(let i=0; i<N; i++) {
+                shiftedMomentum[i] = waveState.momentumWave[(i + N/2) % N];
+            }
+
+            const prob = shiftedMomentum.map(c => c[0]*c[0] + c[1]*c[1]);
+            const wave = shiftedMomentum.map(c => c[0]); // Draw real part for consistency
+            renderWave('momentum-canvas', wave, prob, '255, 69, 0');
+        }
+
+        function updateAllControls() { /* No controls to update in this version */ }
+
+        // --- UI Event Listeners & Wiring ---
+        function setupEventListeners() {
+            const posCanvasContainer = document.getElementById('position-canvas-container');
+            let isDrawing = false;
+            let brushSize = 20;
+
+            function drawOnCanvas(e) {
+                if (!isDrawing) return;
+                const rect = posCanvasContainer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const waveIndex = Math.floor((x / rect.width) * WAVE_SIZE);
+                const amplitude = (rect.height / 2 - y) / (rect.height / 2);
+
+                // "Paint" a gaussian shape
+                for(let i = -brushSize; i<= brushSize; i++) {
+                    const idx = waveIndex + i;
+                    if (idx >= 0 && idx < WAVE_SIZE) {
+                        const falloff = Math.exp(-i*i / (2 * (brushSize/2)*(brushSize/2)));
+                        waveState.positionWave[idx][0] += amplitude * falloff * 0.2;
+                    }
+                }
+                // Clamp values
+                waveState.positionWave.forEach(v => v[0] = Math.max(-1, Math.min(1, v[0])));
+
+                updateMomentumWave();
+            }
+            posCanvasContainer.addEventListener('mousedown', (e) => { isDrawing = true; drawOnCanvas(e); });
+            posCanvasContainer.addEventListener('mousemove', drawOnCanvas);
+            posCanvasContainer.addEventListener('mouseup', () => { isDrawing = false; });
+            posCanvasContainer.addEventListener('mouseleave', () => { isDrawing = false; });
+
+            // Buttons
+            document.getElementById('reset-btn').addEventListener('click', () => resetSimulation('flat'));
+            document.getElementById('preset-narrow-btn').addEventListener('click', () => resetSimulation('narrow'));
+            document.getElementById('preset-wide-btn').addEventListener('click', () => resetSimulation('wide'));
+            document.getElementById('preset-double-slit-btn').addEventListener('click', () => resetSimulation('double_slit'));
+
+            document.getElementById('export-png-btn').addEventListener('click', () => {
+                const posCanvas = document.getElementById('position-canvas');
+                const momCanvas = document.getElementById('momentum-canvas');
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = posCanvas.width;
+                tempCanvas.height = posCanvas.height + momCanvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.fillStyle = '#1a1a1a';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(posCanvas, 0, 0);
+                tempCtx.drawImage(momCanvas, 0, posCanvas.height);
+
+                const link = document.createElement('a');
+                link.download = 'position-momentum-wavefunction.png';
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+            });
+
+            window.setAudience = (level) => {
+                const audienceSelector = document.getElementById('audience-selector');
+                if (audienceSelector) {
+                    const capitalizedLevel = level.charAt(0).toUpperCase() + level.slice(1);
+                    audienceSelector.innerHTML = `Audience level set to: <strong>${capitalizedLevel}</strong>.`;
+                }
+                console.log(`Audience set to ${level}`);
+            };
+        }
+
+        function runSelfChecks() {
+             if (!document.getElementById('position-canvas') || !document.getElementById('momentum-canvas')) {
+                document.getElementById('error-panel').style.display = 'block';
+                document.getElementById('error-panel').textContent = 'Critical Error: Missing canvas element.';
+             }
+        }
+
+        document.getElementById('toggle-dev-console').addEventListener('click', () => {
+            const consoleDiv = document.getElementById('dev-console');
+            consoleDiv.style.display = consoleDiv.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // --- FFT Implementation (Radix-2 Cooley-Tukey) ---
+        const fft = (function() {
+            function c_add(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+            function c_sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+            function c_mul(a, b) { return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]; }
+            function c_exp(x) { return [Math.cos(x), Math.sin(x)]; }
+
+            function _fft(c, N, inverse) {
+                if (N === 1) return c;
+                const even = _fft(c.filter((_, i) => i % 2 === 0), N / 2, inverse);
+                const odd = _fft(c.filter((_, i) => i % 2 === 1), N / 2, inverse);
+                const sign = inverse ? 1 : -1;
+                const result = new Array(N);
+                for (let k = 0; k < N / 2; k++) {
+                    const t = c_mul(odd[k], c_exp(sign * 2 * Math.PI * k / N));
+                    result[k] = c_add(even[k], t);
+                    result[k + N / 2] = c_sub(even[k], t);
+                }
+                return result;
+            }
+            return function fft(amplitudes) {
+                const N = amplitudes.length;
+                if ((N & (N - 1)) !== 0) throw new Error("FFT size must be a power of 2");
+                return _fft(amplitudes, N, false);
+            };
+        })();
+
+        // --- Core Simulation Logic ---
+        function resetSimulation(mode = 'flat') {
+            waveState.positionWave = new Array(WAVE_SIZE).fill(0).map(() => [0, 0]);
+
+            switch(mode) {
+                case 'narrow':
+                    for (let i = 0; i < WAVE_SIZE; i++) {
+                        const x = i - WAVE_SIZE / 2;
+                        const sigma = 5;
+                        waveState.positionWave[i][0] = Math.exp(-x*x / (2 * sigma*sigma));
+                    }
+                    break;
+                case 'wide':
+                     for (let i = 0; i < WAVE_SIZE; i++) {
+                        const x = i - WAVE_SIZE / 2;
+                        const sigma = 50;
+                        waveState.positionWave[i][0] = Math.exp(-x*x / (2 * sigma*sigma));
+                    }
+                    break;
+                case 'double_slit':
+                    for (let i = 0; i < WAVE_SIZE; i++) {
+                        const x = i - WAVE_SIZE / 2;
+                        const sigma = 5;
+                        const d = 50;
+                        const wave1 = Math.exp(-(x-d)*(x-d) / (2 * sigma*sigma));
+                        const wave2 = Math.exp(-(x+d)*(x+d) / (2 * sigma*sigma));
+                        waveState.positionWave[i][0] = wave1 + wave2;
+                    }
+                    break;
+                case 'flat':
+                default:
+                    break; // Already flat
+            }
+
+            updateMomentumWave();
+        }
+
+        function updateMomentumWave() {
+            waveState.momentumWave = fft(waveState.positionWave);
+            render();
+        }
+
+        // --- Main Loop (for rendering only) ---
+        function simulationLoop() {
+            render();
+            requestAnimationFrame(simulationLoop);
+        }
+
+        // --- Initial Setup ---
+        resetSimulation('wide');
+        // UI wiring will be added in a later step
+        simulationLoop();
+
+        // Expose functions for UI
+        window.sim = { resetSimulation, waveState, updateMomentumWave };
+    });
+    </script>
+</body>
+</html>
