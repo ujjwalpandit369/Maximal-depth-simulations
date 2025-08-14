@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classical Mechanics: The Chaotic Pendulum</title>
+    <style>
+        /* --- General Styles & Resets --- */
+        :root {
+            --bg-color: #fdfaf6;
+            --text-color: #3d3d3d;
+            --primary-color: #b71c1c; /* Deep red for classical theme */
+            --primary-text: #ffffff;
+            --secondary-color: #5d4037;
+            --border-color: #d7ccc8;
+            --canvas-bg: #ffffff;
+            --code-bg: #efebe9;
+            --link-color: #880e4f;
+            --header-bg: #efebe9;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #ffca28; /* Amber */
+            --primary-text: #000000;
+            --secondary-color: #aaaaaa;
+            --border-color: #ffffff;
+            --canvas-bg: #111111;
+            --code-bg: #333333;
+            --link-color: #ffca28;
+            --header-bg: #1a1a1a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* --- Layout --- */
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        header { background-color: var(--header-bg); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        .main-layout { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        .simulation-column { flex: 2; min-width: 400px; }
+        .controls-column { flex: 1; min-width: 300px; }
+
+        @media (max-width: 800px) {
+            .main-layout { flex-direction: column; }
+        }
+
+        /* --- Typography & Content --- */
+        h1, h2, h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+        h1 { font-size: 2.5rem; color: var(--primary-color); }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        h3 { font-size: 1.5rem; }
+
+        /* --- UI Elements --- */
+        button { background-color: var(--primary-color); color: var(--primary-text); border: none; padding: 0.5em 1em; border-radius: 5px; cursor: pointer; font-size: 1rem; transition: opacity 0.2s; }
+        button:hover { opacity: 0.85; }
+        button.secondary { background-color: var(--secondary-color); }
+        .controls-group { border: 1px solid var(--border-color); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        /* --- Simulation Canvas --- */
+        #simulationCanvas { width: 100%; height: auto; aspect-ratio: 4 / 3; background-color: var(--canvas-bg); border: 1px solid var(--border-color); border-radius: 8px; }
+
+        /* --- Helper Classes --- */
+        .hidden { display: none; }
+        .error-panel { background-color: #ffcccc; color: #cc0000; border: 1px solid #cc0000; padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+        .dev-console { background-color: #333; color: #eee; padding: 1rem; margin-top: 1rem; border-radius: 8px; }
+        .dev-console summary { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Phase Space of a Damped, Driven Pendulum</h1>
+            <p>An interactive visualization of the route to chaos.</p>
+            <div id="metadata-bar">
+                <small>Est. Runtime: Real-time | Recommended Device: Desktop</small>
+                <button id="theme-toggle" class="secondary" style="float: right;">High Contrast</button>
+            </div>
+        </header>
+
+        <div id="quality-check-panel" class="error-panel hidden"></div>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <section id="simulation-area">
+                    <h2>Phase Space Trajectory (Angle vs. Angular Velocity)</h2>
+                    <canvas id="simulationCanvas" width="800" height="600"></canvas>
+                    <div id="sim-performance-meter" style="margin-top: 0.5rem;">Steps/Sec: --</div>
+                </section>
+
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>This simulation explores how a simple, predictable system—a pendulum—can exhibit surprisingly complex and even chaotic behavior. By adding two ingredients, <strong>damping</strong> (friction) and a periodic <strong>driving force</strong>, the pendulum's motion transforms. We visualize this motion not in real space, but in "phase space," a powerful tool that plots the pendulum's angle against its angular velocity. This view reveals beautiful, intricate patterns, including the famous "strange attractor" that is a hallmark of chaotic systems.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide to the Chaotic Pendulum</h2>
+
+                    <h3>Step 1: What is Phase Space?</h3>
+                    <p>Instead of watching the pendulum swing back and forth, we are looking at a graph of its complete state at every moment. The horizontal axis is its <strong>angle (θ)</strong> from the vertical, and the vertical axis is its <strong>angular velocity (ω)</strong>, or how fast it's spinning. A point on this graph tells you everything you need to know about the pendulum at that instant. As the pendulum moves, this point traces a path called a trajectory. This is its "phase space portrait."</p>
+
+                    <h3>Step 2: The Simple & Damped Pendulum</h3>
+                    <p>Let's build up to chaos. First, imagine a simple pendulum with no friction or driving force. If you let it go, it would swing back and forth forever in a perfect ellipse in phase space. Now, let's add friction:</p>
+                    <ul>
+                        <li>Set the <strong>Driving Force (F)</strong> slider to 0.</li>
+                        <li>Set the <strong>Damping (q)</strong> slider to a small value, like 0.2.</li>
+                        <li>Click "Reset".</li>
+                    </ul>
+                    <p>The trajectory spirals inwards and comes to a stop at the center (0,0). The pendulum just hangs straight down, motionless. This is a "fixed point attractor"—no matter where you start the pendulum, it's always attracted to this final state because damping removes energy from the system.</p>
+
+                    <h3>Step 3: Adding a Drive - The Limit Cycle</h3>
+                    <p>Now let's add energy. The driving force periodically "pushes" the pendulum. This competes with the damping that tries to slow it down.</p>
+                     <ul>
+                        <li>Leave <strong>Damping (q)</strong> at 0.2.</li>
+                        <li>Set the <strong>Driving Force (F)</strong> to about 0.5.</li>
+                        <li>Click "Reset".</li>
+                    </ul>
+                    <p>After a brief spiral, the trajectory settles into a single, stable loop. This is a "limit cycle." The energy being lost to damping is perfectly balanced by the energy being added by the drive. The pendulum settles into a perfectly periodic motion.</p>
+
+                    <h3>Step 4: The Route to Chaos</h3>
+                    <p>Chaos emerges when the system can't decide on a simple, repeating motion. It's not random; it's deterministic, but it never repeats and is extremely sensitive to its starting conditions. One common way to get there is through "period-doubling."</p>
+                    <ul>
+                        <li>Set the parameters to the well-known chaotic values: <strong>Damping (q) = 0.5</strong>, <strong>Driving Force (F) = 1.2</strong>, and <strong>Driving Frequency (ωd) = 0.67</strong> (which is 2/3).</li>
+                        <li>Click Reset and let it run.</li>
+                    </ul>
+                    <p>The trajectory no longer settles into a simple loop. It folds and stretches, tracing an intricate pattern that never exactly repeats. This pattern is the famous <strong>strange attractor</strong>. The pendulum's motion is now chaotic: it is forever attracted to this shape, but its path within the shape is unpredictable over long times.</p>
+                </section>
+
+                <section id="parameters-explained">
+                    <h2>Parameters Explained</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Symbol</th>
+                                <th>Default</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Damping</strong></td>
+                                <td>q</td>
+                                <td>0.5</td>
+                                <td>Represents the force of friction. A value of 0 means no friction, and the pendulum would swing forever without a driving force. Higher values cause it to slow down more quickly.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Driving Force</strong></td>
+                                <td>F</td>
+                                <td>1.2</td>
+                                <td>The amplitude (strength) of the periodic external force applied to the pendulum. This is what "pumps" energy into the system.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Driving Frequency</strong></td>
+                                <td>ωd</td>
+                                <td>0.67</td>
+                                <td>The frequency of the external driving force. This determines how often the pendulum is "pushed."</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory: The Equation of Motion</h2>
+                    <p>The behavior of the pendulum is governed by a second-order nonlinear ordinary differential equation:</p>
+                    <p><code>d²θ/dt² + q(dθ/dt) + sin(θ) = F cos(ωd*t)</code></p>
+                    <p>This equation can be broken down into parts:</p>
+                    <ul>
+                        <li><code>d²θ/dt²</code>: The angular acceleration of the pendulum.</li>
+                        <li><code>q(dθ/dt)</code>: The <strong>damping term</strong>. It's proportional to the angular velocity (q is the damping constant), so the faster the pendulum swings, the more friction it experiences.</li>
+                        <li><code>sin(θ)</code>: The <strong>restoring force</strong> of gravity, which always tries to pull the pendulum back to the bottom (θ=0).</li>
+                        <li><code>F cos(ωd*t)</code>: The <strong>driving force</strong>, which applies a periodic push with amplitude F and frequency ωd.</li>
+                    </ul>
+                    <p>Because this equation is nonlinear (due to the <code>sin(θ)</code> term), it cannot be solved exactly with a simple formula. We must use a numerical method like the 4th-order Runge-Kutta (RK4) integrator to approximate the solution by taking small steps forward in time.</p>
+                </section>
+
+                <section id="analogies">
+                    <h2>Analogies & Intuition</h2>
+                    <p>
+                        <strong>A Child on a Swing:</strong> Think of pushing a child on a swing. The driving force is your push, the damping is air resistance, and the restoring force is gravity. If you push randomly (low frequency), the child's motion is erratic. If you time your pushes perfectly with the swing's natural rhythm (resonance), the amplitude grows. If you push against the rhythm, the motion is dampened. Chaos is like a much more complex version of this pushing game, where the timing and force create a pattern that never quite settles down.
+                    </p>
+                    <p>
+                        <strong>A Ball on a Curvy Landscape:</strong> Phase space can be thought of as a landscape. An attractor is a valley. For a damped pendulum, there's one deep valley at the center (the fixed point). For a driven system, the landscape itself is constantly shaking and deforming. A limit cycle is like the ball finding a stable circular groove to roll in. A strange attractor is like a complex series of interconnected valleys and hills that the ball can never escape from, but also never find a resting point within.
+                    </p>
+                </section>
+
+                <section id="advanced-notes">
+                    <h2>Advanced Notes</h2>
+                    <ul>
+                        <li><strong>Sensitivity to Initial Conditions:</strong> A key property of chaos is extreme sensitivity to initial conditions. If you were to start two identical pendulums with almost identical starting angles, their paths in phase space would be nearly identical at first, but would diverge exponentially over time until they were completely different.</li>
+                        <li><strong>Bifurcation Diagrams:</strong> The "period-doubling" route to chaos is just one possibility. Physicists study these transitions using bifurcation diagrams, which plot the long-term state of the system as a function of one parameter (like the Driving Force F).</li>
+                        <li><strong>Lyapunov Exponent:</strong> A quantitative measure of chaos is the Lyapunov exponent, which measures the rate at which nearby trajectories in phase space diverge. A positive Lyapunov exponent is a definitive sign of a chaotic system.</li>
+                    </ul>
+                </section>
+
+                <section id="faq">
+                    <h2>FAQ & Walkthroughs</h2>
+                    <dl>
+                        <dt>What do the coordinates mean?</dt>
+                        <dd>The horizontal axis is the angle (θ) in radians, from -π to +π. The vertical axis is the angular velocity (ω). A point at (0, 5) means the pendulum is at the bottom of its swing but moving very fast.</dd>
+
+                        <dt>How do I find the classic "strange attractor"?</dt>
+                        <dd>The most famous strange attractor for this system occurs at the parameters: Damping <strong>q = 0.5</strong>, Driving Force <strong>F = 1.2</strong>, and Driving Frequency <strong>ωd ≈ 0.67</strong>. Set the sliders to these values and click Reset.</dd>
+
+                        <dt>What is a "limit cycle"?</dt>
+                        <dd>A limit cycle is a stable, repeating orbit in phase space. Try parameters like <strong>q = 0.2</strong>, <strong>F = 0.52</strong>, <strong>ωd = 0.67</strong>. The pendulum will eventually settle into a simple, single loop.</dd>
+
+                        <dt>What is "period-doubling"?</dt>
+                        <dd>This is a common route to chaos. If you start at the limit cycle parameters above and slowly increase the Driving Force F, you'll see the single loop split into a double loop (period-2), then a four-loop (period-4), and so on, until it becomes fully chaotic. Try setting F to <strong>1.08</strong> to see a period-2 cycle.</dd>
+                    </dl>
+                </section>
+            </div>
+
+            <div class="controls-column">
+                <div class="controls-group">
+                    <h3>Main Controls</h3>
+                    <button id="play-pause-btn" aria-label="Play/Pause (Space)">Pause</button>
+                    <button id="reset-btn" aria-label="Reset (R)">Reset</button>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Presets</h3>
+                    <div id="presets-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Preset buttons will be added here -->
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Pendulum Parameters</h3>
+                    <div id="sliders-container">
+                        <!-- Sliders will be added here by JS -->
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Export</h3>
+                    <button id="export-png-btn">Export PNG</button>
+                    <button id="export-json-btn">Export JSON</button>
+                    <button id="share-preset-btn">Share Preset</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <details id="dev-console" class="dev-console">
+                <summary>Developer Console</summary>
+                <pre id="dev-log">Initializing...</pre>
+            </details>
+        </footer>
+    </div>
+
+    <script>
+        // --- Physics and Integration Logic ---
+
+        class Pendulum {
+            constructor({ theta = 0.2, omega = 0, q = 0.5, F = 1.2, omega_d = 2/3 } = {}) {
+                this.theta = theta;   // Angle
+                this.omega = omega;   // Angular velocity
+                this.time = 0;
+
+                this.q = q;           // Damping coefficient
+                this.F = F;           // Driving force amplitude
+                this.omega_d = omega_d; // Driving frequency
+            }
+
+            // Define the system of first-order differential equations
+            // y = [theta, omega]
+            // dy/dt = [omega, -q*omega - sin(theta) + F*cos(omega_d*t)]
+            derivatives(t, y) {
+                const [theta, omega] = y;
+                const d_theta_dt = omega;
+                const d_omega_dt = -this.q * omega - Math.sin(theta) + this.F * Math.cos(this.omega_d * t);
+                return [d_theta_dt, d_omega_dt];
+            }
+        }
+
+        const Integrator = {
+            // 4th Order Runge-Kutta integrator step
+            rk4_step(pendulum, dt) {
+                const y = [pendulum.theta, pendulum.omega];
+                const t = pendulum.time;
+
+                const k1 = pendulum.derivatives(t, y);
+                const k2 = pendulum.derivatives(t + dt / 2, [y[0] + 0.5 * dt * k1[0], y[1] + 0.5 * dt * k1[1]]);
+                const k3 = pendulum.derivatives(t + dt / 2, [y[0] + 0.5 * dt * k2[0], y[1] + 0.5 * dt * k2[1]]);
+                const k4 = pendulum.derivatives(t + dt,     [y[0] + dt * k3[0], y[1] + dt * k3[1]]);
+
+                pendulum.theta += (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+                pendulum.omega += (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+                pendulum.time += dt;
+
+                // Normalize angle to be within [-PI, PI]
+                pendulum.theta = pendulum.theta % (2 * Math.PI);
+                if (pendulum.theta > Math.PI) pendulum.theta -= 2 * Math.PI;
+                if (pendulum.theta < -Math.PI) pendulum.theta += 2 * Math.PI;
+            }
+        };
+
+        // --- Main Application Logic ---
+
+        const App = {
+            canvas: null,
+            ctx: null,
+            pendulum: null,
+            isRunning: true,
+            dt: 0.04,
+
+            // Drawing state
+            lastX: null,
+            lastY: null,
+            scaleX: 0,
+            scaleY: 0,
+
+            init() {
+                this.canvas = document.getElementById('simulationCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.reset();
+                console.log("Pendulum simulation page loaded.");
+                this.animate();
+            },
+
+            reset() {
+                this.pendulum = new Pendulum(); // Use default params for now
+                this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.lastX = null;
+                this.lastY = null;
+                // Set scaling factors based on canvas size and phase space range
+                this.scaleX = this.canvas.width / (2 * Math.PI);
+                this.scaleY = this.canvas.height / 4; // Arbitrary scaling for omega
+            },
+
+            draw() {
+                // 1. Fade out the old path slowly
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // 2. Map physics coords to canvas coords
+                const x = this.canvas.width / 2 + this.pendulum.theta * this.scaleX;
+                const y = this.canvas.height / 2 - this.pendulum.omega * this.scaleY;
+
+                // 3. Draw the new line segment
+                if (this.lastX !== null) {
+                    this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+                    this.ctx.lineWidth = 1;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.lastX, this.lastY);
+                    this.ctx.lineTo(x, y);
+                    this.ctx.stroke();
+                }
+
+                // 4. Store current position for the next frame
+                this.lastX = x;
+                this.lastY = y;
+            },
+
+            step() {
+                // Perform multiple integration steps per frame for stability and speed
+                for (let i = 0; i < 5; i++) {
+                    Integrator.rk4_step(this.pendulum, this.dt);
+                }
+            },
+
+            animate() {
+                if (this.isRunning) {
+                    this.step();
+                    this.draw();
+                }
+                requestAnimationFrame(() => this.animate());
+            }
+        };
+
+        const UI = {
+            presets: {
+                'Limit Cycle': { q: 0.2, F: 0.52, omega_d: 0.67 },
+                'Period Doubling': { q: 0.5, F: 1.08, omega_d: 0.67 },
+                'Chaotic Attractor': { q: 0.5, F: 1.2, omega_d: 0.67 },
+            },
+
+            init() {
+                this.createSliders();
+                this.createPresetButtons();
+                this.addEventListeners();
+            },
+
+            addEventListeners() {
+                const playPauseBtn = document.getElementById('play-pause-btn');
+                playPauseBtn.addEventListener('click', () => {
+                    App.isRunning = !App.isRunning;
+                    playPauseBtn.textContent = App.isRunning ? 'Pause' : 'Play';
+                });
+
+                document.getElementById('reset-btn').addEventListener('click', () => App.reset());
+                document.getElementById('export-png-btn').addEventListener('click', () => App.exportPNG());
+                document.getElementById('export-json-btn').addEventListener('click', () => App.exportJSON());
+                document.getElementById('share-preset-btn').addEventListener('click', () => App.sharePreset());
+
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') { e.preventDefault(); playPauseBtn.click(); }
+                    if (e.code === 'KeyR') { e.preventDefault(); document.getElementById('reset-btn').click(); }
+                });
+            },
+
+            applyPreset(name) {
+                const preset = this.presets[name];
+                if (!preset) return;
+                Object.assign(App.pendulum, preset);
+                this.createSliders(); // Re-create sliders to reflect new values
+                App.reset();
+            },
+
+            createPresetButtons() {
+                const container = document.getElementById('presets-container');
+                container.innerHTML = '';
+                for (const name in this.presets) {
+                    const button = document.createElement('button');
+                    button.textContent = name;
+                    button.classList.add('secondary');
+                    button.addEventListener('click', () => this.applyPreset(name));
+                    container.appendChild(button);
+                }
+            },
+
+            createSliders() {
+                const container = document.getElementById('sliders-container');
+                container.innerHTML = '';
+
+                const sliderConfigs = {
+                    q: { name: 'Damping (q)', min: 0, max: 1, step: 0.01 },
+                    F: { name: 'Driving Force (F)', min: 0, max: 2, step: 0.01 },
+                    omega_d: { name: 'Driving Frequency (ωd)', min: 0, max: 2, step: 0.01 },
+                };
+
+                for (const param in sliderConfigs) {
+                    const config = sliderConfigs[param];
+                    const value = App.pendulum[param];
+
+                    const sliderDiv = document.createElement('div');
+                    sliderDiv.classList.add('slider-container');
+
+                    const label = document.createElement('label');
+                    label.textContent = `${config.name}: `;
+                    const valueSpan = document.createElement('span');
+                    valueSpan.textContent = value;
+                    label.appendChild(valueSpan);
+
+                    const slider = document.createElement('input');
+                    slider.type = 'range';
+                    slider.min = config.min;
+                    slider.max = config.max;
+                    slider.step = config.step;
+                    slider.value = value;
+
+                    slider.addEventListener('input', (e) => {
+                        const newValue = parseFloat(e.target.value);
+                        App.pendulum[param] = newValue;
+                        valueSpan.textContent = newValue.toFixed(2);
+                        App.reset();
+                    });
+                    sliderDiv.appendChild(label);
+                    sliderDiv.appendChild(slider);
+                    container.appendChild(sliderDiv);
+                }
+            }
+        };
+
+        const Utils = {
+            log(message) {
+                const devLog = document.getElementById('dev-log');
+                if (devLog) {
+                    const time = new Date().toLocaleTimeString();
+                    devLog.textContent = `[${time}] ${message}\n` + devLog.textContent;
+                }
+            },
+            runQualityChecks() {
+                const checks = {
+                    'Canvas': App.canvas,
+                    'Pendulum object': App.pendulum,
+                    'UI object': UI
+                };
+                let all_ok = true;
+                for(const [name, obj] of Object.entries(checks)) {
+                    if (!obj) {
+                        this.log(`ERROR: Quality Check failed for ${name}`);
+                        all_ok = false;
+                    }
+                }
+                if (all_ok) this.log("All quality checks passed.");
+                else document.getElementById('quality-check-panel').classList.remove('hidden');
+            },
+            updatePerfMeter() {
+                const meter = document.getElementById('sim-performance-meter');
+                const steps = App.stepsThisSecond;
+                meter.textContent = `Steps/Sec: ${steps}`;
+                App.stepsThisSecond = 0;
+            }
+        };
+
+        // Modify App to include performance counting and export/share logic
+        Object.assign(App, {
+            stepsThisSecond: 0,
+
+            exportPNG() {
+                Utils.log('Exporting canvas to PNG...');
+                const link = document.createElement('a');
+                link.download = `pendulum_attractor_${Date.now()}.png`;
+                link.href = this.canvas.toDataURL('image/png');
+                link.click();
+            },
+
+            exportJSON() {
+                Utils.log('Exporting parameters to JSON...');
+                const params = { q: this.pendulum.q, F: this.pendulum.F, omega_d: this.pendulum.omega_d };
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(params, null, 2));
+                const link = document.createElement('a');
+                link.href = dataStr;
+                link.download = "pendulum_params.json";
+                link.click();
+            },
+
+            sharePreset() {
+                const params = { q: this.pendulum.q, F: this.pendulum.F, omega_d: this.pendulum.omega_d };
+                const jsonString = JSON.stringify(params);
+                const url = window.location.origin + window.location.pathname + '#params=' + encodeURIComponent(jsonString);
+                navigator.clipboard.writeText(url).then(() => {
+                    Utils.log('Shareable preset URL copied to clipboard.');
+                });
+            },
+
+            loadPresetFromURL() {
+                if (window.location.hash.startsWith('#params=')) {
+                    try {
+                        const encodedJson = window.location.hash.substring(8);
+                        const decodedJson = decodeURIComponent(encodedJson);
+                        const urlParams = JSON.parse(decodedJson);
+                        Utils.log('Found parameters in URL, applying them.');
+                        Object.assign(this.pendulum, urlParams);
+                    } catch(e) {
+                        Utils.log(`Error parsing params from URL: ${e.message}`);
+                    }
+                }
+            }
+        });
+
+        const originalInit = App.init.bind(App);
+        App.init = function() {
+            this.loadPresetFromURL();
+            originalInit();
+        };
+
+        const originalStep = App.step;
+        App.step = function() {
+            originalStep.call(this);
+            this.stepsThisSecond += 5; // As we do 5 steps per frame
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+            UI.init();
+            Utils.log("Application initialized.");
+            Utils.runQualityChecks();
+            setInterval(Utils.updatePerfMeter, 1000);
+        });
+    </script>
+</body>
+</html>
