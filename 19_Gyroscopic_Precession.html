@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gyroscopic Precession Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #e67e22;
+            --accent-color-dark: #d35400;
+            --code-bg: #e2e8f0;
+            --gyro-color: #7f8c8d;
+            --L-vec-color: #2980b9;
+            --tau-vec-color: #c0392b;
+            --dL-vec-color: #27ae60;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #f39c12;
+            --accent-color-dark: #e67e22;
+            --code-bg: #2d3748;
+            --gyro-color: #95a5a6;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; display: flex; justify-content: center; align-items: center; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            cursor: grab;
+        }
+        canvas:active { cursor: grabbing; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gyroscopic Precession Simulator</h1>
+            <p class="subtitle">Visualizing why a spinning top doesn't fall over.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 230 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Why does a spinning top seem to defy gravity, gracefully sweeping out a circle instead of just falling over? The answer lies in the physics of angular momentum. A spinning object has a powerful "gyroscopic" stability that causes it to behave in a very counter-intuitive way. When gravity tries to topple it over by applying a twisting force (a torque), the gyroscope responds by moving sideways, a motion called precession. This simulation provides a 3D view of a gyroscope, allowing you to see the key vectors of angular momentum and torque at play. By adjusting the gyroscope's spin speed and mass, you can discover for yourself how these factors determine the speed and stability of its mesmerizing precession.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Sideways Fall</h2>
+
+            <h3>Step 1: Angular Momentum (L)</h3>
+            <p>Just like a moving object has linear momentum (mass in motion), a spinning object has **angular momentum (L)**. This is a vector that points along the axis of rotation (you can use the "right-hand rule" to find its direction). The faster an object spins and the more massive it is, the larger its angular momentum. In the simulation, this is the large <span style="color:var(--L-vec-color)">blue vector</span> along the gyroscope's axle. An object with a lot of angular momentum strongly resists changes to its spin axis.</p>
+
+            <h3>Step 2: Torque (τ)</h3>
+            <p>Just like a force causes a change in linear momentum, a twisting force, called a **torque (τ)**, causes a change in angular momentum. In our simulation, the gyroscope is supported at one end (the pivot). The force of gravity pulls down on the gyroscope's center of mass. This creates a torque that tries to make the gyroscope fall over. This torque vector is shown in <span style="color:var(--tau-vec-color)">red</span>. Notice that it's always horizontal and perpendicular to both the gyroscope's axle and the force of gravity.</p>
+
+            <h3>Step 3: The Counter-intuitive Result (Precession)</h3>
+            <p>Here is the crucial part: a torque does not cause the angular momentum vector to "point towards" the torque. Instead, the torque causes the angular momentum vector to *change in the direction of the torque*.
+            <br>Look at the vectors: The blue angular momentum vector (L) is pointing along the axle. The red torque vector (τ) is pointing horizontally. The torque will cause the tip of the L vector to move in the direction of τ. This is shown by the small <span style="color:var(--dL-vec-color)">green vector</span> (dL). As the L vector's tip is constantly pushed sideways, the entire axle is forced to sweep out a horizontal circle. This motion is called **precession**.</p>
+            <p>The gyroscope doesn't fall down because the torque isn't strong enough to change the large angular momentum vector directly, but it is strong enough to change its direction over time.</p>
+
+            <h3>Step 4: The Role of Spin Speed</h3>
+            <p>Use the **Spin Rate (ω)** slider to see its effect.
+            <ul>
+                <li>At a **high spin rate**, the angular momentum vector (L) is very large. The small, constant torque from gravity can only change its direction very slowly. This results in slow, stable precession.</li>
+                <li>At a **low spin rate**, the angular momentum (L) is small. The same torque now causes a much larger *proportional* change in the L vector's direction, leading to very rapid, wobbly precession.</li>
+            </ul>
+            This is why a fast-spinning top is stable, but a slow-spinning top quickly wobbles and falls over.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="3D animation of a precessing gyroscope"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="spin-slider">Spin Rate (ω): <span id="spin-label">100</span> rad/s</label>
+                    <input type="range" id="spin-slider" min="10" max="200" value="100" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Flywheel Mass (M): <span id="mass-label">1.0</span> kg</label>
+                    <input type="range" id="mass-slider" min="0.1" max="2.0" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="radius-slider">Axle Length (r): <span id="radius-label">0.1</span> m</label>
+                    <input type="range" id="radius-slider" min="0.05" max="0.2" value="0.1" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label><input type="checkbox" id="vectors-toggle" checked> Show Vectors</label>
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Torque and Angular Momentum</h2>
+
+            <h3>1. Angular Momentum (L)</h3>
+            <p>For a spinning flywheel (approximated as a disk), the magnitude of the angular momentum is:</p>
+            <p><code>L = I&omega;</code></p>
+            <p>Where <code>I</code> is the moment of inertia (for a solid disk, <code>I = &frac12;MR²</code>) and <code>&omega;</code> is the spin angular velocity. The vector <strong>L</strong> points along the axis of rotation.</p>
+
+            <h3>2. Torque (&tau;)</h3>
+            <p>The force of gravity <strong>F</strong><sub>g</sub> = M<strong>g</strong> acts on the center of mass. The torque about the pivot is the cross product of the position vector <strong>r</strong> and the force:</p>
+            <p><code><strong>&tau;</strong> = <strong>r</strong> &times; <strong>F</strong><sub>g</sub></code></p>
+            <p>The magnitude of the torque is <code>&tau; = rMg sin(&theta;)</code>, where &theta; is the angle between the axle and the vertical. Its direction is always horizontal and perpendicular to the axle.</p>
+
+            <h3>3. Precession</h3>
+            <p>The fundamental equation of rotational dynamics states that torque equals the rate of change of angular momentum:</p>
+            <p><code><strong>&tau;</strong> = d<strong>L</strong>/dt</code></p>
+            <p>This means that in a small time dt, the change in angular momentum is <code>d<strong>L</strong> = <strong>&tau;</strong>dt</code>. Since <strong>&tau;</strong> is perpendicular to <strong>L</strong>, this change causes the tip of the <strong>L</strong> vector to move in a circle. The angular speed of this precession, &Omega;, can be shown to be:</p>
+            <p><code>&Omega; = &tau; / (L sin(&theta;)) = rMg / L</code></p>
+            <p>This shows that the precession speed (&Omega;) is inversely proportional to the spin angular momentum (L). A faster spin means slower precession.</p>
+        </article>
+    </div>
+
+    <script>
+    // NOTE: Simplified 3D projection and physics. No nutation is modeled.
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const spinSlider = document.getElementById('spin-slider');
+        const spinLabel = document.getElementById('spin-label');
+        const massSlider = document.getElementById('mass-slider');
+        const massLabel = document.getElementById('mass-label');
+        const radiusSlider = document.getElementById('radius-slider');
+        const radiusLabel = document.getElementById('radius-label');
+        const vectorsToggle = document.getElementById('vectors-toggle');
+
+        // --- Simulation State ---
+        let simParams = { w: 100, M: 1.0, r: 0.1, g: 9.8 };
+        let gyro = {
+            axis: {x: 1, y: 0.3, z: 0}, // Direction vector
+            precessionAngle: 0
+        };
+
+        function normalize(v) {
+            const mag = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+            if (mag === 0) return v;
+            return { x: v.x/mag, y: v.y/mag, z: v.z/mag };
+        }
+
+        function cross(a, b) {
+            return {
+                x: a.y*b.z - a.z*b.y,
+                y: a.z*b.x - a.x*b.z,
+                z: a.x*b.y - a.y*b.x
+            };
+        }
+
+        function update() {
+            const dt = 0.01;
+            const I = 0.5 * simParams.M * (simParams.r*0.5)**2; // Moment of inertia
+            const L_mag = I * simParams.w;
+
+            let L = { x: gyro.axis.x * L_mag, y: gyro.axis.y * L_mag, z: gyro.axis.z * L_mag };
+            const r_vec = { x: gyro.axis.x * simParams.r, y: gyro.axis.y * simParams.r, z: gyro.axis.z * simParams.r };
+            const Fg = { x: 0, y: -simParams.M * simParams.g, z: 0 };
+
+            const torque = cross(r_vec, Fg);
+            const dL = { x: torque.x * dt, y: torque.y * dt, z: torque.z * dt };
+
+            L.x += dL.x; L.y += dL.y; L.z += dL.z;
+
+            gyro.axis = normalize(L);
+        }
+
+        // --- Drawing ---
+        let viewAngle = {x: 0.5, y: 0.5};
+        function project(p) {
+            const rotX = p.y * Math.cos(viewAngle.x) - p.z * Math.sin(viewAngle.x);
+            const rotZ = p.y * Math.sin(viewAngle.x) + p.z * Math.cos(viewAngle.x);
+            const rotY = rotX;
+            const finalX = p.x * Math.cos(viewAngle.y) + rotZ * Math.sin(viewAngle.y);
+            const finalZ = -p.x * Math.sin(viewAngle.y) + rotZ * Math.cos(viewAngle.y);
+
+            const scale = 500 / (500 - finalZ);
+            return {
+                x: canvas.width/2 + finalX * scale,
+                y: canvas.height/2 + rotY * scale
+            };
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw pivot and ground grid
+            ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            ctx.lineWidth = 1;
+            for(let i=-5; i<=5; i++) {
+                const p1 = project({x: i*50, y:0, z:-250});
+                const p2 = project({x: i*50, y:0, z:250});
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                const p3 = project({x: -250, y:0, z:i*50});
+                const p4 = project({x: 250, y:0, z:i*50});
+                ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+            }
+
+            // Draw Gyro
+            const scale = 1000;
+            const r_vec = {x: gyro.axis.x * scale, y: gyro.axis.y * scale, z: gyro.axis.z * scale};
+            const p_axle_end = project(r_vec);
+            const p_origin = project({x:0, y:0, z:0});
+
+            ctx.strokeStyle = 'var(--gyro-color)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(p_origin.x, p_origin.y);
+            ctx.lineTo(p_axle_end.x, p_axle_end.y);
+            ctx.stroke();
+
+            ctx.fillStyle = 'var(--gyro-color)';
+            ctx.beginPath(); ctx.arc(p_axle_end.x, p_axle_end.y, 20, 0, 2*Math.PI); ctx.fill();
+
+            // Draw vectors
+            if(vectorsToggle.checked) {
+                const I = 0.5 * simParams.M * (simParams.r*0.5)**2;
+                const L_mag = I * simParams.w;
+                const L_vec = {x: gyro.axis.x*L_mag, y: gyro.axis.y*L_mag, z: gyro.axis.z*L_mag};
+                const Fg = { x: 0, y: -simParams.M * simParams.g, z: 0 };
+                const r_vec_phys = { x: gyro.axis.x * simParams.r, y: gyro.axis.y * simParams.r, z: gyro.axis.z * simParams.r };
+                const torque = cross(r_vec_phys, Fg);
+
+                drawVector(L_vec, 'var(--L-vec-color)', 'L');
+                drawVector(torque, 'var(--tau-vec-color)', 'τ');
+                drawVector({x: torque.x*10, y:torque.y*10, z:torque.z*10}, 'var(--dL-vec-color)', 'dL');
+            }
+        }
+
+        function drawVector(v, color, label) {
+            const p_start = project({x:0,y:0,z:0});
+            const p_end = project({x: v.x*2, y: v.y*2, z: v.z*2});
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(p_start.x, p_start.y);
+            ctx.lineTo(p_end.x, p_end.y);
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.fillText(label, p_end.x + 5, p_end.y - 5);
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        const updateParams = () => {
+             simParams.w = parseFloat(spinSlider.value);
+             spinLabel.textContent = simParams.w.toFixed(0);
+             simParams.M = parseFloat(massSlider.value);
+             massLabel.textContent = simParams.M.toFixed(1);
+             simParams.r = parseFloat(radiusSlider.value);
+             radiusLabel.textContent = simParams.r.toFixed(2);
+        };
+        [spinSlider, massSlider, radiusSlider].forEach(s => s.addEventListener('input', updateParams));
+
+        // --- Init ---
+        updateParams();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

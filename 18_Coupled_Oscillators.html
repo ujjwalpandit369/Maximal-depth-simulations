@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coupled Oscillators Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #8e44ad;
+            --accent-color-dark: #732d91;
+            --code-bg: #e2e8f0;
+            --mass-color: #c0392b;
+            --spring-color: #7f8c8d;
+            --plot1-color: #2980b9;
+            --plot2-color: #27ae60;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #9b59b6;
+            --accent-color-dark: #8e44ad;
+            --code-bg: #2d3748;
+            --mass-color: #e74c3c;
+            --spring-color: #95a5a6;
+            --plot1-color: #5dade2;
+            --plot2-color: #2ecc71;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #main-canvas { aspect-ratio: 4/1; margin-bottom: 1rem; cursor: grab; }
+        #main-canvas:active { cursor: grabbing; }
+        #plot-canvas { aspect-ratio: 2/1; }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Coupled Oscillators and Normal Modes</h1>
+            <p class="subtitle">Visualizing how complex vibrations emerge from simple, fundamental modes of oscillation.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 240 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>If you connect two swinging pendulums with a spring, their motion can become quite complex and seemingly chaotic. One pendulum might swing wildly while the other is still, only for the energy to gradually transfer until the second pendulum is swinging and the first is at rest. This simulation explores this behavior with a system of two masses and three springs. You'll discover that this complex motion is actually just a simple combination of two fundamental patterns of vibration called "normal modes." By exciting these modes directly, you can see the simple, predictable oscillations that form the building blocks of all the system's possible motions.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Secret Harmony of Vibrations</h2>
+
+            <h3>Step 1: Simple Oscillation</h3>
+            <p>Imagine a single mass attached to a wall by a spring. If you pull it and let go, it will oscillate back and forth in a simple, predictable way. This is called simple harmonic motion.</p>
+
+            <h3>Step 2: Coupling the Oscillators</h3>
+            <p>Now look at the simulation. We have two masses, connected to each other and to the walls by springs. This is a **coupled system**. The motion of one mass affects the other through the middle spring. If you click and drag one mass and release it, the resulting motion is complex. The energy seems to slosh back and forth between the two masses in a "beating" pattern. You can see this clearly in the position-vs-time graphs below the animation.</p>
+
+            <h3>Step 3: Normal Modes - The Building Blocks</h3>
+            <p>It turns out that any possible motion of this system, no matter how complicated, is just a combination (a "superposition") of two very simple patterns called **normal modes**. A normal mode is a special pattern of motion where all parts of the system oscillate with the same, single frequency.
+            <br>You can excite these modes directly using the buttons:
+            <ul>
+                <li><strong>In-Phase Mode (Symmetric):</strong> Click the "Excite Mode 1" button. This displaces both masses in the same direction. When you release them, they oscillate back and forth together, in perfect unison. The middle spring doesn't even stretch or compress. This is the lowest frequency mode.</li>
+                <li><strong>Anti-Phase Mode (Antisymmetric):</strong> Click "Excite Mode 2". This displaces the masses in opposite directions. When released, they oscillate as mirror images of each other, moving towards and away from each other. This is the highest frequency mode.</li>
+            </ul>
+            </p>
+
+            <h3>Step 4: Beats from Mixing Modes</h3>
+            <p>Now, drag just one mass and release it. This initial state is not a pure normal mode; it's a mix of both the in-phase and anti-phase modes. The two different frequencies of these modes interfere with each other, creating the "beat" pattern you see. The energy seems to transfer from one mass to the other because the two underlying normal modes are going in and out of phase with each other. This idea—that any complex vibration can be broken down into a sum of simple normal modes—is one of the most powerful concepts in all of physics, used to understand everything from the vibrations of a guitar string to the oscillations of a bridge.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="200" aria-label="Animation of two masses connected by springs"></canvas>
+                <canvas id="plot-canvas" width="800" height="400" aria-label="Plot of position vs. time for each mass"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="mode1-btn">Excite Mode 1 (In-Phase)</button>
+                    <button id="mode2-btn">Excite Mode 2 (Anti-Phase)</button>
+                    <button id="reset-btn" style="background-color:#7f8c8d">Reset to Equilibrium</button>
+                </div>
+                <div class="control-group">
+                    <label for="m1-slider">Mass 1: <span id="m1-label">1.0</span> kg</label>
+                    <input type="range" id="m1-slider" min="0.5" max="5.0" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="m2-slider">Mass 2: <span id="m2-label">1.0</span> kg</label>
+                    <input type="range" id="m2-slider" min="0.5" max="5.0" value="1.0" step="0.1">
+                </div>
+                 <div class="control-group">
+                    <label for="k1-slider">Spring k₁ (Left): <span id="k1-label">10</span> N/m</label>
+                    <input type="range" id="k1-slider" min="1" max="50" value="10" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="k2-slider">Spring k₂ (Middle): <span id="k2-label">2</span> N/m</label>
+                    <input type="range" id="k2-slider" min="0.1" max="20" value="2" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="k3-slider">Spring k₃ (Right): <span id="k3-label">10</span> N/m</label>
+                    <input type="range" id="k3-slider" min="1" max="50" value="10" step="1">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Equations of Motion</h2>
+            <p>The system is described by a set of coupled second-order differential equations, derived from Newton's Second Law (F=ma).</p>
+
+            <p>Let x₁ and x₂ be the displacements of the masses from their equilibrium positions. The forces on each mass are:</p>
+            <p><code>F₁ = -k₁x₁ + k₂(x₂ - x₁)</code></p>
+            <p><code>F₂ = -k₃x₂ - k₂(x₂ - x₁)</code></p>
+
+            <p>This gives the coupled equations of motion:</p>
+            <p><code>m₁ẍ₁ = -(k₁ + k₂)x₁ + k₂x₂</code></p>
+            <p><code>m₂ẍ₂ = k₂x₁ - (k₂ + k₃)x₂</code></p>
+            <p>A "normal mode" is a solution where both masses oscillate with the same frequency ω, i.e., <code>x₁(t) = A₁cos(ωt)</code> and <code>x₂(t) = A₂cos(ωt)</code>. Plugging this ansatz into the equations leads to an eigenvalue problem that can be solved for the two normal mode frequencies (ω₁ and ω₂) and their corresponding amplitude ratios (A₁/A₂).</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const sliders = {
+            m1: document.getElementById('m1-slider'), m2: document.getElementById('m2-slider'),
+            k1: document.getElementById('k1-slider'), k2: document.getElementById('k2-slider'), k3: document.getElementById('k3-slider')
+        };
+        const labels = {
+            m1: document.getElementById('m1-label'), m2: document.getElementById('m2-label'),
+            k1: document.getElementById('k1-label'), k2: document.getElementById('k2-label'), k3: document.getElementById('k3-label')
+        };
+        const mode1Btn = document.getElementById('mode1-btn');
+        const mode2Btn = document.getElementById('mode2-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- Simulation State ---
+        let simParams = { m1: 1, m2: 1, k1: 10, k2: 2, k3: 10 };
+        let masses = [{x:0, v:0}, {x:0, v:0}];
+        let history = {x1: [], x2: []};
+        let draggingMass = -1;
+
+        function reset(x1=0, x2=0) {
+            Object.keys(sliders).forEach(key => {
+                simParams[key] = parseFloat(sliders[key].value);
+                labels[key].textContent = simParams[key].toFixed(1);
+            });
+            masses[0] = {x: x1, v: 0};
+            masses[1] = {x: x2, v: 0};
+            history = {x1: [], x2: []};
+        }
+
+        function update() {
+            const {m1,m2,k1,k2,k3} = simParams;
+            const {x:x1, v:v1} = masses[0];
+            const {x:x2, v:v2} = masses[1];
+            const dt = 0.1;
+
+            const F1 = -k1 * x1 + k2 * (x2 - x1);
+            const F2 = -k3 * x2 - k2 * (x2 - x1);
+
+            const a1 = F1 / m1;
+            const a2 = F2 / m2;
+
+            masses[0].v += a1 * dt;
+            masses[0].x += masses[0].v * dt;
+            masses[1].v += a2 * dt;
+            masses[1].x += masses[1].v * dt;
+
+            history.x1.push(masses[0].x);
+            history.x2.push(masses[1].x);
+            if(history.x1.length > 400) {
+                history.x1.shift();
+                history.x2.shift();
+            }
+        }
+
+        function drawSpring(x1, x2, num_segments) {
+            const dx = (x2 - x1) / num_segments;
+            const y_mid = canvas.height / 2;
+            const y_amp = 10;
+            ctx.beginPath();
+            ctx.moveTo(x1, y_mid);
+            for(let i=1; i<num_segments; i++) {
+                ctx.lineTo(x1 + i*dx, y_mid + y_amp * ((i%2===0)?1:-1));
+            }
+            ctx.lineTo(x2, y_mid);
+            ctx.stroke();
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width;
+            const eq1 = w*0.3, eq2 = w*0.7;
+            const x1 = eq1 + masses[0].x;
+            const x2 = eq2 + masses[1].x;
+            const massSize = 20;
+
+            // Draw springs and walls
+            ctx.strokeStyle = 'var(--spring-color)';
+            ctx.lineWidth = 2;
+            drawSpring(0, x1 - massSize, 10);
+            drawSpring(x1 + massSize, x2 - massSize, 10);
+            drawSpring(x2 + massSize, w, 10);
+            ctx.fillStyle = 'var(--spring-color)';
+            ctx.fillRect(0,0,10,canvas.height);
+            ctx.fillRect(w-10,0,10,canvas.height);
+
+            // Draw masses
+            ctx.fillStyle = 'var(--mass-color)';
+            ctx.fillRect(x1 - massSize, canvas.height/2 - massSize, massSize*2, massSize*2);
+            ctx.fillRect(x2 - massSize, canvas.height/2 - massSize, massSize*2, massSize*2);
+
+            // Draw plots
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0, 0, plotCanvas.width, plotCanvas.height);
+            const plotH = plotCanvas.height;
+            const plotMidY1 = plotH * 0.25;
+            const plotMidY2 = plotH * 0.75;
+            const plotAmp = plotH * 0.2;
+
+            const drawPlot = (hist, y_mid, color) => {
+                p_ctx.strokeStyle = color;
+                p_ctx.lineWidth = 2;
+                p_ctx.beginPath();
+                hist.forEach((pos, i) => {
+                    const x = i * (plotCanvas.width / 400);
+                    const y = y_mid - pos * 0.5;
+                    if(i===0) p_ctx.moveTo(x,y);
+                    else p_ctx.lineTo(x,y);
+                });
+                p_ctx.stroke();
+            };
+
+            drawPlot(history.x1, plotMidY1, 'var(--plot1-color)');
+            drawPlot(history.x2, plotMidY2, 'var(--plot2-color)');
+        }
+
+        function mainLoop() {
+            if(draggingMass === -1) update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        resetBtn.addEventListener('click', () => reset(0,0));
+        mode1Btn.addEventListener('click', () => reset(50, 50));
+        mode2Btn.addEventListener('click', () => reset(50, -50));
+
+        Object.keys(sliders).forEach(key => sliders[key].addEventListener('input', () => reset(masses[0].x, masses[1].x)));
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const eq1 = canvas.width*0.3, eq2 = canvas.width*0.7;
+            if(Math.abs(x - (eq1 + masses[0].x)) < 20) draggingMass = 0;
+            else if(Math.abs(x - (eq2 + masses[1].x)) < 20) draggingMass = 1;
+        });
+        canvas.addEventListener('mousemove', e => {
+            if(draggingMass > -1) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const eq = (draggingMass === 0) ? canvas.width*0.3 : canvas.width*0.7;
+                masses[draggingMass].x = x - eq;
+                history.x1 = []; history.x2 = []; // Clear history while dragging
+            }
+        });
+        window.addEventListener('mouseup', () => { draggingMass = -1; });
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

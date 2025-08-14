@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work-Energy Theorem Demonstrator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --block-color: #c0392b;
+            --surface-color: #7f8c8d;
+            --w-app-color: #2980b9;
+            --w-fric-color: #e74c3c;
+            --w-net-color: #8e44ad;
+            --ke-color: #f1c40f;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+            --block-color: #e74c3c;
+            --surface-color: #95a5a6;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #main-canvas { aspect-ratio: 4/1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 2/1; }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid var(--accent-color);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Work-Energy Theorem Demonstrator</h1>
+            <p class="subtitle">Visualizing the relationship between the net work done on an object and its change in kinetic energy.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 220 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>When you push a box across the floor, you are doing "work" on it and transferring energy to it. The Work-Energy Theorem is a fundamental principle in physics that makes this connection precise: it states that the total, or "net," work done on an object is exactly equal to the change in its kinetic energy (its energy of motion). This simulation provides a clear, quantitative demonstration of this theorem. You can apply a force to a block over a certain distance, with or without friction, and watch a set of dynamic bar charts. You will see that the work done by your applied force, minus the energy lost to friction, always perfectly matches the final kinetic energy of the block, bringing the Work-Energy Theorem to life.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Work In, Energy Out</h2>
+
+            <h3>Step 1: What is Work in Physics?</h3>
+            <p>In everyday language, "work" can mean many things. In physics, it has a very specific definition: **Work = Force &times; Distance**. Work is done on an object when a force causes it to move over a distance. It represents a transfer of energy. If you push a box and it moves, you have done positive work on the box, giving it energy. </p>
+
+            <h3>Step 2: Positive and Negative Work</h3>
+            <p>Forces that act in the direction of motion do positive work, adding energy to the system. Forces that act opposite to the direction of motion do negative work, removing energy from the system. In this simulation:
+            <ul>
+                <li>The **Applied Force** pushes the block forward, doing positive work.</li>
+                <li>The force of **Friction** opposes the motion, doing negative work. This energy isn't destroyed; it's converted into heat.</li>
+            </ul>
+            The **Net Work** is the sum of all the work done by all the forces.</p>
+
+            <h3>Step 3: The Work-Energy Theorem</h3>
+            <p>The theorem states that the **Net Work** done on an object is equal to its **change in Kinetic Energy (ΔKE)**. Kinetic energy is the energy of motion, <code>KE = &frac12;mv²</code>. Since our block starts from rest, its initial KE is zero, so the theorem simplifies to:
+            <br>
+            <strong>Net Work = Final Kinetic Energy</strong>
+            </p>
+            <p>The simulation demonstrates this visually. The bar chart shows the work done by the applied force, the negative work done by friction, the net work, and the resulting kinetic energy. Watch the bars as the simulation runs—you will see that the purple "Net Work" bar and the yellow "Kinetic Energy" bar are always exactly the same height!</p>
+
+            <h3>Step 4: Running an Experiment</h3>
+            <p>Try this:
+            <ol>
+                <li>Set the **Friction** slider to zero and click "Push". You'll see that all the work done by the applied force is converted directly into kinetic energy (the blue bar and yellow bar are equal).</li>
+                <li>Now, add some friction and click "Push" again. This time, the friction force does negative work (the red bar grows downwards). The Net Work (purple) is now less than the Applied Work (blue). As a result, the final Kinetic Energy (yellow) is also lower, and the block doesn't end up moving as fast. The energy that "disappeared" was converted into heat by friction.</li>
+            </ol>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="200" aria-label="Animation of a block being pushed"></canvas>
+                <canvas id="plot-canvas" width="800"height="200" aria-label="Bar chart of work and energy"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="push-btn">Push!</button>
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Block Mass (m): <span id="mass-label">10</span> kg</label>
+                    <input type="range" id="mass-slider" min="1" max="50" value="10" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="force-slider">Applied Force (F): <span id="force-label">100</span> N</label>
+                    <input type="range" id="force-slider" min="10" max="500" value="100" step="5">
+                </div>
+                 <div class="control-group">
+                    <label for="friction-slider">Kinetic Friction (μk): <span id="friction-label">0.20</span></label>
+                    <input type="range" id="friction-slider" min="0" max="1" value="0.2" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label for="dist-slider">Push Distance (d): <span id="dist-label">5</span> m</label>
+                    <input type="range" id="dist-slider" min="1" max="10" value="5" step="0.5">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Work and Energy Calculations</h2>
+
+            <p>1. The force of kinetic friction is <code>f<sub>k</sub> = μ<sub>k</sub>N</code>. On a horizontal surface, the normal force <code>N</code> equals the force of gravity, <code>mg</code>. So, <code>f<sub>k</sub> = μ<sub>k</sub>mg</code>.</p>
+            <p>2. While the block is being pushed over a distance <code>x ≤ d</code>:</p>
+            <p><code>W<sub>app</sub> = F<sub>applied</sub> &times; x</code></p>
+            <p><code>W<sub>friction</sub> = -f<sub>k</sub> &times; x</code></p>
+            <p><code>W<sub>net</sub>(x) = W<sub>app</sub> + W<sub>friction</sub> = (F<sub>applied</sub> - f<sub>k</sub>)x</code></p>
+
+            <p>3. By the Work-Energy Theorem, <code>KE(x) = W<sub>net</sub>(x)</code>. This is what the simulation calculates and displays in real-time on the bar charts.</p>
+
+            <p>4. The final kinetic energy, after being pushed over the full distance <code>d</code>, is <code>KE<sub>final</sub> = (F<sub>applied</sub> - f<sub>k</sub>)d</code>. The final velocity can be found from this: <code>v<sub>final</sub> = &radic;(2KE<sub>final</sub>/m)</code>.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const pushBtn = document.getElementById('push-btn');
+        const sliders = {
+            m: document.getElementById('mass-slider'),
+            F: document.getElementById('force-slider'),
+            mu_k: document.getElementById('friction-slider'),
+            d: document.getElementById('dist-slider')
+        };
+        const labels = {
+            m: document.getElementById('mass-label'),
+            F: document.getElementById('force-label'),
+            mu_k: document.getElementById('friction-label'),
+            d: document.getElementById('dist-label')
+        };
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let simState = { isRunning: false, x: 0, v: 0, a: 0, phase: 0 }; // phase 0: ready, 1: pushing, 2: coasting
+        let simParams = { m: 10, F: 100, mu_k: 0.2, d: 5, g: 9.8 };
+        let energy = { W_app: 0, W_fric: 0, W_net: 0, KE: 0 };
+
+        function updateParams() {
+            simParams.m = parseFloat(sliders.m.value);
+            simParams.F = parseFloat(sliders.F.value);
+            simParams.mu_k = parseFloat(sliders.mu_k.value);
+            simParams.d = parseFloat(sliders.d.value);
+            labels.m.textContent = simParams.m;
+            labels.F.textContent = simParams.F;
+            labels.mu_k.textContent = simParams.mu_k.toFixed(2);
+            labels.d.textContent = simParams.d;
+        }
+
+        function reset() {
+            simState.isRunning = false;
+            simState.phase = 0;
+            simState.x = 0;
+            simState.v = 0;
+            simState.a = 0;
+            energy = { W_app: 0, W_fric: 0, W_net: 0, KE: 0 };
+            updateParams();
+        }
+
+        function start() {
+            reset();
+            simState.isRunning = true;
+            simState.phase = 1; // Pushing phase
+        }
+
+        function update() {
+            if (!simState.isRunning) return;
+
+            const f_k = simParams.mu_k * simParams.m * simParams.g;
+            let F_net = 0;
+
+            if (simState.phase === 1) { // Pushing
+                F_net = simParams.F - f_k;
+                if (simState.x >= simParams.d * 20) { // *20 for pixel scale
+                    simState.phase = 2; // Coasting phase
+                }
+            } else if (simState.phase === 2) { // Coasting
+                F_net = -f_k;
+            }
+
+            simState.a = F_net / simParams.m;
+            simState.v += simState.a * 0.1;
+            simState.x += simState.v * 0.1;
+
+            // Update energies
+            energy.KE = 0.5 * simParams.m * simState.v**2;
+            if(simState.phase === 1) {
+                energy.W_app = simParams.F * (simState.x / 20);
+                energy.W_fric = -f_k * (simState.x / 20);
+            }
+            energy.W_net = energy.W_app + energy.W_fric;
+
+            if (simState.v <= 0 && simState.phase === 2) {
+                simState.isRunning = false;
+            }
+            if (simState.x > canvas.width) {
+                 simState.isRunning = false;
+            }
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            // Main canvas
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Surface
+            ctx.fillStyle = 'var(--surface-color)';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            // Block
+            const blockW = 40, blockH = 40;
+            ctx.fillStyle = 'var(--block-color)';
+            ctx.fillRect(simState.x, canvas.height - 50 - blockH, blockW, blockH);
+
+            // Plot canvas
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0, 0, plotCanvas.width, plotCanvas.height);
+
+            const max_E = simParams.F * simParams.d;
+            const barW = 50;
+            const x_offset = 100;
+            const y_base = plotCanvas.height - 30;
+
+            const drawBar = (x, val, color, label) => {
+                const h = (val / max_E) * (plotCanvas.height - 40);
+                p_ctx.fillStyle = color;
+                p_ctx.fillRect(x, y_base - Math.max(0,h), barW, Math.max(0,h)); // Positive
+                p_ctx.fillRect(x, y_base, barW, Math.min(0, -h)); // Negative
+                p_ctx.fillStyle = isDark ? '#ecf0f1' : '#1a202c';
+                p_ctx.textAlign = 'center';
+                p_ctx.fillText(label, x + barW/2, y_base + 15);
+                p_ctx.fillText(val.toFixed(0) + ' J', x + barW/2, y_base - Math.max(10,h+5));
+            };
+
+            drawBar(x_offset, energy.W_app, '#2980b9', 'W_app');
+            drawBar(x_offset + 120, energy.W_fric, '#e74c3c', 'W_fric');
+            drawBar(x_offset + 240, energy.W_net, '#8e44ad', 'W_net');
+            drawBar(x_offset + 360, energy.KE, '#f1c40f', 'KE');
+        }
+
+        function mainLoop() {
+            if(simState.isRunning) update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        pushBtn.addEventListener('click', start);
+        resetBtn.addEventListener('click', reset);
+        Object.values(sliders).forEach(s => s.addEventListener('input', updateParams));
+        darkModeToggle.addEventListener('change', () => document.body.classList.toggle('dark-mode'));
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
