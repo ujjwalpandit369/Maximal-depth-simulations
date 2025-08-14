@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heat Transfer: Convection</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --header-color: #059669;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --control-bg: #fff;
+            --control-border: #d1d5db;
+            --canvas-bg: #111827;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --header-color: #6ee7b7;
+            --accent-color: #6ee7b7;
+            --accent-hover: #34d399;
+            --control-bg: #222;
+            --control-border: #888;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #4b5563; margin-top: 0; }
+        .high-contrast .subtitle { color: #9ca3af; }
+        section { margin-bottom: 2em; }
+
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--control-border);
+        }
+        .canvas-container { flex: 3; min-width: 400px; }
+        #simulation-canvas {
+            width: 100%;
+            height: 400px;
+            background-color: var(--canvas-bg);
+            border-radius: 4px;
+        }
+        .controls { flex: 2; min-width: 300px; }
+        .control-group { margin-bottom: 1em; }
+        .control-group label { display: block; margin-bottom: 0.25em; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .high-contrast table, .high-contrast th, .high-contrast td { border-color: #555; }
+        th { background-color: #f2f2f2; }
+        .high-contrast th { background-color: #333; }
+
+        @media (max-width: 800px) {
+            .simulation-area { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Heat Transfer: Convection</h1>
+            <p class="subtitle">An interactive particle simulation of convection currents.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Convection is the transfer of heat through the movement of fluids (liquids or gases). It's the process that drives weather patterns, ocean currents, and the bubbling of a pot of water on the stove. This simulation visualizes the formation of <strong>convection cells</strong>. A fluid, represented by particles, is heated from below. As the bottom layer heats up, it expands, becomes less dense, and rises. The cooler, denser fluid from the top then sinks to take its place, creating a continuous, circular flow of heat and matter.</p>
+        </section>
+
+        <div class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulation-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="power-slider">Heater Power: <span id="power-value">50</span></label>
+                    <input type="range" id="power-slider" min="0" max="100" step="1" value="50">
+                </div>
+                 <div class="control-group">
+                    <label for="viscosity-slider">Fluid Viscosity: <span id="viscosity-value">0.1</span></label>
+                    <input type="range" id="viscosity-slider" min="0.01" max="0.5" step="0.01" value="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="particle-count-slider">Particle Count: <span id="particle-count-value">300</span></label>
+                    <input type="range" id="particle-count-slider" min="100" max="800" step="10" value="300">
+                </div>
+                <hr>
+                <button id="reset-btn">Reset</button>
+                <label style="margin-left: 1em;"><input type="checkbox" id="trails-toggle" checked> Show Trails</label>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>How Convection Works</h2>
+            <p>The process of convection can be broken down into a simple, repeating cycle:</p>
+            <ol>
+                <li><strong>Heating:</strong> A heat source at the bottom of the fluid warms up the particles it touches.</li>
+                <li><strong>Expansion:</strong> As particles heat up, they gain kinetic energy and move around more vigorously, pushing each other farther apart. The fluid expands and its density decreases.</li>
+                <li><strong>Rising:</strong> Because it is now less dense than the cooler fluid above it, this hot fluid experiences a buoyant force and rises. This is the same principle that makes a hot air balloon fly.</li>
+                <li><strong>Cooling:</strong> As the hot fluid reaches the top, it loses heat to the cooler surroundings, contracts, and becomes denser.</li>
+                <li><strong>Sinking:</strong> Now denser than the fluid below it, the cooled fluid sinks back down towards the heat source.</li>
+            </ol>
+            <p>This continuous loop of rising hot fluid and sinking cold fluid is called a <strong>convection cell</strong> or convection current. In the simulation, you can see these cells form as rolling patterns of particles.</p>
+
+            <h3>Analogy: A Lava Lamp</h3>
+            <p>A classic lava lamp is a perfect real-world example of convection. The light bulb at the bottom is the heat source. It heats the colored wax, which becomes less dense than the surrounding oil and rises in a blob. At the top of the lamp, the wax cools, becomes dense again, and sinks back to the bottom to be reheated. The slow, mesmerizing rise and fall of the wax blobs is a direct visualization of convection in a viscous fluid.</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls</h2>
+            <table>
+                <thead><tr><th>Parameter</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Heater Power</strong></td>
+                        <td>Controls the rate at which the heater at the bottom transfers energy to the fluid. Higher power leads to a larger temperature difference, stronger buoyancy, and more vigorous, chaotic convection.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fluid Viscosity</strong></td>
+                        <td>Represents the fluid's internal friction or "thickness." A low viscosity fluid (like water) flows easily, allowing convection to start quickly. A high viscosity fluid (like honey or cold syrup) resists motion, leading to slower, more sluggish convection cells, or preventing them entirely if the heater power is too low.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Particle Count</strong></td>
+                        <td>The number of particles used in the simulation. A higher count gives a more fluid-like appearance but requires more computational power.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Show Trails</strong></td>
+                        <td>Toggles a fading trail effect on the particles, which makes it easier to see the circular motion of the convection cells.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt><strong>1. Why are the particles colored?</strong></dt>
+                <dd>The color of each particle represents its temperature. In this simulation, blue is cold, white is warm, and red is hot. This helps you visualize the temperature distribution in the fluid.</dd>
+                <dt><strong>2. Why don't the cells form immediately?</strong></dt>
+                <dd>Initially, the fluid is heated by conduction. Convection only begins once the temperature difference between the top and bottom layers is large enough for the buoyant force to overcome the fluid's viscosity. This critical point is determined by a value called the Rayleigh number.</dd>
+                <dt><strong>3. The simulation is running slow. What can I do?</strong></dt>
+                <dd>The most effective way to improve performance is to lower the "Particle Count" using its slider. Fewer particles means less work for your computer in each frame.</dd>
+            </dl>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('simulation-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth;
+        let height = canvas.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const controls = {
+            power: document.getElementById('power-slider'),
+            viscosity: document.getElementById('viscosity-slider'),
+            particleCount: document.getElementById('particle-count-slider'),
+            reset: document.getElementById('reset-btn'),
+            trails: document.getElementById('trails-toggle'),
+        };
+        const values = {
+            power: document.getElementById('power-value'),
+            viscosity: document.getElementById('viscosity-value'),
+            particleCount: document.getElementById('particle-count-value'),
+        };
+
+        let config = {
+            power: 50,
+            viscosity: 0.1,
+            particleCount: 300,
+            showTrails: true,
+        };
+
+        let particles = [];
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.temp = 0; // 0 (cold) to 1 (hot)
+            }
+
+            update(avgTemp) {
+                // Buoyancy force
+                const buoyancy = (this.temp - avgTemp) * 0.1;
+                this.vy -= buoyancy;
+
+                // Gravity
+                this.vy += 0.01;
+
+                // Drag from viscosity
+                this.vx *= (1 - config.viscosity);
+                this.vy *= (1 - config.viscosity);
+
+                // Random motion
+                this.vx += (Math.random() - 0.5) * 0.1;
+                this.vy += (Math.random() - 0.5) * 0.1;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Boundary collision
+                if (this.x < 0) { this.x = 0; this.vx *= -0.5; }
+                if (this.x > width) { this.x = width; this.vx *= -0.5; }
+                if (this.y < 0) { this.y = 0; this.vy *= -0.5; }
+                if (this.y > height) { this.y = height; this.vy *= -0.5; }
+
+                // Heat transfer
+                if (this.y > height - 20) { // Heater at bottom
+                    this.temp = Math.min(1, this.temp + (config.power / 1000));
+                } else if (this.y < 20) { // Cooling at top
+                    this.temp = Math.max(0, this.temp - 0.005);
+                }
+            }
+
+            draw(ctx) {
+                const r = 255 * this.temp;
+                const b = 255 * (1 - this.temp);
+                const g = Math.min(r, b) > 0 ? 0 : 255 * (1 - Math.abs(this.temp - 0.5) * 2);
+                ctx.fillStyle = `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function setup() {
+            width = canvas.clientWidth;
+            height = canvas.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            particles = [];
+            for(let i=0; i<config.particleCount; i++) {
+                particles.push(new Particle(Math.random() * width, Math.random() * height));
+            }
+        }
+
+        function animate() {
+            if (config.showTrails) {
+                ctx.fillStyle = 'rgba(17, 24, 39, 0.2)';
+            } else {
+                ctx.fillStyle = '#111827';
+            }
+            ctx.fillRect(0, 0, width, height);
+
+            let totalTemp = 0;
+            particles.forEach(p => totalTemp += p.temp);
+            const avgTemp = totalTemp / particles.length;
+
+            particles.forEach(p => {
+                p.update(avgTemp);
+                p.draw(ctx);
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        function updateConfig() {
+            config.power = parseFloat(controls.power.value);
+            config.viscosity = parseFloat(controls.viscosity.value);
+            const newParticleCount = parseInt(controls.particleCount.value);
+            config.showTrails = controls.trails.checked;
+
+            values.power.textContent = config.power.toFixed(0);
+            values.viscosity.textContent = config.viscosity.toFixed(2);
+            values.particleCount.textContent = newParticleCount;
+
+            if (newParticleCount !== config.particleCount) {
+                config.particleCount = newParticleCount;
+                setup();
+            }
+        }
+
+        controls.power.addEventListener('input', updateConfig);
+        controls.viscosity.addEventListener('input', updateConfig);
+        controls.particleCount.addEventListener('input', updateConfig);
+        controls.trails.addEventListener('change', updateConfig);
+        controls.reset.addEventListener('click', setup);
+        window.addEventListener('resize', setup);
+
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>

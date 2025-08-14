@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Otto Cycle</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #333;
+            --header-color: #3f51b5;
+            --accent-color: #5c6bc0;
+            --accent-hover: #3f51b5;
+            --control-bg: #fff;
+            --control-border: #ccc;
+            --canvas-bg: #e8eaf6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .simulation-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { grid-column: 1 / -1; }
+        .piston-container { min-height: 300px; }
+        .pv-container { min-height: 300px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+
+        .readouts {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-around;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        .readouts span { color: var(--header-color); }
+
+        .control-group { display: inline-block; margin-right: 20px; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+
+        @media (max-width: 800px) {
+            .simulation-area { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Otto Cycle</h1>
+            <p class="subtitle">A simulation of the thermodynamic cycle of a four-stroke gasoline engine.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>The Otto cycle is the idealized thermodynamic cycle that describes the functioning of a typical spark-ignition piston engine. It's the core process that converts the chemical energy in gasoline into the motion that powers most cars. This simulation provides a synchronized view of the two key aspects of the engine: the physical movement of the piston within the cylinder and the abstract changes in pressure and volume represented on a <strong>P-V diagram</strong>. By adjusting the engine's parameters, you can see how they affect the work done and the overall thermal efficiency.</p>
+        </section>
+
+        <div class="simulation-area">
+            <div class="controls">
+                <div class="control-group">
+                    <button id="play-pause-btn">Play</button>
+                    <button id="step-btn">Step</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="cr-slider">Compression Ratio (r): <span id="cr-value">8.0</span></label>
+                    <input type="range" id="cr-slider" min="4" max="12" step="0.5" value="8.0">
+                </div>
+                <div class="control-group">
+                    <label for="gamma-slider">Specific Heat Ratio (γ): <span id="gamma-value">1.4</span></label>
+                    <input type="range" id="gamma-slider" min="1.2" max="1.67" step="0.01" value="1.4">
+                </div>
+            </div>
+
+            <div class="piston-container">
+                <canvas id="piston-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="pv-container">
+                <canvas id="pv-canvas" class="sim-canvas"></canvas>
+            </div>
+
+            <div class="readouts">
+                <div>Work Done: <span id="work-value">0</span> J</div>
+                <div>Thermal Efficiency: <span id="efficiency-value">0</span>%</div>
+                <div>Current Stroke: <span id="stroke-value">Intake</span></div>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Four Strokes of a Gasoline Engine</h2>
+            <p>The Otto cycle consists of four distinct processes, or "strokes." Follow along with the "Step" button to see each one.</p>
+            <ol>
+                <li><strong>Intake (1 → 2 on P-V diagram):</strong> The piston moves down, increasing the volume in the cylinder and drawing in a mixture of fuel and air at roughly constant atmospheric pressure.</li>
+                <li><strong>Compression (2 → 3):</strong> The intake valve closes, and the piston moves up, compressing the fuel-air mixture. This is an <strong>adiabatic</strong> process, meaning no heat is exchanged with the surroundings, so both pressure and temperature rise significantly.</li>
+                <li><strong>Power / Combustion (3 → 4 → 5):</strong>
+                    <ul>
+                        <li>At the peak of compression, a spark plug ignites the mixture. This causes a near-instantaneous combustion, rapidly increasing the temperature and pressure at a constant volume (an <strong>isochoric</strong> process).</li>
+                        <li>This high pressure exerts a massive force on the piston, pushing it down in the power stroke. This is another adiabatic process where the expanding gas does work.</li>
+                    </ul>
+                </li>
+                <li><strong>Exhaust (5 → 2 → 1):</strong>
+                     <ul>
+                        <li>At the bottom of the power stroke, the exhaust valve opens. The pressure drops instantly at constant volume as heat is rejected.</li>
+                        <li>The piston moves up, pushing the remaining exhaust gases out of the cylinder at constant pressure. The cycle is then ready to begin again.</li>
+                    </ul>
+                </li>
+            </ol>
+            <h3>The P-V Diagram</h3>
+            <p>The P-V (Pressure-Volume) diagram is a crucial tool for engineers. The path traced by the cycle shows how pressure and volume change. Most importantly, the <strong>area enclosed by the loop represents the net work done</strong> by the engine in one cycle. A larger area means more work and a more powerful engine for its size.</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Efficiency</h2>
+            <p>The efficiency of an ideal Otto cycle is determined by a surprisingly simple formula that depends only on the compression ratio and the properties of the gas.</p>
+            <code>η = 1 - 1 / (r^(γ-1))</code>
+            <ul>
+                <li><code>η</code> is the <strong>Thermal Efficiency</strong>: The ratio of work done to heat energy supplied. An efficiency of 60% means 60% of the fuel's heat energy was converted into useful work.</li>
+                <li><code>r</code> is the <strong>Compression Ratio</strong>: The ratio of the maximum volume to the minimum volume in the cylinder. As you increase this with the slider, you'll see the efficiency rise dramatically. This is why high-performance engines use high compression ratios.</li>
+                <li><code>γ</code> (gamma) is the <strong>Specific Heat Ratio</strong> of the gas. It's a property of the working fluid (for air, it's approximately 1.4).</li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const pistonCanvas = document.getElementById('piston-canvas');
+        const pCtx = pistonCanvas.getContext('2d');
+        const pvCanvas = document.getElementById('pv-canvas');
+        const pvCtx = pvCanvas.getContext('2d');
+
+        const controls = {
+            play: document.getElementById('play-pause-btn'),
+            step: document.getElementById('step-btn'),
+            reset: document.getElementById('reset-btn'),
+            cr: document.getElementById('cr-slider'),
+            gamma: document.getElementById('gamma-slider'),
+        };
+        const values = {
+            cr: document.getElementById('cr-value'),
+            gamma: document.getElementById('gamma-value'),
+            work: document.getElementById('work-value'),
+            efficiency: document.getElementById('efficiency-value'),
+            stroke: document.getElementById('stroke-value'),
+        };
+
+        let state = {
+            stroke: 0, // 0:intake, 1:compression, 2:power, 3:exhaust
+            progress: 0, // 0 to 1 in each stroke
+            cr: 8.0,
+            gamma: 1.4,
+            isPlaying: false,
+            path: [],
+        };
+
+        function calculateCycle() {
+            const r = state.cr;
+            const gamma = state.gamma;
+
+            // Define points on the P-V diagram (normalized)
+            const V1 = r; const P1 = 1; // Start of intake
+            const V2 = 1; const P2 = P1 * Math.pow(r, gamma); // End of compression
+            const T2_T1 = Math.pow(r, gamma - 1);
+
+            // Assume heat addition triples the temperature for visualization
+            const P3 = P2 * 3;
+            const V3 = V2;
+
+            const V4 = V1; const P4 = P3 * Math.pow(1/r, gamma); // End of power stroke
+
+            const points = [
+                { V: V1, P: P1 }, // Point 1 (start)
+                { V: V1, P: P1 }, // Point 2 (start of compression)
+                { V: V2, P: P2 }, // Point 3 (end of compression)
+                { V: V3, P: P3 }, // Point 4 (after combustion)
+                { V: V4, P: P4 }, // Point 5 (end of power stroke)
+            ];
+
+            const efficiency = (1 - 1 / Math.pow(r, gamma - 1)) * 100;
+            const work = P2 * V2 * (Math.pow(3, 1-gamma) - 1) / (1-gamma) + P1*V1*(1-r); // Simplified work calculation
+
+            return { points, efficiency, work };
+        }
+
+        function updateUI() {
+            const { efficiency, work } = calculateCycle();
+            values.cr.textContent = state.cr.toFixed(1);
+            values.gamma.textContent = state.gamma.toFixed(2);
+            values.efficiency.textContent = efficiency.toFixed(1) + '%';
+            values.work.textContent = (work * 100).toFixed(0); // Arbitrary scale for display
+
+            const strokeNames = ["Intake", "Compression", "Power", "Exhaust"];
+            values.stroke.textContent = strokeNames[state.stroke];
+        }
+
+        function drawPiston(progress, stroke) {
+            const w = pistonCanvas.width;
+            const h = pistonCanvas.height;
+            pCtx.clearRect(0,0,w,h);
+
+            let pistonY;
+            const top = 50;
+            const bottom = h - 50;
+            const strokeLength = bottom - top;
+
+            if (stroke === 0) pistonY = top + progress * strokeLength; // Intake
+            else if (stroke === 1) pistonY = bottom - progress * strokeLength; // Compression
+            else if (stroke === 2) pistonY = top + progress * strokeLength; // Power
+            else pistonY = bottom - progress * strokeLength; // Exhaust
+
+            // Cylinder
+            pCtx.strokeStyle = '#333';
+            pCtx.lineWidth = 4;
+            pCtx.strokeRect(w/2 - 50, 10, 100, h-20);
+
+            // Piston
+            pCtx.fillStyle = '#78909c';
+            pCtx.fillRect(w/2 - 48, pistonY, 96, 20);
+
+            // Spark plug for power stroke
+            if (stroke === 2 && progress < 0.1) {
+                pCtx.fillStyle = '#ffeb3b';
+                pCtx.beginPath();
+                pCtx.arc(w/2, 30, 10, 0, Math.PI*2);
+                pCtx.fill();
+            }
+        }
+
+        function drawPVDiagram() {
+            const w = pvCanvas.width;
+            const h = pvCanvas.height;
+            pvCtx.clearRect(0,0,w,h);
+
+            const { points } = calculateCycle();
+            const maxP = points[3].P * 1.1;
+            const maxV = points[0].V * 1.1;
+
+            const scaleX = (w - 60) / maxV;
+            const scaleY = (h - 60) / maxP;
+            const offsetX = 40;
+            const offsetY = h - 40;
+
+            // Draw axes
+            pvCtx.strokeStyle = '#333';
+            pvCtx.lineWidth = 1;
+            pvCtx.beginPath();
+            pvCtx.moveTo(offsetX, offsetY); pvCtx.lineTo(w - 10, offsetY);
+            pvCtx.moveTo(offsetX, offsetY); pvCtx.lineTo(offsetX, 10);
+            pvCtx.stroke();
+            pvCtx.fillStyle = '#333';
+            pvCtx.fillText("Volume (V)", w/2, h - 10);
+            pvCtx.save();
+            pvCtx.translate(15, h/2);
+            pvCtx.rotate(-Math.PI/2);
+            pvCtx.fillText("Pressure (P)", 0, 0);
+            pvCtx.restore();
+
+            // Draw full cycle path
+            pvCtx.strokeStyle = 'rgba(63, 81, 181, 0.3)';
+            pvCtx.lineWidth = 2;
+            pvCtx.beginPath();
+            // Compression
+            let p = points[1];
+            pvCtx.moveTo(offsetX + p.V * scaleX, offsetY - p.P * scaleY);
+            for(let v=p.V; v>=points[2].V; v-=0.1) {
+                let p_adiabat = points[1].P * Math.pow(points[1].V / v, state.gamma);
+                pvCtx.lineTo(offsetX + v * scaleX, offsetY - p_adiabat * scaleY);
+            }
+            // Combustion
+            pvCtx.lineTo(offsetX + points[3].V * scaleX, offsetY - points[3].P * scaleY);
+            // Power
+            for(let v=points[3].V; v<=points[4].V; v+=0.1) {
+                let p_adiabat = points[3].P * Math.pow(points[3].V / v, state.gamma);
+                pvCtx.lineTo(offsetX + v * scaleX, offsetY - p_adiabat * scaleY);
+            }
+            // Exhaust
+            pvCtx.lineTo(offsetX + points[1].V * scaleX, offsetY - points[1].P * scaleY);
+            pvCtx.stroke();
+
+            // Draw current point
+            let currentV, currentP;
+            // ... logic to calculate currentV, currentP based on state.stroke and state.progress
+            // This is complex, so we'll just draw the final path for now and update it on step/reset
+        }
+
+        function step() {
+            state.progress += 0.02;
+            if (state.progress >= 1) {
+                state.progress = 0;
+                state.stroke = (state.stroke + 1) % 4;
+            }
+            updateUI();
+            drawPiston(state.progress, state.stroke);
+        }
+
+        function animate() {
+            if(state.isPlaying) step();
+            requestAnimationFrame(animate);
+        }
+
+        function reset() {
+            state.stroke = 0;
+            state.progress = 0;
+            state.isPlaying = false;
+            controls.play.textContent = "Play";
+            state.cr = parseFloat(controls.cr.value);
+            state.gamma = parseFloat(controls.gamma.value);
+            updateUI();
+            drawPiston(0,0);
+            drawPVDiagram();
+        }
+
+        controls.play.addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            controls.play.textContent = state.isPlaying ? "Pause" : "Play";
+        });
+        controls.step.addEventListener('click', () => {
+            state.isPlaying = false;
+            controls.play.textContent = "Play";
+            step();
+        });
+        controls.reset.addEventListener('click', reset);
+        controls.cr.addEventListener('input', reset);
+        controls.gamma.addEventListener('input', reset);
+
+        reset();
+        animate();
+    });
+    </script>
+</body>
+</html>

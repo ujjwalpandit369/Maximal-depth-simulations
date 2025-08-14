@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heat Transfer: Blackbody Radiation</title>
+    <style>
+        :root {
+            --bg-color: #111;
+            --text-color: #eee;
+            --header-color: #ffca28;
+            --accent-color: #ffca28;
+            --accent-hover: #ffb300;
+            --control-bg: #212121;
+            --control-border: #424242;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #bdbdbd; margin-top: 0; }
+        section { margin-bottom: 2em; }
+
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--control-border);
+            align-items: center;
+        }
+        .main-viz {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            min-width: 250px;
+        }
+        #object-canvas {
+            width: 200px;
+            height: 200px;
+            background-color: var(--canvas-bg);
+            border-radius: 50%;
+            border: 2px solid #444;
+        }
+        .readouts {
+            font-family: monospace;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        .graph-container {
+            flex: 3;
+            min-width: 400px;
+        }
+        #graph-canvas {
+            width: 100%;
+            height: 350px;
+            background-color: var(--canvas-bg);
+            border-radius: 4px;
+        }
+        .controls {
+            width: 100%;
+            grid-column: 1 / -1;
+            text-align: center;
+        }
+        .control-group label { font-size: 1.2em; }
+        .control-group input[type="range"] {
+            width: 80%;
+            max-width: 700px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 800px) {
+            .simulation-area { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Heat Transfer: Blackbody Radiation</h1>
+            <p class="subtitle">See how temperature affects the color and energy of emitted light.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Every object with a temperature above absolute zero radiates energy in the form of electromagnetic waves. A "blackbody" is an idealized object that absorbs all radiation that falls on it and emits radiation in a way that depends only on its temperature. While idealized, many objects, like stars, furnaces, and incandescent light bulbs, behave very much like blackbodies. This simulation lets you explore how a blackbody's radiation changes as you adjust its temperature, demonstrating two fundamental laws of physics: <strong>Wien's Displacement Law</strong> and the <strong>Stefan-Boltzmann Law</strong>.</p>
+        </section>
+
+        <div class="simulation-area">
+            <div class="main-viz">
+                <canvas id="object-canvas"></canvas>
+                <div class="readouts" id="readouts">
+                    <div>Temperature: 3000 K</div>
+                    <div>Peak Wavelength: 966 nm (Infrared)</div>
+                    <div>Total Power: 459 kW/m²</div>
+                </div>
+            </div>
+            <div class="graph-container">
+                <canvas id="graph-canvas"></canvas>
+            </div>
+            <div class="controls">
+                 <div class="control-group">
+                    <label for="temp-slider">Temperature (K)</label><br>
+                    <input type="range" id="temp-slider" min="300" max="12000" step="50" value="3000">
+                </div>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Glow of Hot Objects</h2>
+            <p>As you increase the temperature of the blackbody using the slider, observe two key effects:</p>
+            <ol>
+                <li><strong>The Color Changes (Wien's Law):</strong> The peak of the radiation spectrum graph shifts to the left, towards shorter wavelengths. This corresponds to a change in the visible color of the object. At lower temperatures (like 1500 K), the peak is in the infrared, but the "tail" of the curve extends into the visible red, so the object glows red. As the temperature rises, the peak moves through the visible spectrum, making the object glow orange, yellow, white, and eventually blue-white at very high temperatures. This is governed by <strong>Wien's Displacement Law</strong>.</li>
+                <li><strong>The Brightness Increases (Stefan-Boltzmann Law):</strong> The total area under the spectrum curve increases dramatically. This represents the total power being radiated by the object. The relationship is not linear; the power increases with the fourth power of the temperature (T⁴). This means doubling the temperature increases the radiated power by a factor of 2⁴ = 16! This is described by the <strong>Stefan-Boltzmann Law</strong>.</li>
+            </ol>
+
+            <h3>Analogy: A Crowd of People Shouting</h3>
+            <p>Imagine a large crowd of people, each person able to shout at a range of pitches. The temperature of the crowd represents their overall excitement level.</p>
+            <ul>
+                <li><strong>Low Temperature (Low Excitement):</strong> The crowd is calm. Most people are murmuring at low pitches (long wavelengths). A few excited people shout at higher pitches. The overall sound is a low rumble (like the infrared peak) and not very loud (low total power).</li>
+                <li><strong>High Temperature (High Excitement):</strong> The crowd is ecstatic. The average person is now shouting at a high pitch (short wavelength peak). Many people are shouting very loudly. The overall sound is a high-pitched roar (blue-shifted peak) and is incredibly loud (high total power).</li>
+            </ul>
+        </section>
+
+        <section id="theory">
+            <h2>The Governing Laws</h2>
+            <h3>Planck's Law of Blackbody Radiation</h3>
+            <p>The shape of the spectral curve is given by Planck's Law, a foundational equation of quantum mechanics. It describes the spectral radiance (power per unit area per unit solid angle per unit wavelength) at any given wavelength (λ) and temperature (T).</p>
+            <code>B(λ, T) = (2hc²/λ⁵) * 1 / (e^(hc/λkT) - 1)</code>
+            <p>Where <code>h</code> is Planck's constant, <code>c</code> is the speed of light, and <code>k</code> is the Boltzmann constant.</p>
+
+            <h3>Wien's Displacement Law</h3>
+            <p>Derived from Planck's Law, this tells us the peak wavelength of emission.</p>
+            <code>λ_max = b / T</code>
+            <p>Where <code>b</code> is Wien's displacement constant (≈ 2.898 x 10⁻³ m·K). As temperature (T) goes up, the peak wavelength (λ_max) goes down.</p>
+
+            <h3>Stefan-Boltzmann Law</h3>
+            <p>This law is found by integrating Planck's Law over all wavelengths. It gives the total power radiated per unit area.</p>
+            <code>P / A = σ * T⁴</code>
+            <p>Where <code>σ</code> is the Stefan-Boltzmann constant (≈ 5.67 x 10⁻⁸ W·m⁻²·K⁻⁴). The T⁴ dependence means that even a small increase in temperature leads to a huge increase in radiated power.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const tempSlider = document.getElementById('temp-slider');
+        const readoutsEl = document.getElementById('readouts');
+        const objectCanvas = document.getElementById('object-canvas');
+        const objCtx = objectCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const graphCtx = graphCanvas.getContext('2d');
+
+        // Physical Constants
+        const h = 6.626e-34; // Planck's constant
+        const c = 3.0e8;     // Speed of light
+        const k = 1.38e-23; // Boltzmann constant
+        const b = 2.898e-3;  // Wien's displacement constant
+        const sigma = 5.67e-8; // Stefan-Boltzmann constant
+
+        function tempToRgb(temp) {
+            // Approximation from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+            temp = temp / 100;
+            let r, g, b;
+
+            if (temp <= 66) {
+                r = 255;
+                g = 99.4708025861 * Math.log(temp) - 161.1195681661;
+            } else {
+                r = 329.698727446 * Math.pow(temp - 60, -0.1332047592);
+                g = 288.1221695283 * Math.pow(temp - 60, -0.0755148492);
+            }
+
+            if (temp >= 66) {
+                b = 255;
+            } else if (temp <= 19) {
+                b = 0;
+            } else {
+                b = 138.5177312231 * Math.log(temp - 10) - 305.0447927307;
+            }
+
+            r = Math.max(0, Math.min(255, r));
+            g = Math.max(0, Math.min(255, g));
+            b = Math.max(0, Math.min(255, b));
+
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function drawObject(temp) {
+            const color = tempToRgb(temp);
+            objCtx.fillStyle = color;
+            objCtx.fillRect(0, 0, objectCanvas.width, objectCanvas.height);
+
+            // Add a glow effect
+            const g = objCtx.createRadialGradient(100, 100, 50, 100, 100, 100);
+            g.addColorStop(0, 'rgba(255,255,255,0.7)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            objCtx.fillStyle = g;
+            objCtx.fillRect(0,0,200,200);
+        }
+
+        function drawGraph(temp) {
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+            graphCtx.clearRect(0, 0, w, h);
+
+            const maxWavelength = 4e-6; // 4000 nm
+            let spectralData = [];
+            let maxIntensity = 0;
+
+            for (let i = 1; i <= 200; i++) {
+                const wl = (i / 200) * maxWavelength; // wavelength in meters
+                const exponent = (h * c) / (wl * k * temp);
+                // Avoid overflow for large exponents
+                if (exponent > 700) continue;
+                const intensity = (2 * h * c * c) / (Math.pow(wl, 5) * (Math.exp(exponent) - 1));
+                spectralData.push({ wl, intensity });
+                if (intensity > maxIntensity) maxIntensity = intensity;
+            }
+
+            if (maxIntensity === 0) return;
+
+            // Draw axes and labels
+            graphCtx.strokeStyle = '#888';
+            graphCtx.fillStyle = '#888';
+            graphCtx.font = '12px sans-serif';
+            graphCtx.beginPath();
+            graphCtx.moveTo(30, 0); graphCtx.lineTo(30, h - 20); graphCtx.lineTo(w, h - 20);
+            graphCtx.stroke();
+            graphCtx.fillText("Intensity", 0, 15);
+            graphCtx.fillText("Wavelength (nm)", w/2 - 50, h - 5);
+
+            // Draw curve
+            graphCtx.beginPath();
+            graphCtx.moveTo(30, h - 21);
+            spectralData.forEach(d => {
+                const x = 30 + (d.wl / maxWavelength) * (w - 30);
+                const y = (h - 21) * (1 - d.intensity / maxIntensity);
+                graphCtx.lineTo(x, y);
+            });
+            graphCtx.strokeStyle = '#ffca28';
+            graphCtx.lineWidth = 2;
+            graphCtx.stroke();
+
+            // Draw peak wavelength marker
+            const peakWl = b / temp;
+            if (peakWl < maxWavelength) {
+                const peakX = 30 + (peakWl / maxWavelength) * (w - 30);
+                graphCtx.beginPath();
+                graphCtx.moveTo(peakX, h - 20);
+                graphCtx.lineTo(peakX, 0);
+                graphCtx.strokeStyle = 'rgba(255, 82, 82, 0.7)';
+                graphCtx.setLineDash([5, 5]);
+                graphCtx.stroke();
+                graphCtx.setLineDash([]);
+            }
+        }
+
+        function update() {
+            const temp = parseFloat(tempSlider.value);
+
+            // Update readouts
+            const peakWl = (b / temp) * 1e9; // in nm
+            const totalPower = sigma * Math.pow(temp, 4); // W/m^2
+
+            let peakUnit = "nm";
+            let peakVal = peakWl;
+            if (peakWl > 1000) { peakUnit = "µm"; peakVal = peakWl / 1000; }
+            let peakType = "";
+            if (peakWl > 700) peakType = "(Infrared)";
+            else if (peakWl < 400) peakType = "(Ultraviolet)";
+            else peakType = "(Visible)";
+
+            let powerUnit = "kW/m²";
+            let powerVal = totalPower / 1000;
+            if (totalPower > 1e6) { powerUnit = "MW/m²"; powerVal = totalPower / 1e6; }
+
+            readoutsEl.innerHTML = `
+                <div>Temperature: ${temp.toFixed(0)} K</div>
+                <div>Peak Wavelength: ${peakVal.toFixed(0)} ${peakUnit} ${peakType}</div>
+                <div>Total Power: ${powerVal.toFixed(0)} ${powerUnit}</div>
+            `;
+
+            // Redraw visuals
+            drawObject(temp);
+            drawGraph(temp);
+        }
+
+        tempSlider.addEventListener('input', update);
+        update();
+    });
+    </script>
+</body>
+</html>

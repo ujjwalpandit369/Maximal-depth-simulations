@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heat Transfer: Conduction</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --text-color: #333;
+            --header-color: #c62828;
+            --accent-color: #ef5350;
+            --accent-hover: #e53935;
+            --control-bg: #fff;
+            --control-border: #ccc;
+            --canvas-bg: #eceff1;
+        }
+
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --header-color: #ff8a80;
+            --accent-color: #ff8a80;
+            --accent-hover: #ff5252;
+            --control-bg: #222;
+            --control-border: #888;
+            --canvas-bg: #101010;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0.1em; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+        .high-contrast .subtitle { color: #aaa; }
+
+        section { margin-bottom: 2em; }
+
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--control-border);
+        }
+        .canvas-container {
+            flex: 3;
+            min-width: 400px;
+            position: relative;
+        }
+        #simulation-canvas {
+            width: 100%;
+            height: 250px;
+            background-color: var(--canvas-bg);
+            border-radius: 4px;
+        }
+        #rate-display {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            font-size: 1.5em;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .controls { flex: 2; min-width: 300px; }
+        .control-group { margin-bottom: 1em; }
+        .control-group label { display: block; margin-bottom: 0.25em; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group select { width: 100%; padding: 5px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .high-contrast table, .high-contrast th, .high-contrast td { border-color: #555; }
+        th { background-color: #f2f2f2; }
+        .high-contrast th { background-color: #333; }
+        code { background-color: #eee; padding: 2px 5px; border-radius: 4px; }
+        .high-contrast code { background-color: #444; }
+
+        @media (max-width: 800px) {
+            .simulation-area { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Heat Transfer: Conduction</h1>
+            <p class="subtitle">An interactive simulation of heat flow through a solid object.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Conduction is one of the three main ways heat is transferred. It's the process by which heat energy is transmitted through collisions between neighboring atoms or molecules. When you touch a hot stove, the heat you feel is transferred through conduction. This simulation visualizes heat conducting through a solid rod placed between a hot reservoir and a cold reservoir, allowing you to explore the factors that determine the rate of heat flow, as described by <strong>Fourier's Law of Heat Conduction</strong>.</p>
+        </section>
+
+        <div class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulation-canvas"></canvas>
+                <div id="rate-display">0.0 W</div>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="material-select">Material (Thermal Conductivity, k): <span id="k-value">401</span> W/mK</label>
+                    <select id="material-select">
+                        <option value="401">Copper (High)</option>
+                        <option value="80">Steel (Medium)</option>
+                        <option value="1.0">Glass (Low)</option>
+                        <option value="0.15">Wood (Very Low)</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="range" id="k-slider" min="0.1" max="500" step="0.1" value="401" style="display:none;">
+                </div>
+                 <div class="control-group">
+                    <label for="area-slider">Cross-Sectional Area (A): <span id="area-value">0.01</span> m²</label>
+                    <input type="range" id="area-slider" min="0.001" max="0.04" step="0.001" value="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="length-slider">Length of Rod (L): <span id="length-value">0.5</span> m</label>
+                    <input type="range" id="length-slider" min="0.1" max="1.0" step="0.05" value="0.5">
+                </div>
+                <div class="control-group">
+                    <label for="th-slider">Hot Reservoir Temp (Tₕ): <span id="th-value">100</span> °C</label>
+                    <input type="range" id="th-slider" min="50" max="500" step="5" value="100">
+                </div>
+                 <div class="control-group">
+                    <label for="tc-slider">Cold Reservoir Temp (T꜀): <span id="tc-value">0</span> °C</label>
+                    <input type="range" id="tc-slider" min="-50" max="50" step="5" value="0">
+                </div>
+                <hr>
+                <button id="reset-btn">Reset to Defaults</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Law of Heat Conduction</h2>
+            <p>The rate at which heat flows through an object is described by a simple and elegant formula known as <strong>Fourier's Law</strong>.</p>
+            <code>P = k * A * (Tₕ - T꜀) / L</code>
+            <p>Let's break down each part of the equation, all of which you can control with the sliders:</p>
+            <ul>
+                <li><code>P</code>: The <strong>Power</strong>, or rate of heat flow, measured in Watts (Joules per second). This is what the simulation calculates and visualizes. A higher value means heat is moving more quickly.</li>
+                <li><code>k</code>: The <strong>Thermal Conductivity</strong> of the material. This is an intrinsic property of a substance that measures how well it conducts heat. Metals like copper have a very high 'k', while insulators like wood or styrofoam have a very low 'k'.</li>
+                <li><code>A</code>: The <strong>Cross-Sectional Area</strong> of the rod. A thicker rod provides more pathways for heat to travel, increasing the overall rate of flow.</li>
+                <li><code>(Tₕ - T꜀)</code>: The <strong>Temperature Difference</strong> between the hot end and the cold end. Heat flows from hot to cold, and a larger temperature difference provides a stronger "push" for the heat to move.</li>
+                <li><code>L</code>: The <strong>Length</strong> of the rod. The longer the path the heat has to travel, the slower the rate of flow will be.</li>
+            </ul>
+            <h3>Analogy: Water Flowing Through a Pipe</h3>
+            <p>You can think of heat conduction like water flowing through a pipe. The rate of water flow (gallons per minute) is analogous to the heat flow rate (Watts).</p>
+            <ul>
+                <li>The <strong>temperature difference (Tₕ - T꜀)</strong> is like the <strong>pressure difference</strong> between the two ends of the pipe. Higher pressure difference pushes more water through.</li>
+                <li>The <strong>cross-sectional area (A)</strong> is like the <strong>pipe's diameter</strong>. A wider pipe lets more water flow.</li>
+                <li>The <strong>length (L)</strong> is the <strong>pipe's length</strong>. A longer pipe creates more resistance, reducing the flow.</li>
+                <li>The <strong>thermal conductivity (k)</strong> is like the <strong>smoothness of the inside of the pipe</strong>. A very smooth pipe (like copper for heat) offers little resistance, while a pipe clogged with gravel (like wood for heat) offers a lot of resistance.</li>
+            </ul>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Worked Examples</h2>
+            <table>
+                <thead><tr><th>Parameter</th><th>Description</th><th>Worked Example</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Thermal Conductivity (k)</strong></td>
+                        <td>A material property indicating how well it conducts heat. Units: W/(m·K).</td>
+                        <td>For Copper (k=<strong>401</strong>), with A=0.01, ΔT=100, L=0.5, the Power is P = 401 * 0.01 * 100 / 0.5 = <strong>802 W</strong>. For Glass (k=<strong>1.0</strong>), the Power is P = 1 * 0.01 * 100 / 0.5 = <strong>2 W</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cross-Sectional Area (A)</strong></td>
+                        <td>The thickness of the rod. Units: m².</td>
+                        <td>With default values (k=401, ΔT=100, L=0.5), if A is doubled from <strong>0.01</strong> to <strong>0.02</strong> m², the Power doubles from 802 W to <strong>1604 W</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Length of Rod (L)</strong></td>
+                        <td>The distance the heat must travel. Units: m.</td>
+                        <td>With default values (k=401, A=0.01, ΔT=100), if L is doubled from <strong>0.5</strong> to <strong>1.0</strong> m, the Power is halved from 802 W to <strong>401 W</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Temperature Difference (ΔT)</strong></td>
+                        <td>The "driving force" for heat flow. Units: °C or K.</td>
+                        <td>With default values (k=401, A=0.01, L=0.5), if the temperature difference (Tₕ - T꜀) is halved from <strong>100°C</strong> to <strong>50°C</strong>, the Power is halved from 802 W to <strong>401 W</strong>.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('simulation-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const controls = {
+            k: document.getElementById('k-slider'),
+            A: document.getElementById('area-slider'),
+            L: document.getElementById('length-slider'),
+            TH: document.getElementById('th-slider'),
+            TC: document.getElementById('tc-slider'),
+            material: document.getElementById('material-select'),
+            reset: document.getElementById('reset-btn'),
+        };
+
+        const values = {
+            k: document.getElementById('k-value'),
+            A: document.getElementById('area-value'),
+            L: document.getElementById('length-value'),
+            TH: document.getElementById('th-value'),
+            TC: document.getElementById('tc-value'),
+            rate: document.getElementById('rate-display'),
+        };
+
+        const config = {
+            k: 401, A: 0.01, L: 0.5, TH: 100, TC: 0,
+            heatParticles: []
+        };
+
+        function updateConfig() {
+            config.k = parseFloat(controls.k.value);
+            config.A = parseFloat(controls.A.value);
+            config.L = parseFloat(controls.L.value);
+            config.TH = parseFloat(controls.TH.value);
+            config.TC = parseFloat(controls.TC.value);
+
+            values.k.textContent = `${config.k.toFixed(1)} W/mK`;
+            values.A.textContent = `${config.A.toFixed(3)} m²`;
+            values.L.textContent = `${config.L.toFixed(2)} m`;
+            values.TH.textContent = `${config.TH.toFixed(0)} °C`;
+            values.TC.textContent = `${config.TC.toFixed(0)} °C`;
+        }
+
+        function calculateHeatFlow() {
+            const dT = config.TH - config.TC;
+            if (config.L === 0 || dT < 0) return 0;
+            return (config.k * config.A * dT) / config.L;
+        }
+
+        function draw() {
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0,0,w,h);
+
+            // Rod dimensions
+            const rodHeight = config.A / 0.0002; // Scale area to height
+            const rodLength = config.L * (w * 0.7);
+            const rodY = h / 2 - rodHeight / 2;
+            const rodX = (w - rodLength) / 2;
+
+            // Reservoirs
+            const reservoirWidth = w * 0.15;
+            ctx.fillStyle = `rgb(255, ${100 - (config.TH/5)}, 0)`;
+            ctx.fillRect(0, 0, reservoirWidth, h);
+            ctx.fillStyle = `rgb(0, ${100 - (config.TC/2)}, 255)`;
+            ctx.fillRect(w - reservoirWidth, 0, reservoirWidth, h);
+
+            // Rod gradient
+            const gradient = ctx.createLinearGradient(rodX, 0, rodX + rodLength, 0);
+            gradient.addColorStop(0, `rgb(255, ${100 - (config.TH/5)}, 0)`);
+            gradient.addColorStop(1, `rgb(0, ${100 - (config.TC/2)}, 255)`);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(rodX, rodY, rodLength, rodHeight);
+
+            // Heat particles
+            config.heatParticles.forEach(p => {
+                ctx.fillStyle = `rgba(255, 255, 0, ${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function update(power) {
+            values.rate.textContent = `${power.toFixed(1)} W`;
+
+            // Update particles
+            const particleSpeed = Math.log1p(power) * 0.2;
+            if(Math.random() < power / 500) { // Spawn rate depends on power
+                 config.heatParticles.push({
+                    x: canvas.width * 0.15,
+                    y: canvas.height/2 - (config.A/0.0002)/2 + Math.random() * (config.A/0.0002),
+                    alpha: 1,
+                    radius: 2 + Math.random() * 2
+                });
+            }
+
+            config.heatParticles.forEach(p => {
+                p.x += particleSpeed;
+                p.alpha -= 0.005 * particleSpeed;
+            });
+            config.heatParticles = config.heatParticles.filter(p => p.alpha > 0 && p.x < canvas.width * 0.85);
+
+            draw();
+        }
+
+        function mainLoop() {
+            updateConfig();
+            const power = calculateHeatFlow();
+            update(power);
+            requestAnimationFrame(mainLoop);
+        }
+
+        controls.material.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                controls.k.style.display = 'block';
+            } else {
+                controls.k.style.display = 'none';
+                controls.k.value = e.target.value;
+            }
+        });
+
+        controls.reset.addEventListener('click', () => {
+            controls.k.value = 401;
+            controls.A.value = 0.01;
+            controls.L.value = 0.5;
+            controls.TH.value = 100;
+            controls.TC.value = 0;
+            controls.material.value = "401";
+            controls.k.style.display = 'none';
+            config.heatParticles = [];
+        });
+
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
