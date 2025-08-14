@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radioactive Half-Life Dice Game</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #28a745; /* Green for active */
+            --secondary-color: #6c757d; /* Grey for decayed */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #20c997;
+            --secondary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 200px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; height: 50px; }
+        .button-bar button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .decay-selector { display: flex; gap: 5px; margin-top: 10px; justify-content: center; }
+        .decay-selector .die-face { width: 30px; height: 30px; border: 1px solid var(--border-color); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 1.2em; user-select: none; }
+        .decay-selector .die-face.selected { background-color: var(--primary-color); color: white; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Radioactive Half-Life Dice Game</h1>
+            <p class="subtitle">An analogy for the probabilistic nature of radioactive decay.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Radioactive decay, where an unstable atomic nucleus breaks down, is a fundamentally random process. We can never know exactly when one specific nucleus will decay. However, for a large collection of nuclei, their collective behavior is very predictable. This simulation uses a large number of dice as an analogy for radioactive nuclei. Each "roll" is a unit of time, and if a die lands on a chosen "decay number," it's considered decayed. This simple game beautifully demonstrates the concepts of probability, exponential decay, and half-life.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Dice Analogy</h2>
+
+            <h3>Step 1: The Setup</h3>
+            <p>Imagine each die in the simulation is a single, unstable atomic nucleus. We start with a large number of these "undecayed" dice. Each roll of all the dice represents one unit of time passing (e.g., a year, a minute, a second).</p>
+
+            <h3>Step 2: The Decay Rule</h3>
+            <p>We need a rule for when a die "decays." In this simulation, you can select one or more numbers on the die face (from 1 to 6) to be the "decay numbers." For example, if you select only the number "1," then any die that lands on a 1 after a roll is considered "decayed." The probability of any single die decaying in one roll is 1/6. If you select "1" and "2," the probability becomes 2/6, or 1/3.</p>
+
+            <h3>Step 3: Randomness and Predictability</h3>
+            <p>This is the core concept. For any single die, you can't predict if it will decay on the next roll. It's completely random. However, for a large number of dice, you can be very confident that *about* 1/6th of them will decay on each roll (if "1" is the decay number). This is exactly how radioactive decay works: the process is individually random but collectively predictable.</p>
+
+            <h3>Step 4: Exponential Decay and Half-Life</h3>
+            <p>As you repeatedly click "Roll All Dice," you'll see the number of active (undecayed) dice decrease. The graph below the dice grid plots this decrease. You'll notice it's not a straight line; it's an **exponential decay curve**. The number of decays is large at the beginning when there are many dice, and it gets smaller as the number of remaining dice dwindles.
+            <br><br>
+            The **half-life (`T₁/₂`)** is a crucial concept. It's the time required for exactly half of the initial nuclei to decay. In our game, it's the number of rolls it takes for the number of active dice to drop to half its starting value. The simulation will mark this point on the graph for you.
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="roll-btn">Roll All Dice</button>
+                    <button id="auto-btn">Auto-Roll</button>
+                </div>
+                <div class="button-bar">
+                    <button id="reset-btn" style="grid-column: 1 / -1;">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label>Number of Dice (N₀): <span id="n-dice-value">400</span></label>
+                    <input type="range" id="n-dice-slider" min="100" max="1000" step="20" value="400">
+                </div>
+                <div class="control-group">
+                    <label>Decay Numbers (click to select):</label>
+                    <div class="decay-selector" id="decay-selector">
+                        <div class="die-face selected" data-value="1">1</div>
+                        <div class="die-face" data-value="2">2</div>
+                        <div class="die-face" data-value="3">3</div>
+                        <div class="die-face" data-value="4">4</div>
+                        <div class="die-face" data-value="5">5</div>
+                        <div class="die-face" data-value="6">6</div>
+                    </div>
+                </div>
+                 <div class="readout" style="text-align:center;">
+                    <h4>Status</h4>
+                    <p>Rolls: <span id="rolls-value">0</span></p>
+                    <p>Active Dice: <span id="active-value">--</span></p>
+                    <p>Half-Life: <span id="half-life-value">--</span> Rolls</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>The Law of Radioactive Decay</h3>
+            <p>The number of undecayed nuclei, `N(t)`, remaining at time `t` follows an exponential decay law:</p>
+            <p><code>N(t) = N₀ * e^(-λt)</code></p>
+            <p>Where `N₀` is the initial number of nuclei, `e` is the base of the natural logarithm, and `λ` (lambda) is the **decay constant**. The decay constant represents the probability per unit time that a single nucleus will decay. In our dice analogy, `λ` is directly related to the probability `p` of rolling a decay number on a single roll (`p = number of decay faces / 6`). For a discrete process like ours, the equation is `N(t) = N₀ * (1-p)ᵗ`.</p>
+
+            <h3>Half-Life (`T₁/₂`)</h3>
+            <p>The half-life is the time it takes for `N(t)` to become `N₀/2`. We can solve for it by setting `N(t) = N₀/2` in the decay equation:</p>
+            <p><code>N₀ / 2 = N₀ * e^(-λ * T₁/₂)</code></p>
+            <p><code>1/2 = e^(-λ * T₁/₂)</code></p>
+            <p>Taking the natural logarithm of both sides gives `ln(1/2) = -λ * T₁/₂`, which simplifies to `-ln(2) = -λ * T₁/₂`. Therefore, the relationship is:</p>
+            <p><code>T₁/₂ = ln(2) / λ ≈ 0.693 / λ</code></p>
+            <p>This shows that a larger decay constant (a higher probability of decay) leads to a shorter half-life.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx, plotCanvas, plotCtx;
+    let animationFrameId;
+
+    let config = { numDice: 400, decayNumbers: [1] };
+
+    let dice = [];
+    let history = [];
+    let rolls = 0;
+    let autoRollInterval = null;
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+        reset();
+    }
+
+    function reset() {
+        if (autoRollInterval) clearInterval(autoRollInterval);
+        autoRollInterval = null;
+        document.getElementById('auto-btn').textContent = 'Auto-Roll';
+
+        rolls = 0;
+        dice = [];
+        for (let i = 0; i < config.numDice; i++) {
+            dice.push({ value: Math.ceil(Math.random() * 6), active: true });
+        }
+        history = [{ rolls: 0, active: config.numDice }];
+        updateReadouts();
+        draw();
+    }
+
+    function roll() {
+        let decayedInRoll = 0;
+        dice.forEach(d => {
+            if (d.active) {
+                d.value = Math.ceil(Math.random() * 6);
+                if (config.decayNumbers.includes(d.value)) {
+                    d.active = false;
+                    decayedInRoll++;
+                }
+            }
+        });
+        rolls++;
+        const activeCount = history[history.length-1].active - decayedInRoll;
+        history.push({ rolls: rolls, active: activeCount });
+        updateReadouts();
+        draw();
+
+        if (activeCount === 0 && autoRollInterval) {
+            clearInterval(autoRollInterval);
+            autoRollInterval = null;
+            document.getElementById('auto-btn').textContent = 'Auto-Roll';
+        }
+    }
+
+    function draw() {
+        drawDice();
+        drawPlot();
+    }
+
+    function drawDice() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        const numCols = Math.ceil(Math.sqrt(config.numDice * (width/height)));
+        const numRows = Math.ceil(config.numDice / numCols);
+        const dieSize = Math.min(width/numCols, height/numRows) * 0.8;
+        const paddingX = (width - numCols * (dieSize/0.8)) / 2;
+        const paddingY = (height - numRows * (dieSize/0.8)) / 2;
+
+        dice.forEach((d, i) => {
+            const row = Math.floor(i / numCols);
+            const col = i % numCols;
+            const x = col * (dieSize/0.8) + dieSize*0.1 + paddingX;
+            const y = row * (dieSize/0.8) + dieSize*0.1 + paddingY;
+
+            ctx.fillStyle = d.active ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+            ctx.fillRect(x, y, dieSize, dieSize);
+
+            ctx.fillStyle = d.active ? '#fff' : '#aaa';
+            ctx.font = `${dieSize*0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(d.value, x + dieSize/2, y + dieSize/2);
+        });
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        const max_rolls = Math.max(10, rolls);
+        const max_n = config.numDice;
+
+        // Draw half-life line
+        const halfLife = findHalfLife();
+        if (halfLife !== null) {
+            const x_hl = (halfLife / max_rolls) * width;
+            plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+            plotCtx.lineWidth = 1;
+            plotCtx.setLineDash([5, 5]);
+            plotCtx.beginPath();
+            plotCtx.moveTo(x_hl, 0);
+            plotCtx.lineTo(x_hl, height);
+            plotCtx.stroke();
+            plotCtx.setLineDash([]);
+        }
+
+        // Draw decay curve
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        history.forEach((p, i) => {
+            const x = (p.rolls / max_rolls) * width;
+            const y = height - (p.active / max_n) * height;
+            if (i === 0) plotCtx.moveTo(x, y);
+            else plotCtx.lineTo(x, y);
+        });
+        plotCtx.stroke();
+    }
+
+    function findHalfLife() {
+        const halfCount = config.numDice / 2;
+        const halfLifePoint = history.find(p => p.active <= halfCount);
+        if (halfLifePoint) return halfLifePoint.rolls;
+        return null;
+    }
+
+    function updateReadouts() {
+        document.getElementById('rolls-value').textContent = rolls;
+        document.getElementById('active-value').textContent = history[history.length - 1].active;
+        const halfLife = findHalfLife();
+        document.getElementById('half-life-value').textContent = halfLife !== null ? `${halfLife} Rolls` : '--';
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('roll-btn').addEventListener('click', roll);
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        document.getElementById('auto-btn').addEventListener('click', e => {
+            if (autoRollInterval) {
+                clearInterval(autoRollInterval);
+                autoRollInterval = null;
+                e.target.textContent = 'Auto-Roll';
+            } else {
+                autoRollInterval = setInterval(roll, 200);
+                e.target.textContent = 'Stop';
+            }
+        });
+
+        document.getElementById('n-dice-slider').addEventListener('input', e => {
+            config.numDice = parseInt(e.target.value, 10);
+            document.getElementById('n-dice-value').textContent = config.numDice;
+            reset();
+        });
+
+        document.getElementById('decay-selector').addEventListener('click', e => {
+            if (e.target.classList.contains('die-face')) {
+                e.target.classList.toggle('selected');
+                config.decayNumbers = [];
+                document.querySelectorAll('#decay-selector .selected').forEach(face => {
+                    config.decayNumbers.push(parseInt(face.dataset.value, 10));
+                });
+                if (config.decayNumbers.length === 0) { // must have at least one
+                    document.querySelector('#decay-selector .die-face[data-value="1"]').classList.add('selected');
+                    config.decayNumbers.push(1);
+                }
+            }
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); draw(); }
+
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>

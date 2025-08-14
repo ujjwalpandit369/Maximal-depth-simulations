@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cherenkov Radiation Detector</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff; /* Blue for Cherenkov light */
+            --secondary-color: #6c757d; /* Grey for detector components */
+            --particle-color: #dc3545;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #1a1a2e;
+            --text-color: #f8f9fa;
+            --primary-color: #58a6ff;
+            --secondary-color: #adb5bd;
+            --particle-color: #ff7b72;
+            --border-color: #495057;
+            --canvas-bg: #0f1a24;
+            --code-bg: #343a40;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 16 / 9; }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+        .readout p { margin: 5px 0; font-family: monospace; font-size: 1.1em;}
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cherenkov Radiation Detector</h1>
+            <p class="subtitle">Visualizing an "optical sonic boom" and how to detect it.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>While nothing can travel faster than the speed of light in a vacuum, light itself slows down when it passes through a medium like water or gas. It is possible for a high-energy particle to travel through that medium faster than the light does! When this happens, the particle creates a shockwave of light, similar to the sonic boom created by a supersonic jet. This light is called **Cherenkov radiation**. This simulation shows how this cone of light is produced and how a Ring-Imaging Cherenkov (RICH) detector uses mirrors to focus the cone into a ring, allowing physicists to precisely measure the particle's velocity.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Optical Sonic Boom</h2>
+
+            <h3>Step 1: The Cosmic Speed Limit and a Loophole</h3>
+            <p>Einstein's theory of relativity states that nothing can travel faster than `c`, the speed of light in a vacuum. However, when light enters a transparent medium like glass or water, it slows down to a new speed, `v_light = c/n`, where `n` is the medium's refractive index. For water, `n` is about 1.33, so light travels at only 75% of its vacuum speed. This creates a loophole: a particle from a collider can travel at, say, 90% of `c`, which is faster than the light in the water.</p>
+
+            <h3>Step 2: The Shockwave of Light</h3>
+            <p>When a charged particle travels faster than light in a medium, it creates an "optical shockwave." The particle is essentially outrunning the electromagnetic disturbances it creates, causing them to pile up into a coherent wavefront. This wavefront of light forms a cone that propagates outwards from the particle's path. This is Cherenkov radiation, typically seen as a faint blue glow.
+            <br><br>
+            <strong>Analogy: A Supersonic Jet.</strong> This is exactly analogous to a sonic boom. A jet flying faster than the speed of sound outruns its own sound waves, causing them to pile up into a conical shockwave of pressure that we hear as a loud boom when it passes overhead. Cherenkov radiation is a sonic boom made of light.
+            </p>
+
+            <h3>Step 3: The RICH Detector - From Cone to Ring</h3>
+            <p>A Ring-Imaging Cherenkov (RICH) detector is designed to measure this cone of light. The simulation shows its key components:
+            <ol>
+                <li>A charged particle (red line) travels through a **Radiator Medium**. If it's fast enough, it emits a cone of Cherenkov light (blue lines).</li>
+                <li>This cone of light expands and hits a large, curved **Focusing Mirror**.</li>
+                <li>The mirror reflects the light and focuses it onto a flat **Photodetector Plane**.</li>
+            </ol>
+            Because the light comes from a cone, the focused image on the detector plane is a perfect **ring**.
+            </p>
+
+            <h3>Step 4: Measuring Velocity</h3>
+            <p>The angle of the Cherenkov cone (`θ_c`) depends only on the particle's speed and the medium's refractive index. A faster particle produces a wider cone. This wider cone, in turn, is focused into a larger ring by the mirror. By precisely measuring the radius of the ring on their detectors, physicists can work backwards to calculate the cone angle, and from that, the particle's exact velocity. This is a crucial technique for identifying different types of particles in modern physics experiments.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label>Particle Velocity (v/c): <span id="v-value">0.90</span></label>
+                    <input type="range" id="v-slider" min="0.50" max="0.99" step="0.01" value="0.90">
+                </div>
+                <div class="control-group">
+                    <label>Refractive Index (n): <span id="n-value">1.33</span></label>
+                    <input type="range" id="n-slider" min="1.0" max="2.0" step="0.01" value="1.33">
+                </div>
+                <div class="readout">
+                    <h4>Calculated Properties</h4>
+                    <p id="status-line">--</p>
+                    <p>Cone Angle (θc): <span id="angle-value">--</span>°</p>
+                    <p>Ring Radius (R): <span id="radius-value">--</span> cm</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Condition for Cherenkov Radiation</h3>
+            <p>A charged particle with speed `v` will emit Cherenkov radiation in a medium with refractive index `n` only if its speed is greater than the speed of light *in that medium*.</p>
+            <p><code>v > c / n</code></p>
+            <p>It is often convenient to use `β = v/c`, the particle's speed as a fraction of the speed of light in a vacuum. The condition is then simply:</p>
+            <p><code>β > 1 / n</code></p>
+            <h3>The Cherenkov Angle (`θ_c`)</h3>
+            <p>The angle of the cone of light, measured from the particle's direction of motion, is given by a simple trigonometric relation:</p>
+            <p><code>cos(θ_c) = 1 / (n * β)</code></p>
+            <p>From this, we can see that as the particle's speed `β` increases, the value of `1/(nβ)` decreases, which means the angle `θ_c` increases. Faster particles produce wider cones.</p>
+            <h3>Ring Radius</h3>
+            <p>A RICH detector uses a spherical mirror to focus the cone of light. For a mirror with a focal length `f`, the radius `R` of the ring formed on the detector plane is given by:</p>
+            <p><code>R = f * tan(θ_c)</code></p>
+            <p>By measuring `R`, and knowing `f`, physicists can determine `θ_c` and then solve for the particle's velocity `β`.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+
+    let config = { v_beta: 0.90, n: 1.33 };
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        setupControls();
+        draw();
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        // --- Calculations ---
+        const v = config.v_beta;
+        const n = config.n;
+        let theta_c = 0;
+        let ring_radius = 0;
+        let status = "No Cherenkov Radiation (v < c/n)";
+        let statusColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color');
+
+        if (v > 1/n) {
+            theta_c = Math.acos(1 / (n * v));
+            status = "Cherenkov Radiation Emitted!";
+            statusColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        }
+
+        // --- Draw Main Detector View ---
+        const radiator = { x: 0, y: height*0.2, w: width*0.6, h: height*0.6 };
+        const mirror_cx = width*0.85;
+        const mirror_r = width*0.4;
+        const detector_x = width*0.5;
+
+        // Draw components
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color') + '20';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(radiator.x, radiator.y, radiator.w, radiator.h);
+        ctx.fillRect(radiator.x, radiator.y, radiator.w, radiator.h);
+        ctx.beginPath();
+        ctx.arc(mirror_cx, cy, mirror_r, Math.PI*0.7, Math.PI*1.3);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(detector_x, 0); ctx.lineTo(detector_x, height);
+        ctx.stroke();
+
+        // Draw particle path
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--particle-color');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, cy); ctx.lineTo(radiator.w, cy);
+        ctx.stroke();
+
+        // Draw Cherenkov cone and rays
+        if (theta_c > 0) {
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+            ctx.lineWidth = 1;
+
+            // Draw 3 representative rays
+            for (let i = 0; i < 3; i++) {
+                const particle_x = radiator.w * (0.2 + i * 0.3);
+
+                // Top ray
+                const ray1 = { angle: -theta_c, x: particle_x, y: cy };
+                const hit1 = rayMirrorIntersect(ray1, mirror_cx, mirror_r);
+                const reflected1 = reflect(ray1, hit1, mirror_cx, mirror_r);
+                const final1 = linePlaneIntersect(reflected1, detector_x);
+                drawRayPath(ray1, hit1, final1);
+
+                // Bottom ray
+                const ray2 = { angle: theta_c, x: particle_x, y: cy };
+                const hit2 = rayMirrorIntersect(ray2, mirror_cx, mirror_r);
+                const reflected2 = reflect(ray2, hit2, mirror_cx, mirror_r);
+                const final2 = linePlaneIntersect(reflected2, detector_x);
+                drawRayPath(ray2, hit2, final2);
+
+                // Draw ring in inset view
+                if (i === 1) { // use middle ray for radius calc
+                    ring_radius = Math.abs(final1.y - cy);
+                    drawRing(ring_radius);
+                }
+            }
+        } else {
+            drawRing(0);
+        }
+
+        // Update readouts
+        document.getElementById('status-line').textContent = status;
+        document.getElementById('status-line').style.color = statusColor;
+        document.getElementById('angle-value').textContent = theta_c > 0 ? (theta_c * 180 / Math.PI).toFixed(2) : '--';
+        document.getElementById('radius-value').textContent = ring_radius > 0 ? (ring_radius/10).toFixed(2) : '--'; // px to cm
+    }
+
+    function rayMirrorIntersect(ray, mcx, mr) {
+        // Simplified for visualization, not a real geometric calculation
+        return { x: mcx - mr * Math.cos(ray.angle * 0.2), y: ray.y + (mcx - ray.x) * Math.tan(ray.angle) };
+    }
+
+    function reflect(ray, hit, mcx, mr) {
+        const normal_angle = Math.atan2(hit.y - canvas.height/2, hit.x - mcx);
+        const reflected_angle = 2 * normal_angle - Math.PI - ray.angle;
+        return { angle: reflected_angle, x: hit.x, y: hit.y };
+    }
+
+    function linePlaneIntersect(ray, plane_x) {
+        const dx = plane_x - ray.x;
+        const y = ray.y + dx * Math.tan(ray.angle);
+        return { x: plane_x, y: y };
+    }
+
+    function drawRayPath(start, middle, end) {
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(middle.x, middle.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+    }
+
+    function drawRing(radius_px) {
+        const { width, height } = canvas;
+        const ring_cx = width * 0.15;
+        const ring_cy = height * 0.2;
+        const ring_r_max = 80;
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        ctx.lineWidth = 1;
+        ctx.fillRect(ring_cx - ring_r_max, ring_cy - ring_r_max, ring_r_max*2, ring_r_max*2);
+        ctx.strokeRect(ring_cx - ring_r_max, ring_cy - ring_r_max, ring_r_max*2, ring_r_max*2);
+
+        if (radius_px > 0) {
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(ring_cx, ring_cy, radius_px, 0, 2*Math.PI);
+            ctx.stroke();
+        }
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('v-slider').addEventListener('input', e => {
+            config.v_beta = parseFloat(e.target.value);
+            document.getElementById('v-value').textContent = config.v_beta.toFixed(2);
+            draw();
+        });
+        document.getElementById('n-slider').addEventListener('input', e => {
+            config.n = parseFloat(e.target.value);
+            document.getElementById('n-value').textContent = config.n.toFixed(2);
+            draw();
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); draw(); }
+
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>
