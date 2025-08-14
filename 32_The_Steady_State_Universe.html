@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Steady State Universe</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #f39c12; /* Changed accent for this sim */
+            --accent-color-dark: #e67e22;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --galaxy-color: #2c3e50;
+            --new-galaxy-color: #e74c3c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #f1c40f;
+            --accent-color-dark: #f39c12;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --galaxy-color: #ecf0f1;
+            --new-galaxy-color: #e74c3c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2 / 1;
+        }
+
+        .sim-labels { display: flex; justify-content: space-around; font-weight: bold; margin-top: 10px; }
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            padding: 8px 12px; border: 1px solid var(--control-border); border-radius: 5px;
+            background-color: var(--bg-color); color: var(--text-color); cursor: pointer;
+            margin-right: 5px; transition: background-color 0.2s;
+        }
+        .control-group button:hover { background-color: var(--code-bg); }
+        .control-group button.primary { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
+        .control-group button.primary:hover { background-color: var(--accent-color-dark); }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--table-border); padding: 10px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: "Courier New", Courier, monospace; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Steady State Universe</h1>
+            <p class="subtitle">A historical rival to the Big Bang, where the universe is eternal and matter is continuously created.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop/Mobile</span>
+                <span><strong>Approx. HTML Size:</strong> 210 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Today, we take the Big Bang for granted, but for decades, it had a major scientific rival: the Steady State theory. This elegant and compelling idea proposed that the universe is eternal and, on the largest scales, unchanging in time. As observations showed the universe was expanding, this created a puzzle: wouldn't the universe become emptier and emptier? The Steady State theory's radical solution was that new matter is continuously being created out of nothing, perfectly balancing the dilution from expansion to keep the universe's density constant. This simulation shows a side-by-side comparison of a standard expanding universe, which grows emptier over time, and the Steady State universe, where new galaxies pop into existence to fill the voids, forever maintaining a "steady state."</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: A Universe Without a Beginning</h2>
+
+            <h3>Step 1: The Expanding Universe</h3>
+            <p>In the 1920s, astronomers like Edwin Hubble made a stunning discovery: almost all galaxies are moving away from us, and the farther away a galaxy is, the faster it's moving away. This is the observation of the expanding universe. It's not that galaxies are flying through space, but that space itself is stretching, carrying the galaxies along for the ride. This is the starting point for all modern cosmology.</p>
+
+            <h3>Step 2: Two Competing Ideas</h3>
+            <p>This discovery led to two major interpretations:
+            <ol>
+                <li><strong>The Big Bang:</strong> If the universe is expanding, it must have been smaller, denser, and hotter in the past. If you run the clock all the way back, you reach an initial moment of unimaginable density—a beginning. This idea was first proposed by Georges Lemaître.</li>
+                <li><strong>The Steady State:</strong> Proposed by Fred Hoyle, Thomas Gold, and Hermann Bondi in the 1940s, this theory found the idea of a "beginning" unscientific. They proposed the "Perfect Cosmological Principle": the universe is not only the same everywhere in space, but also the same at all points in time.</li>
+            </ol>
+            The simulation above shows these two ideas in action. On the left, a standard universe model (like the Big Bang) expands and gets more dilute. On the right, the Steady State universe expands, but tries to keep its density constant.</p>
+
+            <h3>Step 3: The Problem of Dilution</h3>
+            <p>Look at the left box in the simulation. As the galaxies (dots) move apart, the space between them grows. The number of galaxies in the box stays the same, so the density—the number of galaxies per unit of area—goes down. The universe becomes emptier. This violates the Perfect Cosmological Principle, which demands that the density should remain the same over time.</p>
+
+            <h3>Step 4: The Radical Solution - Continuous Creation</h3>
+            <p>To solve this puzzle, the Steady State theory made an extraordinary claim: new matter is constantly being created everywhere in the universe. The rate of creation is incredibly slow—perhaps one hydrogen atom per cubic meter every few billion years—but over cosmic scales, it's just enough to perfectly balance the thinning out caused by expansion. As galaxies move apart, new galaxies form from newly created matter in the voids between them.</p>
+            <p>Watch the right box in the simulation. As the galaxies expand, you will see new red dots appear in the empty spaces. This is the continuous creation process at work. The result is that the box, while expanding, maintains roughly the same number of dots per area. From a statistical point of view, it looks the same at the end as it did at the beginning, fulfilling the Perfect Cosmological Principle.</p>
+
+            <h3>Analogy: The Self-Refilling Pot of Soup</h3>
+            <p>Imagine a large pot of alphabet soup. The Big Bang model is like taking a single, incredibly dense clump of soup at the beginning and watching it expand outwards, thinning out into a watery broth with letters scattered far apart. The Steady State model is like a magical pot of soup. As people come and take spoonfuls (cosmic expansion), the pot magically refills itself with new soup and letters, so the pot always remains full and has the same consistency. It has always been full, and it always will be full. It's in a "steady state."</p>
+
+            <h3>Step 5: The Downfall of a Beautiful Theory</h3>
+            <p>For a time, both theories had their supporters. But in 1965, astronomers discovered the Cosmic Microwave Background (CMB)—a faint, uniform glow of radiation coming from all directions in space. The Big Bang theory predicted this perfectly: it's the leftover heat from the hot, dense early universe. The Steady State theory had no natural explanation for the CMB. The universe *was* different in the past. This discovery was the decisive evidence that led to the Big Bang model becoming the standard theory of cosmology.</p>
+        </article>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead><tr><th>Parameter</th><th>Units</th><th>Default</th><th>Min/Max</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td>Initial Galaxy Count</td>
+                        <td>Count</td>
+                        <td>30</td>
+                        <td>10 / 80</td>
+                        <td>The number of galaxies the simulation starts with in each box.</td>
+                    </tr>
+                    <tr>
+                        <td>Hubble Constant (H)</td>
+                        <td>km/s/Mpc (visual)</td>
+                        <td>0.5</td>
+                        <td>0.1 / 2.0</td>
+                        <td>Controls the speed of expansion. Higher values make galaxies move apart faster.</td>
+                    </tr>
+                    <tr>
+                        <td>Creation Threshold</td>
+                        <td>Density (galaxies/area)</td>
+                        <td>0.8</td>
+                        <td>0.2 / 1.5</td>
+                        <td>The density below which the Steady State model starts creating new galaxies. Lower values mean less creation.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="400" aria-label="Side-by-side simulation of a standard vs steady state universe"></canvas>
+                <div class="sim-labels">
+                    <span>Left: Standard Expanding Universe</span>
+                    <span>Right: Steady State Universe</span>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="play-pause-btn" class="primary">Pause</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="galaxies-slider">Initial Galaxies: <span id="galaxies-value">30</span></label>
+                    <input type="range" id="galaxies-slider" min="10" max="80" value="30" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="hubble-slider">Hubble Constant: <span id="hubble-value">0.5</span></label>
+                    <input type="range" id="hubble-slider" min="0.1" max="2.0" value="0.5" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="creation-slider">Creation Threshold: <span id="creation-value">0.8</span></label>
+                    <input type="range" id="creation-slider" min="0.2" max="1.5" value="0.8" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Presets</label>
+                    <button id="preset1-btn">Slow & Clear</button>
+                    <button id="preset2-btn">Rapid Expansion</button>
+                    <button id="preset3-btn">Aggressive Creation</button>
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <section id="presets-examples">
+            <h2>Try These Examples</h2>
+            <h3>1. Slow & Clear</h3>
+            <p>A slow expansion rate that makes it easy to see the difference between the two models.
+            <strong>Observation:</strong> Watch the left box become noticeably emptier over time, while the right box maintains its visual density as new red galaxies pop in to fill the gaps.
+            </p>
+            <button onclick="loadPreset(1)">Run "Slow & Clear"</button>
+
+            <h3>2. Rapid Expansion</h3>
+            <p>A high Hubble constant causes the galaxies to fly apart quickly.
+            <strong>Observation:</strong> The left box empties out almost immediately. The Steady State model on the right has to work hard, creating many new galaxies to try and keep up with the rapid dilution.
+            </p>
+            <button onclick="loadPreset(2)">Run "Rapid Expansion"</button>
+
+            <h3>3. Aggressive Creation</h3>
+            <p>This preset uses a high creation threshold, meaning the Steady State model will try to maintain a very high density.
+            <strong>Observation:</strong> The right box will become crowded with newly created galaxies, as the model overzealously fills every available void to meet its high-density target.
+            </p>
+            <button onclick="loadPreset(3)">Run "Aggressive Creation"</button>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Expansion and Creation</h2>
+            <p>The simulation is based on two simple principles: Hubble's law for expansion and a density-based rule for matter creation.</p>
+
+            <h3>1. Hubble Expansion</h3>
+            <p>Every galaxy at a position vector <strong>r</strong> from the center moves with a velocity <strong>v</strong> proportional to its position. This is Hubble's Law.</p>
+            <p><code><strong>v</strong> = H * <strong>r</strong></code></p>
+            <p><strong>Plain English:</strong> The farther away something is, the faster it moves away from you. In the simulation, we implement this by updating each galaxy's position in every time step: <code><strong>r</strong><sub>new</sub> = <strong>r</strong><sub>old</sub> + <strong>v</strong> * &Delta;t</code>.</p>
+
+            <h3>2. The Steady State Condition</h3>
+            <p>The core principle is that the average density <code>&rho;</code> must remain constant. In an expanding universe, this requires a creation rate <code>C</code> that balances the dilution.</p>
+            <p><code>d&rho;/dt = C - 3H&rho; = 0</code> &nbsp;&rArr;&nbsp; <code>C = 3H&rho;</code></p>
+            <p><strong>Plain English:</strong> The rate of change of density is the creation rate minus the dilution rate. For a steady state, this must be zero. So, the amount of new matter needed (<code>C</code>) is proportional to the expansion rate (<code>H</code>) and the current density (<code>&rho;</code>).</p>
+            <p>In our simulation, instead of using this formula directly, we implement the principle differently: when the measured density <code>&rho;</code> in the right-hand box drops below a target threshold, we find the largest void and create a new galaxy there. This achieves the same goal of maintaining a constant average density.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const galaxiesSlider = document.getElementById('galaxies-slider');
+        const galaxiesValue = document.getElementById('galaxies-value');
+        const hubbleSlider = document.getElementById('hubble-slider');
+        const hubbleValue = document.getElementById('hubble-value');
+        const creationSlider = document.getElementById('creation-slider');
+        const creationValue = document.getElementById('creation-value');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let simParams = {
+            initialGalaxies: 30,
+            hubble: 0.5,
+            creationThreshold: 0.8,
+        };
+        let galaxies1 = [], galaxies2 = [];
+        let isPlaying = false;
+
+        function reset() {
+            simParams.initialGalaxies = parseInt(galaxiesSlider.value);
+            simParams.hubble = parseFloat(hubbleSlider.value);
+            simParams.creationThreshold = parseFloat(creationSlider.value);
+
+            galaxies1 = [];
+            galaxies2 = [];
+            const boxWidth = canvas.width / 2;
+            const boxHeight = canvas.height;
+            for(let i=0; i<simParams.initialGalaxies; i++) {
+                const galaxy = {
+                    x: Math.random() * boxWidth,
+                    y: Math.random() * boxHeight,
+                    isNew: false
+                };
+                galaxies1.push({...galaxy});
+                galaxies2.push({...galaxy});
+            }
+            if(!isPlaying) draw();
+        }
+
+        function update() {
+            if (!isPlaying) return;
+            const dt = 0.1;
+            const boxWidth = canvas.width / 2;
+            const boxHeight = canvas.height;
+            const centerX = boxWidth / 2;
+            const centerY = boxHeight / 2;
+
+            // Expand galaxies
+            [galaxies1, galaxies2].forEach(galaxySet => {
+                for(const g of galaxySet) {
+                    const dx = g.x - centerX;
+                    const dy = g.y - centerY;
+                    g.x += dx * simParams.hubble * dt * 0.01;
+                    g.y += dy * simParams.hubble * dt * 0.01;
+                }
+            });
+
+            // Filter out galaxies that left the box
+            galaxies1 = galaxies1.filter(g => g.x > 0 && g.x < boxWidth && g.y > 0 && g.y < boxHeight);
+            galaxies2 = galaxies2.filter(g => g.x > 0 && g.x < boxWidth && g.y > 0 && g.y < boxHeight);
+
+            // Steady State: create new matter
+            const targetDensity = simParams.creationThreshold * simParams.initialGalaxies / (boxWidth*boxHeight);
+            const currentDensity = galaxies2.length / (boxWidth * boxHeight);
+
+            if (currentDensity < targetDensity) {
+                // Find largest void
+                let maxDist = 0;
+                let voidX = 0, voidY = 0;
+                for(let i=0; i<50; i++) { // Sample 50 random points
+                    const px = Math.random() * boxWidth;
+                    const py = Math.random() * boxHeight;
+                    let minDist2 = Infinity;
+                    for(const g of galaxies2) {
+                        const d2 = (g.x-px)**2 + (g.y-py)**2;
+                        if (d2 < minDist2) minDist2 = d2;
+                    }
+                    if (minDist2 > maxDist) {
+                        maxDist = minDist2;
+                        voidX = px;
+                        voidY = py;
+                    }
+                }
+                galaxies2.push({ x: voidX, y: voidY, isNew: true });
+            }
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw divider
+            ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            const defaultColor = isDark ? '#ecf0f1' : '#2c3e50';
+            const newColor = '#e74c3c';
+
+            // Draw galaxies
+            for(const g of galaxies1) {
+                ctx.fillStyle = defaultColor;
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            for(const g of galaxies2) {
+                ctx.fillStyle = g.isNew ? newColor : defaultColor;
+                ctx.beginPath();
+                ctx.arc(g.x + canvas.width/2, g.y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+        }
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        resetBtn.addEventListener('click', reset);
+
+        galaxiesSlider.addEventListener('input', e => { galaxiesValue.textContent = e.target.value; });
+        galaxiesSlider.addEventListener('change', reset);
+        hubbleSlider.addEventListener('input', e => { hubbleValue.textContent = parseFloat(e.target.value).toFixed(1); simParams.hubble = parseFloat(e.target.value); });
+        creationSlider.addEventListener('input', e => { creationValue.textContent = parseFloat(e.target.value).toFixed(1); simParams.creationThreshold = parseFloat(e.target.value); });
+
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        window.loadPreset = (n) => {
+            if (n === 1) { // Slow
+                hubbleSlider.value = 0.3;
+                creationSlider.value = 0.8;
+            } else if (n === 2) { // Rapid
+                hubbleSlider.value = 1.5;
+                creationSlider.value = 0.8;
+            } else if (n === 3) { // Aggressive
+                hubbleSlider.value = 0.5;
+                creationSlider.value = 1.2;
+            }
+            hubbleSlider.dispatchEvent(new Event('input'));
+            creationSlider.dispatchEvent(new Event('input'));
+            reset();
+        };
+        document.getElementById('preset1-btn').addEventListener('click', () => window.loadPreset(1));
+        document.getElementById('preset2-btn').addEventListener('click', () => window.loadPreset(2));
+        document.getElementById('preset3-btn').addEventListener('click', () => window.loadPreset(3));
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
