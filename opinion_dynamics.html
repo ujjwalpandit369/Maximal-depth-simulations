@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sociophysics: Opinion Dynamics</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #6d4c41;
+            --accent-color: #8d6e63;
+            --control-bg: #fff;
+            --control-border: #d7ccc8;
+            --canvas-bg: #efebe9;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; border-bottom: 1px solid var(--control-border); padding-bottom: 15px; }
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 400px; background: var(--canvas-bg); border-radius: 4px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sociophysics: Opinion Dynamics</h1>
+            <p class="subtitle">An agent-based model of consensus formation and polarization.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>How do large groups of people come to a consensus, and why do they sometimes fragment into polarized, echo-chamber-like factions? Sociophysics is a field that uses models from statistical physics to understand social phenomena. This simulation uses a <strong>bounded confidence model</strong> of opinion dynamics. It features a network of agents, each with an opinion on a spectrum. The key rule is that agents will only interact with and be influenced by neighbors whose opinions are already "close" to their own. This simple mechanism can lead to complex emergent behavior, including the formation of a global consensus or the persistent fragmentation of society into polarized groups.</p>
+        </section>
+
+        <div class="main-container">
+             <div class="controls">
+                <button id="reset-btn">Reset</button>
+                <label style="margin-left: 20px;">Network Topology:</label>
+                <select id="network-select">
+                    <option value="grid">Regular Grid</option>
+                    <option value="random">Random Network</option>
+                </select>
+                <label style="margin-left: 20px;">Confidence Bound (ε): <span id="confidence-value">0.30</span></label>
+                <input type="range" id="confidence-slider" min="0.01" max="1.0" step="0.01" value="0.3" style="vertical-align: middle;">
+            </div>
+
+            <div class="sim-panel">
+                <h3>Agent Network</h3>
+                <canvas id="network-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="sim-panel">
+                <h3>Opinion Distribution</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const networkCanvas = document.getElementById('network-canvas');
+        const nCtx = networkCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            reset: document.getElementById('reset-btn'),
+            network: document.getElementById('network-select'),
+            confidence: document.getElementById('confidence-slider'),
+        };
+        const values = {
+            confidence: document.getElementById('confidence-value'),
+        };
+
+        const NUM_AGENTS = 150;
+        let agents = [];
+        let state = {
+            confidence: 0.3,
+            networkType: 'grid',
+            mu: 0.2, // convergence parameter
+        };
+
+        function setup() {
+            agents = [];
+            for(let i=0; i<NUM_AGENTS; i++) {
+                agents.push({
+                    x: Math.random() * networkCanvas.width,
+                    y: Math.random() * networkCanvas.height,
+                    opinion: Math.random() * 2 - 1, // -1 to +1
+                    neighbors: []
+                });
+            }
+            generateNetwork();
+            drawGraph();
+        }
+
+        function generateNetwork() {
+            agents.forEach(a => a.neighbors = []);
+            if (state.networkType === 'grid') {
+                const gridSize = Math.ceil(Math.sqrt(NUM_AGENTS));
+                for(let i=0; i<NUM_AGENTS; i++) {
+                    const ix = i % gridSize;
+                    const iy = Math.floor(i / gridSize);
+                    agents[i].x = (ix + 1) * (networkCanvas.width / (gridSize + 1));
+                    agents[i].y = (iy + 1) * (networkCanvas.height / (gridSize + 1));
+
+                    if (ix > 0) agents[i].neighbors.push(agents[i-1]);
+                    if (ix < gridSize-1) agents[i].neighbors.push(agents[i+1]);
+                    if (iy > 0) agents[i].neighbors.push(agents[i-gridSize]);
+                    if (iy < gridSize-1) agents[i].neighbors.push(agents[i+gridSize]);
+                }
+            } else { // Random network
+                 for(let i=0; i<NUM_AGENTS * 2; i++) {
+                     const i1 = Math.floor(Math.random() * NUM_AGENTS);
+                     const i2 = Math.floor(Math.random() * NUM_AGENTS);
+                     if (i1 !== i2 && !agents[i1].neighbors.includes(agents[i2])) {
+                         agents[i1].neighbors.push(agents[i2]);
+                         agents[i2].neighbors.push(agents[i1]);
+                     }
+                 }
+            }
+        }
+
+        function update() {
+            for(let i=0; i<NUM_AGENTS; i++) { // One interaction per agent per frame
+                const agent1 = agents[Math.floor(Math.random() * NUM_AGENTS)];
+                if (agent1.neighbors.length === 0) continue;
+                const agent2 = agent1.neighbors[Math.floor(Math.random() * agent1.neighbors.length)];
+
+                if (Math.abs(agent1.opinion - agent2.opinion) < state.confidence) {
+                    const op1 = agent1.opinion;
+                    const op2 = agent2.opinion;
+                    agent1.opinion += state.mu * (op2 - op1);
+                    agent2.opinion += state.mu * (op1 - op2);
+                }
+            }
+        }
+
+        function opinionToColor(opinion) {
+            const r = opinion > 0 ? 255 * opinion : 0;
+            const b = opinion < 0 ? 255 * -opinion : 0;
+            const g = (1 - Math.abs(opinion)) * 100;
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function draw() {
+            // Draw network
+            nCtx.clearRect(0,0,networkCanvas.width, networkCanvas.height);
+            nCtx.strokeStyle = 'rgba(0,0,0,0.1)';
+            nCtx.lineWidth = 1;
+            agents.forEach(a => {
+                a.neighbors.forEach(n => {
+                    nCtx.beginPath();
+                    nCtx.moveTo(a.x, a.y);
+                    nCtx.lineTo(n.x, n.y);
+                    nCtx.stroke();
+                });
+            });
+            agents.forEach(a => {
+                nCtx.fillStyle = opinionToColor(a.opinion);
+                nCtx.beginPath();
+                nCtx.arc(a.x, a.y, 8, 0, Math.PI*2);
+                nCtx.fill();
+            });
+
+            // Draw graph
+            drawGraph();
+        }
+
+        function drawGraph() {
+            const numBins = 50;
+            const bins = new Array(numBins).fill(0);
+            agents.forEach(a => {
+                const binIndex = Math.floor((a.opinion + 1) / 2 * numBins);
+                if (binIndex < numBins) bins[binIndex]++;
+            });
+
+            gCtx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
+            const barWidth = graphCanvas.width / numBins;
+            const maxBinCount = Math.max(...bins, 1);
+
+            bins.forEach((count, i) => {
+                const opinion = (i / numBins) * 2 - 1;
+                gCtx.fillStyle = opinionToColor(opinion);
+                const h = (count / maxBinCount) * graphCanvas.height;
+                gCtx.fillRect(i * barWidth, graphCanvas.height - h, barWidth, h);
+            });
+        }
+
+        function animate() {
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        controls.reset.addEventListener('click', setup);
+        controls.network.addEventListener('change', e => {
+            state.networkType = e.target.value;
+            setup();
+        });
+        controls.confidence.addEventListener('input', e => {
+            state.confidence = parseFloat(e.target.value);
+            values.confidence.textContent = state.confidence.toFixed(2);
+        });
+
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>

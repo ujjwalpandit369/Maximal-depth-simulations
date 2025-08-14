@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Econophysics: Wealth Distribution</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --header-color: #059669;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --control-bg: #fff;
+            --control-border: #d1d5db;
+            --canvas-bg: #e6fffa;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #4b5563; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; border-bottom: 1px solid var(--control-border); padding-bottom: 15px; }
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 350px; background: var(--canvas-bg); border-radius: 4px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Econophysics: Wealth Distribution</h1>
+            <p class="subtitle">A kinetic exchange model showing the emergence of inequality.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why do societies tend to become unequal, even if everyone starts on a level playing field? <strong>Econophysics</strong> is a field that applies tools from statistical mechanics to understand economic phenomena. This simulation uses a simple <strong>kinetic exchange model</strong>, treating people like gas particles and money like energy. In each step, two random agents are chosen and they exchange a random amount of money. You will see that even with completely fair, random rules, the system does not remain equal. It spontaneously evolves into a highly unequal, exponential-like distribution, with a few very wealthy agents and a large majority of poor ones.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <button id="run-pause-btn">Run</button>
+                <button id="reset-btn" style="margin-left: 10px;">Reset</button>
+                <label style="margin-left: 30px;">Savings Rate: <span id="savings-value">0.0</span></label>
+                <input type="range" id="savings-slider" min="0" max="0.9" step="0.05" value="0.0" style="vertical-align: middle;">
+            </div>
+
+            <div class="sim-panel">
+                <h3>Agent Population</h3>
+                <canvas id="agent-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="sim-panel">
+                <h3>Wealth Distribution</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The Inevitability of Inequality?</h2>
+            <p>This model is analogous to how energy is distributed among molecules in a gas. The resulting distribution is known as the <strong>Boltzmann-Gibbs distribution</strong>, which is an exponential decay. This suggests that in any system with random exchanges of a conserved quantity (like energy or money), an unequal, hierarchical distribution is the most probable outcome—it has the highest entropy.</p>
+            <h3>The Role of Savings</h3>
+            <p>The basic model is a bit too pessimistic. Real economies have mechanisms that can alter this outcome. The <strong>Savings Rate</strong> slider introduces one such mechanism. In this modified model, before an exchange, each agent sets aside a certain fraction of their wealth, which is safe from the transaction. The random exchange only happens with the remaining, non-saved portion.</p>
+            <p><strong>Try this:</strong> Run the simulation with a savings rate of 0. You'll see the classic exponential distribution. Now, reset and run it with a savings rate of 0.5 or higher. Notice how the shape of the distribution changes. It is no longer a simple exponential. The peak moves away from zero wealth, a "middle class" emerges, and the long tail of extreme wealth is shortened. This demonstrates how a simple behavioral rule—saving—can fundamentally alter the macroscopic outcome and reduce inequality.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const agentCanvas = document.getElementById('agent-canvas');
+        const aCtx = agentCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            run: document.getElementById('run-pause-btn'),
+            reset: document.getElementById('reset-btn'),
+            savings: document.getElementById('savings-slider'),
+        };
+        const values = {
+            savings: document.getElementById('savings-value'),
+        };
+
+        const NUM_AGENTS = 500;
+        const INITIAL_WEALTH = 100;
+        let agents = [];
+        let state = { isRunning: false, savingsRate: 0.0 };
+
+        function setup() {
+            agents = [];
+            for(let i=0; i<NUM_AGENTS; i++) {
+                agents.push({
+                    x: Math.random() * agentCanvas.width,
+                    y: Math.random() * agentCanvas.height,
+                    wealth: INITIAL_WEALTH,
+                });
+            }
+            state.savingsRate = parseFloat(controls.savings.value);
+            values.savings.textContent = state.savingsRate.toFixed(2);
+            draw();
+        }
+
+        function update() {
+            if (!state.isRunning) return;
+
+            for(let i=0; i<100; i++) { // 100 transactions per frame
+                const i1 = Math.floor(Math.random() * NUM_AGENTS);
+                const i2 = Math.floor(Math.random() * NUM_AGENTS);
+                if (i1 === i2) continue;
+
+                const a1 = agents[i1];
+                const a2 = agents[i2];
+
+                const w1_saved = a1.wealth * state.savingsRate;
+                const w2_saved = a2.wealth * state.savingsRate;
+
+                const w1_exchange = a1.wealth - w1_saved;
+                const w2_exchange = a2.wealth - w2_saved;
+
+                const totalExchange = w1_exchange + w2_exchange;
+                if (totalExchange <= 0) continue;
+
+                const rand = Math.random() * totalExchange;
+
+                a1.wealth = w1_saved + rand;
+                a2.wealth = w2_saved + (totalExchange - rand);
+            }
+        }
+
+        function draw() {
+            // Draw agents
+            aCtx.clearRect(0,0,agentCanvas.width, agentCanvas.height);
+            const maxWealth = Math.max(...agents.map(a => a.wealth), INITIAL_WEALTH * 3);
+            agents.forEach(a => {
+                const wealthRatio = a.wealth / maxWealth;
+                aCtx.fillStyle = `rgba(5, 150, 105, ${0.2 + wealthRatio*0.8})`;
+                aCtx.beginPath();
+                aCtx.arc(a.x, a.y, 2 + wealthRatio * 15, 0, Math.PI*2);
+                aCtx.fill();
+            });
+
+            // Draw graph
+            gCtx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
+            const numBins = 40;
+            const bins = new Array(numBins).fill(0);
+            const maxBinWealth = INITIAL_WEALTH * 4;
+            const binWidth = maxBinWealth / numBins;
+
+            agents.forEach(a => {
+                const binIndex = Math.floor(a.wealth / binWidth);
+                if (binIndex < numBins) bins[binIndex]++;
+            });
+
+            const maxBinCount = Math.max(...bins);
+            const barWidth = graphCanvas.width / numBins;
+
+            gCtx.fillStyle = '#059669';
+            bins.forEach((count, i) => {
+                const h = (count / maxBinCount) * graphCanvas.height;
+                gCtx.fillRect(i * barWidth, graphCanvas.height - h, barWidth - 1, h);
+            });
+        }
+
+        function animate() {
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        controls.run.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            controls.run.textContent = state.isRunning ? 'Pause' : 'Run';
+        });
+        controls.reset.addEventListener('click', setup);
+        controls.savings.addEventListener('input', e => {
+            state.savingsRate = parseFloat(e.target.value);
+            values.savings.textContent = state.savingsRate.toFixed(2);
+        });
+
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>

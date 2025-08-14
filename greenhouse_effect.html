@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Greenhouse Effect</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --header-color: #059669;
+            --accent-color: #10b981;
+            --accent-hover: #059669;
+            --control-bg: #fff;
+            --control-border: #d1d5db;
+            --canvas-bg: #e0f2f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #4b5563; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 400px; }
+        .sim-canvas { width: 100%; height: 100%; background: #111827; border-radius: 4px; }
+        .controls { padding: 10px; border-left: 1px solid var(--control-border); }
+        .control-group { margin-bottom: 1.5em; }
+
+        .readout { text-align: center; font-weight: bold; font-size: 1.8em; margin-top: 20px; color: var(--header-color); }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Greenhouse Effect</h1>
+            <p class="subtitle">A simplified energy balance model of a planet.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>A planet's surface temperature is determined by a balance between the energy it receives from its star and the energy it radiates back into space. The <strong>Greenhouse Effect</strong> describes how a planet's atmosphere can disrupt this balance. Certain gases in the atmosphere are transparent to the incoming visible light from the sun, but opaque to the outgoing infrared (thermal) radiation from the surface. They absorb this outgoing heat and re-radiate some of it back down, warming the planet beyond the temperature it would have without an atmosphere. This simulation visualizes this energy balance and lets you explore how changing key parameters affects a planet's equilibrium temperature.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Planet Parameters</h3>
+                <div class="control-group">
+                    <label for="solar-slider">Solar Constant: <span id="solar-value">1361</span> W/m²</label>
+                    <input type="range" id="solar-slider" min="1000" max="2000" step="10" value="1361">
+                </div>
+                <div class="control-group">
+                    <label for="albedo-slider">Albedo: <span id="albedo-value">0.3</span></label>
+                    <input type="range" id="albedo-slider" min="0" max="1" step="0.01" value="0.3">
+                </div>
+                <div class="control-group">
+                    <label for="ghg-slider">Greenhouse Gases: <span id="ghg-value">0.4</span></label>
+                    <input type="range" id="ghg-slider" min="0" max="1" step="0.01" value="0.4">
+                </div>
+                <div class="readout">
+                    T_surf = <span id="temp-readout">288</span> K
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            solar: document.getElementById('solar-slider'),
+            albedo: document.getElementById('albedo-slider'),
+            ghg: document.getElementById('ghg-slider'),
+        };
+        const values = {
+            solar: document.getElementById('solar-value'),
+            albedo: document.getElementById('albedo-value'),
+            ghg: document.getElementById('ghg-value'),
+            temp: document.getElementById('temp-readout'),
+        };
+
+        const sigma = 5.67e-8; // Stefan-Boltzmann constant
+
+        function calculateTemperature() {
+            const S = parseFloat(controls.solar.value);
+            const a = parseFloat(controls.albedo.value);
+            const g = parseFloat(controls.ghg.value); // greenhouse factor
+
+            const energy_in = S * (1 - a) / 4;
+            // Simplified model where greenhouse factor g traps a fraction of outgoing radiation
+            // T^4 = (S*(1-a)/4) / (sigma * (1-g))
+            const T4 = energy_in / (sigma * (1-g));
+            const temp = Math.pow(T4, 0.25);
+
+            return { temp, energy_in };
+        }
+
+        function drawArrow(x, y1, y2, width, color, text) {
+            const headlen = 10;
+            const angle = Math.atan2(y2 - y1, 0);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x, y1);
+            ctx.lineTo(x, y2);
+            ctx.lineTo(x - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.moveTo(x, y2);
+            ctx.lineTo(x - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.fillText(text, x + 15, y1 + (y2-y1)/2);
+        }
+
+        function draw() {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            ctx.clearRect(0,0,width,height);
+
+            const { temp, energy_in } = calculateTemperature();
+            const S = parseFloat(controls.solar.value);
+            const a = parseFloat(controls.albedo.value);
+            const g = parseFloat(controls.ghg.value);
+
+            // Planet
+            const planetY = height * 0.8;
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(0, planetY, width, height * 0.2);
+
+            // Atmosphere
+            const atmY = height * 0.2;
+            ctx.fillStyle = `rgba(129, 212, 250, ${g * 0.5})`;
+            ctx.fillRect(0, atmY, width, planetY - atmY);
+
+            // Energy Arrows
+            ctx.font = '14px sans-serif';
+            // Incoming Solar
+            drawArrow(width*0.15, 0, planetY, S/100, '#ffeb3b', 'Incoming Solar');
+            // Reflected (Albedo)
+            drawArrow(width*0.3, planetY, 0, S/100 * a, '#fff', 'Reflected');
+            // Surface Radiation
+            const surface_rad = sigma * Math.pow(temp, 4);
+            drawArrow(width*0.5, planetY, atmY, surface_rad/60, '#e53935', 'Surface Radiation');
+            // Back Radiation
+            drawArrow(width*0.65, atmY, planetY, surface_rad/60 * g, '#f44336', 'Back Radiation (GHG)');
+            // Outgoing Radiation
+            drawArrow(width*0.85, atmY, 0, energy_in/20, '#ff8a80', 'Outgoing to Space');
+
+            // Thermometer
+            const thermX = width*0.05, thermY = height*0.75, thermW = 20, thermH = -200;
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(thermX, thermY, thermW, thermH);
+            const tempRatio = (temp - 200) / 150; // Scale from 200K to 350K
+            ctx.fillStyle = '#d32f2f';
+            ctx.fillRect(thermX, thermY, thermW, thermH * tempRatio);
+            values.temp.textContent = `${temp.toFixed(1)}`;
+        }
+
+        function update() {
+            values.solar.textContent = controls.solar.value;
+            values.albedo.textContent = controls.albedo.value;
+            values.ghg.textContent = controls.ghg.value;
+            draw();
+        }
+
+        Object.values(controls).forEach(c => c.addEventListener('input', update));
+        window.addEventListener('resize', draw);
+
+        update();
+    });
+    </script>
+</body>
+</html>
