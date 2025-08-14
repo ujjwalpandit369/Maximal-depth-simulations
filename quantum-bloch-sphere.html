@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum State Space: The Bloch Sphere</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f9;
+            --text-color: #333;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --border-color: #dce4e8;
+            --header-bg: #ecf0f1;
+            --code-bg: #e8e8e8;
+            --canvas-bg: #fff;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #3498db;
+            --secondary-color: #ecf0f1;
+            --border-color: #666;
+            --header-bg: #222;
+            --code-bg: #333;
+            --canvas-bg: #111;
+        }
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { margin-top: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; border-bottom: 2px solid var(--secondary-color); }
+        h2 { font-size: 2em; }
+        h3 { font-size: 1.5em; }
+        p, li { text-align: justify; }
+        button {
+            cursor: pointer;
+            padding: 10px 18px;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            margin: 5px;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--secondary-color); }
+        .gate-btn { background-color: #e74c3c; }
+        .gate-btn:hover { background-color: #c0392b; }
+        .controls-grid, .simulation-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            align-items: start;
+        }
+        .control-group, .preset-group, .export-group, .readout-group {
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            background-color: var(--canvas-bg);
+        }
+        label { display: block; margin-bottom: 8px; font-weight: 500; }
+        input[type="range"] { width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 10px; text-align: left; }
+        th { background-color: var(--header-bg); }
+        canvas {
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            cursor: grab;
+        }
+        canvas:active { cursor: grabbing; }
+        code { background-color: var(--code-bg); padding: 3px 6px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        .metadata-bar, .suggestion-box {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            background-color: var(--header-bg);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 1em;
+        }
+        .dirac-notation {
+            font-size: 1.5em;
+            font-family: 'Times New Roman', Times, serif;
+            text-align: center;
+            padding: 15px;
+            background-color: var(--header-bg);
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .prob-bars { margin-top: 15px; }
+        .prob-bar-container { display: flex; align-items: center; margin-bottom: 10px; }
+        .prob-label { width: 40px; }
+        .prob-bar {
+            height: 25px;
+            background-color: var(--secondary-color);
+            border-radius: 3px;
+            transition: width 0.3s ease-out;
+            text-align: right;
+            padding-right: 5px;
+            color: white;
+            box-sizing: border-box;
+        }
+        .quality-check-panel { border: 1px solid #c0392b; background-color: #f2dede; color: #a94442; padding: 15px; border-radius: 5px; display: none; }
+        .dev-console { border: 1px solid var(--border-color); margin-top: 20px; }
+        .dev-console summary { padding: 10px; cursor: pointer; background: var(--header-bg); }
+        .dev-console-content { padding: 10px; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 2em; }
+            .simulation-layout, .controls-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Quantum State Space: The Bloch Sphere</h1>
+            <p class="subtitle">An interactive visualizer for the state of a single quantum bit (qubit).</p>
+            <div class="metadata-bar">
+                Estimated Runtime: Real-time | Recommended Device: Desktop | Approx. HTML Size: ~45 KB
+            </div>
+        </header>
+
+        <section>
+            <h2>Plain-Language Overview</h2>
+            <p>In the strange world of quantum mechanics, a basic unit of information is not a simple "bit" (which is either 0 or 1), but a "qubit." A qubit can be a 0, a 1, or a combination of both at the same time—a concept called <strong>superposition</strong>. The Bloch Sphere is a powerful way to visualize all possible states of a single qubit. Think of it as a globe. The North Pole represents the pure state |0⟩, and the South Pole represents |1⟩. Any other point on the surface of the sphere represents a unique combination of |0⟩ and |1⟩. This tool lets you explore this "state space," apply quantum operations (gates), and see how they affect the qubit's state.</p>
+        </section>
+
+        <section>
+            <h2>Beginner's Guide to the Bloch Sphere</h2>
+            <h3>1. What is a Qubit?</h3>
+            <p>A classical bit is like a light switch: it's either ON (1) or OFF (0). A qubit is more like a dimmer switch. It can be fully OFF (|0⟩), fully ON (|1⟩), or somewhere in between. This "in-between" state is called a superposition. The Bloch Sphere is a map of every possible setting on that dimmer switch, and more.</p>
+
+            <h3>2. Meet the Sphere</h3>
+            <p>Look at the interactive 3D sphere.
+            <ul>
+                <li>The very top point (North Pole) is the state <strong>|0⟩</strong>. This is equivalent to a classical bit being 0.</li>
+                <li>The very bottom point (South Pole) is the state <strong>|1⟩</strong>. This is equivalent to a classical bit being 1.</li>
+                <li>The arrow pointing from the center to a point on the sphere is the <strong>state vector</strong>. It shows the current state of the qubit. Try dragging it around!</li>
+            </ul>
+            </p>
+
+            <h3>3. Superposition and the Equator</h3>
+            <p>Any point on the sphere that isn't one of the poles is a superposition. The most famous superpositions lie on the <strong>equator</strong>. A state on the equator has a perfect 50/50 chance of being measured as |0⟩ or |1⟩. Drag the state vector to the equator. Look at the "Measurement Probabilities" graph. You'll see the bars are equal. This is the ultimate state of quantum uncertainty.</p>
+
+            <h3>4. The Second Quantum Ingredient: Phase</h3>
+            <p>You might ask: if every point on the equator is a 50/50 state, what makes them different? The answer is <strong>phase</strong>. This is represented by the angle around the equator (the azimuthal angle, φ). Phase is a more subtle quantum property that doesn't affect the measurement probabilities of |0⟩ vs |1⟩, but it's crucial for quantum interference and the behavior of quantum algorithms. It's like having two cities on the same latitude—they have the same North-South position, but their East-West position (longitude) is different.</p>
+
+            <h3>5. Quantum Gates: Rotating the State</h3>
+            <p>In classical computers, we have logic gates like NOT, AND, OR. In quantum computers, we have <strong>quantum gates</strong>, which are operations that rotate the state vector on the Bloch Sphere.
+            <ul>
+                <li><strong>X Gate (NOT Gate):</strong> Try setting the vector to |0⟩ (the top) and press the 'X' button. The vector flips to |1⟩ (the bottom). It's a 180-degree rotation around the x-axis. It's the quantum equivalent of a NOT gate.</li>
+                <li><strong>H Gate (Hadamard Gate):</strong> This is one of the most important gates. Reset the state to |0⟩ and press 'H'. The vector moves to the equator! The Hadamard gate creates a perfect superposition. Press 'H' again. It returns to |0⟩.</li>
+            </ul>
+            Experiment with the other gates (Y and Z) to see how they rotate the state in different ways.
+            </p>
+
+            <h3>Analogy: A Globe of Possibilities</h3>
+            <p>Imagine the Bloch Sphere is a globe.
+            <ul>
+                <li><strong>|0⟩</strong> is the North Pole. <strong>|1⟩</strong> is the South Pole.</li>
+                <li><strong>Latitude (θ)</strong> tells you the *probability* of being 0 or 1. At the North Pole (0° latitude), you are 100% in state |0⟩. At the South Pole (180° latitude), you are 100% in state |1⟩. At the Equator (90° latitude), it's a 50/50 mix.</li>
+                <li><strong>Longitude (φ)</strong> tells you the *phase*. Two points on the same latitude but different longitudes (like Ecuador and Kenya) have the same probabilities but different phases.</li>
+                <li><strong>Quantum gates</strong> are like instructions to a pilot: "Fly 180 degrees south" (an X gate) or "Fly to the equator along the prime meridian" (an H gate).</li>
+            </ul>
+            </p>
+        </section>
+
+        <section id="simulation-area">
+            <h2>Interactive Bloch Sphere</h2>
+            <div class="simulation-layout">
+                <div class="phasespace-panel">
+                    <h3>Qubit State Visualizer</h3>
+                    <canvas id="blochSphereCanvas" width="500" height="500"></canvas>
+                </div>
+                <div class="readout-group">
+                    <h3>State Readout & Probabilities</h3>
+                    <p>The current state of the qubit in Dirac notation:</p>
+                    <div id="dirac-readout" class="dirac-notation">|ψ⟩ = 1.00|0⟩ + 0.00i|1⟩</div>
+                    <p>Upon measurement, the probability of collapsing to each state:</p>
+                    <div class="prob-bars">
+                        <div class="prob-bar-container">
+                            <div class="prob-label">P(|0⟩):</div>
+                            <div id="prob0-bar" class="prob-bar" style="width: 100%;">100%</div>
+                        </div>
+                        <div class="prob-bar-container">
+                            <div class="prob-label">P(|1⟩):</div>
+                            <div id="prob1-bar" class="prob-bar" style="width: 0%;">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3>State Controls</h3>
+                    <label for="theta-slider">Polar Angle (θ): <span id="theta-value">0</span>°</label>
+                    <input type="range" id="theta-slider" min="0" max="180" value="0" step="1">
+
+                    <label for="phi-slider">Azimuthal Angle (φ): <span id="phi-value">0</span>°</label>
+                    <input type="range" id="phi-slider" min="0" max="360" value="0" step="1">
+                </div>
+                <div class="control-group">
+                    <h3>Apply Quantum Gates</h3>
+                    <button id="gate-x-btn" class="gate-btn">X (NOT)</button>
+                    <button id="gate-y-btn" class="gate-btn">Y</button>
+                    <button id="gate-z-btn" class="gate-btn">Z</button>
+                    <button id="gate-h-btn" class="gate-btn">H (Hadamard)</button>
+                </div>
+                <div class="preset-group">
+                    <h3>Simulation Controls</h3>
+                    <button id="reset-btn">Reset to |0⟩</button>
+                    <button id="export-png-btn">Export PNG</button>
+                    <button id="share-btn">Share Preset</button>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Core Theory & Equations</h2>
+            <h3>The Qubit State Vector</h3>
+            <p>Any qubit state |ψ⟩ can be written as a linear combination of the basis states |0⟩ and |1⟩:</p>
+            <p><code>|ψ⟩ = α|0⟩ + β|1⟩</code></p>
+            <p>Where α and β are complex numbers called probability amplitudes. The rule is that the sum of their squared magnitudes must be 1: <code>|α|² + |β|² = 1</code>. <code>|α|²</code> is the probability of measuring the state as |0⟩.</p>
+
+            <h3>The Bloch Sphere Representation</h3>
+            <p>We can represent the complex amplitudes α and β using two real angles, θ and φ:</p>
+            <p><code>|ψ⟩ = cos(θ/2)|0⟩ + e^(iφ)sin(θ/2)|1⟩</code></p>
+            <p><em>Translation:</em>
+            <ul>
+                <li><strong>θ (theta)</strong> is the polar angle, from 0 (North Pole) to π (180°, South Pole). It controls the probability.</li>
+                <li><strong>φ (phi)</strong> is the azimuthal angle, from 0 to 2π (360°). It controls the relative phase between |0⟩ and |1⟩.</li>
+            </ul>
+            <em>Example:</em> For a state on the equator, θ = π/2 (90°). Then cos(θ/2) = sin(θ/2) = 1/√2. The state is <code>(1/√2)|0⟩ + (e^(iφ)/√2)|1⟩</code>. The probability of measuring |0⟩ is |1/√2|² = <strong>0.5 (or 50%)</strong>.
+            </p>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="preset-group">
+                <h3>1. Superposition: |+⟩ state</h3>
+                <p>Parameters: <code>{"theta": 90, "phi": 0}</code></p>
+                <p><strong>Observation:</strong> This places the state vector on the equator pointing along the x-axis. This is the famous |+⟩ state, an equal superposition of |0⟩ and |1⟩. The measurement probabilities will be exactly 50/50.</p>
+                <button onclick="applyPreset(Math.PI/2, 0)">Run this preset</button>
+            </div>
+            <div class="preset-group">
+                <h3>2. Superposition with Phase: |i⟩ state</h3>
+                <p>Parameters: <code>{"theta": 90, "phi": 90}</code></p>
+                <p><strong>Observation:</strong> The vector points along the y-axis. Probabilities are still 50/50, but the phase is different. Applying a Z-gate will have a visible effect on this state, unlike the |+⟩ state.</p>
+                <button onclick="applyPreset(Math.PI/2, Math.PI/2)">Run this preset</button>
+            </div>
+            <div class="preset-group">
+                <h3>3. A Biased State</h3>
+                <p>Parameters: <code>{"theta": 45, "phi": 180}</code></p>
+                <p><strong>Observation:</strong> This state is biased towards |0⟩. The measurement probabilities will be cos²(45/2) ≈ 85% for |0⟩ and sin²(45/2) ≈ 15% for |1⟩.</p>
+                <button onclick="applyPreset(Math.PI/4, Math.PI)">Run this preset</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li><strong>Hadamard twice:</strong> Reset to |0⟩. Press 'H'. The state is now on the equator. Press 'H' again. The state returns to |0⟩. The Hadamard gate is its own inverse.</li>
+                <li><strong>Pauli X as NOT:</strong> Reset to |0⟩. Press 'X'. The state flips to |1⟩. Press 'X' again. It flips back to |0⟩.</li>
+                <li><strong>Pauli Z and Phase:</strong> Set the state to |+⟩ using the preset. Press 'Z'. The vector flips from the +x axis to the -x axis. The phase changes by 180 degrees (π). Probabilities are unaffected.</li>
+                <li><strong>Create the |-⟩ state:</strong> Reset to |0⟩. Press 'H' to get to |+⟩. Press 'Z' to flip it to the other side of the equator. You have created the |-⟩ state.</li>
+                <li><strong>Y Gate action:</strong> Reset to |0⟩. Press 'Y'. Notice it flips to |1⟩ but also adds a phase shift (the vector points along the -y axis in the 3D view if you rotate it).</li>
+            </ol>
+        </section>
+
+        <section id="advanced">
+            <h2>Advanced Notes & Extensions</h2>
+            <p><strong>Gate Implementation:</strong> The gates here are implemented as geometric rotations on the sphere. In a real quantum computer, they are unitary matrix transformations on the 2-dimensional complex state vector `[α, β]`. The Bloch sphere is a visualization of this transformation. For example, the Hadamard gate matrix is `[[1, 1], [1, -1]] / sqrt(2)`. Applying this matrix to the vector `[1, 0]` (representing |0⟩) results in `[1/√2, 1/√2]`, which corresponds to the |+⟩ state (θ=π/2, φ=0).</p>
+            <p><strong>Limitations:</strong> The Bloch sphere is a fantastic tool, but it can only represent the state of a single qubit. It cannot visualize entanglement, the "spooky action at a distance" that links the states of two or more qubits together, which is a cornerstone of quantum computing's power.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h3>1. The Dimmer-and-Color-Dial Analogy</h3>
+            <p>Imagine a light bulb that has two controls: a dimmer switch (from Off to On) and a color dial (from Red to Blue).
+                <ul>
+                    <li><strong>θ (theta)</strong> is the dimmer switch. 0° is fully Off (|0⟩), and 180° is fully On (|1⟩). 90° is half-brightness (superposition).</li>
+                    <li><strong>φ (phi)</strong> is the color dial. This represents the phase. It doesn't change the brightness, only the "flavor" of the light.</li>
+                </ul>
+            <em>Limitation:</em> This doesn't capture how gates affect both properties at once, or the specific rules of quantum measurement. It's just a way to visualize two independent parameters defining a state.
+            </p>
+        </section>
+
+        <section>
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt><strong>1. Why is the angle in the formula θ/2?</strong></dt>
+                <dd>This is a mathematical detail that makes the geometry work. An angle of θ on the sphere corresponds to a rotation of θ/2 in the complex vector space. This ensures that a 180° rotation on the sphere (like from |0⟩ to |1⟩) corresponds to a full change in the state vector.</dd>
+                <dt><strong>2. What does the Z gate do? It doesn't seem to move the vector.</strong></dt>
+                <dd>Try moving the state vector to the equator first, then press 'Z'. You'll see it rotates around the Z-axis. The Z gate changes the *phase* (φ) of the qubit but leaves the probabilities (θ) unchanged. The poles |0⟩ and |1⟩ are on the Z-axis, so rotating around it doesn't move them.</dd>
+                <dt><strong>3. Can the vector point inside the sphere?</strong></dt>
+                <dd>For an ideal, pure qubit state, the vector always lies on the surface. A vector pointing inside the sphere represents a "mixed state," which is a more advanced concept describing qubits that are entangled with their environment or part of a statistical ensemble. This simulation only deals with pure states.</dd>
+                <dt><strong>4. The 3D effect is confusing on my screen.</strong></dt>
+                <dd>Try dragging the sphere around slowly. The lines of latitude and longitude should help give a sense of perspective. The state vector also becomes slightly transparent when it's on the "back" of the sphere.</dd>
+            </dl>
+        </section>
+
+        <footer>
+            <div class="metadata-bar">
+                <label for="theme-toggle">High Contrast Mode:</label>
+                <input type="checkbox" id="theme-toggle">
+                <label for="perf-toggle" style="margin-left: 20px;">Performance Mode:</label>
+                <input type="checkbox" id="perf-toggle">
+                <span id="perf-meter" style="float: right;">FPS: --</span>
+            </div>
+        </footer>
+
+        <!-- DEV CONSOLE -->
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content" id="dev-console-content">
+                Initialization...
+            </div>
+        </details>
+
+        <div id="quality-check-panel" class="quality-check-panel"></div>
+    </div>
+
+    <script>
+    (function() {
+        // --- DOM ELEMENT SELECTION ---
+        const get = (id) => document.getElementById(id);
+        const logToConsole = (message) => {
+            const consoleContent = get('dev-console-content');
+            if (!consoleContent) return;
+            consoleContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+            console.log(message);
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (runQualityChecks()) {
+                init();
+            }
+        });
+
+        function runQualityChecks() {
+            const checks = {
+                'blochSphereCanvas': 'Bloch Sphere canvas',
+                'theta-slider': 'Theta slider',
+                'phi-slider': 'Phi slider',
+                'gate-x-btn': 'X Gate button',
+            };
+            const panel = get('quality-check-panel');
+            let failed = false;
+            panel.innerHTML = '<strong>Quality Check Failed!</strong><ul></ul>';
+            const list = panel.querySelector('ul');
+
+            for (const id in checks) {
+                if (!get(id)) {
+                    failed = true;
+                    const li = document.createElement('li');
+                    li.textContent = `Missing element: ${checks[id]} (ID: #${id})`;
+                    list.appendChild(li);
+                }
+            }
+            if (failed) {
+                panel.style.display = 'block';
+                return false;
+            }
+            return true;
+        }
+
+        // --- STATE & PARAMETERS ---
+        const state = {
+            theta: 0, // Polar angle in radians
+            phi: 0,   // Azimuthal angle in radians
+            lowPerfMode: false,
+            // Mouse drag state
+            dragging: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            // Rotation matrix for the sphere view
+            rotation: { x: 0.5, y: -0.5 },
+            // FPS counter
+            lastFrameTime: 0,
+            frameCount: 0,
+            fps: 0,
+            lastFpsUpdate: 0,
+        };
+
+        // --- CANVAS & UI ELEMENTS ---
+        let canvas, ctx, w, h;
+        const ui = {};
+
+        function setupDOM() {
+            canvas = get('blochSphereCanvas');
+            ctx = canvas.getContext('2d');
+            w = canvas.width;
+            h = canvas.height;
+
+            ui.thetaSlider = get('theta-slider');
+            ui.phiSlider = get('phi-slider');
+            ui.thetaValue = get('theta-value');
+            ui.phiValue = get('phi-value');
+
+            ui.diracReadout = get('dirac-readout');
+            ui.prob0Bar = get('prob0-bar');
+            ui.prob1Bar = get('prob1-bar');
+
+            ui.gateXBtn = get('gate-x-btn');
+            ui.gateYBtn = get('gate-y-btn');
+            ui.gateZBtn = get('gate-z-btn');
+            ui.gateHBtn = get('gate-h-btn');
+
+            ui.resetBtn = get('reset-btn');
+            ui.exportPngBtn = get('export-png-btn');
+            ui.shareBtn = get('share-btn');
+            ui.themeToggle = get('theme-toggle');
+            ui.perfToggle = get('perf-toggle');
+            ui.perfMeter = get('perf-meter');
+        }
+
+        function setupEventListeners() {
+            ui.thetaSlider.addEventListener('input', (e) => updateState(parseFloat(e.target.value) * Math.PI / 180, state.phi, 'slider'));
+            ui.phiSlider.addEventListener('input', (e) => updateState(state.theta, parseFloat(e.target.value) * Math.PI / 360 * 2, 'slider'));
+
+            ui.resetBtn.addEventListener('click', () => {
+                updateState(0, 0);
+                logToConsole("State reset to |0⟩.");
+            });
+
+            ui.gateXBtn.addEventListener('click', () => { applyGate('X'); logToConsole("Applied X Gate."); });
+            ui.gateYBtn.addEventListener('click', () => { applyGate('Y'); logToConsole("Applied Y Gate."); });
+            ui.gateZBtn.addEventListener('click', () => { applyGate('Z'); logToConsole("Applied Z Gate."); });
+            ui.gateHBtn.addEventListener('click', () => { applyGate('H'); logToConsole("Applied H Gate."); });
+
+            ui.exportPngBtn.addEventListener('click', exportPNG);
+            ui.shareBtn.addEventListener('click', sharePreset);
+            ui.themeToggle.addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+            ui.perfToggle.addEventListener('change', (e) => {
+                state.lowPerfMode = e.target.checked;
+                logToConsole(`Performance mode ${state.lowPerfMode ? 'enabled' : 'disabled'}.`);
+            });
+
+            // Mouse controls for rotation and state dragging
+            canvas.addEventListener('mousedown', (e) => {
+                state.dragging = true;
+                state.lastMouseX = e.clientX;
+                state.lastMouseY = e.clientY;
+            });
+            canvas.addEventListener('mouseup', () => state.dragging = false);
+            canvas.addEventListener('mouseleave', () => state.dragging = false);
+            canvas.addEventListener('mousemove', (e) => {
+                if (!state.dragging) return;
+                const dx = e.clientX - state.lastMouseX;
+                const dy = e.clientY - state.lastMouseY;
+
+                if (e.shiftKey) { // Drag state vector
+                    // This is a simplified interaction, not a perfect projection
+                    const newTheta = Math.min(Math.max(state.theta + dy * 0.02, 0), Math.PI);
+                    const newPhi = (state.phi + dx * 0.02) % (2 * Math.PI);
+                    updateState(newTheta, newPhi);
+                } else { // Rotate view
+                    state.rotation.y += dx * 0.01;
+                    state.rotation.x += dy * 0.01;
+                    state.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, state.rotation.x));
+                }
+
+                state.lastMouseX = e.clientX;
+                state.lastMouseY = e.clientY;
+            });
+        }
+
+        // --- 3D RENDERING MATH ---
+        function rotatePoint(p, rot) {
+            // Rotate around Y axis
+            let p1 = {
+                x: p.x * Math.cos(rot.y) - p.z * Math.sin(rot.y),
+                y: p.y,
+                z: p.x * Math.sin(rot.y) + p.z * Math.cos(rot.y)
+            };
+            // Rotate around X axis
+            let p2 = {
+                x: p1.x,
+                y: p1.y * Math.cos(rot.x) - p1.z * Math.sin(rot.x),
+                z: p1.y * Math.sin(rot.x) + p1.z * Math.cos(rot.x)
+            };
+            return p2;
+        }
+
+        function projectPoint(p) {
+            const perspective = 1000;
+            const scale = perspective / (perspective + p.z);
+            return {
+                x: w / 2 + p.x * scale,
+                y: h / 2 + p.y * scale,
+                z: p.z
+            };
+        }
+
+        // --- QUANTUM STATE LOGIC ---
+        function updateState(theta, phi, source = 'code') {
+            state.theta = theta;
+            state.phi = phi;
+
+            if (source !== 'slider') {
+                ui.thetaSlider.value = theta * 180 / Math.PI;
+                ui.phiSlider.value = phi * 180 / Math.PI;
+            }
+            ui.thetaValue.textContent = (theta * 180 / Math.PI).toFixed(0);
+            ui.phiValue.textContent = (phi * 180 / Math.PI).toFixed(0);
+
+            updateReadout();
+        }
+
+        window.applyPreset = function(theta, phi) {
+            updateState(theta, phi);
+            logToConsole(`Applied preset: θ=${(theta*180/Math.PI).toFixed(1)}°, φ=${(phi*180/Math.PI).toFixed(1)}°`);
+        }
+
+        function applyGate(gate) {
+            let { x, y, z } = getCartesianFromSpherical(state.theta, state.phi);
+            let nx, ny, nz;
+
+            switch (gate) {
+                case 'X': // 180 deg rotation around X
+                    nx = x;
+                    ny = -y;
+                    nz = -z;
+                    break;
+                case 'Y': // 180 deg rotation around Y
+                    nx = -x;
+                    ny = y;
+                    nz = -z;
+                    break;
+                case 'Z': // 180 deg rotation around Z
+                    nx = -x;
+                    ny = -y;
+                    nz = z;
+                    break;
+                case 'H': // Hadamard
+                    nx = z;
+                    ny = y;
+                    nz = x;
+                    break;
+            }
+            const {theta, phi} = getSphericalFromCartesian(nx, ny, nz);
+            updateState(theta, phi);
+        }
+
+        function updateReadout() {
+            const alpha_re = Math.cos(state.theta / 2);
+            const beta_re = Math.sin(state.theta / 2) * Math.cos(state.phi);
+            const beta_im = Math.sin(state.theta / 2) * Math.sin(state.phi);
+
+            const formatComplex = (re, im) => {
+                if (Math.abs(re) < 1e-10 && Math.abs(im) < 1e-10) return "0.00";
+                if (Math.abs(im) < 1e-10) return re.toFixed(2);
+                if (Math.abs(re) < 1e-10) return `${im.toFixed(2)}i`;
+                return `${re.toFixed(2)} ${im > 0 ? '+' : '-'} ${Math.abs(im).toFixed(2)}i`;
+            };
+
+            let beta_str = "";
+            if (Math.abs(beta_re) > 1e-10 || Math.abs(beta_im) > 1e-10) {
+                 beta_str = `(${formatComplex(beta_re, beta_im)})`;
+            } else {
+                beta_str = "0.00";
+            }
+
+            ui.diracReadout.innerHTML = `|ψ⟩ = ${alpha_re.toFixed(2)}|0⟩ + ${beta_str}|1⟩`;
+
+            const prob0 = alpha_re * alpha_re;
+            const prob1 = 1 - prob0;
+            ui.prob0Bar.style.width = `${prob0 * 100}%`;
+            ui.prob0Bar.textContent = `${(prob0 * 100).toFixed(1)}%`;
+            ui.prob1Bar.style.width = `${prob1 * 100}%`;
+            ui.prob1Bar.textContent = `${(prob1 * 100).toFixed(1)}%`;
+        }
+
+        function getCartesianFromSpherical(theta, phi) {
+            const r = 1; // Radius of Bloch sphere is 1
+            return {
+                x: r * Math.sin(theta) * Math.cos(phi),
+                y: r * Math.sin(theta) * Math.sin(phi),
+                z: r * Math.cos(theta)
+            };
+        }
+
+        function getSphericalFromCartesian(x, y, z) {
+            const r = Math.sqrt(x*x + y*y + z*z);
+            return {
+                theta: Math.acos(z/r),
+                phi: Math.atan2(y, x)
+            };
+        }
+
+        // --- RENDERING ---
+        function draw(time) {
+            // FPS calculation
+            if (state.lastFrameTime > 0) {
+                state.frameCount++;
+                if (time - state.lastFpsUpdate > 1000) {
+                    state.fps = state.frameCount;
+                    state.frameCount = 0;
+                    state.lastFpsUpdate = time;
+                    ui.perfMeter.textContent = `FPS: ${state.fps}`;
+                }
+            }
+            state.lastFrameTime = time;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = getComputedStyle(canvas).getPropertyValue('--canvas-bg');
+            ctx.fillRect(0,0,w,h);
+            const radius = w * 0.4;
+
+            // Draw sphere lines (latitude/longitude)
+            const lines = state.lowPerfMode ? 6 : 12;
+            for (let i = 1; i < lines; i++) {
+                // Latitude
+                drawLineLoop(t => ({x: Math.sin(t), y: 0, z: Math.cos(t)}), {x:0, y: (i/lines*2-1)*radius, z: 0}, radius * Math.sqrt(1 - Math.pow(i/lines*2-1, 2)));
+                // Longitude
+                if (i % 2 === 1 || !state.lowPerfMode) { // Draw fewer longitude lines in perf mode
+                    drawLineLoop(t => ({x: Math.cos(t), y: Math.sin(t), z: 0}), {x:0, y:0, z:0}, radius, {x: 0, y: i * Math.PI*2/lines, z: 0});
+                }
+            }
+
+            // Draw axes
+            drawAxis({x:-radius*1.2, y:0, z:0}, {x:radius*1.2, y:0, z:0}, "x");
+            drawAxis({x:0, y:-radius*1.2, z:0}, {x:0, y:radius*1.2, z:0}, "y");
+            drawAxis({x:0, y:0, z:-radius*1.2}, {x:0, y:0, z:radius*1.2}, "z");
+
+            // Draw state vector
+            const stateVec3D = getCartesianFromSpherical(state.theta, state.phi);
+            stateVec3D.x *= radius; stateVec3D.y *= radius; stateVec3D.z *= radius;
+            drawVector({x:0,y:0,z:0}, stateVec3D, 'red', 4);
+
+            // Draw labels
+            drawLabel("|0⟩", {x:0, y:-radius*1.1, z:0});
+            drawLabel("|1⟩", {x:0, y:radius*1.1, z:0});
+        }
+
+        function drawLine(p1, p2, color = 'grey', lineWidth = 1) {
+            p1 = rotatePoint(p1, state.rotation);
+            p2 = rotatePoint(p2, state.rotation);
+
+            const isBehind = p1.z < 0 && p2.z < 0;
+            ctx.globalAlpha = isBehind ? 0.3 : 1.0;
+
+            const proj1 = projectPoint(p1);
+            const proj2 = projectPoint(p2);
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            ctx.moveTo(proj1.x, proj1.y);
+            ctx.lineTo(proj2.x, proj2.y);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+        }
+
+        function drawLineLoop(pointFunc, offset, scale, rotation = {x:0,y:0,z:0}) {
+            const segments = 60;
+            let prevP = null;
+            for(let i=0; i<=segments; i++) {
+                let p = pointFunc(i/segments * Math.PI * 2);
+                p = {x: p.x * scale, y: p.y * scale, z: p.z * scale};
+                p = rotatePoint(p, rotation);
+                p = {x: p.x + offset.x, y: p.y + offset.y, z: p.z + offset.z};
+                if(prevP) {
+                    drawLine(prevP, p, 'var(--border-color)');
+                }
+                prevP = p;
+            }
+        }
+
+        function drawAxis(start, end, label) {
+            drawLine(start, end, 'var(--secondary-color)', 1);
+            const p = rotatePoint(end, state.rotation);
+            const proj = projectPoint(p);
+            ctx.fillStyle = 'var(--text-color)';
+            ctx.font = '16px Arial';
+            ctx.fillText(label, proj.x + 5, proj.y + 5);
+        }
+
+        function drawVector(start, end, color, lineWidth) {
+            const rotatedEnd = rotatePoint(end, state.rotation);
+            const isBehind = rotatedEnd.z < 0;
+            ctx.globalAlpha = isBehind ? 0.5 : 1.0;
+
+            drawLine(start, end, color, lineWidth);
+
+            // Draw arrowhead
+            const len = Math.sqrt(Math.pow(end.x,2)+Math.pow(end.y,2)+Math.pow(end.z,2));
+            const p1 = {x: end.x*0.95, y: end.y*0.95, z: end.z*0.95};
+            // This is a 2D arrowhead on a projected 3D line, a simplification
+            const projStart = projectPoint(rotatePoint(p1, state.rotation));
+            const projEnd = projectPoint(rotatedEnd);
+            const angle = Math.atan2(projEnd.y - projStart.y, projEnd.x - projStart.x);
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(projEnd.x, projEnd.y);
+            ctx.lineTo(projEnd.x - 15 * Math.cos(angle - Math.PI/6), projEnd.y - 15 * Math.sin(angle - Math.PI/6));
+            ctx.lineTo(projEnd.x - 15 * Math.cos(angle + Math.PI/6), projEnd.y - 15 * Math.sin(angle + Math.PI/6));
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+
+        function drawLabel(text, pos) {
+            const p = rotatePoint(pos, state.rotation);
+            const proj = projectPoint(p);
+            ctx.fillStyle = 'var(--text-color)';
+            ctx.font = 'bold 20px Times New Roman';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, proj.x, proj.y);
+        }
+
+        // --- UTILITY ---
+        function exportPNG() {
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = `bloch_sphere_${Date.now()}.png`;
+            a.click();
+            logToConsole("PNG exported.");
+        }
+
+        function sharePreset() {
+            const data = { theta: state.theta, phi: state.phi };
+            const jsonString = JSON.stringify(data);
+            const url = `${window.location.href.split('#')[0]}#preset=${btoa(jsonString)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Shareable link copied to clipboard!');
+                logToConsole("Share link copied.");
+            }, () => {
+                alert('Failed to copy link.');
+                logToConsole("Failed to copy share link.");
+            });
+        }
+
+        function loadPresetFromURL() {
+            if(window.location.hash.startsWith('#preset=')) {
+                try {
+                    const encoded = window.location.hash.substring(8);
+                    const decoded = atob(encoded);
+                    const data = JSON.parse(decoded);
+                    if (data.theta !== undefined && data.phi !== undefined) {
+                        applyPreset(data.theta, data.phi);
+                        logToConsole("Loaded preset from URL.");
+                    }
+                } catch (e) {
+                    logToConsole("Failed to load preset from URL hash.");
+                    console.error(e);
+                }
+            }
+        }
+
+        // --- MAIN INITIALIZATION FUNCTION ---
+        function init() {
+            logToConsole("Initializing Bloch Sphere simulation...");
+            setupDOM();
+            setupEventListeners();
+            loadPresetFromURL();
+            if (!window.location.hash.startsWith('#preset=')) {
+                updateState(0, 0); // Start at |0> unless loading from URL
+            }
+            requestAnimationFrame(draw);
+            logToConsole("Initialization complete. Ready to run.");
+        }
+
+    })();
+    </script>
+</body>
+</html>
