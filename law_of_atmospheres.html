@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Law of Atmospheres</title>
+    <style>
+        :root {
+            --bg-color: #e3f2fd;
+            --text-color: #1e3a8a;
+            --header-color: #0d47a1;
+            --accent-color: #1976d2;
+            --accent-hover: #1565c0;
+            --control-bg: #fff;
+            --control-border: #bbdefb;
+            --canvas-bg: #e3f2fd;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #1565c0; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; border-bottom: 1px solid var(--control-border); padding-bottom: 15px; margin-bottom: 15px;}
+        .graph-container { min-height: 400px; }
+        .sim-container { min-height: 400px; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; }
+
+        .control-group { margin-bottom: 1em; }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Law of Atmospheres</h1>
+            <p class="subtitle">A simulation of a gas column in a gravitational field.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why is the air thinner at the top of a mountain? The answer is a competition between gravity and thermal energy. Gravity pulls air molecules down, while their own thermal motion (their temperature) causes them to spread out and fill their container. The <strong>Law of Atmospheres</strong>, or barometric formula, describes the equilibrium state of this competition. It shows that the density and pressure of a gas in a gravitational field are not uniform, but decrease exponentially with height. This simulation visualizes this effect with a column of gas particles and a corresponding graph of the density profile.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (T): <span id="temp-value">300</span> K</label>
+                    <input type="range" id="temp-slider" min="50" max="800" step="5" value="300">
+                </div>
+                <div class="control-group">
+                    <label for="gravity-slider">Gravity (g): <span id="gravity-value">9.8</span> m/s²</label>
+                    <input type="range" id="gravity-slider" min="1" max="30" step="0.5" value="9.8">
+                </div>
+                 <div class="control-group">
+                    <label for="mass-slider">Particle Mass (m): <span id="mass-value">29</span> amu</label>
+                    <input type="range" id="mass-slider" min="4" max="80" step="1" value="29">
+                </div>
+            </div>
+
+            <div class="graph-container">
+                <h3>Density vs. Height</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="sim-container">
+                <h3>Gas Column</h3>
+                <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>Gravity vs. Temperature</h2>
+            <p>The exponential decay of atmospheric density is governed by the ratio of two energies: the gravitational potential energy needed to lift a particle, and the thermal energy the particle possesses.</p>
+            <code>ρ(h) = ρ₀ * e^(-mgh / kT)</code>
+            <ul>
+                <li><code>ρ(h)</code> is the density at height <code>h</code>.</li>
+                <li><code>ρ₀</code> is the density at the bottom (h=0).</li>
+                <li><code>mgh</code> is the <strong>gravitational potential energy</strong>. A stronger gravity (g) or a heavier particle (m) makes this term larger, causing the density to fall off more quickly.</li>
+                <li><code>kT</code> is the characteristic <strong>thermal energy</strong>. A higher temperature (T) gives particles more energy to fight against gravity, causing them to spread out more and the density to fall off more slowly.</li>
+            </ul>
+            <h3>The Scale Height</h3>
+            <p>The term <code>H = kT / mg</code> is called the <strong>scale height</strong>. It's the characteristic distance over which the pressure or density decreases by a factor of <em>e</em> (about 2.718). A large scale height (high T, low g/m) means a thick, extended atmosphere. A small scale height (low T, high g/m) means a thin, compressed atmosphere that hugs the ground.</p>
+            <p><strong>Try this:</strong> Set the temperature to its maximum and gravity/mass to their minimums. You'll see a large scale height, and the particles will be spread almost evenly. Now do the opposite: set temperature to its minimum and gravity/mass to their maximums. The scale height will be very small, and almost all the particles will be pinned to the bottom of the column.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const simCanvas = document.getElementById('sim-canvas');
+        const sCtx = simCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            temp: document.getElementById('temp-slider'),
+            gravity: document.getElementById('gravity-slider'),
+            mass: document.getElementById('mass-slider'),
+        };
+        const values = {
+            temp: document.getElementById('temp-value'),
+            gravity: document.getElementById('gravity-value'),
+            mass: document.getElementById('mass-value'),
+        };
+
+        const config = {
+            temp: 300,
+            gravity: 9.8,
+            mass: 29,
+            particleCount: 200,
+        };
+
+        let particles = [];
+        const k_B = 1.38e-23; // Boltzmann constant
+        const amu = 1.66e-27; // Atomic mass unit
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * simCanvas.width;
+                this.y = Math.random() * simCanvas.height;
+                const speed = Math.sqrt(config.temp / 50);
+                const angle = Math.random() * 2 * Math.PI;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+            }
+            update() {
+                // Apply gravity
+                this.vy += config.gravity * 0.01;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off walls
+                if (this.x < 0 || this.x > simCanvas.width) this.vx *= -1;
+                if (this.y < 0) { this.y = 0; this.vy *= -0.8; }
+                if (this.y > simCanvas.height) { this.y = simCanvas.height; this.vy *= -0.8; }
+            }
+            draw() {
+                sCtx.fillStyle = '#1e3a8a';
+                sCtx.beginPath();
+                sCtx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                sCtx.fill();
+            }
+        }
+
+        function setup() {
+            particles = [];
+            for (let i = 0; i < config.particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+            gCtx.clearRect(0,0,w,h);
+
+            const m = config.mass * amu;
+            const g = config.gravity;
+            const T = config.temp;
+            const scaleHeight = (k_B * T) / (m * g);
+
+            gCtx.strokeStyle = '#0d47a1';
+            gCtx.lineWidth = 3;
+            gCtx.beginPath();
+
+            for (let y_px = 0; y_px < h; y_px++) {
+                const height_m = (h - y_px) * 100; // Arbitrary scaling: 1px = 100m
+                const density = Math.exp(-height_m / scaleHeight);
+                const x_px = density * (w - 20) + 10;
+                if (y_px === 0) gCtx.moveTo(x_px, y_px);
+                else gCtx.lineTo(x_px, y_px);
+            }
+            gCtx.stroke();
+
+            // Axes
+            gCtx.strokeStyle = '#999';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            gCtx.moveTo(10, 0); gCtx.lineTo(10, h);
+            gCtx.moveTo(10, h); gCtx.lineTo(w, h);
+            gCtx.stroke();
+            gCtx.fillStyle = '#333';
+            gCtx.fillText("Density →", w/2 - 20, h - 5);
+            gCtx.save();
+            gCtx.translate(5, h/2); gCtx.rotate(-Math.PI/2);
+            gCtx.fillText("Height →", 0, 0);
+            gCtx.restore();
+        }
+
+        function animate() {
+            sCtx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        function updateConfig() {
+            config.temp = parseFloat(controls.temp.value);
+            config.gravity = parseFloat(controls.gravity.value);
+            config.mass = parseFloat(controls.mass.value);
+
+            values.temp.textContent = `${config.temp.toFixed(0)}`;
+            values.gravity.textContent = `${config.gravity.toFixed(1)}`;
+            values.mass.textContent = `${config.mass.toFixed(0)}`;
+
+            // Reset particle speeds
+            particles.forEach(p => {
+                const speed = Math.sqrt(config.temp / 50);
+                const angle = Math.random() * 2 * Math.PI;
+                p.vx = Math.cos(angle) * speed;
+                p.vy = Math.sin(angle) * speed;
+            });
+
+            drawGraph();
+        }
+
+        Object.values(controls).forEach(c => c.addEventListener('input', updateConfig));
+
+        setup();
+        drawGraph();
+        animate();
+    });
+    </script>
+</body>
+</html>

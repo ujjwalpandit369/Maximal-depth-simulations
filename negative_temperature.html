@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Negative Absolute Temperature</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #0d47a1;
+            --accent-color: #1976d2;
+            --accent-hover: #1565c0;
+            --control-bg: #fff;
+            --control-border: #e0e0e0;
+            --canvas-bg: #e3f2fd;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; padding-bottom: 20px; border-bottom: 1px solid var(--control-border); }
+
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 300px; background: var(--canvas-bg); border-radius: 4px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+
+        .readout { text-align: center; font-size: 1.5em; font-weight: bold; margin-top: 10px; }
+        .readout span { color: var(--header-color); }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Negative Absolute Temperature</h1>
+            <p class="subtitle">An interactive demonstration of a system "hotter than infinity."</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Can something be colder than absolute zero (0 Kelvin)? The answer is no. But can something have a <em>negative</em> absolute temperature? Surprisingly, yes. Negative temperature is a real, experimentally verified concept that occurs in special physical systems, like a collection of nuclear spins in a magnetic field. This simulation demonstrates how such a state is created. Counter-intuitively, a system at negative temperature is not cold at all; it is infinitely hot, and will give up heat to any system at any positive temperature.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <button id="pulse-btn">Apply 180° Pulse</button>
+                <button id="reset-btn" style="margin-left: 10px;">Reset</button>
+            </div>
+
+            <div class="sim-panel">
+                <h3>Spin System</h3>
+                <canvas id="spin-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="sim-panel">
+                <h3>Population vs. Energy</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="readout" style="grid-column: 1 / -1;">
+                System State: <span id="state-readout">Positive Temperature (T > 0)</span>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>How Negative Temperature Works</h2>
+            <h3>1. A Special Kind of System</h3>
+            <p>Normally, the energy you can add to a system is unlimited. You can always make particles move faster. However, some quantum systems have a <strong>maximum possible energy state</strong>. The classic example, shown here, is a set of nuclear spins in a magnetic field. Each spin can either be low-energy (aligned with the field) or high-energy (anti-aligned with the field). The system's energy is highest when all spins are anti-aligned. There's no way to add more energy after that point.</p>
+
+            <h3>2. Temperature and Population</h3>
+            <p>Temperature is a measure of how energy is distributed among the available states. For any positive temperature (T > 0), from room temperature to the core of a star, there will always be more particles in low-energy states than in high-energy states. This is shown in the initial "Population vs. Energy" graph: the "Low Energy" bar is much taller than the "High Energy" bar.</p>
+
+            <h3>3. Creating a Population Inversion</h3>
+            <p>To achieve negative temperature, we need to flip this situation and create a <strong>population inversion</strong>, where more particles are in high-energy states than low-energy states. In the lab, this is done by applying a precisely timed radio-frequency pulse (a "180° pulse") that causes all the spins to flip their orientation simultaneously.
+            <br><strong>Click the "Apply 180° Pulse" button to see this happen.</strong> Notice how all the spins flip upwards, and the population graph inverts. The system is now in a negative temperature state.</p>
+
+            <h3>4. Hotter Than Infinity?</h3>
+            <p>Why is this "hot"? Heat always flows from a hotter object to a colder one. If you put our negative-temperature spin system in contact with *any* system at a positive temperature (even a trillion degrees), heat will flow *from* the spins *to* the other system. The negative temperature system is so eager to give up its energy that it acts as the hotter object in any interaction. The scale of temperature looks like this:</p>
+            <p><strong>0 K → +300 K → +∞ K → -∞ K → -300 K → -0 K</strong></p>
+            <p>Passing through infinity is the only way to get from the positive to the negative temperature regime. Therefore, negative temperatures are not "below zero" but are on the other side of infinity.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const spinCanvas = document.getElementById('spin-canvas');
+        const sCtx = spinCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const pulseBtn = document.getElementById('pulse-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const stateReadout = document.getElementById('state-readout');
+
+        const GRID_SIZE = 10;
+        let spins = [];
+        let state = 'positive'; // 'positive' or 'negative'
+
+        function setup() {
+            state = 'positive';
+            spins = [];
+            const w = spinCanvas.width;
+            const h = spinCanvas.height;
+            const x_spacing = w / (GRID_SIZE + 1);
+            const y_spacing = h / (GRID_SIZE + 1);
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const isUp = Math.random() > 0.8; // At positive T, most are down
+                    spins.push({
+                        x: x_spacing * (i + 1),
+                        y: y_spacing * (j + 1),
+                        up: isUp
+                    });
+                }
+            }
+            update();
+        }
+
+        function drawSpins() {
+            sCtx.clearRect(0,0,spinCanvas.width, spinCanvas.height);
+            // Draw B-field lines
+            sCtx.strokeStyle = 'rgba(0,0,255,0.3)';
+            sCtx.lineWidth = 1;
+            for(let i=1; i<=5; i++) {
+                const x = spinCanvas.width * i / 6;
+                sCtx.beginPath();
+                sCtx.moveTo(x, 0); sCtx.lineTo(x, spinCanvas.height);
+                sCtx.stroke();
+            }
+
+            spins.forEach(spin => {
+                sCtx.beginPath();
+                sCtx.moveTo(spin.x, spin.y - 10);
+                sCtx.lineTo(spin.x, spin.y + 10);
+                if (spin.up) { // High Energy
+                    sCtx.moveTo(spin.x - 5, spin.y - 5);
+                    sCtx.lineTo(spin.x, spin.y - 10);
+                    sCtx.lineTo(spin.x + 5, spin.y - 5);
+                } else { // Low Energy
+                    sCtx.moveTo(spin.x - 5, spin.y + 5);
+                    sCtx.lineTo(spin.x, spin.y + 10);
+                    sCtx.lineTo(spin.x + 5, spin.y + 5);
+                }
+                sCtx.strokeStyle = '#3f51b5';
+                sCtx.lineWidth = 3;
+                sCtx.stroke();
+            });
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+            gCtx.clearRect(0,0,w,h);
+
+            const popUp = spins.filter(s => s.up).length;
+            const popDown = spins.length - popUp;
+
+            const barWidth = w / 4;
+            const maxPop = spins.length;
+
+            // Low Energy Bar
+            const hDown = (popDown / maxPop) * (h - 40);
+            gCtx.fillStyle = '#42a5f5';
+            gCtx.fillRect(w * 0.25 - barWidth/2, h - 30 - hDown, barWidth, hDown);
+
+            // High Energy Bar
+            const hUp = (popUp / maxPop) * (h - 40);
+            gCtx.fillStyle = '#ef5350';
+            gCtx.fillRect(w * 0.75 - barWidth/2, h - 30 - hUp, barWidth, hUp);
+
+            // Axes and labels
+            gCtx.fillStyle = '#333';
+            gCtx.font = '14px sans-serif';
+            gCtx.textAlign = 'center';
+            gCtx.fillText('Low Energy', w * 0.25, h - 10);
+            gCtx.fillText('High Energy', w * 0.75, h - 10);
+            gCtx.fillText('Population', 5, h/2);
+        }
+
+        function update() {
+            if (state === 'positive') {
+                stateReadout.textContent = 'Positive Temperature (T > 0)';
+                stateReadout.style.color = '#1976d2';
+            } else {
+                stateReadout.textContent = 'Negative Temperature (T < 0)';
+                stateReadout.style.color = '#d32f2f';
+            }
+            drawSpins();
+            drawGraph();
+        }
+
+        pulseBtn.addEventListener('click', () => {
+            spins.forEach(s => s.up = !s.up);
+            state = (state === 'positive') ? 'negative' : 'positive';
+            update();
+        });
+
+        resetBtn.addEventListener('click', setup);
+
+        setup();
+    });
+    </script>
+</body>
+</html>

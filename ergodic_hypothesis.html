@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ergodic Hypothesis</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #004d40;
+            --accent-color: #00796b;
+            --accent-hover: #004d40;
+            --control-bg: #fff;
+            --control-border: #e0e0e0;
+            --canvas-bg: #e0f2f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; padding-bottom: 15px; }
+
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 300px; background: var(--canvas-bg); border-radius: 4px; }
+        .graph-canvas { width: 100%; height: 150px; background: var(--canvas-bg); border-radius: 4px; margin-top: 10px; }
+
+        .readout { text-align: center; font-weight: bold; margin-top: 10px; font-family: monospace; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ergodic Hypothesis Visualizer</h1>
+            <p class="subtitle">Equivalence of Time Averages and Ensemble Averages.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>How can we predict the pressure of a gas, which contains trillions of particles, without tracking every single one? The answer lies in statistical mechanics, which is built on a foundational assumption called the <strong>Ergodic Hypothesis</strong>. The hypothesis states that for a chaotic system, two ways of averaging a property should yield the same result. The first is the <strong>Time Average</strong>: watching a single system for a very long time and averaging its properties. The second is the <strong>Ensemble Average</strong>: taking an instantaneous snapshot of a huge number of identical systems and averaging the property over all of them. This simulation demonstrates this equivalence visually.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <button id="start-btn">Start/Reset</button>
+            </div>
+
+            <div class="sim-panel">
+                <h3>Time Average</h3>
+                <canvas id="time-canvas" class="sim-canvas"></canvas>
+                <canvas id="time-graph-canvas" class="graph-canvas"></canvas>
+                <div class="readout">Time Avg. Kinetic Energy: <span id="time-avg-value">0.00</span></div>
+            </div>
+
+            <div class="sim-panel">
+                <h3>Ensemble Average</h3>
+                <canvas id="ensemble-canvas" class="sim-canvas"></canvas>
+                <canvas id="ensemble-graph-canvas" class="graph-canvas"></canvas>
+                <div class="readout">Ensemble Avg. Kinetic Energy: <span id="ensemble-avg-value">0.00</span></div>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>How it Works</h2>
+            <h3>Panel 1: The Time Average</h3>
+            <p>This panel shows a single particle in a "stadium billiard," a classic chaotic system. The particle starts with a random position and velocity and evolves over time, bouncing off the walls. We track its kinetic energy (proportional to speed squared) at every moment. The graph below plots the <strong>running average</strong> of this energy over time. Notice how it fluctuates wildly at the beginning but eventually settles down and converges to a stable value. This final value is the time average.</p>
+
+            <h3>Panel 2: The Ensemble Average</h3>
+            <p>This panel shows an "ensemble" of 1000 identical systems. Each dot represents a particle in its own stadium at a random initial position and velocity. This is like taking an instantaneous photograph of 1000 parallel universes. We calculate the kinetic energy of each of these 1000 particles and average them all together just once. The histogram below shows the distribution of energies across the ensemble (the Maxwell-Boltzmann distribution). The calculated average is the ensemble average.</p>
+
+            <h3>The Ergodic Hypothesis in Action</h3>
+            <p>The magic of the ergodic hypothesis is that the final, stable value that the <strong>time average converges to</strong> in the left panel should be equal to the <strong>ensemble average calculated once</strong> in the right panel. This works because the single chaotic particle on the left will, over a long enough time, visit every part of the state space with equal probability. Its long-term behavior is therefore representative of the entire collection of possibilities, which is what the ensemble shows.</p>
+            <p>This assumption is what allows physicists to calculate properties like temperature and pressure for a gas by considering the statistical properties of an ensemble, rather than attempting the impossible task of tracking every particle over time.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Shared state and controls
+        const startBtn = document.getElementById('start-btn');
+        let isRunning = false;
+        let animationFrameId;
+
+        // --- Time Average Simulation ---
+        const timeCanvas = document.getElementById('time-canvas');
+        const tCtx = timeCanvas.getContext('2d');
+        const timeGraphCanvas = document.getElementById('time-graph-canvas');
+        const tgCtx = timeGraphCanvas.getContext('2d');
+        const timeAvgValue = document.getElementById('time-avg-value');
+
+        let particle = { x: 0, y: 0, vx: 0, vy: 0 };
+        let timeHistory = [];
+        let runningSum = 0;
+        let timeSteps = 0;
+
+        // --- Ensemble Average Simulation ---
+        const ensembleCanvas = document.getElementById('ensemble-canvas');
+        const eCtx = ensembleCanvas.getContext('2d');
+        const ensembleGraphCanvas = document.getElementById('ensemble-graph-canvas');
+        const egCtx = ensembleGraphCanvas.getContext('2d');
+        const ensembleAvgValue = document.getElementById('ensemble-avg-value');
+
+        let ensemble = [];
+        const ENSEMBLE_SIZE = 1000;
+
+        // --- Common Billiard Shape ---
+        const stadium = { w: timeCanvas.width * 0.8, h: timeCanvas.height * 0.5, r: timeCanvas.height * 0.25 };
+        stadium.cx = timeCanvas.width / 2;
+        stadium.cy = timeCanvas.height / 2;
+
+        function drawStadium(ctx) {
+            ctx.strokeStyle = '#004d40';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(stadium.cx - stadium.w/2, stadium.cy, stadium.r, Math.PI/2, -Math.PI/2);
+            ctx.lineTo(stadium.cx + stadium.w/2, stadium.cy - stadium.r);
+            ctx.arc(stadium.cx + stadium.w/2, stadium.cy, stadium.r, -Math.PI/2, Math.PI/2);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function setup() {
+            // Time average setup
+            particle.x = stadium.cx;
+            particle.y = stadium.cy;
+            const angle = Math.random() * 2 * Math.PI;
+            particle.vx = Math.cos(angle) * 3;
+            particle.vy = Math.sin(angle) * 3;
+            timeHistory = [];
+            runningSum = 0;
+            timeSteps = 0;
+
+            // Ensemble average setup
+            ensemble = [];
+            let totalEnergy = 0;
+            for(let i=0; i<ENSEMBLE_SIZE; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const speed = 3;
+                const ke = 0.5 * (speed*speed);
+                ensemble.push({
+                    x: stadium.cx - stadium.w/2 + Math.random() * stadium.w,
+                    y: stadium.cy - stadium.r + Math.random() * 2 * stadium.r,
+                    ke: ke
+                });
+                totalEnergy += ke;
+            }
+            ensembleAvgValue.textContent = (totalEnergy / ENSEMBLE_SIZE).toFixed(2);
+
+            drawAll();
+        }
+
+        function updateTimeAverage() {
+            for(let i=0; i<5; i++) { // 5 steps per frame for speed
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+
+                // Collision with flat walls
+                if ((particle.y < stadium.cy - stadium.r || particle.y > stadium.cy + stadium.r) &&
+                    (particle.x > stadium.cx - stadium.w/2 && particle.x < stadium.cx + stadium.w/2) ) {
+                    particle.vy *= -1;
+                }
+
+                // Collision with semicircles
+                const leftCenter = {x: stadium.cx - stadium.w/2, y: stadium.cy};
+                const rightCenter = {x: stadium.cx + stadium.w/2, y: stadium.cy};
+                const distLeft = Math.hypot(particle.x - leftCenter.x, particle.y - leftCenter.y);
+                const distRight = Math.hypot(particle.x - rightCenter.x, particle.y - rightCenter.y);
+
+                if (distLeft > stadium.r && particle.x < leftCenter.x) {
+                    const normalX = particle.x - leftCenter.x;
+                    const normalY = particle.y - leftCenter.y;
+                    const mag = Math.hypot(normalX, normalY);
+                    const nx = normalX / mag;
+                    const ny = normalY / mag;
+                    const dot = particle.vx * nx + particle.vy * ny;
+                    particle.vx -= 2 * dot * nx;
+                    particle.vy -= 2 * dot * ny;
+                }
+                if (distRight > stadium.r && particle.x > rightCenter.x) {
+                    const normalX = particle.x - rightCenter.x;
+                    const normalY = particle.y - rightCenter.y;
+                    const mag = Math.hypot(normalX, normalY);
+                    const nx = normalX / mag;
+                    const ny = normalY / mag;
+                    const dot = particle.vx * nx + particle.vy * ny;
+                    particle.vx -= 2 * dot * nx;
+                    particle.vy -= 2 * dot * ny;
+                }
+            }
+
+            const ke = 0.5 * (particle.vx**2 + particle.vy**2);
+            runningSum += ke;
+            timeSteps++;
+            const avg = runningSum / timeSteps;
+            timeHistory.push(avg);
+            if (timeHistory.length > timeGraphCanvas.width) timeHistory.shift();
+            timeAvgValue.textContent = avg.toFixed(2);
+        }
+
+        function drawAll() {
+            // Time Average
+            tCtx.fillStyle = '#e0f2f1';
+            tCtx.fillRect(0,0,timeCanvas.width, timeCanvas.height);
+            drawStadium(tCtx);
+            tCtx.fillStyle = '#bf360c';
+            tCtx.beginPath();
+            tCtx.arc(particle.x, particle.y, 5, 0, Math.PI*2);
+            tCtx.fill();
+
+            tgCtx.fillStyle = '#e0f2f1';
+            tgCtx.fillRect(0,0,timeGraphCanvas.width, timeGraphCanvas.height);
+            tgCtx.strokeStyle = '#bf360c';
+            tgCtx.beginPath();
+            timeHistory.forEach((val, i) => {
+                const y = timeGraphCanvas.height - (val / 10) * timeGraphCanvas.height;
+                if(i===0) tgCtx.moveTo(i, y);
+                else tgCtx.lineTo(i, y);
+            });
+            tgCtx.stroke();
+
+            // Ensemble Average
+            eCtx.fillStyle = '#e0f2f1';
+            eCtx.fillRect(0,0,ensembleCanvas.width, ensembleCanvas.height);
+            drawStadium(eCtx);
+            eCtx.fillStyle = 'rgba(0, 77, 64, 0.5)';
+            ensemble.forEach(p => {
+                eCtx.beginPath();
+                eCtx.arc(p.x, p.y, 2, 0, Math.PI*2);
+                eCtx.fill();
+            });
+
+            // Draw ensemble histogram
+            egCtx.fillStyle = '#e0f2f1';
+            egCtx.fillRect(0,0,ensembleGraphCanvas.width, ensembleGraphCanvas.height);
+            const bins = new Array(20).fill(0);
+            const maxKE = 10;
+            ensemble.forEach(p => {
+                const binIndex = Math.floor(p.ke / maxKE * bins.length);
+                if(binIndex < bins.length) bins[binIndex]++;
+            });
+            const maxBin = Math.max(...bins);
+            const binWidth = ensembleGraphCanvas.width / bins.length;
+            egCtx.fillStyle = '#004d40';
+            bins.forEach((count, i) => {
+                const h = (count / maxBin) * ensembleGraphCanvas.height;
+                egCtx.fillRect(i * binWidth, ensembleGraphCanvas.height - h, binWidth - 1, h);
+            });
+        }
+
+        function animate() {
+            if (isRunning) {
+                updateTimeAverage();
+                drawAll();
+            }
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (isRunning) {
+                isRunning = false;
+                startBtn.textContent = "Start";
+                if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            } else {
+                setup();
+                isRunning = true;
+                startBtn.textContent = "Reset";
+                animate();
+            }
+        });
+
+        setup();
+        drawAll();
+    });
+    </script>
+</body>
+</html>
