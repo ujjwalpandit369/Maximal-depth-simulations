@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase Diagram Explorer</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #3498db;
+            --accent-color-dark: #2980b9;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --solid-color: #3498db;
+            --liquid-color: #2ecc71;
+            --gas-color: #e67e22;
+            --supercritical-color: #9b59b6;
+            --state-point-color: #c0392b;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #5dade2;
+            --accent-color-dark: #3498db;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #main-canvas { aspect-ratio: 1/1; cursor: crosshair; }
+        #micro-canvas { aspect-ratio: 1/1; margin-top: 1rem; }
+
+        #state-readout {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            margin-top: 1rem;
+            border-radius: 5px;
+            border: 1px solid var(--control-border);
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Phase Diagram Explorer</h1>
+            <p class="subtitle">An interactive P-T diagram to explore the states of matter and phase transitions.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 220 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Water can be a solid (ice), a liquid, or a gas (steam). What state it's in depends on its temperature and pressure. A "phase diagram" is a map that shows you exactly what state a substance will be in under any given conditions. This simulation provides an interactive phase diagram. You can move a point around the map by changing the temperature and pressure with sliders. As you do, a second window shows you what the particles of the substance would look like at a microscopic level—from an ordered, vibrating solid to a disordered liquid to a chaotic, spread-out gas. By exploring the map, you can discover the conditions for melting, boiling, and even sublimating (going straight from solid to gas), and see special locations like the "triple point," where all three states can exist at once!</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: A Map of Matter</h2>
+
+            <h3>Step 1: The States of Matter</h3>
+            <p>We are familiar with the three most common states of matter:
+            <ul>
+                <li><strong>Solid:</strong> Particles are locked into a fixed, orderly pattern (a crystal lattice). They vibrate but cannot move past each other. Solids have a fixed shape and volume.</li>
+                <li><strong>Liquid:</strong> Particles are still close together but are disordered and can slide past one another. Liquids have a fixed volume but take the shape of their container.</li>
+                <li><strong>Gas:</strong> Particles are far apart and move randomly and rapidly. A gas will expand to fill any container it is in.</li>
+            </ul>
+            The small "Microscopic View" canvas shows a simplified animation of these states.</p>
+
+            <h3>Step 2: The Phase Diagram</h3>
+            <p>The large canvas shows the P-T (Pressure-Temperature) phase diagram. Think of it as a map. The horizontal axis is Temperature, and the vertical axis is Pressure. Any point on this map represents a specific set of conditions. Depending on which region your point is in, the substance will be a solid, liquid, or gas. You can move the red "state point" by using the sliders or by dragging it directly on the diagram.</p>
+
+            <h3>Step 3: Crossing the Lines (Phase Transitions)</h3>
+            <p>The lines on the map are the phase boundaries. When you move the state point across a line, the substance undergoes a phase transition:
+            <ul>
+                <li><strong>Solid-Liquid Line (Fusion Curve):</strong> Crossing this line from left to right is <strong>melting</strong>. Crossing from right to left is <strong>freezing</strong>.</li>
+                <li><strong>Liquid-Gas Line (Vaporization Curve):</strong> Crossing this line from left to right is <strong>boiling</strong>. Crossing from right to left is <strong>condensation</strong>.</li>
+                <li><strong>Solid-Gas Line (Sublimation Curve):</strong> Crossing this line from left to right is <strong>sublimation</strong> (like how dry ice turns directly into CO₂ gas). Crossing from right to left is <strong>deposition</strong>.</li>
+            </ul>
+            </p>
+
+            <h3>Step 4: Special Points on the Map</h3>
+            <p>There are two very special locations on the phase diagram that are marked for you:
+            <ul>
+                <li><strong>The Triple Point (TP):</strong> This is the unique point where all three phase boundaries meet. At this exact temperature and pressure, the solid, liquid, and gas phases can all exist in equilibrium at the same time!</li>
+                <li><strong>The Critical Point (CP):</strong> This is the point where the liquid-gas boundary line simply ends. Beyond this point, at very high temperatures and pressures, the distinction between a liquid and a gas vanishes. The substance becomes a "supercritical fluid," which has properties of both.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Interactive P-T Phase Diagram"></canvas>
+                <canvas id="micro-canvas" width="512" height="256" aria-label="Microscopic view of particles"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (T): <span id="temp-label">250</span> K</label>
+                    <input type="range" id="temp-slider" min="0" max="500" value="250" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="pressure-slider">Pressure (P): <span id="pressure-label">1.0</span> atm</label>
+                    <input type="range" id="pressure-slider" min="0.1" max="2.0" value="1.0" step="0.01">
+                </div>
+                <div id="state-readout">Current State: <span id="state-label">SOLID</span></div>
+                <div class="control-group" style="margin-top: 2rem;">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Clausius-Clapeyron Relation</h2>
+            <p>The slopes of the phase boundary lines are not arbitrary. They are governed by the laws of thermodynamics, specifically the Clausius-Clapeyron relation. This equation relates the slope of a boundary line (dP/dT) to the change in enthalpy (latent heat, ΔH) and the change in volume (ΔV) during the transition.</p>
+            <p><code>dP/dT = &Delta;H / (T &Delta;V)</code></p>
+            <p><strong>Plain English:</strong> The slope of the line depends on how much energy is needed for the transition (latent heat) and how much the volume changes.
+            <ul>
+                <li>For boiling, ΔV is large and positive (liquid to gas), so the slope is positive and relatively shallow.</li>
+                <li>For melting, ΔV is usually small and positive (solid to liquid), so the slope is positive and very steep.</li>
+                <li><strong>Special Case - Water:</strong> Ice is less dense than liquid water, so for water's melting transition, ΔV is negative. This means the dP/dT slope is negative, which is why the solid-liquid line on water's phase diagram uniquely slopes to the left. This is why ice skates work: the high pressure from the blade melts the ice underneath it.</li>
+            </ul>
+            </p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const mainCanvas = document.getElementById('main-canvas');
+        const m_ctx = mainCanvas.getContext('2d');
+        const microCanvas = document.getElementById('micro-canvas');
+        const mc_ctx = microCanvas.getContext('2d');
+
+        const tempSlider = document.getElementById('temp-slider');
+        const tempLabel = document.getElementById('temp-label');
+        const pressureSlider = document.getElementById('pressure-slider');
+        const pressureLabel = document.getElementById('pressure-label');
+        const stateLabel = document.getElementById('state-label');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let statePoint = { T: 250, P: 1.0 }; // T in K, P in atm
+
+        // --- Phase Diagram Data (simplified for a generic substance) ---
+        const triplePoint = { T: 200, P: 0.5 };
+        const criticalPoint = { T: 400, P: 1.5 };
+
+        function getPhase(T, P) {
+            if (T > criticalPoint.T && P > criticalPoint.P) return 'SUPERCRITICAL';
+
+            // Vaporization curve (simplified Clausius-Clapeyron)
+            const P_vap = triplePoint.P * Math.exp(10 * (1 - triplePoint.T / T));
+
+            if (P < P_vap && T < criticalPoint.T) {
+                 if (T < triplePoint.T) return 'GAS (Sublimation)';
+                 return 'GAS';
+            }
+
+            // Fusion curve (simplified steep line)
+            const P_fus = triplePoint.P + (T - triplePoint.T) * 10;
+            if (P > P_fus) return 'SOLID';
+
+            return 'LIQUID';
+        }
+
+        function mapToCanvas(T, P) {
+            const T_max = 500, P_max = 2.0;
+            const x = (T / T_max) * mainCanvas.width;
+            const y = mainCanvas.height - (P / P_max) * mainCanvas.height;
+            return {x, y};
+        }
+
+        function mapFromCanvas(x, y) {
+            const T_max = 500, P_max = 2.0;
+            const T = (x / mainCanvas.width) * T_max;
+            const P = ((mainCanvas.height - y) / mainCanvas.height) * P_max;
+            return {T, P};
+        }
+
+        function drawPhaseDiagram() {
+            const isDark = darkModeToggle.checked;
+            m_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            m_ctx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+            // Fill phase regions
+            const regionPaths = {
+                solid: new Path2D(), liquid: new Path2D(), gas: new Path2D()
+            };
+
+            const p_tp = mapToCanvas(triplePoint.T, triplePoint.P);
+            // Solid
+            regionPaths.solid.moveTo(0, 0);
+            for(let T=0; T<=triplePoint.T; T+=5) {
+                const P_sub = triplePoint.P * Math.exp(12 * (1 - triplePoint.T / T));
+                const p = mapToCanvas(T, P_sub);
+                regionPaths.solid.lineTo(p.x, p.y);
+            }
+            regionPaths.solid.lineTo(p_tp.x, p_tp.y);
+            for(let T=triplePoint.T; T<=500; T+=5) {
+                 const P_fus = triplePoint.P + (T - triplePoint.T) * 10;
+                 const p = mapToCanvas(T, P_fus);
+                 regionPaths.solid.lineTo(p.x, p.y);
+            }
+            regionPaths.solid.lineTo(mapToCanvas(500, 2).x, 0);
+            m_ctx.fillStyle = isDark ? 'rgba(93, 173, 226, 0.3)' : 'rgba(52, 152, 219, 0.3)';
+            m_ctx.fill(regionPaths.solid);
+
+            // Gas
+            regionPaths.gas.moveTo(0, mainCanvas.height);
+            for(let T=0; T<=criticalPoint.T; T+=5) {
+                const P_vap = triplePoint.P * Math.exp(10 * (1 - triplePoint.T / T));
+                const p = mapToCanvas(T, P_vap);
+                regionPaths.gas.lineTo(p.x, p.y);
+            }
+            regionPaths.gas.lineTo(mainCanvas.width, mapToCanvas(criticalPoint.T, criticalPoint.P).y);
+            regionPaths.gas.lineTo(mainCanvas.width, mainCanvas.height);
+            m_ctx.fillStyle = isDark ? 'rgba(243, 156, 18, 0.3)' : 'rgba(230, 126, 34, 0.3)';
+            m_ctx.fill(regionPaths.gas);
+
+            // Liquid
+            m_ctx.fillStyle = isDark ? 'rgba(39, 174, 96, 0.3)' : 'rgba(46, 204, 113, 0.3)';
+            m_ctx.beginPath();
+            m_ctx.moveTo(p_tp.x, p_tp.y);
+            for(let T=triplePoint.T; T<=criticalPoint.T; T+=2) {
+                 const P_vap = triplePoint.P * Math.exp(10 * (1 - triplePoint.T / T));
+                 const p = mapToCanvas(T, P_vap);
+                 m_ctx.lineTo(p.x, p.y);
+            }
+            const p_cp = mapToCanvas(criticalPoint.T, criticalPoint.P);
+            m_ctx.lineTo(p_cp.x, p_cp.y);
+            for(let T=criticalPoint.T; T>=triplePoint.T; T-=2) {
+                 const P_fus = triplePoint.P + (T - triplePoint.T) * 10;
+                 const p = mapToCanvas(T, P_fus);
+                 m_ctx.lineTo(p.x, p.y);
+            }
+            m_ctx.closePath();
+            m_ctx.fill();
+
+            // Draw labels and points
+            m_ctx.fillStyle = isDark ? '#ecf0f1' : '#2c3e50';
+            m_ctx.font = '14px ' + getComputedStyle(document.body).fontFamily;
+            m_ctx.fillText("SOLID", 50, 50);
+            m_ctx.fillText("LIQUID", 250, 200);
+            m_ctx.fillText("GAS", 350, 450);
+
+            const drawPoint = (p, label) => {
+                const pos = mapToCanvas(p.T, p.P);
+                m_ctx.fillStyle = '#9b59b6';
+                m_ctx.beginPath(); m_ctx.arc(pos.x, pos.y, 5, 0, 2*Math.PI); m_ctx.fill();
+                m_ctx.fillStyle = isDark ? '#ecf0f1' : '#2c3e50';
+                m_ctx.fillText(label, pos.x + 8, pos.y - 8);
+            };
+            drawPoint(triplePoint, 'TP');
+            drawPoint(criticalPoint, 'CP');
+
+            // Draw state point
+            const sp = mapToCanvas(statePoint.T, statePoint.P);
+            m_ctx.fillStyle = '#c0392b';
+            m_ctx.beginPath(); m_ctx.arc(sp.x, sp.y, 7, 0, 2*Math.PI); m_ctx.fill();
+            m_ctx.strokeStyle = '#ffffff';
+            m_ctx.lineWidth = 2;
+            m_ctx.stroke();
+        }
+
+        // --- Microscopic View ---
+        let microParticles = [];
+        function setupMicro(phase) {
+            microParticles = [];
+            const N = 50;
+            for(let i=0; i<N; i++) {
+                microParticles.push({
+                    x: Math.random() * microCanvas.width,
+                    y: Math.random() * microCanvas.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    ox: 0, oy: 0 // Original position for solid
+                });
+            }
+            if(phase === 'SOLID') {
+                const gridN = Math.ceil(Math.sqrt(N));
+                microParticles.forEach((p,i) => {
+                    p.x = (i % gridN + 1) * (microCanvas.width / (gridN+1));
+                    p.y = (Math.floor(i/gridN) + 1) * (microCanvas.height / (gridN+1));
+                    p.ox = p.x; p.oy = p.y;
+                });
+            }
+        }
+
+        function drawMicro() {
+            const isDark = darkModeToggle.checked;
+            mc_ctx.fillStyle = isDark ? '#2d3748' : '#ffffff';
+            mc_ctx.fillRect(0,0,microCanvas.width, microCanvas.height);
+
+            const phase = getPhase(statePoint.T, statePoint.P);
+            const speed = Math.sqrt(statePoint.T / 50);
+
+            mc_ctx.fillStyle = isDark ? '#5dade2' : '#3498db';
+            microParticles.forEach(p => {
+                switch(phase) {
+                    case 'SOLID':
+                        p.x += (Math.random() - 0.5) * speed * 0.5;
+                        p.y += (Math.random() - 0.5) * speed * 0.5;
+                        p.x += (p.ox - p.x) * 0.1; // Spring force back to lattice
+                        p.y += (p.oy - p.y) * 0.1;
+                        break;
+                    case 'GAS':
+                    case 'SUPERCRITICAL':
+                        p.x += p.vx * speed;
+                        p.y += p.vy * speed;
+                        if(p.x < 0 || p.x > microCanvas.width) p.vx *= -1;
+                        if(p.y < 0 || p.y > microCanvas.height) p.vy *= -1;
+                        break;
+                    case 'LIQUID':
+                        p.x += p.vx * speed * 0.5;
+                        p.y += p.vy * speed * 0.5;
+                        if(p.x < 0 || p.x > microCanvas.width) p.vx *= -1;
+                        if(p.y < 0 || p.y > microCanvas.height*0.8) { // Confined volume
+                            p.vy *= -1;
+                            p.y = Math.min(p.y, microCanvas.height*0.8);
+                        }
+                        if(p.y < 0) p.vy *= -1;
+                        break;
+                }
+                 mc_ctx.beginPath();
+                 mc_ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+                 mc_ctx.fill();
+            });
+        }
+
+        function mainLoop() {
+            drawPhaseDiagram();
+            drawMicro();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function updateState() {
+            statePoint.T = parseFloat(tempSlider.value);
+            statePoint.P = parseFloat(pressureSlider.value);
+            tempLabel.textContent = statePoint.T.toFixed(0);
+            pressureLabel.textContent = statePoint.P.toFixed(2);
+            const phase = getPhase(statePoint.T, statePoint.P);
+            if(stateLabel.textContent !== phase) {
+                stateLabel.textContent = phase;
+                setupMicro(phase);
+            }
+        }
+
+        // --- Controls ---
+        tempSlider.addEventListener('input', updateState);
+        pressureSlider.addEventListener('input', updateState);
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        let isDragging = false;
+        mainCanvas.addEventListener('mousedown', (e) => { isDragging = true; handleDrag(e); });
+        mainCanvas.addEventListener('mousemove', (e) => { if(isDragging) handleDrag(e); });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        function handleDrag(e) {
+            const rect = mainCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const newPoint = mapFromCanvas(x, y);
+            tempSlider.value = newPoint.T;
+            pressureSlider.value = newPoint.P;
+            updateState();
+        }
+
+        // --- Init ---
+        updateState();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

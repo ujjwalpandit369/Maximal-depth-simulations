@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maxwell-Boltzmann Distribution of Speeds</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --particle-color: #3498db;
+            --histogram-bar-color: #2ecc71;
+            --theory-curve-color: #e74c3c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --particle-color: #5dade2;
+            --histogram-bar-color: #27ae60;
+            --theory-curve-color: #e74c3c;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #gas-canvas { aspect-ratio: 2 / 1; margin-bottom: 1rem; }
+        #plot-canvas { aspect-ratio: 2 / 1; }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input, .control-group select { width: 100%; padding: 5px; }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--table-border); padding: 10px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: "Courier New", Courier, monospace; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Maxwell-Boltzmann Distribution of Speeds</h1>
+            <p class="subtitle">Visualizing the statistical spread of particle speeds in an ideal gas.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 220 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>When we talk about the temperature of a gas, we're referring to the *average* energy of its countless moving particles. In reality, these particles aren't all moving at the same speed; they are in a constant state of chaos, colliding and exchanging energy. Some move very fast, some move slowly, and most are somewhere in between. The Maxwell-Boltzmann distribution is a fundamental concept in physics that precisely describes this spread of speeds. This simulation makes this abstract idea concrete. You can see individual particles buzzing around in a container, and below it, a histogram that builds up in real-time, showing how their collective speeds create a beautiful, predictable curve. By changing the temperature and particle mass, you can see for yourself how these factors shape the distribution of speeds in a gas.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Not All Particles Are Created Equal</h2>
+
+            <h3>Step 1: The Microscopic Chaos</h3>
+            <p>The top canvas in the simulation shows a box of gas particles. They are all moving randomly and continuously colliding with each other and the walls. In each collision, energy is exchanged. One particle might slow down, while the other speeds up. This constant shuffling of energy is the key to understanding the gas as a whole. Even if all particles started at the same speed, they would quickly develop a range of different speeds due to these collisions.</p>
+
+            <h3>Step 2: From Chaos to Order - The Histogram</h3>
+            <p>How can we make sense of this chaos? We can use statistics. The bottom canvas shows a histogram, which is a type of bar chart. We take all the particles in the box, measure their current speed, and put them into "bins" based on how fast they are going. The height of each bar tells you how many particles have a speed in that particular range. As the simulation runs, you can see this histogram building up, showing the statistical distribution of speeds in real time.</p>
+
+            <h3>Step 3: The Maxwell-Boltzmann Curve</h3>
+            <p>Remarkably, this chaotic system gives rise to a very predictable pattern. The red line overlaid on the histogram is the theoretical Maxwell-Boltzmann distribution. You'll notice that as you add more particles and run the simulation, the shape of the histogram gets closer and closer to this smooth curve. This shows how the macroscopic properties of a gas emerge from the statistical behavior of its microscopic components. The curve is not symmetric; it has a longer "tail" on the right, meaning a small number of particles can have very high speeds, but none can have a speed less than zero.</p>
+
+            <h3>Step 4: Temperature and Mass</h3>
+            <p>This distribution isn't fixed; it depends on two key properties you can control with the sliders:
+            <ul>
+                <li><strong>Temperature (T):</strong> Temperature is a measure of the average kinetic energy. If you increase the temperature, you give more energy to the system. Watch the curve shift to the right and flatten out. This means the average speed is higher, but the spread of speeds is also wider.</li>
+                <li><strong>Molar Mass (M):</strong> At the same temperature, heavier particles move more slowly than lighter ones (since kinetic energy is 1/2 * mass * velocity²). Try switching the gas from light Helium to heavy Argon. You'll see the curve shift to the left and become taller and narrower, indicating lower average speeds and a smaller spread.</li>
+            </ul>
+            </p>
+
+            <h3>Step 5: The Different "Average" Speeds</h3>
+            <p>Because the curve is asymmetric, there are three different ways to talk about the "typical" speed, which are marked on the plot:
+            <ul>
+                <li><strong>v<sub>p</sub> (Most Probable Speed):</strong> The speed at the peak of the curve. More particles have this speed than any other.</li>
+                <li><strong>v<sub>avg</sub> (Average Speed):</strong> The mean speed of all the particles. It's slightly higher than v<sub>p</sub> because of the high-speed tail.</li>
+                <li><strong>v<sub>rms</sub> (Root-Mean-Square Speed):</strong> The square root of the average of the squared speeds. It's the speed related most directly to the kinetic energy and is the highest of the three.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="gas-canvas" width="512" height="256" aria-label="Animation of gas particles in a container"></canvas>
+                <canvas id="plot-canvas" width="512" height="256" aria-label="Histogram of particle speeds with theoretical curve"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (T): <span id="temp-label">300</span> K</label>
+                    <input type="range" id="temp-slider" min="50" max="800" value="300">
+                </div>
+                <div class="control-group">
+                    <label for="mass-select">Gas (Molar Mass)</label>
+                    <select id="mass-select">
+                        <option value="4.0026">Helium (4 g/mol)</option>
+                        <option value="20.180" selected>Neon (20 g/mol)</option>
+                        <option value="39.948">Argon (40 g/mol)</option>
+                        <option value="131.29">Xenon (131 g/mol)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="particles-slider">Number of Particles: <span id="particles-label">200</span></label>
+                    <input type="range" id="particles-slider" min="50" max="500" value="200" step="10">
+                </div>
+                <div class="control-group">
+                    <button id="play-pause-btn">Pause</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Distribution Function</h2>
+            <p>The simulation demonstrates the Maxwell-Boltzmann distribution, which gives the probability density for a particle's speed in a gas at thermal equilibrium.</p>
+
+            <h3>1. The Distribution Function</h3>
+            <p>The probability density function <code>f(v)</code> for a speed <code>v</code> is given by:</p>
+            <p><code>f(v) = 4&pi; (m / 2&pi;k<sub>B</sub>T)<sup>3/2</sup> v² exp(-mv² / 2k<sub>B</sub>T)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>m</code> is the mass of a single particle.</li>
+                <li><code>k<sub>B</sub></code> is the Boltzmann constant.</li>
+                <li><code>T</code> is the absolute temperature in Kelvin.</li>
+                <li><code>v</code> is the speed.</li>
+            </ul>
+            The <code>v²</code> term comes from the fact that velocity is a 3D vector, and there are more ways to have a high speed than a low speed. The exponential term is the "Boltzmann factor," which suppresses high-energy states.</p>
+
+            <h3>2. Characteristic Speeds</h3>
+            <p>From this distribution, we can derive the characteristic speeds shown on the plot:</p>
+            <p><strong>Most Probable Speed (v<sub>p</sub>):</strong> The peak of the distribution, found by taking the derivative of <code>f(v)</code> and setting it to zero.</p>
+            <p><code>v<sub>p</sub> = &radic;(2k<sub>B</sub>T / m)</code></p>
+
+            <p><strong>Average Speed (v<sub>avg</sub>):</strong> The mean value of the speed, found by integrating <code>v * f(v)</code> from 0 to infinity.</p>
+            <p><code>v<sub>avg</sub> = &radic;(8k<sub>B</sub>T / &pi;m)</code></p>
+
+            <p><strong>Root-Mean-Square Speed (v<sub>rms</sub>):</strong> The speed directly related to the average kinetic energy. It is the square root of the average of the squared speeds.</p>
+            <p><code>v<sub>rms</sub> = &radic;(3k<sub>B</sub>T / m)</code></p>
+            <p>Note that for any temperature, <code>v<sub>p</sub> < v<sub>avg</sub> < v<sub>rms</sub></code>.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const gasCanvas = document.getElementById('gas-canvas');
+        const g_ctx = gasCanvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const tempSlider = document.getElementById('temp-slider');
+        const tempLabel = document.getElementById('temp-label');
+        const massSelect = document.getElementById('mass-select');
+        const particlesSlider = document.getElementById('particles-slider');
+        const particlesLabel = document.getElementById('particles-label');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let simParams = { T: 300, M: 20.180, N: 200, m: 0 };
+        let particles = [];
+        let isPlaying = true;
+        const k_B = 1.38e-23; // Boltzmann constant
+        const N_A = 6.022e23; // Avogadro's number
+
+        function setup() {
+            simParams.T = parseFloat(tempSlider.value);
+            simParams.M = parseFloat(massSelect.value);
+            simParams.N = parseInt(particlesSlider.value);
+            simParams.m = simParams.M / N_A / 1000; // mass in kg
+
+            particles = [];
+            const v_rms = Math.sqrt(3 * k_B * simParams.T / simParams.m);
+            for(let i=0; i<simParams.N; i++) {
+                const speed = v_rms * (0.5 + Math.random()); // Start with a reasonable speed
+                const angle = Math.random() * 2 * Math.PI;
+                particles.push({
+                    x: Math.random() * gasCanvas.width,
+                    y: Math.random() * gasCanvas.height,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                });
+            }
+        }
+
+        function update() {
+            if (!isPlaying) return;
+
+            const dt = 0.1;
+            particles.forEach(p => {
+                p.x += p.vx * dt * 0.001;
+                p.y += p.vy * dt * 0.001;
+
+                if (p.x < 0 || p.x > gasCanvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > gasCanvas.height) p.vy *= -1;
+            });
+        }
+
+        function drawGas() {
+            const isDark = darkModeToggle.checked;
+            g_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            g_ctx.fillRect(0, 0, gasCanvas.width, gasCanvas.height);
+
+            g_ctx.fillStyle = isDark ? '#5dade2' : '#3498db';
+            particles.forEach(p => {
+                g_ctx.beginPath();
+                g_ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+                g_ctx.fill();
+            });
+        }
+
+        function drawPlot() {
+            const isDark = darkModeToggle.checked;
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0, 0, plotCanvas.width, plotCanvas.height);
+
+            const MAX_SPEED = Math.sqrt(3 * k_B * 1000 / (4/N_A/1000)) * 1.2; // Max speed for He at 1000K
+            const NUM_BINS = 50;
+            const binWidth = MAX_SPEED / NUM_BINS;
+            const bins = new Array(NUM_BINS).fill(0);
+
+            particles.forEach(p => {
+                const speed = Math.sqrt(p.vx**2 + p.vy**2);
+                const binIndex = Math.floor(speed / binWidth);
+                if (binIndex < NUM_BINS) bins[binIndex]++;
+            });
+
+            const maxCount = Math.max(...bins, 1);
+
+            // Draw histogram
+            p_ctx.fillStyle = isDark ? '#27ae60' : '#2ecc71';
+            bins.forEach((count, i) => {
+                const barHeight = (count / maxCount) * (plotCanvas.height - 40);
+                p_ctx.fillRect(30 + i * (plotCanvas.width-40)/NUM_BINS, plotCanvas.height - 30 - barHeight, (plotCanvas.width-40)/NUM_BINS - 1, barHeight);
+            });
+
+            // Draw theory curve
+            p_ctx.strokeStyle = '#e74c3c';
+            p_ctx.lineWidth = 2;
+            p_ctx.beginPath();
+            const C = 4 * Math.PI * Math.pow(simParams.m / (2*Math.PI*k_B*simParams.T), 1.5);
+            let max_f = 0;
+            for(let v=0; v<MAX_SPEED; v+=10) {
+                 const fv = C * v*v * Math.exp(-simParams.m * v*v / (2*k_B*simParams.T));
+                 if(fv > max_f) max_f = fv;
+            }
+
+            for(let v=0; v<MAX_SPEED; v+=5) {
+                const fv = C * v*v * Math.exp(-simParams.m * v*v / (2*k_B*simParams.T));
+                const x = 30 + (v / MAX_SPEED) * (plotCanvas.width - 40);
+                const y = plotCanvas.height - 30 - (fv / max_f) * (plotCanvas.height - 40);
+                if (v===0) p_ctx.moveTo(x,y);
+                else p_ctx.lineTo(x,y);
+            }
+            p_ctx.stroke();
+
+            // Draw axes
+            p_ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            p_ctx.lineWidth = 1;
+            p_ctx.beginPath();
+            p_ctx.moveTo(30, 0); p_ctx.lineTo(30, plotCanvas.height - 30); p_ctx.lineTo(plotCanvas.width, plotCanvas.height-30);
+            p_ctx.stroke();
+
+            p_ctx.fillStyle = isDark ? '#a0aec0' : '#666';
+            p_ctx.fillText("Number of Particles", 5, 15);
+            p_ctx.fillText("Speed (m/s)", plotCanvas.width/2, plotCanvas.height - 10);
+
+            // Draw characteristic speeds
+            const vp = Math.sqrt(2*k_B*simParams.T/simParams.m);
+            const vavg = Math.sqrt(8*k_B*simParams.T/(Math.PI*simParams.m));
+            const vrms = Math.sqrt(3*k_B*simParams.T/simParams.m);
+
+            const drawMarker = (v, label, color) => {
+                const x = 30 + (v / MAX_SPEED) * (plotCanvas.width - 40);
+                if(x > plotCanvas.width) return;
+                p_ctx.strokeStyle = color;
+                p_ctx.beginPath();
+                p_ctx.moveTo(x, plotCanvas.height-30);
+                p_ctx.lineTo(x, plotCanvas.height-20);
+                p_ctx.stroke();
+                p_ctx.fillStyle = color;
+                p_ctx.save();
+                p_ctx.translate(x, plotCanvas.height-40);
+                p_ctx.rotate(-Math.PI/4);
+                p_ctx.fillText(label, 0, 0);
+                p_ctx.restore();
+            };
+            drawMarker(vp, "v_p", "#3498db");
+            drawMarker(vavg, "v_avg", "#9b59b6");
+            drawMarker(vrms, "v_rms", "#16a085");
+        }
+
+        let lastPlotTime = 0;
+        function mainLoop(time) {
+            if(isPlaying) update();
+            drawGas();
+            if(time - lastPlotTime > 100) { // Update plot less frequently
+                drawPlot();
+                lastPlotTime = time;
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        function handleParamChange() {
+            if(isPlaying) playPauseBtn.click();
+            setup();
+            drawPlot();
+        }
+
+        tempSlider.addEventListener('input', e => { tempLabel.textContent = e.target.value; });
+        tempSlider.addEventListener('change', handleParamChange);
+        massSelect.addEventListener('change', handleParamChange);
+        particlesSlider.addEventListener('input', e => { particlesLabel.textContent = e.target.value; });
+        particlesSlider.addEventListener('change', handleParamChange);
+
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+        });
+        resetBtn.addEventListener('click', () => {
+            if(isPlaying) playPauseBtn.click();
+            setup();
+            drawPlot();
+        });
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

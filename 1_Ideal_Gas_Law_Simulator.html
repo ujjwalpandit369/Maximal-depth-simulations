@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Ideal Gas Law Simulator (PV=nRT)</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #e67e22;
+            --accent-color-dark: #d35400;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --particle-color: #3498db;
+            --gauge-color: #2ecc71;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #f39c12;
+            --accent-color-dark: #e67e22;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --particle-color: #5dade2;
+            --gauge-color: #27ae60;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; position: relative;}
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4 / 3;
+        }
+
+        #data-readout {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255,255,255,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: "Courier New", monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--control-border);
+        }
+        .dark-mode #data-readout {
+             background-color: rgba(45, 55, 72, 0.8);
+             border-color: var(--control-border);
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            padding: 8px 12px; border: 1px solid var(--control-border); border-radius: 5px;
+            background-color: var(--bg-color); color: var(--text-color); cursor: pointer;
+            margin-right: 5px; transition: background-color 0.2s;
+        }
+        .control-group button:hover { background-color: var(--code-bg); }
+        .control-group button.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color-dark);
+        }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--table-border); padding: 10px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: "Courier New", Courier, monospace; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Interactive Ideal Gas Law Simulator</h1>
+            <p class="subtitle">Visualizing the relationship between Pressure, Volume, Temperature, and Moles of a gas (PV=nRT).</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 230 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>The air around us is made of countless tiny particles, all buzzing around and bumping into things. The Ideal Gas Law is a fundamental equation in physics and chemistry that describes how these particles behave on a large scale. It connects four properties: the pressure the gas exerts (from particles hitting a surface), the volume of the container it's in, the amount of gas (number of particles), and its temperature (how fast the particles are moving). This simulation lets you see this law in action. You can directly control the volume, temperature, and number of gas particles in a container and see how the pressure changes in response, giving you an intuitive feel for the beautiful relationship that governs the behavior of gases.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Dance of the Molecules</h2>
+
+            <h3>Step 1: What is a Gas?</h3>
+            <p>A gas is a state of matter where particles are not bound together. They are in constant, high-speed, random motion. Imagine a crowded room full of super-bouncy balls, all ricocheting off each other and the walls. This is a good picture of a gas at the microscopic level. The simulation above shows these particles as blue dots.</p>
+
+            <h3>Step 2: The Four Properties</h3>
+            <p>The Ideal Gas Law connects four properties you can measure:
+            <ul>
+                <li><strong>Volume (V):</strong> This is the size of the container. In the simulation, you can change the volume by dragging the gray piston on the right.</li>
+                <li><strong>Temperature (T):</strong> This is a measure of the average kinetic energy of the particles. Hotter gas means faster-moving particles. Use the Temperature slider to see them speed up and slow down.</li>
+                <li><strong>Number of Moles (n):</strong> This is a way of counting the amount of gas. For our purposes, it's just the number of particles in the box. You can add or remove particles with the "Moles" slider.</li>
+                <li><strong>Pressure (P):</strong> This is the force the gas exerts on the walls of its container, divided by the area of the walls. Microscopically, this force comes from the countless particles colliding with the walls every second. You can't control pressure directly, but you can see it change on the pressure gauge in the simulation.</li>
+            </ul>
+            </p>
+
+            <h3>Step 3: The Ideal Gas Law (PV = nRT)</h3>
+            <p>The law states that for an "ideal" gas, these four properties are related by the simple equation <code>PV = nRT</code>. (R is just a constant of proportionality called the ideal gas constant). This means if you change one property, at least one other property must change to keep the equation balanced. For example, if you squeeze the gas into a smaller volume (decrease V) without changing the temperature (T) or amount of gas (n), the pressure (P) must go up! Why? Because the particles are in a smaller space, so they will hit the walls more often, increasing the average force.</p>
+
+            <h3>Step 4: Exploring the Named Laws</h3>
+            <p>The Ideal Gas Law contains several other famous laws within it. You can explore them using the "Hold Constant" buttons:
+            <ul>
+                <li><strong>Boyle's Law (Hold Temperature):</strong> If you keep temperature constant, pressure and volume are inversely related (if one goes up, the other goes down). Try decreasing the volume and watch the pressure gauge shoot up.</li>
+                <li><strong>Charles's Law (Hold Pressure):</strong> If you keep pressure constant, volume and temperature are directly related. Try increasing the temperature. To keep the pressure from rising, the piston must move out, increasing the volume.</li>
+                <li><strong>Gay-Lussac's Law (Hold Volume):</strong> If you keep volume constant, pressure and temperature are directly related. Lock the piston by selecting "Hold Volume," then increase the temperature. The particles move faster, hit the walls harder and more often, and the pressure rises.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="600" height="450" aria-label="Animation of gas particles in a container"></canvas>
+                <div id="data-readout">
+                    <p>Pressure (P): <span id="pressure-val">1.00</span> atm</p>
+                    <p>Volume (V): <span id="volume-val">22.4</span> L</p>
+                    <p>Moles (n): <span id="moles-val">1.0</span> mol</p>
+                    <p>Temperature (T): <span id="temp-val">273</span> K</p>
+                    <hr>
+                    <p>PV/nT = <span id="ratio-val">0.082</span></p>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label>Hold Constant:</label>
+                    <button id="hold-none-btn" class="active">Nothing</button>
+                    <button id="hold-pressure-btn">Pressure</button>
+                    <button id="hold-volume-btn">Volume</button>
+                    <button id="hold-temp-btn">Temperature</button>
+                </div>
+                <div class="control-group">
+                    <label for="temp-slider">Temperature: <span id="temp-label">273</span> K</label>
+                    <input type="range" id="temp-slider" min="50" max="600" value="273">
+                </div>
+                <div class="control-group">
+                    <label for="moles-slider">Moles (n): <span id="moles-label">1.0</span></label>
+                    <input type="range" id="moles-slider" min="0.2" max="2.0" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="volume-slider">Volume (V): <span id="volume-label">22.4</span> L</label>
+                    <input type="range" id="volume-slider" min="5" max="45" value="22.4" step="0.1">
+                </div>
+                 <div class="control-group">
+                    <label for="trails-toggle">Show Particle Trails</label>
+                    <input type="checkbox" id="trails-toggle">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: From Microscopic Motion to Macroscopic Laws</h2>
+            <p>The simulation connects the microscopic world of particles to the macroscopic world of measurable properties.</p>
+
+            <h3>1. The Ideal Gas Law</h3>
+            <p>The fundamental relationship is:</p>
+            <p><code>PV = nRT</code></p>
+            <p>Where <code>P</code> is pressure, <code>V</code> is volume, <code>n</code> is the number of moles, <code>T</code> is the absolute temperature (in Kelvin), and <code>R</code> is the ideal gas constant (≈ 0.0821 L·atm/(mol·K)). This equation is a good approximation for many gases under moderate conditions.</p>
+
+            <h3>2. Microscopic Origins of Temperature</h3>
+            <p>In the simulation, temperature is directly proportional to the average kinetic energy (KE) of the particles.</p>
+            <p><code>KE<sub>avg</sub> = (1/2)m(v²)<sub>avg</sub> = (3/2)k<sub>B</sub>T</code></p>
+            <p>Here, <code>m</code> is the particle mass, <code>v</code> is its velocity, and <code>k<sub>B</sub></code> is the Boltzmann constant. When you increase the temperature slider, the simulation increases the speed of all particles such that their new average kinetic energy matches the new temperature.</p>
+
+            <h3>3. Microscopic Origins of Pressure</h3>
+            <p>Pressure arises from particles colliding with the container walls. Each collision imparts a change in momentum. The total force is the total momentum change per unit time.</p>
+            <p><code>P = Force / Area</code></p>
+            <p>The simulation calculates pressure by summing the momentum transferred to the walls by all particle collisions over a short time interval and dividing by the wall area and the time interval. This is why the pressure gauge fluctuates slightly—it's a real-time measurement of a statistical process!</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const tempSlider = document.getElementById('temp-slider');
+        const tempLabel = document.getElementById('temp-label');
+        const molesSlider = document.getElementById('moles-slider');
+        const molesLabel = document.getElementById('moles-label');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeLabel = document.getElementById('volume-label');
+        const trailsToggle = document.getElementById('trails-toggle');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        const pressureVal = document.getElementById('pressure-val');
+        const volumeVal = document.getElementById('volume-val');
+        const molesVal = document.getElementById('moles-val');
+        const tempVal = document.getElementById('temp-val');
+        const ratioVal = document.getElementById('ratio-val');
+
+        const holdBtns = {
+            none: document.getElementById('hold-none-btn'),
+            pressure: document.getElementById('hold-pressure-btn'),
+            volume: document.getElementById('hold-volume-btn'),
+            temp: document.getElementById('hold-temp-btn'),
+        }
+        let holdMode = 'none';
+
+        // --- Simulation State ---
+        let particles = [];
+        let V = 22.4, T = 273, n = 1.0;
+        let P = 1.0;
+        let momentumSum = 0;
+        let frameCount = 0;
+        const R = 0.0821; // Gas constant
+        const PARTICLE_RADIUS = 3;
+        const PARTICLE_MASS = 1;
+
+        function resetParticles(new_n) {
+            const numParticles = Math.floor(new_n * 50);
+            const oldNumParticles = particles.length;
+            if (numParticles > oldNumParticles) {
+                for(let i=0; i < numParticles - oldNumParticles; i++) {
+                    addParticle();
+                }
+            } else {
+                particles.splice(0, oldNumParticles - numParticles);
+            }
+        }
+
+        function addParticle() {
+            const speed = Math.sqrt(2 * T / PARTICLE_MASS);
+            const angle = Math.random() * 2 * Math.PI;
+            particles.push({
+                x: Math.random() * (canvas.width * (V/45)),
+                y: Math.random() * canvas.height,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                trail: []
+            });
+        }
+
+        function setTemperature(new_T) {
+            const old_T = T;
+            if (old_T === 0) return;
+            const ratio = Math.sqrt(new_T / old_T);
+            particles.forEach(p => {
+                p.vx *= ratio;
+                p.vy *= ratio;
+            });
+            T = new_T;
+        }
+
+        function update() {
+            const pistonX = canvas.width * (V / 45);
+
+            particles.forEach(p => {
+                p.x += p.vx * 0.1;
+                p.y += p.vy * 0.1;
+
+                // Wall collisions
+                if (p.x < PARTICLE_RADIUS) {
+                    p.vx = Math.abs(p.vx);
+                    momentumSum += 2 * PARTICLE_MASS * p.vx;
+                }
+                if (p.x > pistonX - PARTICLE_RADIUS) {
+                    p.vx = -Math.abs(p.vx);
+                     momentumSum += 2 * PARTICLE_MASS * Math.abs(p.vx);
+                }
+                if (p.y < PARTICLE_RADIUS || p.y > canvas.height - PARTICLE_RADIUS) {
+                    p.vy *= -1;
+                    momentumSum += 2 * PARTICLE_MASS * Math.abs(p.vy);
+                }
+
+                if(trailsToggle.checked) {
+                    p.trail.push({x:p.x, y:p.y});
+                    if(p.trail.length > 10) p.trail.shift();
+                } else {
+                    p.trail = [];
+                }
+            });
+
+            frameCount++;
+            if (frameCount >= 30) { // Calculate pressure every 30 frames
+                const area = 2 * (pistonX + canvas.height); // Simplified 2D area
+                const time = frameCount * 0.016; // Approx time for 60fps
+                P = (momentumSum / time) / area;
+                P = P * 0.005; // Scaling factor to get reasonable atm values
+                momentumSum = 0;
+                frameCount = 0;
+            }
+
+            // Handle "Hold Constant" logic
+            if(holdMode === 'pressure') {
+                const targetP = (n * R * T) / V;
+                V += (P - targetP) * 0.1; // Simple proportional controller
+                V = Math.max(5, Math.min(45, V));
+                volumeSlider.value = V;
+            } else if (holdMode === 'volume') {
+                V = parseFloat(volumeSlider.value);
+            } else if (holdMode === 'temp') {
+                T = parseFloat(tempSlider.value);
+            }
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const pistonX = canvas.width * (V / 45);
+
+            // Draw particles
+            ctx.fillStyle = isDark ? '#5dade2' : '#3498db';
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, PARTICLE_RADIUS, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Draw trails
+                if(trailsToggle.checked && p.trail.length > 1) {
+                    ctx.strokeStyle = isDark ? 'rgba(93, 173, 226, 0.5)' : 'rgba(52, 152, 219, 0.5)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(p.trail[0].x, p.trail[0].y);
+                    for(let i=1; i<p.trail.length; i++) {
+                        ctx.lineTo(p.trail[i].x, p.trail[i].y);
+                    }
+                    ctx.stroke();
+                }
+            });
+
+            // Draw piston
+            ctx.fillStyle = isDark ? '#7f8c8d' : '#bdc3c7';
+            ctx.fillRect(pistonX, 0, canvas.width - pistonX, canvas.height);
+            ctx.fillStyle = isDark ? '#95a5a6' : '#95a5a6';
+            ctx.fillRect(pistonX, 0, 10, canvas.height);
+        }
+
+        function updateUI() {
+            pressureVal.textContent = P.toFixed(2);
+            volumeVal.textContent = V.toFixed(1);
+            molesVal.textContent = n.toFixed(1);
+            tempVal.textContent = T.toFixed(0);
+
+            volumeLabel.textContent = V.toFixed(1);
+            molesLabel.textContent = n.toFixed(1);
+            tempLabel.textContent = T.toFixed(0);
+
+            const ratio = (P * V) / (n * T);
+            ratioVal.textContent = ratio.toFixed(4);
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            updateUI();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        function setHoldMode(mode) {
+            holdMode = mode;
+            Object.values(holdBtns).forEach(b => b.classList.remove('active'));
+            holdBtns[mode].classList.add('active');
+
+            tempSlider.disabled = (mode === 'temp' || mode === 'pressure');
+            volumeSlider.disabled = (mode === 'volume' || mode === 'pressure');
+        }
+        Object.keys(holdBtns).forEach(key => {
+            holdBtns[key].addEventListener('click', () => setHoldMode(key));
+        });
+
+        tempSlider.addEventListener('input', e => {
+            const newT = parseFloat(e.target.value);
+            if(holdMode !== 'temp') setTemperature(newT);
+        });
+        molesSlider.addEventListener('input', e => {
+            n = parseFloat(e.target.value);
+            resetParticles(n);
+        });
+        volumeSlider.addEventListener('input', e => {
+            if(holdMode !== 'volume') V = parseFloat(e.target.value);
+        });
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        resetParticles(n);
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

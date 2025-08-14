@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Carnot Engine Cycle Explorer</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #c0392b;
+            --accent-color-dark: #a93226;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --hot-color: #e74c3c;
+            --cold-color: #3498db;
+            --insulation-color: #95a5a6;
+            --gas-color: #f39c12;
+            --pv-line-color: #2c3e50;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #e74c3c;
+            --accent-color-dark: #c0392b;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --pv-line-color: #ecf0f1;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+        }
+
+        #main-canvas { aspect-ratio: 2/1; }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            padding: 8px 12px; border: 1px solid var(--control-border); border-radius: 5px;
+            background-color: var(--bg-color); color: var(--text-color); cursor: pointer;
+            margin-right: 5px; transition: background-color 0.2s;
+        }
+        .control-group button:hover { background-color: var(--code-bg); }
+        .control-group button.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color-dark);
+            font-weight: bold;
+        }
+        .cycle-controls button { width: calc(50% - 3px); }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Carnot Engine Cycle Explorer</h1>
+            <p class="subtitle">An interactive visualization of the most efficient thermodynamic cycle possible.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 240 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>A heat engine, like the one in your car, is a device that converts heat into useful work. The Carnot cycle, devised by Sadi Carnot in 1824, is a theoretical "perfect" cycle for a heat engine. While no real engine can be perfectly efficient, the Carnot cycle sets the absolute upper limit on the efficiency of any engine operating between two temperatures. This simulation allows you to explore this ideal cycle. On the left, you'll see a piston-cylinder containing a gas that can be heated or cooled. On the right, you'll see the cycle traced on a Pressure-Volume (P-V) diagram. By stepping through the four stages—two expansions and two compressions—you can build an intuition for how heat is transformed into work and why the Carnot cycle is a cornerstone of thermodynamics.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Perfect Engine</h2>
+
+            <h3>Step 1: What is a Heat Engine?</h3>
+            <p>A heat engine is a machine that operates in a cycle, taking in heat from a hot source, converting some of that heat into mechanical work (like pushing a piston), and then expelling the leftover waste heat to a cold sink. This process repeats over and over. The goal is to get as much work out as possible for the amount of heat you put in. This is called the engine's "efficiency."</p>
+
+            <h3>Step 2: The Four Stages of the Carnot Cycle</h3>
+            <p>The Carnot cycle consists of four distinct, reversible stages. You can step through them using the buttons in the controls. The simulation shows the physical process on the left and tracks its state on the P-V diagram on the right.
+            <ol>
+                <li><strong>Isothermal Expansion:</strong> The gas starts at a high temperature (T<sub>H</sub>). It's placed in contact with a "hot reservoir" and allowed to expand, pushing the piston out. Because it's absorbing heat from the reservoir, its temperature stays constant during this expansion. <em>(Heat Q<sub>H</sub> enters the system)</em></li>
+                <li><strong>Adiabatic Expansion:</strong> The hot reservoir is removed, and the cylinder is insulated. The gas continues to expand. Since it's insulated, it can't absorb any more heat, so it does work by using its own internal energy. This causes its temperature to drop until it reaches the temperature of the cold reservoir (T<sub>C</sub>).</li>
+                <li><strong>Isothermal Compression:</strong> The insulation is removed, and the cylinder is placed in contact with a "cold reservoir." The piston now pushes in, compressing the gas. Because it's in contact with the cold reservoir, the gas expels heat and its temperature stays constant at T<sub>C</sub>. <em>(Waste heat Q<sub>C</sub> leaves the system)</em></li>
+                <li><strong>Adiabatic Compression:</strong> The cold reservoir is removed, and the cylinder is insulated again. The piston continues to push in, doing work on the gas. This work increases the gas's internal energy, raising its temperature from T<sub>C</sub> back up to the starting temperature T<sub>H</sub>. The cycle is now complete and ready to repeat.</li>
+            </ol>
+            </p>
+
+            <h3>Step 3: Pressure-Volume (P-V) Diagrams</h3>
+            <p>The panel on the right is a P-V diagram, a standard tool in thermodynamics. It plots the pressure of the gas versus its volume. As the engine goes through its cycle, the point on the graph traces a closed loop. The two top curves are the expansions, and the two bottom curves are the compressions. A key result from thermodynamics is that the net work done by the engine in one cycle is equal to the area enclosed by this loop. The simulation shades this area for you.</p>
+
+            <h3>Step 4: Efficiency</h3>
+            <p>The efficiency of a heat engine is the ratio of the work you get out to the heat you put in: <code>Efficiency (&eta;) = Work / Q<sub>H</sub></code>. Carnot proved that the maximum possible efficiency for any engine operating between two temperatures, T<sub>H</sub> and T<sub>C</sub>, is given by a simple formula: <code>&eta; = 1 - (T<sub>C</sub> / T<sub>H</sub>)</code>. (Note: Temperatures must be in an absolute scale like Kelvin). The readout below the simulation calculates this for you. Try changing the reservoir temperatures with the sliders. You'll see that the efficiency is highest when the hot reservoir is very hot and the cold reservoir is very cold. This is a fundamental limit of nature!</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="400" aria-label="Carnot cycle simulation and P-V diagram"></canvas>
+                 <div id="readout">
+                    <p>Work Done (W): <span id="work-val">0.00</span> J</p>
+                    <p>Heat In (Q<sub>H</sub>): <span id="qh-val">0.00</span> J</p>
+                    <p>Efficiency (&eta;): <span id="eff-val">0.00</span>%</p>
+                    <p>Carnot Efficiency (&eta;<sub>c</sub>): <span id="carnot-eff-val">0.00</span>%</p>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="th-slider">Hot Reservoir (T<sub>H</sub>): <span id="th-label">500</span> K</label>
+                    <input type="range" id="th-slider" min="300" max="800" value="500">
+                </div>
+                <div class="control-group">
+                    <label for="tc-slider">Cold Reservoir (T<sub>C</sub>): <span id="tc-label">300</span> K</label>
+                    <input type="range" id="tc-slider" min="100" max="500" value="300">
+                </div>
+                <div class="control-group">
+                    <label>Cycle Controls</label>
+                    <div class="cycle-controls">
+                        <button id="step1-btn">1. Iso. Expansion</button>
+                        <button id="step2-btn">2. Adia. Expansion</button>
+                        <button id="step3-btn">3. Iso. Compression</button>
+                        <button id="step4-btn">4. Adia. Compression</button>
+                    </div>
+                    <button id="run-cycle-btn" style="width: 100%; margin-top: 5px;">Run Full Cycle</button>
+                    <button id="reset-btn" style="width: 100%; margin-top: 5px;">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Physics of the Cycle</h2>
+            <p>The simulation calculates the state of an ideal monatomic gas (with heat capacity ratio &gamma; = 5/3) as it moves through the four stages.</p>
+
+            <h3>1. Isothermal Processes (Constant Temperature)</h3>
+            <p>During stages 1 and 3, the temperature is held constant. The relationship between pressure and volume is given by the Ideal Gas Law: <code>P = nRT / V</code>. The work done on or by the gas is:</p>
+            <p><code>W = &int; P dV = nRT ln(V<sub>final</sub> / V<sub>initial</sub>)</code></p>
+            <p>Since the internal energy of an ideal gas depends only on temperature, the change in internal energy is zero. By the First Law of Thermodynamics (ΔU = Q - W), the heat absorbed or expelled must equal the work done: <code>Q = W</code>.</p>
+
+            <h3>2. Adiabatic Processes (No Heat Exchange)</h3>
+            <p>During stages 2 and 4, the system is insulated, so <code>Q = 0</code>. The relationship between pressure and volume is now:</p>
+            <p><code>PV<sup>&gamma;</sup> = constant</code></p>
+            <p>As the gas expands or is compressed, its temperature changes according to the relation <code>TV<sup>&gamma;-1</sup> = constant</code>. The work done is equal to the change in the gas's internal energy: <code>W = -ΔU = -nC<sub>V</sub>ΔT</code>.</p>
+
+            <h3>3. Carnot Efficiency</h3>
+            <p>The efficiency, &eta;, is the net work done (W<sub>net</sub>) divided by the heat absorbed from the hot reservoir (Q<sub>H</sub>). After calculating the work and heat for all four stages, it can be shown that this simplifies to a remarkable result that depends only on the reservoir temperatures:</p>
+            <p><code>&eta; = W<sub>net</sub> / Q<sub>H</sub> = (Q<sub>H</sub> - Q<sub>C</sub>) / Q<sub>H</sub> = 1 - T<sub>C</sub> / T<sub>H</sub></code></p>
+            <p>(Note: Temperatures T<sub>C</sub> and T<sub>H</sub> must be in an absolute scale like Kelvin).</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const thSlider = document.getElementById('th-slider');
+        const thLabel = document.getElementById('th-label');
+        const tcSlider = document.getElementById('tc-slider');
+        const tcLabel = document.getElementById('tc-label');
+        const stepBtns = [
+            document.getElementById('step1-btn'), document.getElementById('step2-btn'),
+            document.getElementById('step3-btn'), document.getElementById('step4-btn')
+        ];
+        const runCycleBtn = document.getElementById('run-cycle-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const workVal = document.getElementById('work-val');
+        const qhVal = document.getElementById('qh-val');
+        const effVal = document.getElementById('eff-val');
+        const carnotEffVal = document.getElementById('carnot-eff-val');
+
+        // --- Simulation State ---
+        let simState = {
+            stage: 0, // 0: reset, 1-4: stages
+            progress: 0, // 0-1
+            running: false,
+            // State variables (P, V, T)
+            T_H: 500, T_C: 300,
+            V_a: 1, V_b: 2, V_c: 0, V_d: 0,
+            P_a: 0, P_b: 0, P_c: 0, P_d: 0,
+            path: [],
+            n: 1, R: 8.314, gamma: 5/3
+        };
+
+        function calculateCyclePoints() {
+            const { T_H, T_C, V_a, V_b, n, R, gamma } = simState;
+            simState.P_a = n * R * T_H / V_a;
+            simState.P_b = n * R * T_H / V_b;
+            const k1 = simState.P_b * Math.pow(V_b, gamma);
+            simState.V_c = Math.pow(k1 / (n * R * T_C), 1 / (gamma - 1));
+            simState.P_c = n * R * T_C / simState.V_c;
+            const k2 = simState.P_a * Math.pow(V_a, gamma);
+            simState.V_d = Math.pow(k2 / (n * R * T_C), 1 / (gamma-1));
+            simState.P_d = n * R * T_C / simState.V_d;
+
+            simState.V_c = Math.pow(T_H * Math.pow(V_b, gamma-1) / T_C, 1/(gamma-1));
+            simState.P_c = n * R * T_C / simState.V_c;
+            simState.V_d = Math.pow(T_H * Math.pow(V_a, gamma-1) / T_C, 1/(gamma-1));
+            simState.P_d = n* R * T_C / simState.V_d;
+        }
+
+        function reset() {
+            simState.T_H = parseFloat(thSlider.value);
+            simState.T_C = parseFloat(tcSlider.value);
+            if(simState.T_C >= simState.T_H) {
+                simState.T_C = simState.T_H - 1;
+                tcSlider.value = simState.T_C;
+            }
+            calculateCyclePoints();
+            simState.stage = 0;
+            simState.progress = 0;
+            simState.running = false;
+            simState.path = [getCurrentState()];
+            updateUI();
+        }
+
+        function getCurrentState() {
+            const { stage, progress, T_H, T_C, V_a, V_b, V_c, V_d, P_a, P_b, P_c, P_d, n, R, gamma } = simState;
+            let V, T, P, onHot, onCold;
+            onHot = onCold = false;
+
+            switch(stage) {
+                case 1: // Isothermal Expansion
+                    V = V_a + (V_b - V_a) * progress;
+                    T = T_H;
+                    P = n * R * T / V;
+                    onHot = true;
+                    break;
+                case 2: // Adiabatic Expansion
+                    V = V_b + (V_c - V_b) * progress;
+                    P = P_b * Math.pow(V_b, gamma) / Math.pow(V, gamma);
+                    T = P * V / (n * R);
+                    break;
+                case 3: // Isothermal Compression
+                    V = V_c + (V_d - V_c) * progress;
+                    T = T_C;
+                    P = n * R * T / V;
+                    onCold = true;
+                    break;
+                case 4: // Adiabatic Compression
+                    V = V_d + (V_a - V_d) * progress;
+                    P = P_d * Math.pow(V_d, gamma) / Math.pow(V, gamma);
+                    T = P * V / (n * R);
+                    break;
+                default: // Reset state
+                    V=V_a; T=T_H; P=P_a;
+            }
+            return {V, T, P, onHot, onCold};
+        }
+
+        function update() {
+            if (!simState.running) return;
+
+            simState.progress += 0.01;
+            if (simState.progress >= 1.0) {
+                simState.progress = 0;
+                simState.stage = (simState.stage % 4) + 1;
+                if(simState.stage === 1) simState.path = []; // Clear for new loop
+            }
+            simState.path.push(getCurrentState());
+        }
+
+        function draw() {
+            const w = canvas.width, h = canvas.height;
+            const w2 = w/2;
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0,0,w,h);
+
+            const state = getCurrentState();
+
+            // --- Draw Physical View (Left) ---
+            const base_y = h * 0.8;
+            const cylinder_w = w2 * 0.6;
+            const cylinder_h = h * 0.7;
+            const piston_h = cylinder_h * (state.V / (simState.V_c * 1.1));
+
+            ctx.strokeStyle = isDark ? '#a0aec0' : '#2c3e50';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(w2/2 - cylinder_w/2, base_y - cylinder_h, cylinder_w, cylinder_h);
+
+            // Draw gas
+            ctx.fillStyle = `rgba(243, 156, 18, ${state.P / simState.P_a})`;
+            ctx.fillRect(w2/2 - cylinder_w/2, base_y - piston_h, cylinder_w, piston_h);
+
+            // Draw Piston
+            ctx.fillStyle = isDark ? '#95a5a6' : '#7f8c8d';
+            ctx.fillRect(w2/2 - cylinder_w/2 - 10, base_y - piston_h - 10, cylinder_w + 20, 10);
+
+            // Draw Reservoirs
+            if(state.onHot) {
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(w2/2 - cylinder_w/2 - 10, base_y, cylinder_w + 20, 15);
+            } else if(state.onCold) {
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(w2/2 - cylinder_w/2 - 10, base_y, cylinder_w + 20, 15);
+            } else {
+                 ctx.fillStyle = '#95a5a6';
+                 ctx.fillRect(w2/2 - cylinder_w/2 - 10, base_y, cylinder_w + 20, 15);
+            }
+
+            // --- Draw PV Diagram (Right) ---
+            const V_max = simState.V_c * 1.1;
+            const P_max = simState.P_a * 1.1;
+            const margin = {x: 50, y: 50};
+            const mapX = V => margin.x + (V/V_max) * (w2 - margin.x*1.5);
+            const mapY = P => h - (margin.y + (P/P_max) * (h - margin.y*1.5));
+
+            // Axes
+            ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(w2 + margin.x, h - margin.y);
+            ctx.lineTo(w2 + w2, h - margin.y);
+            ctx.moveTo(w2 + margin.x, h - margin.y);
+            ctx.lineTo(w2 + margin.x, 0);
+            ctx.stroke();
+            ctx.fillStyle = isDark ? '#a0aec0' : '#666';
+            ctx.fillText("Volume (V)", w2 + w2/2, h - 20);
+            ctx.save();
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText("Pressure (P)", -h/2, w2 + 20);
+            ctx.restore();
+
+            // Draw path
+            if (simState.path.length > 1) {
+                if(simState.stage === 0 && simState.path.length > 2) { // Full cycle complete
+                    ctx.fillStyle = 'rgba(192, 57, 43, 0.3)';
+                    ctx.beginPath();
+                    ctx.moveTo(mapX(simState.path[0].V), mapY(simState.path[0].P));
+                    for(const p of simState.path) ctx.lineTo(mapX(p.V), mapY(p.P));
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                ctx.strokeStyle = isDark ? '#ecf0f1' : '#2c3e50';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(mapX(simState.path[0].V), mapY(simState.path[0].P));
+                for(const p of simState.path) ctx.lineTo(mapX(p.V), mapY(p.P));
+                ctx.stroke();
+
+                // Current state point
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.arc(mapX(state.V), mapY(state.P), 5, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function updateUI() {
+            const { T_H, T_C, V_a, V_b, V_c, V_d, n, R } = simState;
+            const Q_H = n * R * T_H * Math.log(V_b / V_a);
+            const Q_C = n * R * T_C * Math.log(V_c / V_d); // Q_C is magnitude
+            const W_net = Q_H - Q_C;
+            const efficiency = (Q_H > 0) ? W_net / Q_H : 0;
+            const carnot_eff = 1 - T_C / T_H;
+
+            workVal.textContent = W_net.toFixed(2);
+            qhVal.textContent = Q_H.toFixed(2);
+            effVal.textContent = (efficiency * 100).toFixed(1);
+            carnotEffVal.textContent = (carnot_eff * 100).toFixed(1);
+
+            stepBtns.forEach((btn, i) => {
+                if(simState.running && simState.stage === i+1) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        thSlider.addEventListener('input', e => { thLabel.textContent = e.target.value; reset(); });
+        tcSlider.addEventListener('input', e => { tcLabel.textContent = e.target.value; reset(); });
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        stepBtns.forEach((btn, i) => {
+            btn.addEventListener('click', () => {
+                simState.running = true;
+                if(simState.stage !== i+1) {
+                    simState.stage = i+1;
+                    simState.progress = 0;
+                    simState.path = [getCurrentState()];
+                }
+            });
+        });
+
+        runCycleBtn.addEventListener('click', () => {
+            if(simState.stage === 0) {
+                simState.stage = 1;
+                simState.path = [getCurrentState()];
+            }
+            simState.running = true;
+        });
+
+        resetBtn.addEventListener('click', () => {
+            reset();
+            updateUI();
+        });
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

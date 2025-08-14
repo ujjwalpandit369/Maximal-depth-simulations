@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entropy and the Arrow of Time</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #8e44ad;
+            --accent-color-dark: #732d91;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --particle-color: #e67e22;
+            --plot-line-color: #2ecc71;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #9b59b6;
+            --accent-color-dark: #8e44ad;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --particle-color: #f39c12;
+            --plot-line-color: #27ae60;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        #gas-canvas { aspect-ratio: 2 / 1; position: relative; }
+        #plot-canvas { aspect-ratio: 2 / 1; margin-top: 1rem;}
+
+        .particle-counts {
+            position: absolute;
+            display: flex;
+            width: 100%;
+            top: 10px;
+            justify-content: space-around;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+            pointer-events: none;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+         .control-group button#reset-btn { background-color: #e74c3c; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Entropy and the Arrow of Time</h1>
+            <p class="subtitle">A statistical visualization of the Second Law of Thermodynamics.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 210 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Why does time only seem to flow in one direction? Why do eggs scramble but never unscramble? This deep question is connected to one of the most fundamental laws of physics: the Second Law of Thermodynamics, which states that the total "entropy," or disorder, of the universe always increases. This simulation provides a visual explanation for *why* this happens. It's not a mysterious force pushing things toward disorder. Instead, it's a simple matter of probability. By watching particles in a box, you'll see how they naturally move from an ordered, unlikely arrangement to a disordered, highly probable one, simply because there are vastly more ways to be disordered than to be ordered. This reveals the statistical origin of entropy and the "arrow of time."</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Why Things Break But Don't Un-break</h2>
+
+            <h3>Step 1: The Initial State - Low Entropy</h3>
+            <p>The simulation starts with a box divided in two by a wall. All the gas particles are confined to the left side. This is a highly ordered, special, and unnatural state. In the language of thermodynamics, this is a state of **low entropy**. It's low entropy because there is only *one* way for this to be true: every single particle must be in the left half. </p>
+
+            <h3>Step 2: Removing the Wall</h3>
+            <p>Click the "Remove Wall" button. The partition disappears, and the particles are now free to move anywhere in the box. They will move randomly, bouncing off the walls. Watch what happens to the particle counts at the top of the box. Initially it's (N, 0), where N is the total number of particles. Very quickly, the particles will spread out to fill the whole box.</p>
+
+            <h3>Step 3: The Final State - High Entropy</h3>
+            <p>After a short time, the system will reach "equilibrium." You'll notice that the number of particles in each half is roughly equal: (N/2, N/2). This is a disordered state. It is a state of **high entropy**. Why did the system evolve to this state? Not because of any special force, but simply because of probability. </p>
+
+            <h3>Step 4: A Matter of Probability (Microstates and Macrostates)</h3>
+            <p>Let's think about the arrangements.
+            <ul>
+                <li><strong>Macrostate:</strong> This is what we observe on a large scale. For example, "all particles on the left" is one macrostate. "Half the particles on the left, half on the right" is another macrostate.</li>
+                <li><strong>Microstate:</strong> This is the exact, detailed configuration of every single particle—its precise position and velocity.</li>
+            </ul>
+            The crucial insight is this: for the macrostate "all particles on the left," there is only one way to arrange them (they all have to be on the left). But for the macrostate "half on the left, half on the right," there are a staggering number of possible arrangements. For just 100 particles, there are more than 10<sup>29</sup> ways to have 50 on each side! </p>
+            <p>The system isn't "trying" to increase its entropy. It's just randomly exploring all possible microstates, and since the vast, overwhelming majority of microstates correspond to the macrostate of being evenly spread out, that is the state you are overwhelmingly likely to find it in. The entropy plot below the box shows this: it plots the logarithm of the number of possible arrangements, and you can see it rapidly rise to a maximum and stay there.</p>
+
+            <h3>Step 5: The Arrow of Time</h3>
+            <p>This explains the "arrow of time." It is statistically inevitable that systems will evolve from low-entropy (unlikely) states to high-entropy (likely) states. The chance of all the particles spontaneously returning to the left half of the box is not zero, but it is astronomically small. For a real-world gas with trillions of atoms, the probability is so low that you would have to wait trillions of times the age of the universe to see it happen. This is why scrambled eggs don't unscramble and why we remember the past (a low-entropy state) but not the future (a higher-entropy state).</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <div id="gas-canvas-container" style="position: relative;">
+                    <canvas id="gas-canvas" width="512" height="256"></canvas>
+                    <div class="particle-counts">
+                        <span id="left-count">0</span> | <span id="right-count">0</span>
+                    </div>
+                </div>
+                <canvas id="plot-canvas" width="512" height="256" aria-label="Plot of entropy vs. time"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="remove-wall-btn">Remove Wall</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="particles-slider">Number of Particles: <span id="particles-label">200</span></label>
+                    <input type="range" id="particles-slider" min="4" max="500" value="200" step="2">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Boltzmann's Entropy Formula</h2>
+            <p>The simulation demonstrates the statistical definition of entropy, as formulated by Ludwig Boltzmann.</p>
+
+            <h3>1. Boltzmann's Entropy Formula</h3>
+            <p>The entropy <code>S</code> of a macroscopic state is proportional to the natural logarithm of the number of microscopic states (microstates), <code>&Omega;</code>, that correspond to it.</p>
+            <p><code>S = k<sub>B</sub> ln(&Omega;)</code></p>
+            <p>Where <code>k<sub>B</sub></code> is the Boltzmann constant. A state with more possible microscopic arrangements has higher entropy.</p>
+
+            <h3>2. Counting Microstates (Combinatorics)</h3>
+            <p>For our system of <code>N</code> particles distributed between two halves of a box, a macrostate is defined by the number of particles on the left (N<sub>L</sub>) and on the right (N<sub>R</sub>). The number of ways to achieve this state is given by the binomial coefficient "N choose N<sub>L</sub>":</p>
+            <p><code>&Omega;(N, N<sub>L</sub>) = N! / (N<sub>L</sub>! * (N - N<sub>L</sub>)!)</code></p>
+            <p>The simulation calculates this value (or rather, its logarithm to avoid dealing with huge numbers) in real-time to generate the entropy plot. You can see that this function is maximized when N<sub>L</sub> is close to N/2, which is why the system evolves to that state.</p>
+            <p><strong>Note on Calculation:</strong> Calculating factorials of large numbers is impossible. We instead calculate the log of the entropy using the log-gamma function, which is a standard method for computing log-factorials: <code>ln(n!) &approx; n*ln(n) - n</code> (Stirling's Approximation).</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const gasCanvas = document.getElementById('gas-canvas');
+        const g_ctx = gasCanvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const p_ctx = plotCanvas.getContext('2d');
+
+        const removeWallBtn = document.getElementById('remove-wall-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const particlesSlider = document.getElementById('particles-slider');
+        const particlesLabel = document.getElementById('particles-label');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const leftCountLabel = document.getElementById('left-count');
+        const rightCountLabel = document.getElementById('right-count');
+
+        // --- Simulation State ---
+        let simParams = { N: 200, speed: 1.5 };
+        let particles = [];
+        let wallRemoved = false;
+        let entropyHistory = [];
+
+        function logGamma(x) { // Stirling's approximation for log(n!)
+            return x * Math.log(x) - x + 0.5 * Math.log(2 * Math.PI * x);
+        }
+
+        function calculateLogOmega(N, N_L) {
+            if (N_L === 0 || N_L === N) return 0;
+            if (N === 0) return 0;
+            // log(N!) - log(NL!) - log(NR!)
+            return logGamma(N) - logGamma(N_L) - logGamma(N - N_L);
+        }
+
+        function setup() {
+            simParams.N = parseInt(particlesSlider.value);
+            particlesLabel.textContent = simParams.N;
+            wallRemoved = false;
+            entropyHistory = [];
+
+            particles = [];
+            for(let i=0; i<simParams.N; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                particles.push({
+                    x: Math.random() * (gasCanvas.width/2 - 5),
+                    y: Math.random() * gasCanvas.height,
+                    vx: Math.cos(angle) * simParams.speed,
+                    vy: Math.sin(angle) * simParams.speed,
+                });
+            }
+        }
+
+        function update() {
+            const dt = 0.1;
+            const wallX = wallRemoved ? gasCanvas.width : gasCanvas.width / 2;
+
+            particles.forEach(p => {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                if (p.x < 0 || p.x > wallX) p.vx *= -1;
+                if (p.y < 0 || p.y > gasCanvas.height) p.vy *= -1;
+                p.x = Math.max(0, Math.min(wallX, p.x));
+                p.y = Math.max(0, Math.min(gasCanvas.height, p.y));
+            });
+
+            // Update stats
+            if(wallRemoved) {
+                const leftCount = particles.filter(p => p.x < gasCanvas.width / 2).length;
+                leftCountLabel.textContent = leftCount;
+                rightCountLabel.textContent = simParams.N - leftCount;
+
+                const logOmega = calculateLogOmega(simParams.N, leftCount);
+                entropyHistory.push(logOmega);
+                if(entropyHistory.length > 500) entropyHistory.shift();
+            } else {
+                leftCountLabel.textContent = simParams.N;
+                rightCountLabel.textContent = 0;
+            }
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            // Draw gas
+            g_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            g_ctx.fillRect(0, 0, gasCanvas.width, gasCanvas.height);
+            g_ctx.fillStyle = isDark ? '#f39c12' : '#e67e22';
+            particles.forEach(p => {
+                g_ctx.beginPath();
+                g_ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+                g_ctx.fill();
+            });
+            if(!wallRemoved) {
+                g_ctx.fillStyle = isDark ? '#a0aec0' : '#2c3e50';
+                g_ctx.fillRect(gasCanvas.width/2 - 1, 0, 2, gasCanvas.height);
+            }
+
+            // Draw plot
+            p_ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            p_ctx.fillRect(0, 0, plotCanvas.width, plotCanvas.height);
+            const maxLogOmega = calculateLogOmega(simParams.N, simParams.N / 2) * 1.1;
+
+            p_ctx.strokeStyle = '#27ae60';
+            p_ctx.lineWidth = 2;
+            p_ctx.beginPath();
+            entropyHistory.forEach((logOmega, i) => {
+                const x = (i / 500) * plotCanvas.width;
+                const y = plotCanvas.height - (logOmega / maxLogOmega) * plotCanvas.height;
+                if(i===0) p_ctx.moveTo(x,y);
+                else p_ctx.lineTo(x,y);
+            });
+            p_ctx.stroke();
+
+            // Draw axes
+            p_ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            p_ctx.lineWidth = 1;
+            p_ctx.beginPath();
+            p_ctx.moveTo(30, 0); p_ctx.lineTo(30, plotCanvas.height - 20); p_ctx.lineTo(plotCanvas.width, plotCanvas.height-20);
+            p_ctx.stroke();
+            p_ctx.fillStyle = isDark ? '#a0aec0' : '#666';
+            p_ctx.fillText("Entropy (S ∝ ln Ω)", 35, 15);
+            p_ctx.fillText("Time", plotCanvas.width/2, plotCanvas.height - 5);
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        removeWallBtn.addEventListener('click', () => {
+            if(!wallRemoved) {
+                wallRemoved = true;
+                entropyHistory.push(0);
+            }
+        });
+        resetBtn.addEventListener('click', setup);
+        particlesSlider.addEventListener('input', e => {
+            particlesLabel.textContent = e.target.value;
+            simParams.N = parseInt(e.target.value);
+        });
+        particlesSlider.addEventListener('change', setup);
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
