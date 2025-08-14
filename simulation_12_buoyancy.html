@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buoyancy and Archimedes' Principle</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff; /* Blue for fluid */
+            --secondary-color: #6c757d; /* Grey for the block */
+            --gravity-color: #dc3545; /* Red for gravity */
+            --buoyancy-color: #28a745; /* Green for buoyancy */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #58a6ff;
+            --secondary-color: #adb5bd;
+            --gravity-color: #ff7b72;
+            --buoyancy-color: #20c997;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; cursor: grab; }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+        .readout p { margin: 5px 0; font-family: monospace; font-size: 1.1em;}
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Buoyancy and Archimedes' Principle</h1>
+            <p class="subtitle">An interactive demonstration of why things float or sink.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Why does a log float while a rock sinks? The answer was discovered by the ancient Greek mathematician Archimedes. He realized that any object placed in a fluid is pushed upward by a "buoyant force" that is equal to the weight of the fluid the object displaces. This simulation lets you explore this principle interactively. You can drag a block with a certain density into a fluid of another density and see the two competing forces—gravity pulling down and buoyancy pushing up—and watch what happens when you let go.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Battle of the Forces</h2>
+
+            <h3>Step 1: The Force of Gravity</h3>
+            <p>Every object has a weight, which is the force of gravity pulling it down. This force depends on the object's mass. In our simulation, the <span style="color:var(--gravity-color); font-weight:bold;">red arrow</span> pointing down represents the force of gravity. For a given block, this force is constant; it doesn't change whether the block is in the air or in the water.</p>
+
+            <h3>Step 2: The Buoyant Force</h3>
+            <p>When you submerge an object in a fluid, the fluid pushes back, creating an upward buoyant force. This is represented by the <span style="color:var(--buoyancy-color); font-weight:bold;">green arrow</span>. Where does this force come from? It's caused by the pressure of the fluid. The fluid pressure is higher at the bottom of the object than at the top, resulting in a net upward push.</p>
+
+            <h3>Step 3: Archimedes' Principle</h3>
+            <p>Archimedes made the crucial discovery that the magnitude of this upward buoyant force is exactly equal to the <strong>weight of the fluid that the object displaces</strong>. As you push the block into the water in the simulation, you will see the water level rise. The weight of that extra volume of water is precisely the strength of the buoyant force. This means the buoyant force is not constant; it increases as more of the object is submerged.</p>
+
+            <h3>Step 4: Floating vs. Sinking</h3>
+            <p>What happens to the object depends on which of these two forces is stronger.
+            <ul>
+                <li><strong>It Sinks if...</strong> the force of gravity is greater than the maximum possible buoyant force (which occurs when the object is fully submerged). This happens when the object is denser than the fluid (`ρ_obj > ρ_fluid`).</li>
+                <li><strong>It Floats if...</strong> the buoyant force becomes equal to the force of gravity *before* the object is fully submerged. The object will rise until just enough of it is underwater to create a buoyant force that exactly balances its weight. This happens when the object is less dense than the fluid (`ρ_obj < ρ_fluid`).</li>
+                <li><strong>It's Neutrally Buoyant if...</strong> the force of gravity is exactly equal to the maximum buoyant force. The object will happily hover wherever it is placed underwater. This happens when the object's density is equal to the fluid's density (`ρ_obj = ρ_fluid`).</li>
+            </ul>
+            Try setting the block density to be less than, equal to, and greater than the fluid density and see these three outcomes for yourself!
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="block-density-slider">Block Density (kg/m³): <span id="block-density-value">400</span></label>
+                    <input type="range" id="block-density-slider" min="100" max="2000" step="50" value="400">
+                </div>
+                <div class="control-group">
+                    <label for="fluid-density-slider">Fluid Density (kg/m³): <span id="fluid-density-value">1000</span></label>
+                    <input type="range" id="fluid-density-slider" min="500" max="3000" step="100" value="1000">
+                </div>
+                <div class="control-group">
+                    <label for="block-vol-slider">Block Size: <span id="block-vol-value">100</span>%</label>
+                    <input type="range" id="block-vol-slider" min="50" max="150" step="10" value="100">
+                </div>
+                <button id="reset-btn" style="width:100%; margin-top:10px;">Reset Block</button>
+                <div class="readout">
+                    <h4>Forces</h4>
+                    <p>Gravity (Fg): <span id="fg-value">--</span> N</p>
+                    <p>Buoyancy (Fb): <span id="fb-value">--</span> N</p>
+                    <hr>
+                    <p>Net Force: <span id="fnet-value">--</span> N</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Force of Gravity (`F_g`)</h3>
+            <p>The downward force of gravity is equal to the object's mass (`m_obj`) times the acceleration due to gravity (`g` ≈ 9.8 m/s²). Since mass is density (`ρ_obj`) times volume (`V_obj`), the formula is:</p>
+            <p><code>F_g = m_obj * g = ρ_obj * V_obj * g</code></p>
+            <h3>Buoyant Force (`F_b`)</h3>
+            <p>Archimedes' Principle states that the upward buoyant force is equal to the weight of the displaced fluid. The mass of the displaced fluid is the fluid's density (`ρ_fluid`) times the volume of the object that is submerged (`V_submerged`).</p>
+            <p><code>F_b = m_fluid_displaced * g = ρ_fluid * V_submerged * g</code></p>
+            <h3>Net Force (`F_net`)</h3>
+            <p>The net force determines the object's acceleration. Taking upward as the positive direction:</p>
+            <p><code>F_net = F_b - F_g</code></p>
+            <p><strong>Example:</strong> A block of wood (`ρ_obj` = 700 kg/m³) with a volume of 0.1 m³ is placed in water (`ρ_fluid` = 1000 kg/m³).
+            <br>Its weight is `F_g = 700 * 0.1 * 9.8 = 686 N`.
+            <br>To float, it needs an upward buoyant force of 686 N. How much volume must it submerge to get this force?
+            <br>`686 N = 1000 * V_submerged * 9.8`
+            <br>`V_submerged = 686 / (1000 * 9.8) = 0.07 m³`.
+            <br>Since the submerged volume (0.07 m³) is less than the total volume (0.1 m³), the block will float with 70% of its volume underwater.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let animationFrameId;
+
+    let config = {
+        rho_obj: 400,
+        rho_fluid: 1000,
+        vol_scale: 1.0,
+    };
+
+    let block = {};
+    let isDragging = false;
+
+    function resetBlock() {
+        const { width, height } = canvas;
+        const blockW = 100 * config.vol_scale;
+        const blockH = 100 * config.vol_scale;
+        block = {
+            w: blockW, h: blockH,
+            x: width/2 - blockW/2, y: 100,
+            vy: 0
+        };
+    }
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        resetBlock();
+        gameLoop();
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            if (mouseX > block.x && mouseX < block.x + block.w && mouseY > block.y && mouseY < block.y + block.h) {
+                isDragging = true;
+                canvas.style.cursor = 'grabbing';
+            }
+        });
+        canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                block.y = e.clientY - rect.top - block.h / 2;
+                block.vy = 0;
+            }
+        });
+    }
+
+    function simulationStep(dt) {
+        const g = 9.8;
+        const waterLevel = canvas.height * 0.5;
+
+        // Use area as a proxy for volume in 2D
+        const V_obj = block.w * block.h;
+        const m_obj = config.rho_obj * V_obj;
+        const Fg = m_obj * g;
+
+        const submergedHeight = Math.max(0, Math.min(block.h, (block.y + block.h) - waterLevel));
+        const V_submerged = submergedHeight * block.w;
+        const Fb = config.rho_fluid * V_submerged * g;
+
+        const Fnet = Fb - Fg;
+
+        if (!isDragging) {
+            const a = Fnet / m_obj;
+            block.vy += a * dt;
+            block.vy *= 0.98; // Damping
+            block.y += block.vy * dt;
+        }
+
+        // Constraints
+        if (block.y + block.h > canvas.height) {
+            block.y = canvas.height - block.h;
+            block.vy = 0;
+        }
+        if (block.y < 0) {
+            block.y = 0;
+            block.vy = 0;
+        }
+
+        // Update readouts (scale forces for display)
+        document.getElementById('fg-value').textContent = `${(Fg/10000).toFixed(1)} N`;
+        document.getElementById('fb-value').textContent = `${(Fb/10000).toFixed(1)} N`;
+        document.getElementById('fnet-value').textContent = `${(Fnet/10000).toFixed(1)} N`;
+    }
+
+    function gameLoop() {
+        simulationStep(1/60);
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        const waterLevel = height * 0.5;
+
+        // Draw fluid
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '80';
+        ctx.fillRect(0, waterLevel, width, height - waterLevel);
+
+        // Draw block
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.fillRect(block.x, block.y, block.w, block.h);
+        ctx.strokeStyle = '#000';
+        ctx.strokeRect(block.x, block.y, block.w, block.h);
+
+        // Draw force vectors
+        const centerX = block.x + block.w/2;
+        const centerY = block.y + block.h/2;
+        const Fg = config.rho_obj * (block.w * block.h) * 9.8;
+        const submergedHeight = Math.max(0, (block.y + block.h) - waterLevel);
+        const V_submerged = submergedHeight * block.w;
+        const Fb = config.rho_fluid * V_submerged * 9.8;
+
+        // Gravity vector
+        drawVector(centerX, centerY, 0, Fg/5000, getComputedStyle(document.documentElement).getPropertyValue('--gravity-color'));
+        // Buoyancy vector
+        drawVector(centerX, centerY, 0, -Fb/5000, getComputedStyle(document.documentElement).getPropertyValue('--buoyancy-color'));
+    }
+
+    function drawVector(x, y, vx, vy, color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + vx, y + vy);
+        ctx.stroke();
+
+        // Arrowhead
+        const angle = Math.atan2(vy, vx);
+        ctx.save();
+        ctx.translate(x + vx, y + vy);
+        ctx.rotate(angle);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-12, 6);
+        ctx.lineTo(-12, -6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        const updateAll = () => {
+            config.rho_obj = parseInt(document.getElementById('block-density-slider').value, 10);
+            document.getElementById('block-density-value').textContent = config.rho_obj;
+            config.rho_fluid = parseInt(document.getElementById('fluid-density-slider').value, 10);
+            document.getElementById('fluid-density-value').textContent = config.rho_fluid;
+            config.vol_scale = parseFloat(document.getElementById('block-vol-slider').value) / 100;
+            document.getElementById('block-vol-value').textContent = document.getElementById('block-vol-slider').value;
+
+            // If not dragging, preserve y position relative to size change
+            const oldH = block.h;
+            block.w = 100 * config.vol_scale;
+            block.h = 100 * config.vol_scale;
+            block.y += (oldH - block.h) / 2;
+        };
+
+        ['block-density-slider', 'fluid-density-slider', 'block-vol-slider'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateAll);
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', resetBlock);
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        setup();
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+    };
+    </script>
+</body>
+</html>
