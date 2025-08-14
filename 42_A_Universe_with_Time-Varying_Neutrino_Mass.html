@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Universe with Time-Varying Neutrino Mass</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #e67e22; /* Changed accent for this sim */
+            --accent-color-dark: #d35400;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --warning-bg: #fffbe6;
+            --warning-border: #f6e05e;
+            --error-bg: #fff5f5;
+            --error-border: #fc8181;
+            --success-color: #48bb78;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #f39c12;
+            --accent-color-dark: #e67e22;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --warning-bg: #4a4a38;
+            --warning-border: #f6e05e;
+            --error-bg: #522222;
+            --error-border: #fc8181;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header, section, article {
+            margin-bottom: 2.5rem;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .metadata-bar {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #718096;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .simulation-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        #simulation-area {
+            flex: 3;
+            min-width: 400px;
+        }
+        #controls-area {
+            flex: 1;
+            min-width: 280px;
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2 / 1;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            padding: 8px 12px; border: 1px solid var(--control-border); border-radius: 5px;
+            background-color: var(--bg-color); color: var(--text-color); cursor: pointer;
+            margin-right: 5px; transition: background-color 0.2s;
+        }
+        .control-group button:hover { background-color: var(--code-bg); }
+        .control-group button.primary {
+            background-color: var(--accent-color); color: white; border-color: var(--accent-color);
+        }
+        .control-group button.primary:hover { background-color: var(--accent-color-dark); }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--table-border); padding: 10px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: "Courier New", Courier, monospace; }
+
+        .warning-box, .error-box {
+            padding: 15px; margin: 1rem 0; border-radius: 5px; border: 1px solid;
+        }
+        .warning-box { background-color: var(--warning-bg); border-color: var(--warning-border); }
+        .error-box { background-color: var(--error-bg); border-color: var(--error-border); display: none; }
+
+        .dev-console { margin-top: 2rem; border: 1px solid var(--control-border); border-radius: 5px; }
+        .dev-console summary { padding: 10px; font-weight: bold; cursor: pointer; background-color: var(--code-bg); }
+        .dev-console-content { padding: 10px; max-height: 150px; overflow-y: auto; font-family: "Courier New", Courier, monospace; font-size: 0.8rem; background-color: var(--control-bg); }
+        .dev-console-content p { margin: 0; }
+
+        #tooltip { position: absolute; display: none; background-color: black; color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; pointer-events: none; }
+
+        .sim-labels { display: flex; justify-content: space-around; font-weight: bold; margin-top: 10px; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.75rem; }
+            .metadata-bar { flex-direction: column; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="tooltip"></div>
+    <div class="container">
+        <header>
+            <h1>A Universe with Time-Varying Neutrino Mass</h1>
+            <p class="subtitle">Exploring how structure formation changes if neutrino masses evolve with the cosmos.</p>
+            <div class="metadata-bar">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 280 KB</span>
+            </div>
+            <div id="error-panel" class="error-box"></div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Our universe is filled with a cosmic web of galaxies, a structure that grew from tiny seeds of matter in the early universe. The growth of this web is a gravitational tug-of-war. Dark matter pulls things together, while the expansion of space and fast-moving particles can slow this growth down. Neutrinos, tiny fundamental particles, play a role in this cosmic battle. This simulation explores a fascinating "what if" scenario: What if the mass of neutrinos isn't constant, but changes as the universe expands? We will see a side-by-side comparison of two universes: one that follows our standard understanding, and another where neutrinos become lighter over time. By watching how the cosmic web forms differently in each, we can get a feel for how astronomers might one day hunt for these subtle, yet profound, effects in the sky.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide — The Cosmic Web and Feathery Neutrinos</h2>
+
+            <h3>Step 1: Building the Cosmic Web</h3>
+            <p>Shortly after the Big Bang, the universe was incredibly smooth and uniform. But there were minuscule, random fluctuations in density – some spots were ever-so-slightly denser than others. Over billions of years, gravity has amplified these tiny seeds. The denser regions pulled in more and more matter, growing into the vast clusters of galaxies we see today, all connected by long filaments of gas and dark matter. This beautiful, intricate pattern is called the "Cosmic Web." The simulation above shows a simplified 2D version of this process, with dots representing clumps of dark matter pulling on each other.</p>
+
+            <h3>Step 2: The Role of Dark Matter</h3>
+            <p>Most of the matter in the universe isn't the stuff we're made of (atoms). It's an invisible substance called "dark matter." It doesn't interact with light, but it does have gravity. In fact, dark matter provides the main gravitational scaffolding for the cosmic web. The particles in our simulation represent this dominant dark matter component.</p>
+
+            <h3>Step 3: Neutrinos, the Cosmic Spoilers</h3>
+            <p>Neutrinos are incredibly light, almost ghostly particles that are produced in nuclear reactions, like inside the Sun. There are so many of them in the universe that, even if they are very light, their combined mass can have a noticeable gravitational effect. But unlike dark matter, which is thought to be "cold" (slow-moving), neutrinos are "hot" (they move at near the speed of light). </p>
+            <p>Because they zip around so fast, they tend to escape from small, dense clumps, smoothing out gravitational perturbations. Think of it like trying to build a sandcastle with very jittery sand – the fine details get washed away. In the same way, a sea of massive neutrinos suppresses the growth of small-scale structures in the universe, leading to fewer small galaxies and a smoother cosmic web.</p>
+
+            <h3>Step 4: A Mass That Changes with Time?</h3>
+            <p>Normally, we assume the mass of a fundamental particle is a fixed, unchanging number. But some advanced theories of cosmology, particularly those trying to explain dark energy, propose that this might not be true. In these "mass-varying neutrino" models, the neutrino mass is determined by the value of a background energy field that fills all of space. As the universe expands, this field changes, and so does the neutrino's mass. Typically, the models predict that neutrinos were more massive in the early universe and have become lighter as time goes on.</p>
+
+            <h3>Step 5: The Observational Signature</h3>
+            <p>If neutrinos were heavier in the past, they would have been better at suppressing structure growth long ago. As they become lighter, their suppressing effect weakens, and structure can grow more freely. This creates a unique, time-dependent pattern in the formation of the cosmic web compared to the standard model where the neutrino mass is constant. The simulation above visualizes this directly. The left box is our standard universe. The right box is the universe with mass-varying neutrinos. Can you spot the difference in how clumped the matter becomes by the end?</p>
+
+            <h3>Analogy: Building with Wet vs. Drying Sand</h3>
+            <p>Imagine two teams building sandcastles (cosmic structures). Team A (Standard Universe) uses sand that is consistently damp. It clumps together, but the water (neutrinos) prevents very fine, sharp details from forming. Team B (Varying Mass Universe) starts with very wet, sloppy sand. In the beginning, it's hard to build anything but low, smooth hills – the water (heavy neutrinos) washes everything out. But as time goes on, their sand dries out (neutrinos get lighter). It becomes much easier to build taller, more detailed structures. By the end, Team B's castle might look more detailed than Team A's, even though they both started from the same pile of sand. The *history* of the building material mattered.</p>
+        </article>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Units</th><th>Default</th><th>Min/Max</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Particle Count</td>
+                        <td>N</td>
+                        <td>250</td>
+                        <td>50 / 500</td>
+                        <td>Number of dark matter particles in each simulation. More particles give a better view but are slower.</td>
+                    </tr>
+                    <tr>
+                        <td>Initial Neutrino Mass (m<sub>&nu;,0</sub>)</td>
+                        <td>eV (electron-volts)</td>
+                        <td>0.3</td>
+                        <td>0.05 / 1.0</td>
+                        <td>The total mass of all neutrino types at the start. Higher values suppress structure growth more.</td>
+                    </tr>
+                    <tr>
+                        <td>Varying Mass Coupling (&alpha;)</td>
+                        <td>Dimensionless</td>
+                        <td>0.5</td>
+                        <td>0 / 3.0</td>
+                        <td>How strongly the neutrino mass changes with cosmic expansion. &alpha;=0 is the standard model (no change).</td>
+                    </tr>
+                    <tr>
+                        <td>Gravity Strength (G<sub>eff</sub>)</td>
+                        <td>Arbitrary</td>
+                        <td>1.0</td>
+                        <td>0.1 / 2.0</td>
+                        <td>An effective gravitational constant to speed up or slow down the simulation.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>Worked Example: Neutrino Mass Evolution</h3>
+            <p>In our model, the neutrino mass <code>m<sub>&nu;</sub></code> changes with the scale factor of the universe <code>a</code> (which goes from ~0 to 1). The formula is: <code>m<sub>&nu;</sub>(a) = m<sub>&nu;,0</sub> * a<sup>-&alpha;</sup></code>. The scale factor <code>a</code> is a proxy for time in the simulation.</p>
+            <p>Let's use the default preset values: Initial Mass <code>m<sub>&nu;,0</sub> = 0.3 eV</code> and Coupling <code>&alpha; = 0.5</code>.
+            <ul>
+                <li>At the start of the simulation (let's say <code>a = 0.1</code>): <code>m<sub>&nu;</sub> = 0.3 * (0.1)<sup>-0.5</sup> = 0.3 * 3.16 = <strong>0.95 eV</strong></code>. The neutrinos are heavy.</li>
+                <li>Halfway through the simulation (<code>a = 0.5</code>): <code>m<sub>&nu;</sub> = 0.3 * (0.5)<sup>-0.5</sup> = 0.3 * 1.41 = <strong>0.42 eV</strong></code>.</li>
+                <li>At the end of the simulation (<code>a = 1.0</code>): <code>m<sub>&nu;</sub> = 0.3 * (1.0)<sup>-0.5</sup> = <strong>0.3 eV</strong></code>. The mass has dropped to its final value.</li>
+            </ul>
+            </p>
+        </section>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="400" aria-label="Side-by-side simulation of cosmic structure formation"></canvas>
+                <div class="sim-labels">
+                    <span>Left: Standard Universe (Constant Neutrino Mass)</span>
+                    <span>Right: Varying Mass Universe</span>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="play-pause-btn" class="primary">Play</button>
+                    <button id="step-btn">Step</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="particles-slider">Particle Count: <span id="particles-value">250</span></label>
+                    <input type="range" id="particles-slider" min="50" max="500" value="250" step="10">
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Initial Neutrino Mass: <span id="mass-value">0.3</span> eV</label>
+                    <input type="range" id="mass-slider" min="0.05" max="1.0" value="0.3" step="0.05">
+                </div>
+                <div class="control-group">
+                    <label for="coupling-slider">Varying Mass Coupling: <span id="coupling-value">0.5</span></label>
+                    <input type="range" id="coupling-slider" min="0" max="3.0" value="0.5" step="0.1">
+                </div>
+                 <div class="control-group">
+                    <label>Presets</label>
+                    <button id="preset1-btn">Standard (ΛCDM)</button>
+                    <button id="preset2-btn">Weak Coupling</button>
+                    <button id="preset3-btn">Strong Coupling</button>
+                </div>
+                <div class="control-group">
+                    <label>Export & Theme</label>
+                    <button id="export-png-btn">Export PNG</button>
+                    <input type="checkbox" id="dark-mode-toggle"> Dark Mode
+                </div>
+                 <div class="warning-box" id="heavy-warning" style="display:none;">
+                    <strong>Warning:</strong> Particle counts above 350 may cause slowdowns.
+                </div>
+            </div>
+        </section>
+
+        <section id="presets-examples">
+            <h2>Try These Examples</h2>
+
+            <h3>1. Standard Universe (ΛCDM)</h3>
+            <p>This preset sets the coupling to zero, so the neutrino mass is constant in both simulations. This is our baseline.
+            <strong>Observation:</strong> Both sides should evolve identically (up to random initial conditions). Notice how the initial smooth distribution of matter collapses into filaments and clumps over time.</p>
+            <button onclick="loadPreset(1)">Run "Standard Universe"</button>
+            <code>{"particles": 250, "initial_mass": 0.3, "coupling": 0.0}</code>
+
+            <h3>2. Weak Coupling</h3>
+            <p>This preset introduces a small time-variation in the neutrino mass on the right side.
+            <strong>Observation:</strong> Watch both simulations closely. By the end, the right box should appear slightly *more* clumpy and structured than the left. This is because the neutrinos became lighter over time, reducing their ability to smooth out structures.</p>
+            <button onclick="loadPreset(2)">Run "Weak Coupling"</button>
+            <code>{"particles": 250, "initial_mass": 0.5, "coupling": 0.8}</code>
+
+            <h3>3. Strong Coupling & High Mass</h3>
+            <p>Here we use a high initial mass and a strong coupling. This exaggerates the effect for visibility.
+            <strong>Observation:</strong> At the beginning, the right box should evolve much more slowly than the left, as the very heavy neutrinos are suppressing all growth. But by the end, as the neutrino mass plummets, structure formation on the right rapidly catches up and may even surpass the left.</p>
+            <button onclick="loadPreset(3)">Run "Strong Coupling"</button>
+            <code>{"particles": 250, "initial_mass": 1.0, "coupling": 2.0}</code>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Gravitational Evolution & Suppression</h2>
+            <p>The simulation uses a simplified N-body method where particles represent large chunks of dark matter. Their motion is governed by gravity, but with a modification to account for neutrinos.</p>
+
+            <h3>1. Gravitational Force</h3>
+            <p>The force on each particle is the sum of gravitational pulls from all other particles. To make this computationally feasible, we use a Particle-Mesh (PM) approach: we assign particle masses to a grid, calculate the gravitational potential on the grid, and then differentiate to find the force.</p>
+            <p><code>&nabla;<sup>2</sup>&Phi; = 4&pi;G&rho;</code></p>
+            <p><strong>Plain English:</strong> This is Poisson's equation. It relates the gravitational potential <code>&Phi;</code> to the mass density <code>&rho;</code>. Solving this gives us the gravitational field.</p>
+
+            <h3>2. Neutrino Free-Streaming Suppression</h3>
+            <p>Fast-moving ("hot") neutrinos resist gravitational clustering on scales smaller than their "free-streaming length". We model this as a suppression of the gravitational force on small scales. The suppression factor depends on the fraction of the universe's energy density in neutrinos, <code>f<sub>&nu;</sub></code>.</p>
+            <p><code>f<sub>&nu;</sub> = &Omega;<sub>&nu;</sub> / &Omega;<sub>m</sub> &approx; m<sub>&nu;,total</sub> / (94.1 eV * h<sup>2</sup> * &Omega;<sub>m</sub>)</code></p>
+            <p><strong>Plain English:</strong> The neutrino fraction <code>f<sub>&nu;</sub></code> is just their total mass divided by the total matter content of the universe (with some cosmological constants thrown in). More massive neutrinos make up a larger fraction.</p>
+            <p>The effective gravitational force becomes:</p>
+            <p><code>F<sub>eff</sub> &approx; F<sub>gravity</sub> * (1 - C * f<sub>&nu;</sub>)</code></p>
+            <p>Where `C` is a constant around 6-8. In our simulation, this suppression is applied to the forces in both boxes, but in the right-hand box, <code>f<sub>&nu;</sub></code> (and thus the suppression) decreases over time as <code>m<sub>&nu;</sub></code> drops.</p>
+
+            <h3>3. Particle Motion</h3>
+            <p>Once the forces are known, we update particle positions and velocities using a simple "kick-drift-kick" leapfrog integrator.</p>
+            <p><code>v<sub>n+1/2</sub> = v<sub>n-1/2</sub> + F(x<sub>n</sub>) * dt</code></p>
+            <p><code>x<sub>n+1</sub> = x<sub>n</sub> + v<sub>n+1/2</sub> * dt</code></p>
+            <p><strong>Plain English:</strong> We "kick" the particle by updating its velocity based on the current force, then let it "drift" to a new position based on its new velocity. This method is stable and accurate for gravitational simulations.</p>
+        </article>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why would neutrino mass change?</dt>
+                <dd>It's a potential consequence of certain "quintessence" or "dynamical dark energy" models. In these models, the dark energy that drives cosmic acceleration is a dynamic scalar field, not a constant. If neutrinos get their mass by interacting with this field, their mass would change as the field evolves.</dd>
+
+                <dt>2. Is this idea taken seriously?</dt>
+                <dd>Yes, it's an active area of theoretical and observational research. Cosmological surveys like DES, Euclid, and DESI are making precise measurements of the cosmic web, and their data can be used to place constraints on models like this.</dd>
+
+                <dt>3. Why are there two boxes?</dt>
+                <dd>To provide a controlled experiment. The left box is the "control group" (our standard theory), while the right box is the "experimental group." By comparing them directly, the subtle differences caused by the varying mass become much easier to see.</dd>
+
+                <dt>4. The effect seems very small. Is it even detectable?</dt>
+                <dd>The effect is indeed subtle. You won't see it by looking at a single galaxy. But by statistically analyzing the positions and shapes of millions of galaxies, cosmologists can measure the "power spectrum" of the universe very precisely. Models like this predict specific changes to that power spectrum, which future surveys hope to be sensitive enough to detect or rule out.</dd>
+
+                <dt>5. Why does the simulation eventually stop?</dt>
+                <dd>The simulation tracks the universe from an early time (high redshift) to the present day (redshift z=0). It stops when it reaches the "present day," representing the full evolution of the structures.</dd>
+
+                <dt><strong>Troubleshooting:</strong></dt>
+                <dd>If the simulation is slow or frozen:
+                    <ul>
+                    <li>Press "Reset" and try a lower "Particle Count". Values below 300 are recommended for most computers.</li>
+                    <li>Ensure you are not running other heavy applications in the background.</li>
+                    <li>If the canvas is blank, reload the page. If the issue persists, check the browser's developer console (F12) for errors.</li>
+                    </ul>
+                </dd>
+            </dl>
+        </section>
+
+        <footer>
+            <div class="dev-console">
+                <details>
+                    <summary>Developer Console</summary>
+                    <div class="dev-console-content" id="dev-console-content"></div>
+                </details>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const particlesSlider = document.getElementById('particles-slider');
+        const particlesValue = document.getElementById('particles-value');
+        const massSlider = document.getElementById('mass-slider');
+        const massValue = document.getElementById('mass-value');
+        const couplingSlider = document.getElementById('coupling-slider');
+        const couplingValue = document.getElementById('coupling-value');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const heavyWarning = document.getElementById('heavy-warning');
+        const devConsole = document.getElementById('dev-console-content');
+
+        // --- Simulation Parameters ---
+        let simState = {
+            isPlaying: true,
+            time: 0,
+            maxTime: 1000,
+            particles: [],
+            width: canvas.width / 2,
+            height: canvas.height,
+        };
+
+        let simParams = {
+            numParticles: 250,
+            initialNuMass: 0.3,
+            couplingAlpha: 0.5,
+            gravity: 1.0,
+            f_nu_constant: 0.0, // Calculated for left box
+            f_nu_varying: 0.0, // Calculated for right box
+        };
+
+        const PM_GRID_SIZE = 16; // Particle-Mesh grid size
+
+        // --- N-body Simulation Logic ---
+        function createParticles() {
+            simState.particles = [];
+            for (let i = 0; i < simParams.numParticles; i++) {
+                // Initial positions with small random perturbations
+                const x = Math.random() * simState.width;
+                const y = Math.random() * simState.height;
+                simState.particles.push({
+                    x: x, y: y, // For left box
+                    vx: 0, vy: 0,
+                    x2: x, y2: y, // For right box
+                    vx2: 0, vy2: 0
+                });
+            }
+        }
+
+        // Particle-Mesh Force Calculation
+        function calculateForces(boxId) {
+            const grid = Array(PM_GRID_SIZE * PM_GRID_SIZE).fill(0);
+            const forces = { fx: new Float32Array(simParams.numParticles), fy: new Float32Array(simParams.numParticles) };
+            const dx = simState.width / PM_GRID_SIZE;
+            const dy = simState.height / PM_GRID_SIZE;
+
+            // 1. Mass Assignment (Cloud-in-Cell)
+            for (let i = 0; i < simParams.numParticles; i++) {
+                const p = simState.particles[i];
+                const x = (boxId === 1) ? p.x : p.x2;
+                const y = (boxId === 1) ? p.y : p.y2;
+
+                const gx = Math.floor(x / dx);
+                const gy = Math.floor(y / dy);
+
+                grid[gx + gy * PM_GRID_SIZE] += 1;
+            }
+
+            // 2. Calculate Potential (using FFT would be better, but direct summation is simpler here)
+            // This is a simplified gravity calculation - a proper PM method uses FFT to solve Poisson's eq.
+            // Here we do a smoothed direct force for simplicity.
+            const forceGrid = { fx: Array(PM_GRID_SIZE * PM_GRID_SIZE).fill(0), fy: Array(PM_GRID_SIZE * PM_GRID_SIZE).fill(0) };
+            for(let i=0; i<PM_GRID_SIZE; i++) {
+                for(let j=0; j<PM_GRID_SIZE; j++) {
+                    let fx_total = 0;
+                    let fy_total = 0;
+                    for(let i2=0; i2<PM_GRID_SIZE; i2++) {
+                        for(let j2=0; j2<PM_GRID_SIZE; j2++) {
+                            if(i === i2 && j === j2) continue;
+                            const mass = grid[i2 + j2 * PM_GRID_SIZE];
+                            if(mass === 0) continue;
+
+                            let r_x = (i2 - i) * dx;
+                            let r_y = (j2 - j) * dy;
+
+                            // Toroidal boundary conditions
+                            if (r_x > simState.width / 2) r_x -= simState.width;
+                            if (r_x < -simState.width / 2) r_x += simState.width;
+                            if (r_y > simState.height / 2) r_y -= simState.height;
+                            if (r_y < -simState.height / 2) r_y += simState.height;
+
+                            const r2 = r_x*r_x + r_y*r_y + 100; // softening
+                            const r = Math.sqrt(r2);
+                            const force = mass / r2;
+                            fx_total += force * r_x / r;
+                            fy_total += force * r_y / r;
+                        }
+                    }
+                    forceGrid.fx[i + j*PM_GRID_SIZE] = fx_total;
+                    forceGrid.fy[i + j*PM_GRID_SIZE] = fy_total;
+                }
+            }
+
+            // 3. Interpolate Force to Particles
+            for (let i = 0; i < simParams.numParticles; i++) {
+                const p = simState.particles[i];
+                const x = (boxId === 1) ? p.x : p.x2;
+                const y = (boxId === 1) ? p.y : p.y2;
+
+                const gx = Math.floor(x / dx);
+                const gy = Math.floor(y / dy);
+
+                forces.fx[i] = forceGrid.fx[gx + gy * PM_GRID_SIZE];
+                forces.fy[i] = forceGrid.fy[gx + gy * PM_GRID_SIZE];
+            }
+            return forces;
+        }
+
+
+        function update() {
+            if (!simState.isPlaying || simState.time >= simState.maxTime) return;
+
+            const dt = 0.1;
+            const scale_factor = simState.time / simState.maxTime;
+
+            // Calculate neutrino suppression
+            const mass_standard = simParams.initialNuMass;
+            const mass_varying = simParams.initialNuMass * Math.pow(scale_factor + 0.01, -simParams.couplingAlpha);
+
+            // Simplified f_nu calculation
+            const f_nu_standard = 0.2 * mass_standard;
+            const f_nu_varying = 0.2 * mass_varying;
+
+            const suppression_standard = 1.0 - 6.0 * f_nu_standard;
+            const suppression_varying = 1.0 - 6.0 * f_nu_varying;
+
+            const forces1 = calculateForces(1);
+            const forces2 = calculateForces(2);
+
+            for (let i = 0; i < simParams.numParticles; i++) {
+                const p = simState.particles[i];
+
+                // Update left box (standard)
+                p.vx += forces1.fx[i] * dt * simParams.gravity * suppression_standard;
+                p.vy += forces1.fy[i] * dt * simParams.gravity * suppression_standard;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                // Update right box (varying)
+                p.vx2 += forces2.fx[i] * dt * simParams.gravity * suppression_varying;
+                p.vy2 += forces2.fy[i] * dt * simParams.gravity * suppression_varying;
+                p.x2 += p.vx2 * dt;
+                p.y2 += p.vy2 * dt;
+
+                // Periodic boundary conditions
+                p.x = (p.x + simState.width) % simState.width;
+                p.y = (p.y + simState.height) % simState.height;
+                p.x2 = (p.x2 + simState.width) % simState.width;
+                p.y2 = (p.y2 + simState.height) % simState.height;
+            }
+
+            simState.time++;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw divider
+            ctx.strokeStyle = isDark ? '#4a5568' : '#dcdfe6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            // Draw particles
+            ctx.fillStyle = isDark ? '#63b3ed' : '#3498db';
+            for (const p of simState.particles) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(p.x2 + simState.width, p.y2, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Draw progress bar
+            const progress = simState.time / simState.maxTime;
+            ctx.fillStyle = '#718096';
+            ctx.fillRect(0, canvas.height - 5, canvas.width, 5);
+            ctx.fillStyle = varToCSS('--accent-color');
+            ctx.fillRect(0, canvas.height - 5, canvas.width * progress, 5);
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls & Handlers ---
+        function reset() {
+            simState.time = 0;
+            simParams.numParticles = parseInt(particlesSlider.value);
+            simParams.initialNuMass = parseFloat(massSlider.value);
+            simParams.couplingAlpha = parseFloat(couplingSlider.value);
+            createParticles();
+            logToDevConsole(`Reset with ${simParams.numParticles} particles.`);
+        }
+
+        function togglePlayPause() {
+            simState.isPlaying = !simState.isPlaying;
+            playPauseBtn.textContent = simState.isPlaying ? 'Pause' : 'Play';
+        }
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        stepBtn.addEventListener('click', () => {
+            if(simState.isPlaying) togglePlayPause();
+            update();
+        });
+        resetBtn.addEventListener('click', reset);
+
+        particlesSlider.addEventListener('input', e => {
+            particlesValue.textContent = e.target.value;
+            heavyWarning.style.display = e.target.value > 350 ? 'block' : 'none';
+        });
+        particlesSlider.addEventListener('change', () => {
+             simParams.numParticles = parseInt(particlesSlider.value);
+             reset();
+        });
+        massSlider.addEventListener('input', e => {
+            massValue.textContent = parseFloat(e.target.value).toFixed(2);
+            simParams.initialNuMass = parseFloat(e.target.value);
+        });
+        couplingSlider.addEventListener('input', e => {
+            couplingValue.textContent = parseFloat(e.target.value).toFixed(1);
+            simParams.couplingAlpha = parseFloat(e.target.value);
+        });
+
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        exportPngBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'varying_neutrino_mass_sim.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        window.loadPreset = (n) => {
+            if (n === 1) { // Standard
+                massSlider.value = 0.3;
+                couplingSlider.value = 0.0;
+            } else if (n === 2) { // Weak Coupling
+                massSlider.value = 0.5;
+                couplingSlider.value = 0.8;
+            } else if (n === 3) { // Strong Coupling
+                massSlider.value = 1.0;
+                couplingSlider.value = 2.0;
+            }
+            massSlider.dispatchEvent(new Event('input'));
+            couplingSlider.dispatchEvent(new Event('input'));
+            reset();
+        };
+        document.getElementById('preset1-btn').addEventListener('click', () => window.loadPreset(1));
+        document.getElementById('preset2-btn').addEventListener('click', () => window.loadPreset(2));
+        document.getElementById('preset3-btn').addEventListener('click', () => window.loadPreset(3));
+
+        // --- Utility ---
+        function logToDevConsole(message) {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            devConsole.insertBefore(p, devConsole.firstChild);
+        }
+
+        function varToCSS(varName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        }
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

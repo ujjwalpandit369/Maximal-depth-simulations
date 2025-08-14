@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Asymptotic Safety Scenario for Quantum Gravity</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #3498db;
+            --accent-color-dark: #2980b9;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --warning-bg: #fffbe6;
+            --warning-border: #f6e05e;
+            --error-bg: #fff5f5;
+            --error-border: #fc8181;
+            --success-color: #48bb78;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #63b3ed;
+            --accent-color-dark: #4299e1;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --warning-bg: #4a4a38;
+            --warning-border: #f6e05e;
+            --error-bg: #522222;
+            --error-border: #fc8181;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header, section, article {
+            margin-bottom: 2.5rem;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .metadata-bar {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #718096;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+        }
+
+        .suggestion-box {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-left: 5px solid var(--accent-color);
+            padding: 10px 15px;
+            margin: 1rem auto;
+            font-size: 0.9rem;
+        }
+        .suggestion-box p { margin: 0; }
+        .suggestion-box button {
+            margin-left: 10px;
+            padding: 2px 8px;
+            border: 1px solid var(--accent-color);
+            background-color: transparent;
+            color: var(--accent-color);
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .suggestion-box button:hover { background-color: var(--accent-color); color: white; }
+
+        .simulation-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        #simulation-area {
+            flex: 3;
+            min-width: 400px;
+        }
+        #controls-area {
+            flex: 1;
+            min-width: 280px;
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            cursor: crosshair;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+        .control-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .control-group button {
+            padding: 8px 12px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            margin-right: 5px;
+            transition: background-color 0.2s;
+        }
+        .control-group button:hover {
+            background-color: var(--code-bg);
+        }
+        .control-group button.primary {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+        .control-group button.primary:hover {
+            background-color: var(--accent-color-dark);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        th, td {
+            border: 1px solid var(--table-border);
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: var(--code-bg);
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .warning-box, .error-box {
+            padding: 15px;
+            margin: 1rem 0;
+            border-radius: 5px;
+            border: 1px solid;
+        }
+        .warning-box {
+            background-color: var(--warning-bg);
+            border-color: var(--warning-border);
+        }
+        .error-box {
+            background-color: var(--error-bg);
+            border-color: var(--error-border);
+            display: none; /* Hidden by default */
+        }
+
+        .dev-console {
+            margin-top: 2rem;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+        }
+        .dev-console summary {
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: var(--code-bg);
+        }
+        .dev-console-content {
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.8rem;
+            background-color: var(--control-bg);
+        }
+        .dev-console-content p { margin: 0; }
+
+        #tooltip {
+            position: absolute;
+            display: none;
+            background-color: black;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container {
+                flex-direction: column;
+            }
+            h1 { font-size: 2rem; }
+            h2 { font-size: 1.75rem; }
+            .metadata-bar { flex-direction: column; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="tooltip"></div>
+    <div class="container">
+        <header>
+            <h1>The Asymptotic Safety Scenario for Quantum Gravity</h1>
+            <p class="subtitle">Visualizing the flow of fundamental constants towards a safe, predictable point at extreme energies.</p>
+            <div class="metadata-bar">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 250 KB</span>
+            </div>
+            <div class="suggestion-box">
+                <p><strong>Quick Tune:</strong>
+                    <button onclick="setAudience('beginner')">Audience: Beginner</button>
+                    <button onclick="setAudience('intermediate')">Intermediate</button>
+                    <button onclick="setAudience('advanced')">Advanced</button>
+                </p>
+            </div>
+            <div id="error-panel" class="error-box">
+                <strong>Initialization Error!</strong>
+                <p>A self-check failed. Some parts of the simulation may not work correctly.</p>
+                <ul id="error-list"></ul>
+                <p>Please check your browser console for details or report this bug.</p>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Imagine zooming into the fabric of spacetime, deeper and deeper, to scales trillions of times smaller than an atom. At these incredible energies, our best theories of physics, like Einstein's General Relativity, seem to break down and give nonsensical, infinite answers. The "Asymptotic Safety" scenario is a promising idea that suggests physics might save itself. It proposes that the fundamental "constants" of nature, like the strength of gravity, aren't really constant. They change with energy. Instead of running off to infinity, they flow towards a stable, predictable value, a "safe point." This would mean that even at infinite energy, the laws of physics remain well-behaved and understandable, allowing for a complete theory of quantum gravity without needing exotic ingredients like extra dimensions or strings.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide — A Gentle Introduction</h2>
+            <p>Welcome! This guide will walk you through the core ideas of Asymptotic Safety, even if you've never heard of quantum gravity before. We'll use simple steps and analogies to build up the intuition.</p>
+
+            <h3>Step 1: The Problem with Gravity</h3>
+            <p>We have two pillars of modern physics. General Relativity describes gravity perfectly on large scales (planets, galaxies). Quantum Mechanics describes the other forces of nature (electromagnetism, nuclear forces) perfectly on tiny scales (atoms, particles). The problem? When we try to combine them to describe gravity on tiny scales—like inside a black hole or at the Big Bang—the math goes haywire. The theory predicts infinite probabilities, which is nature's way of telling us the theory is wrong or incomplete. This is often called the "problem of quantum gravity."</p>
+
+            <h3>Step 2: Constants That Aren't Constant</h3>
+            <p>A key idea in quantum physics is that the strength of a force isn't fixed. It changes depending on the energy of the interaction you're probing. Think of the charge of an electron. From far away, it has a familiar, constant value. But as you get closer and closer (probing at higher energy), you push through a cloud of virtual particles that screen the electron's true charge. The "bare" charge seen at very high energy is different from the charge we measure in the lab.</p>
+            <p>This phenomenon is called "running," as in "the coupling constant runs with energy." Asymptotic Safety proposes that gravity's "constant," G, does the same thing. So do other related universal numbers, like the Cosmological Constant (which relates to the energy of empty space).</p>
+
+            <h3>Step 3: What is "Theory Space"?</h3>
+            <p>Imagine a map where every possible physical universe is a point. The coordinates of this map are the values of the fundamental "constants" like the strength of gravity (G) and the cosmological constant (Λ). This map is what physicists call "Theory Space." Our universe, at the low energies we experience every day, sits at one specific point on this map. The simulation you see above is a 2D slice of this infinite-dimensional map, showing just G and Λ.</p>
+
+            <h3>Step 4: The Flow of Physics</h3>
+            <p>As we increase the energy—by using a more powerful particle accelerator or looking closer at the Big Bang—we are effectively moving on this map. The "running" of the constants creates a path, or a trajectory, through Theory Space. This is called the Renormalization Group (RG) flow. The simulation shows these flows as colored lines. You can start a new flow by clicking anywhere on the canvas.</p>
+
+            <h3>Step 5: The "Safe" Harbor</h3>
+            <p>So where do these paths lead? For most forces, as energy increases, the path leads to a simple "trivial" point where the force strength becomes zero. But for gravity, if you just naively extrapolate, the strength seems to shoot off to infinity. This is the breakdown.</p>
+            <p>Asymptotic Safety suggests there's a special destination on the map: a "non-trivial fixed point." Think of it as a cosmic whirlpool or a stable eddy in a river. As energy increases towards infinity, the RG flows are drawn into this whirlpool. No matter where you start on the map (within a certain region called the "basin of attraction"), you end up at this exact same point. Because the flow ends up at a finite, stable point instead of infinity, the theory is "safe" from divergences. It remains predictive at all energies.</p>
+
+            <h3>Analogy 1: The Mountain Stream</h3>
+            <p>Imagine all the raindrops falling on a mountain range. Each drop represents a possible starting point for our universe's physics (a point in Theory Space). As the drops flow downwards (equivalent to going to higher energy), they form streams and rivers. Many different raindrops, from all over the mountain, will eventually end up in the same large river, and that river will flow to a single, deep lake in the valley. This lake is the "fixed point." The fact that streams from a wide area all converge to the same lake demonstrates the predictive power of the theory. If we know our universe is on that mountain, we know it must end up in that lake. The lake's properties (the values at the fixed point) could be fundamental constants of nature we could, in principle, calculate.</p>
+
+            <h3>Analogy 2: Tuning a Radio</h3>
+            <p>Think of Theory Space as all possible frequencies on a radio dial. Most frequencies are just static (a nonsensical theory). A "renormalizable" theory is like a clear radio station you can tune into. For quantum gravity, people thought there were no clear stations at high energy. Asymptotic Safety proposes there is one special, powerful station broadcasting from "infinite energy." The RG flow is like an automatic tuning system that, as you turn up the "energy" dial, inevitably locks onto this one super-clear station—the fixed point. This makes the theory listenable and understandable, not just static.</p>
+            <p>This is a radical and beautiful idea. It suggests that the laws of physics are the way they are because they are the *only* way they can be to remain consistent at the highest energies. The fixed point dictates the fundamental parameters, and our low-energy world is just one point on the long journey away from that ultimate destination.</p>
+        </article>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Min/Max</th>
+                        <th>Example Values</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gravity Strength (g)</td>
+                        <td>Dimensionless</td>
+                        <td>(Click to set)</td>
+                        <td>0 / 2.0</td>
+                        <td>0.1 / 0.7 / 1.5</td>
+                        <td>Dimensionless version of Newton's constant G. The x-axis of the plot.</td>
+                    </tr>
+                    <tr>
+                        <td>Cosmological Const. (λ)</td>
+                        <td>Dimensionless</td>
+                        <td>(Click to set)</td>
+                        <td>-1.0 / 1.0</td>
+                        <td>-0.5 / 0.2 / 0.8</td>
+                        <td>Dimensionless version of the cosmological constant Λ. The y-axis of the plot.</td>
+                    </tr>
+                    <tr>
+                        <td>Speed</td>
+                        <td>Steps/frame</td>
+                        <td>10</td>
+                        <td>1 / 100</td>
+                        <td>1 / 10 / 50</td>
+                        <td>How many integration steps are calculated per animation frame. Higher is faster.</td>
+                    </tr>
+                    <tr>
+                        <td>Matter Fields (N<sub>s</sub>)</td>
+                        <td>Count</td>
+                        <td>0</td>
+                        <td>0 / 24</td>
+                        <td>0 / 4 / 12</td>
+                        <td>Number of simple scalar matter fields. Adding matter changes the flow equations and moves the fixed point.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>Worked Example: The Beta Function for Gravity</h3>
+            <p>The core of the simulation is the "beta function," which tells us how a coupling changes with energy. A simplified beta function for the gravitational coupling `g` is: <code>&beta;<sub>g</sub> = 2g - B * g<sup>2</sup></code>. The first term (<code>2g</code>) represents the classical behavior, and the second term (<code>-B * g<sup>2</sup></code>) represents the screening from quantum gravitational fluctuations. The fixed point occurs when <code>&beta;<sub>g</sub> = 0</code>.</p>
+            <p>Let's plug in some numbers. In our simulation, the constant <code>B</code> is approximately <code>4.0</code>.
+            If `g = 0.1`: <code>&beta;<sub>g</sub> = 2*(0.1) - 4.0*(0.1)<sup>2</sup> = 0.2 - 0.04 = <strong>0.16</strong></code>. Since the result is positive, `g` will increase as energy increases.
+            If `g = 0.5`: <code>&beta;<sub>g</sub> = 2*(0.5) - 4.0*(0.5)<sup>2</sup> = 1.0 - 1.0 = <strong>0.0</strong></code>. This is the fixed point! `g` will not change further.
+            If `g = 0.8`: <code>&beta;<sub>g</sub> = 2*(0.8) - 4.0*(0.8)<sup>2</sup> = 1.6 - 2.56 = <strong>-0.96</strong></code>. Since the result is negative, `g` will decrease towards the fixed point.</p>
+        </section>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="600" height="600" aria-label="Interactive plot of Theory Space for Quantum Gravity"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="play-pause-btn" class="primary" aria-label="Play or Pause Simulation (Spacebar)">Play</button>
+                    <button id="step-btn" aria-label="Advance one time step (Right Arrow)">Step</button>
+                    <button id="reset-btn" aria-label="Reset Simulation (R)">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="speed-slider">Speed: <span id="speed-value">10</span>x</label>
+                    <input type="range" id="speed-slider" min="1" max="100" value="10" aria-label="Simulation Speed">
+                </div>
+                <div class="control-group">
+                    <label for="matter-slider">Matter Fields (N<sub>s</sub>): <span id="matter-value">0</span></label>
+                    <input type="range" id="matter-slider" min="0" max="24" value="0" step="1" aria-label="Number of scalar matter fields">
+                </div>
+                <div class="control-group">
+                    <label>Presets</label>
+                    <button id="preset1-btn">Low-Energy Start</button>
+                    <button id="preset2-btn">Graviton-Dominated</button>
+                    <button id="preset3-btn">Matter-Dominated</button>
+                </div>
+                <div class="control-group">
+                    <label>Export</label>
+                    <button id="export-png-btn" aria-label="Export current view as PNG (E)">Export PNG</button>
+                    <button id="export-json-btn">Export JSON</button>
+                    <button id="share-btn">Share Preset</button>
+                </div>
+                <div class="control-group">
+                    <label for="perf-toggle">Performance Mode</label>
+                    <input type="checkbox" id="perf-toggle"> <small>Reduce trajectory length</small>
+                </div>
+                 <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+                <div class="warning-box" id="heavy-warning" style="display:none;">
+                    <strong>Warning:</strong> High settings may slow down your browser.
+                </div>
+            </div>
+        </section>
+
+        <section id="presets-examples">
+            <h2>Try These Examples</h2>
+
+            <h3>1. Low-Energy Start</h3>
+            <p>This preset starts trajectories in the bottom-left corner, representing a universe like ours with weak gravity and a small cosmological constant.
+            <strong>Observation:</strong> Watch as all trajectories, regardless of their exact starting point, curve upwards and to the right, inevitably heading towards the same fixed point.</p>
+            <button onclick="loadPreset(1)">Run "Low-Energy Start"</button>
+            <code>{"matter_fields": 0, "points": [{"x":0.1,"y":0.05}, {"x":0.15,"y":0.02}]}</code>
+
+            <h3>2. Graviton-Dominated Flow</h3>
+            <p>This preset starts trajectories high up on the plot, in a region where quantum gravity effects (the <code>g</code>-coupling) are strong.
+            <strong>Observation:</strong> Notice how the flows are pulled strongly downwards and rightwards, demonstrating how the fixed point exerts its influence over a large region of the theory space.</p>
+            <button onclick="loadPreset(2)">Run "Graviton-Dominated"</button>
+            <code>{"matter_fields": 0, "points": [{"x":0.2,"y":0.8}, {"x":0.3,"y":0.9}]}</code>
+
+            <h3>3. Matter-Dominated Flow</h3>
+            <p>This preset adds 12 scalar matter fields, which alters the beta functions and shifts the fixed point.
+            <strong>Observation:</strong> Compare the location of the new fixed point (it will be further to the right and lower) to the pure gravity case. This shows how the ultimate laws of physics could depend on the particle content of the universe.</p>
+            <button onclick="loadPreset(3)">Run "Matter-Dominated"</button>
+            <code>{"matter_fields": 12, "points": [{"x":0.1,"y":0.1}, {"x":0.2,"y":0.4}]}</code>
+        </section>
+
+        <article id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+
+            <h3>Changing the Number of Matter Fields</h3>
+            <p>The parameter <code>N<sub>s</sub></code> controls how much "stuff" exists in our toy universe. Matter particles, like electrons and quarks, have their own quantum fluctuations that also affect the running of G.</p>
+            <ol>
+                <li>Start with the default preset ("Low-Energy Start"). Note the location of the fixed point (around g=0.5, &lambda;=0.2).</li>
+                <li>Slowly drag the "Matter Fields" slider from <strong>0</strong> to <strong>12</strong>.</li>
+                <li>Observe how the fixed point (the glowing red dot) smoothly moves to the right and downwards. With <code>N<sub>s</sub> = 12</code>, the new fixed point is at roughly (g=0.8, &lambda;=0.1).</li>
+            </ol>
+            <p><strong>Analogy:</strong> Adding matter is like adding more tributaries to our mountain stream analogy. These new streams of influence change the main river's course and the final location of the lake it flows into.</p>
+
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li><strong>Basin of Attraction:</strong> Reset the simulation. Click to add a point at (g=1.5, &lambda;=0.9). Does it flow to the fixed point? Now try one at (g=1.8, &lambda;=0.2). Some points are outside the "basin of attraction" and will flow away, representing non-physical universes.</li>
+                <li><strong>Flow Speed:</strong> Pause the simulation. Place a point near the fixed point, and another far away. Press Play. Observe that the flow is much "slower" near the fixed point, as the beta functions (the "forces" driving the flow) approach zero.</li>
+                <li><strong>UV vs IR:</strong> Remember that the flow on the screen is from low energy (the starting click) to high energy (the fixed point). If you were to run time backwards, you would see the "low-energy" physics that emerges from a single high-energy point. Reset and add several points very close to the fixed point. Press Play. Notice how they diverge to very different low-energy values, showing how one fundamental theory can lead to diverse low-energy worlds.</li>
+                <li><strong>Matter's Influence:</strong> Set Matter Fields to 24. Click to start a flow at (g=0.1, &lambda;=0.1). Where does it end up? Now, set Matter Fields back to 0. Where would it have ended up? You can see that matter has a significant impact on the ultimate fate of the couplings.</li>
+            </ol>
+        </article>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Renormalization Group</h2>
+            <p>The simulation is driven by a set of simplified Renormalization Group (RG) equations for the dimensionless gravitational coupling <code>g(k)</code> and cosmological constant <code>&lambda;(k)</code>, where <code>k</code> is the energy scale. The rate of change is described by beta functions.</p>
+
+            <h3>1. The Beta Functions</h3>
+            <p>We define <code>t = ln(k)</code>, so that increasing energy corresponds to increasing `t`. The evolution equations are:</p>
+            <p><code>dg/dt = &beta;<sub>g</sub>(g, &lambda;)</code></p>
+            <p><code>d&lambda;/dt = &beta;<sub>&lambda;</sub>(g, &lambda;)</code></p>
+            <p><strong>Plain English:</strong> The change in the value of a coupling (left side) is determined by a "beta function" (right side) which depends on the current values of all other couplings. This creates a coupled system of differential equations.</p>
+
+            <h3>2. A Toy Model for Quantum Gravity</h3>
+            <p>For this simulation, we use a well-known simplified model. <code>N<sub>s</sub></code> is the number of scalar matter fields.</p>
+            <p><code>&beta;<sub>g</sub> = 2g - B(g) * g<sup>2</sup></code>, where <code>B(g) = B<sub>grav</sub> - B<sub>matter</sub> * N<sub>s</sub></code></p>
+            <p><strong>Plain English:</strong> Gravity's strength `g` wants to grow (the <code>2g</code> term), but is "screened" or reduced by quantum fluctuations of both gravity itself (<code>B<sub>grav</sub></code>) and matter fields (<code>B<sub>matter</sub></code>).</p>
+            <p><code>&beta;<sub>&lambda;</sub> = -2&lambda; + C<sub>g</sub> * g - C<sub>&lambda;</sub> * g&lambda; - D<sub>matter</sub> * g * N<sub>s</sub></code></p>
+            <p><strong>Plain English:</strong> The cosmological constant `&lambda;` is pushed around by many factors: it wants to shrink on its own (<code>-2&lambda;</code>), but is increased by gravity's strength (<code>C<sub>g</sub>*g</code>) and influenced by matter (<code>D<sub>matter</sub></code>).</p>
+            <p><strong>Numeric Example:</strong> Let's find the fixed point `g*` where `&beta;<sub>g</sub> = 0`. This happens when `2g* = B(g*) * (g*)<sup>2</sup>`, which simplifies to `g* = 2 / B(g*)`. With our simulation values (<code>B<sub>grav</sub> &approx; 4.0</code>) and <code>N<sub>s</sub> = 0</code>, we get <code>g* = 2 / 4.0 = <strong>0.5</strong></code>. This is the x-coordinate of the red dot on the plot!</p>
+
+            <h3>3. The Fixed Point Condition</h3>
+            <p>A non-trivial fixed point (g*, &lambda;*) exists if we can find a solution where both beta functions are zero simultaneously:</p>
+            <p><code>&beta;<sub>g</sub>(g*, &lambda;*) = 0</code> and <code>&beta;<sub>&lambda;</sub>(g*, &lambda;*) = 0</code></p>
+            <p><strong>Plain English:</strong> The fixed point is the special location in Theory Space where the forces driving the flow perfectly balance out, and the couplings stop changing, even as energy continues to increase.</p>
+            <p><strong>Stability Condition:</strong> For the fixed point to be "safe" (an attractor), the flow must point towards it. This requires analyzing the eigenvalues of the stability matrix at the fixed point. If the eigenvalues have negative real parts, trajectories will be drawn in, making it a stable UV fixed point.</p>
+        </article>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <ul>
+                <li><strong>Numerical Method:</strong> This simulation uses a simple forward Euler method to integrate the ODEs: <code>g<sub>n+1</sub> = g<sub>n</sub> + dt * &beta;<sub>g</sub>(g<sub>n</sub>, &lambda;<sub>n</sub>)</code>. While fast, it can be inaccurate. A better choice would be a 4th-order Runge-Kutta (RK4) integrator, which would allow for larger, more stable time steps.</li>
+                <li><strong>Approximations:</strong> The beta functions used here are a gross simplification (a "toy model"). Real calculations in quantum gravity are immensely complex, involving intricate tensor calculations and gauge-fixing procedures (e.g., the background field method). The coefficients B, C, D are the results of these huge calculations and depend on the specific choices made.</li>
+                <li><strong>Gauge Dependence:</strong> A known issue in this field is that the location of the fixed point can depend on "gauge parameters" used in the calculation. A key research goal is to find physical observables (like mass ratios or critical exponents) that are independent of these unphysical parameters.</li>
+                <li><strong>Extending the Simulation:</strong> To improve this simulation, one could:
+                    <ol>
+                        <li>Add more couplings to the theory space, such as a coupling for a <code>R<sup>2</sup></code> term in the action. This would require adding a third dimension or more sliders.</li>
+                        <li>Implement a more sophisticated integrator like RK4. You would replace the one-line Euler step with the multi-stage RK4 calculation.</li>
+                        <li>Show the "critical exponents" which govern the flow speed near the fixed point. These are universal predictions of the theory.</li>
+                    </ol>
+                </li>
+            </ul>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+
+            <h3>1. Physical Analogy: The River Delta</h3>
+            <p>Theory Space is a vast, high-altitude plateau. The RG flow is the water flowing from this plateau towards the sea (low energy). Asymptotic Safety proposes that at the highest altitudes (the "UV," highest energy), the water doesn't come from everywhere; it's sourced from a single, special spring (the fixed point). All the complexity of the river delta we see at sea level emerges from this single, simple source.</p>
+            <p><strong>Limitation:</strong> This analogy reverses the direction of flow. In physics, we start at low energy (the delta) and flow to high energy (the spring). The analogy helps visualize the convergence, but the causality is flipped.</p>
+
+            <h3>2. Visualization Analogy: Heat Flow</h3>
+            <p>Imagine the Theory Space canvas is a metal plate. The beta functions describe how heat flows across the plate. A fixed point is like a "heat sink" (or source) maintained at a constant temperature. Over time, the temperature of any point on the plate will flow towards the temperature of the sink. The trajectories are the paths of heat flow.</p>
+            <p><strong>Limitation:</strong> Heat flow is a dissipative process that settles over time. The RG flow is not about time evolution, but about changing the energy scale of observation. The "flow" is a conceptual journey, not a temporal one.</p>
+
+            <h3>3. Computational Analogy: Iterative Algorithm</h3>
+            <p>Think of an algorithm that tries to find the root of an equation, like Newton's method. You make an initial guess (the low-energy physics). The algorithm then provides a rule to get a better guess (the beta function). You apply the rule over and over (increase energy). If the algorithm is well-behaved, your guesses will converge to a single, precise answer (the fixed point), regardless of your initial guess (within a certain range).</p>
+            <p><strong>Limitation:</strong> This analogy is quite abstract but is the closest to the mathematical reality. Its weakness is that it doesn't provide a strong physical picture of what's happening.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why does the strength of gravity change with energy at all?</dt>
+                <dd>In quantum field theory, empty space is not empty. It's filled with "virtual particles" that pop in and out of existence. These particles interact with the force carriers (like gravitons) and effectively "screen" or "anti-screen" their charge, making the measured strength dependent on how closely you look (i.e., at what energy).</dd>
+
+                <dt>2. Is this a real, proven theory?</dt>
+                <dd>No. Asymptotic Safety is a compelling and mathematically active research program, but it is not yet a proven or experimentally verified theory. It is an alternative to other approaches like String Theory and Loop Quantum Gravity.</dd>
+
+                <dt>3. What do the axes g and &lambda; mean physically?</dt>
+                <dd><code>g</code> is a dimensionless measure of the strength of gravity. It's related to Newton's constant G by <code>g = G * k<sup>2</sup></code>, where k is the energy scale. <code>&lambda;</code> is a dimensionless measure of the cosmological constant (the energy density of the vacuum), related by <code>&lambda; = &Lambda; / k<sup>2</sup></code>.</dd>
+
+                <dt>4. Why is the fixed point "non-trivial"?</dt>
+                <dd>"Trivial" means zero. In many theories, the force strengths go to zero at high energy (this is called "asymptotic freedom"). A "non-trivial" or "interacting" fixed point is one where the couplings have finite, non-zero values. This means the theory remains interactive even at infinite energy.</dd>
+
+                <dt>5. What happens if a flow starts outside the "basin of attraction"?</dt>
+                <dd>Those trajectories typically run off to infinity. In the context of the theory, such flows would not correspond to a physically consistent universe, as they cannot be extended to arbitrarily high energies.</dd>
+
+                <dt>6. The simulation is running slow. What can I do?</dt>
+                <dd>Try checking the "Performance Mode" box. This reduces the maximum length of the flow trajectories, which requires less memory and drawing. You can also reduce the number of active flows by pressing the "Reset" button.</dd>
+
+                <dt><strong>Troubleshooting:</strong></dt>
+                <dd>If the canvas is blank or the simulation freezes:
+                    <ul>
+                    <li>Press the "Reset" button.</li>
+                    <li>Try a different preset.</li>
+                    <li>If the problem persists, open your browser's developer console (usually F12), look for any red error messages, and copy them if you need to report an issue.</li>
+                    </ul>
+                </dd>
+            </dl>
+        </section>
+
+        <footer>
+            <div class="dev-console">
+                <details>
+                    <summary>Developer Console</summary>
+                    <div class="dev-console-content" id="dev-console-content">
+                        <p>Initializing...</p>
+                    </div>
+                </details>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Self-Check ---
+        const errors = [];
+        const check = (id, description) => {
+            if (!document.getElementById(id)) {
+                errors.push(`Failed to find element: #${id} (${description})`);
+            }
+        };
+        check('main-canvas', 'Simulation canvas');
+        check('play-pause-btn', 'Play/Pause button');
+        check('reset-btn', 'Reset button');
+        check('preset1-btn', 'Preset 1 button');
+        check('preset2-btn', 'Preset 2 button');
+        check('preset3-btn', 'Preset 3 button');
+
+        if (errors.length > 0) {
+            const errorPanel = document.getElementById('error-panel');
+            const errorList = document.getElementById('error-list');
+            errors.forEach(e => {
+                const li = document.createElement('li');
+                li.textContent = e;
+                errorList.appendChild(li);
+            });
+            errorPanel.style.display = 'block';
+        }
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const matterSlider = document.getElementById('matter-slider');
+        const matterValue = document.getElementById('matter-value');
+        const perfToggle = document.getElementById('perf-toggle');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const devConsole = document.getElementById('dev-console-content');
+        const tooltip = document.getElementById('tooltip');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let isPlaying = true;
+        let trajectories = [];
+        let fixedPoint = { g: 0, lambda: 0 };
+        const MAX_TRAJECTORY_LENGTH = 5000;
+        const PERF_TRAJECTORY_LENGTH = 500;
+
+        let simParams = {
+            speed: 10,
+            matterFields: 0,
+            dt: 0.001,
+            // Beta function coefficients - chosen to look good
+            B_grav: 4.0,
+            B_matter: 0.15,
+            C_g: 0.8,
+            C_lambda: 1.5,
+            D_matter: 0.05
+        };
+
+        // --- Coordinate Transformation ---
+        const world = { g_min: 0, g_max: 2.0, l_min: -1.0, l_max: 1.0 };
+        const toScreenX = g => (g - world.g_min) / (world.g_max - world.g_min) * canvas.width;
+        const toScreenY = l => canvas.height - (l - world.l_min) / (world.l_max - world.l_min) * canvas.height;
+        const toWorldX = x => (x / canvas.width) * (world.g_max - world.g_min) + world.g_min;
+        const toWorldY = y => (1 - y / canvas.height) * (world.l_max - world.l_min) + world.l_min;
+
+        // --- Core Simulation Logic ---
+        const getBetaFunctions = (g, l) => {
+            const B = simParams.B_grav - simParams.B_matter * simParams.matterFields;
+            const beta_g = 2 * g - B * g * g;
+            const beta_l = -2 * l + simParams.C_g * g - simParams.C_lambda * g * l - simParams.D_matter * g * simParams.matterFields;
+            return { beta_g, beta_l };
+        };
+
+        const calculateFixedPoint = () => {
+            const B = simParams.B_grav - simParams.B_matter * simParams.matterFields;
+            if (B <= 0) return { g: -1, lambda: -1 }; // No physical FP
+            const g_star = 2 / B;
+            if (g_star < 0 || g_star > world.g_max) return { g: -1, lambda: -1 };
+
+            const denominator = 2 + simParams.C_lambda * g_star;
+            if (Math.abs(denominator) < 1e-6) return { g: -1, lambda: -1 };
+
+            const lambda_star = (g_star * (simParams.C_g - simParams.D_matter * simParams.matterFields)) / denominator;
+
+            fixedPoint = { g: g_star, lambda: lambda_star };
+        };
+
+        const stepSimulation = () => {
+            const maxLen = perfToggle.checked ? PERF_TRAJECTORY_LENGTH : MAX_TRAJECTORY_LENGTH;
+            trajectories.forEach(traj => {
+                if (traj.points.length >= maxLen) return;
+                const lastPoint = traj.points[traj.points.length - 1];
+                const { beta_g, beta_l } = getBetaFunctions(lastPoint.g, lastPoint.l);
+
+                const next_g = lastPoint.g + beta_g * simParams.dt;
+                const next_l = lastPoint.l + beta_l * simParams.dt;
+
+                traj.points.push({ g: next_g, l: next_l });
+            });
+        };
+
+        // --- Drawing ---
+        const drawGrid = () => {
+            ctx.strokeStyle = darkModeToggle.checked ? '#4a5568' : '#dcdfe6';
+            ctx.fillStyle = darkModeToggle.checked ? '#e2e8f0' : '#1a202c';
+            ctx.lineWidth = 1;
+            ctx.font = '10px ' + getComputedStyle(document.body).fontFamily;
+
+            // X-axis grid and labels
+            for (let g = world.g_min; g <= world.g_max; g += 0.2) {
+                const x = toScreenX(g);
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+                ctx.fillText(g.toFixed(1), x + 5, canvas.height - 5);
+            }
+            // Y-axis grid and labels
+            for (let l = world.l_min; l <= world.l_max; l += 0.2) {
+                const y = toScreenY(l);
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+                ctx.fillText(l.toFixed(1), 5, y - 5);
+            }
+            ctx.fillStyle = darkModeToggle.checked ? '#a0aec0' : '#2c3e50';
+            ctx.font = '14px ' + getComputedStyle(document.body).fontFamily;
+            ctx.fillText("g (Gravitational Coupling)", canvas.width / 2 - 80, canvas.height - 10);
+            ctx.save();
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText("λ (Cosmological Constant)", -canvas.height / 2 - 80, 20);
+            ctx.restore();
+        };
+
+        const drawTrajectories = () => {
+            trajectories.forEach(traj => {
+                ctx.beginPath();
+                ctx.strokeStyle = traj.color;
+                ctx.lineWidth = 2;
+                const startPoint = traj.points[0];
+                ctx.moveTo(toScreenX(startPoint.g), toScreenY(startPoint.l));
+                for (let i = 1; i < traj.points.length; i++) {
+                    const p = traj.points[i];
+                    ctx.lineTo(toScreenX(p.g), toScreenY(p.l));
+                }
+                ctx.stroke();
+            });
+        };
+
+        const drawFixedPoint = () => {
+            if(fixedPoint.g < world.g_min || fixedPoint.g > world.g_max || fixedPoint.l < world.l_min || fixedPoint.l > world.l_max) return;
+
+            const x = toScreenX(fixedPoint.g);
+            const y = toScreenY(fixedPoint.lambda);
+
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+            ctx.arc(x, y, 8, 0, 2 * Math.PI);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.arc(x, y, 12, 0, 2 * Math.PI);
+            ctx.stroke();
+        };
+
+        let lastLogTime = 0;
+        let frameCount = 0;
+        const draw = (time) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = darkModeToggle.checked ? 'rgba(26, 32, 44, 1)' : 'rgba(240, 244, 248, 1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawGrid();
+            drawTrajectories();
+            drawFixedPoint();
+
+            frameCount++;
+            if (time - lastLogTime > 1000) {
+                const fps = frameCount / ((time - lastLogTime) / 1000);
+                logToDevConsole(`FPS: ${fps.toFixed(1)}, Trajectories: ${trajectories.length}, Points: ${trajectories.reduce((acc, t) => acc + t.points.length, 0)}`);
+                lastLogTime = time;
+                frameCount = 0;
+            }
+        };
+
+        const mainLoop = (time) => {
+            if (isPlaying) {
+                for (let i = 0; i < simParams.speed; i++) {
+                    stepSimulation();
+                }
+            }
+            draw(time);
+            requestAnimationFrame(mainLoop);
+        };
+
+        // --- Controls & Event Handlers ---
+        const togglePlayPause = () => {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+            playPauseBtn.setAttribute('aria-label', isPlaying ? 'Pause Simulation (Spacebar)' : 'Play Simulation (Spacebar)');
+        };
+
+        const resetSimulation = () => {
+            trajectories = [];
+            logToDevConsole("Simulation reset.");
+        };
+
+        const addTrajectory = (x, y) => {
+            const g = toWorldX(x);
+            const l = toWorldY(y);
+            const color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+            trajectories.push({
+                points: [{ g, l }],
+                color: color
+            });
+        };
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        stepBtn.addEventListener('click', () => {
+            if (isPlaying) togglePlayPause();
+            stepSimulation();
+        });
+        resetBtn.addEventListener('click', resetSimulation);
+
+        speedSlider.addEventListener('input', e => {
+            simParams.speed = parseInt(e.target.value);
+            speedValue.textContent = simParams.speed;
+        });
+
+        matterSlider.addEventListener('input', e => {
+            simParams.matterFields = parseInt(e.target.value);
+            matterValue.textContent = simParams.matterFields;
+            calculateFixedPoint();
+        });
+
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            addTrajectory(x, y);
+        });
+
+        // --- Presets ---
+        window.loadPreset = (n) => {
+            resetSimulation();
+            if (n === 1) {
+                matterSlider.value = 0;
+                simParams.matterFields = 0;
+                addTrajectory(toScreenX(0.1), toScreenY(0.05));
+                addTrajectory(toScreenX(0.15), toScreenY(0.02));
+                addTrajectory(toScreenX(0.05), toScreenY(0.1));
+            } else if (n === 2) {
+                matterSlider.value = 0;
+                simParams.matterFields = 0;
+                addTrajectory(toScreenX(0.2), toScreenY(0.8));
+                addTrajectory(toScreenX(0.3), toScreenY(0.9));
+                addTrajectory(toScreenX(0.1), toScreenY(0.7));
+            } else if (n === 3) {
+                matterSlider.value = 12;
+                simParams.matterFields = 12;
+                addTrajectory(toScreenX(0.1), toScreenY(0.1));
+                addTrajectory(toScreenX(0.2), toScreenY(0.4));
+                addTrajectory(toScreenX(0.05), toScreenY(0.3));
+            }
+            matterSlider.dispatchEvent(new Event('input'));
+        };
+        document.getElementById('preset1-btn').addEventListener('click', () => window.loadPreset(1));
+        document.getElementById('preset2-btn').addEventListener('click', () => window.loadPreset(2));
+        document.getElementById('preset3-btn').addEventListener('click', () => window.loadPreset(3));
+
+        // --- Export ---
+        exportPngBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'asymptotic_safety_simulation.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            const state = {
+                simParams,
+                trajectories: trajectories.map(t => ({ color: t.color, initialPoint: t.points[0] }))
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const link = document.createElement('a');
+            link.href = dataStr;
+            link.download = "asymptotic_safety_params.json";
+            link.click();
+        });
+
+        shareBtn.addEventListener('click', () => {
+            const state = {
+                m: simParams.matterFields,
+                p: trajectories.map(t => ({ g: t.points[0].g.toFixed(3), l: t.points[0].l.toFixed(3) }))
+            };
+            const jsonString = JSON.stringify(state);
+            const url = `${window.location.href.split('#')[0]}#preset=${encodeURIComponent(jsonString)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Shareable link copied to clipboard!");
+            }, () => {
+                alert("Failed to copy link.");
+            });
+        });
+
+        const loadFromUrl = () => {
+            if(window.location.hash.startsWith('#preset=')) {
+                try {
+                    const jsonString = decodeURIComponent(window.location.hash.substring(8));
+                    const state = JSON.parse(jsonString);
+                    resetSimulation();
+                    matterSlider.value = state.m;
+                    simParams.matterFields = state.m;
+                    state.p.forEach(p => addTrajectory(toScreenX(parseFloat(p.g)), toScreenY(parseFloat(p.l))));
+                    matterSlider.dispatchEvent(new Event('input'));
+                    logToDevConsole("Loaded preset from URL.");
+                } catch(e) {
+                    logToDevConsole("Error loading from URL hash: " + e.message);
+                }
+            }
+        };
+
+        // --- Keyboard Shortcuts & Accessibility ---
+        window.addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                togglePlayPause();
+            } else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                stepBtn.click();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                resetBtn.click();
+            } else if (e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+                exportPngBtn.click();
+            }
+        });
+
+        // --- Tooltips ---
+        const setupTooltip = (element, text) => {
+            element.addEventListener('mouseover', (e) => {
+                tooltip.textContent = text;
+                tooltip.style.display = 'block';
+            });
+            element.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.pageX + 10) + 'px';
+                tooltip.style.top = (e.pageY + 10) + 'px';
+            });
+            element.addEventListener('mouseout', () => {
+                tooltip.style.display = 'none';
+            });
+        };
+        setupTooltip(playPauseBtn, playPauseBtn.getAttribute('aria-label'));
+        setupTooltip(stepBtn, "Advance one step (Right Arrow)");
+        setupTooltip(resetBtn, "Clear all trajectories (R)");
+        setupTooltip(exportPngBtn, "Save canvas as PNG (E)");
+
+        // --- Dark Mode ---
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Dev Console Logging ---
+        const logToDevConsole = (message) => {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            devConsole.appendChild(p);
+            devConsole.scrollTop = devConsole.scrollHeight;
+        };
+        window.onerror = (message, source, lineno, colno, error) => {
+            logToDevConsole(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+        };
+
+        // --- Initialization ---
+        const init = () => {
+            logToDevConsole("Simulation initialized successfully.");
+            calculateFixedPoint();
+            window.loadPreset(1);
+            loadFromUrl();
+            requestAnimationFrame(mainLoop);
+        };
+
+        init();
+    });
+    </script>
+</body>
+</html>
