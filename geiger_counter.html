@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Geiger Counter</title>
+    <style>
+        :root {
+            --bg-color: #37474f;
+            --text-color: #eceff1;
+            --header-color: #ffb74d;
+            --accent-color: #ffb74d;
+            --accent-hover: #ffa726;
+            --control-bg: #455a64;
+            --control-border: #546e7a;
+            --canvas-bg: #263238;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #cfd8dc; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-container { min-height: 400px; position: relative; }
+        .sim-canvas { width: 100%; height: 100%; background: var(--canvas-bg); border-radius: 4px; cursor: pointer; }
+        .controls { padding: 10px; border-left: 1px solid var(--control-border); }
+
+        .readout { text-align: center; font-size: 2.5em; font-family: monospace; color: var(--accent-color); background: #000; padding: 10px; border-radius: 5px; margin-bottom: 20px;}
+
+        .source-btn { background-color: #78909c; color: white; border: 2px solid transparent; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; margin-bottom: 10px; }
+        .source-btn.active { border-color: var(--accent-color); }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+            .controls { border-left: none; border-top: 1px solid var(--control-border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Virtual Geiger Counter</h1>
+            <p class="subtitle">An interactive simulation of a Geiger-Müller tube detecting radiation.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>A Geiger counter is an instrument used for detecting and measuring ionizing radiation. Its heart is the Geiger-Müller tube, a sealed cylinder filled with an inert gas. When a single particle of radiation (like an alpha particle, beta particle, or gamma ray) passes through the tube, it ionizes a gas atom. A high voltage in the tube creates a strong electric field, which accelerates the freed electron. This electron then collides with other atoms, freeing more electrons in a chain reaction called a <strong>Townsend avalanche</strong>. This creates a large pulse of current that is registered as the iconic "click" of the counter. This simulation visualizes this entire process.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="sim-container">
+                <canvas id="sim-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Counter</h3>
+                <div class="readout" id="counter-readout">0</div>
+                <h3>Radioactive Sources</h3>
+                <p style="font-size:0.8em">Click a source, then click on the left side of the simulation to place it.</p>
+                <button class="source-btn active" data-rate="2">Background</button>
+                <button class="source-btn" data-rate="20">Weak Source</button>
+                <button class="source-btn" data-rate="80">Strong Source</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const counterReadout = document.getElementById('counter-readout');
+        const sourceButtons = document.querySelectorAll('.source-btn');
+
+        let audioCtx;
+        let counter = 0;
+        let particles = [];
+        let gasAtoms = [];
+        let source = { x: -100, y: height/2, rate: 2 };
+        let activeSourceBtn = document.querySelector('.source-btn.active');
+
+        function createClick() {
+            if (!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.error("Web Audio API is not supported in this browser");
+                    return;
+                }
+            }
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.05);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function setup() {
+            gasAtoms = [];
+            for(let i=0; i<30; i++) {
+                gasAtoms.push({
+                    x: width*0.4 + Math.random() * width*0.5,
+                    y: height*0.1 + Math.random() * height*0.8,
+                });
+            }
+        }
+
+        function triggerAvalanche(x, y) {
+            counter++;
+            counterReadout.textContent = counter;
+            createClick();
+
+            // Visual avalanche
+            for(let i=0; i<50; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (width/2 - x) / 20, // Move towards anode
+                    vy: (height/2 - y) / 20 + (Math.random()-0.5)*5,
+                    life: 1.0,
+                    type: 'electron'
+                });
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0,0,width,height);
+
+            // Draw Geiger Tube
+            const tube = { x: width*0.3, y: height*0.05, w: width*0.6, h: height*0.9 };
+            ctx.strokeStyle = '#90a4ae';
+            ctx.lineWidth = 10;
+            ctx.strokeRect(tube.x, tube.y, tube.w, tube.h);
+            // Anode wire
+            ctx.strokeStyle = '#cfd8dc';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tube.x, height/2);
+            ctx.lineTo(tube.x + tube.w, height/2);
+            ctx.stroke();
+
+            // Draw Gas Atoms
+            gasAtoms.forEach(atom => {
+                ctx.fillStyle = '#b0bec5';
+                ctx.beginPath();
+                ctx.arc(atom.x, atom.y, 4, 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            // Draw Source
+            if (source.x > 0) {
+                 ctx.fillStyle = '#ffb74d';
+                 ctx.beginPath();
+                 ctx.arc(source.x, source.y, 15, 0, Math.PI * 2);
+                 ctx.fill();
+            }
+
+            // Emit radiation
+            const dist = Math.hypot(source.x - width/2, source.y - height/2);
+            const rate = source.rate / Math.max(1, (dist/50)**2);
+            if (Math.random() < rate / 60) { // per frame
+                const angle = Math.atan2(height/2 - source.y, width/2 - source.x) + (Math.random()-0.5)*2;
+                particles.push({
+                    x: source.x, y: source.y,
+                    vx: Math.cos(angle) * 10, vy: Math.sin(angle) * 10,
+                    life: 1.0, type: 'radiation'
+                });
+            }
+
+            // Update and draw particles
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                if(p.life <= 0) particles.splice(index, 1);
+
+                if (p.type === 'radiation' && p.x > tube.x && p.x < tube.x+tube.w && p.y > tube.y && p.y < tube.y+tube.h) {
+                    triggerAvalanche(p.x, p.y);
+                    particles.splice(index, 1); // radiation particle is absorbed
+                }
+
+                ctx.fillStyle = p.type === 'radiation' ? `rgba(255,255,100,${p.life})` : `rgba(173,216,230,${p.life})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.type==='radiation' ? 3 : 2, 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        sourceButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sourceButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeSourceBtn = btn;
+            });
+        });
+
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x < width * 0.3) { // Only place on left side
+                source.x = x;
+                source.y = e.clientY - rect.top;
+                source.rate = parseFloat(activeSourceBtn.dataset.rate);
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            setup();
+        });
+
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>

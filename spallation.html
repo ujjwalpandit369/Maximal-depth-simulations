@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spallation Neutron Source</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #4a148c;
+            --accent-color: #6a1b9a;
+            --accent-hover: #4a148c;
+            --control-bg: #fff;
+            --control-border: #e1bee7;
+            --canvas-bg: #ede7f6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { text-align: center; }
+        .control-group { margin: 1em 0; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; }
+        button:hover { background-color: var(--accent-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Spallation Neutron Source</h1>
+            <p class="subtitle">A conceptual animation of creating free neutrons for research.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>How do scientists create intense beams of neutrons to study the structure of materials? One of the most powerful methods is <strong>spallation</strong>. The process is conceptually simple but requires immense power: a high-energy particle (usually a proton) is smashed into a heavy target nucleus (like mercury or tungsten). The impact is so violent that it "chips off" or "boils off" dozens of neutrons from the target. This simulation visualizes this process, showing how a proton impact can shatter a nucleus and release a shower of neutrons.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <div class="controls">
+                 <div class="control-group">
+                    <label for="energy-slider">Proton Beam Energy: <span id="energy-value">50</span></label><br>
+                    <input type="range" id="energy-slider" min="10" max="100" step="5" value="50" style="width: 80%; max-width: 400px;">
+                </div>
+                <button id="fire-btn">Fire Proton</button>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>From Proton to Neutron Beam</h2>
+            <p>The spallation process is a brute-force method for converting protons into useful neutrons.</p>
+            <ol>
+                <li><strong>Acceleration:</strong> A proton is accelerated to very high energies, often close to the speed of light, in a particle accelerator.</li>
+                <li><strong>Impact:</strong> This high-energy proton is directed at a target made of a very heavy element. Heavy elements are used because they have a large number of neutrons in their nucleus.</li>
+                <li><strong>Spallation ("Chipping Off"):</strong> The proton slams into a nucleus in the target. The massive energy dump from the collision excites the nucleus into a highly unstable state. The nucleus rapidly de-excites by ejecting many of its constituent particles, primarily neutrons, but also some protons and other fragments.</li>
+                <li><strong>Neutron Beams for Science:</strong> These ejected neutrons, which are now free, are collected and guided into beams. Because neutrons are electrically neutral, they can penetrate deep into materials without being deflected by electric charges. They then scatter off the atomic nuclei within the material, and by measuring the pattern of this scattering, scientists can deduce the precise arrangement of atoms. This is a crucial technique in materials science, chemistry, and biology.</li>
+            </ul>
+            <p>In the simulation, try adjusting the <strong>Proton Beam Energy</strong>. You will see that a higher energy impact leads to a more violent reaction and releases a larger number of neutrons, which is exactly how real-world spallation sources are made more intense.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const controls = {
+            energy: document.getElementById('energy-slider'),
+            fire: document.getElementById('fire-btn'),
+        };
+        const values = {
+            energy: document.getElementById('energy-value'),
+        };
+
+        const target = { x: width * 0.8, y: height / 2, radius: 80 };
+        let particles = [];
+        let proton = { x: -20, y: height/2, active: false };
+
+        function reset() {
+            proton.x = -20;
+            proton.y = height / 2;
+            proton.active = false;
+            particles = [];
+        }
+
+        function createSpallation(energy) {
+            const numNeutrons = Math.floor(energy / 4);
+            const numProtons = Math.floor(energy / 20);
+
+            for (let i = 0; i < numNeutrons; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const speed = 2 + Math.random() * 4;
+                particles.push({
+                    x: target.x, y: target.y,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                    type: 'neutron', radius: 4
+                });
+            }
+            for (let i = 0; i < numProtons; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const speed = 1 + Math.random() * 3;
+                particles.push({
+                    x: target.x, y: target.y,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                    type: 'proton', radius: 5
+                });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,width,height);
+
+            // Draw Target Nucleus
+            ctx.fillStyle = '#6d4c41';
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+            ctx.fill();
+            for(let i=0; i<100; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.random() * target.radius;
+                ctx.fillStyle = Math.random() > 0.6 ? 'rgba(255,0,0,0.5)' : 'rgba(200,200,200,0.5)';
+                ctx.beginPath();
+                ctx.arc(target.x + Math.cos(angle)*r, target.y + Math.sin(angle)*r, 8, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // Draw incoming proton
+            if (proton.active) {
+                ctx.fillStyle = '#d32f2f';
+                ctx.beginPath();
+                ctx.arc(proton.x, proton.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw ejected particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.type === 'neutron' ? '#bdbdbd' : '#ef5350';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function update() {
+            if (proton.active) {
+                proton.x += 10;
+                if (proton.x >= target.x) {
+                    proton.active = false;
+                    const energy = parseFloat(controls.energy.value);
+                    createSpallation(energy);
+                }
+            }
+
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+            });
+            particles = particles.filter(p => p.x > -10 && p.x < width+10 && p.y > -10 && p.y < height+10);
+        }
+
+        function animate() {
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        controls.fire.addEventListener('click', () => {
+            reset();
+            proton.active = true;
+        });
+
+        controls.energy.addEventListener('input', e => {
+            values.energy.textContent = e.target.value;
+        });
+
+        window.addEventListener('resize', () => {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            target.x = width * 0.8; target.y = height / 2;
+        });
+
+        animate();
+    });
+    </script>
+</body>
+</html>

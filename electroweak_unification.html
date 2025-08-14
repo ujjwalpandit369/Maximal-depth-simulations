@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Electroweak Interaction</title>
+    <style>
+        :root {
+            --bg-color: #f3e5f5;
+            --text-color: #333;
+            --header-color: #6a1b9a;
+            --accent-color: #8e24aa;
+            --accent-hover: #6a1b9a;
+            --control-bg: #fff;
+            --control-border: #e1bee7;
+            --canvas-bg: #f3e5f5;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            border: 1px solid var(--control-border);
+        }
+        .controls { text-align: center; width: 100%; }
+        .readout { text-align: center; font-weight: bold; font-size: 1.5em; margin-top: 10px; height: 2em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Electroweak Interaction</h1>
+            <p class="subtitle">A visualization of the unification of fundamental forces.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In our everyday, low-energy world, we experience two distinct fundamental forces: the electromagnetic force, which governs light and magnetism, and the weak nuclear force, which governs radioactive decay. However, the Standard Model of particle physics reveals a deeper truth: at extremely high energies, such as those present moments after the Big Bang, these two forces are not distinct at all. They merge, or "unify," into a single <strong>electroweak force</strong>. The difference we see today is an illusion created by a process called <strong>spontaneous symmetry breaking</strong>, mediated by the Higgs field. This simulation visualizes this unification as you increase the energy of an interaction.</p>
+        </section>
+
+        <div class="main-container">
+            <canvas id="sim-canvas" class="sim-canvas"></canvas>
+            <div class="controls">
+                <label for="energy-slider"><strong>Interaction Energy</strong></label><br>
+                <input type="range" id="energy-slider" min="0" max="200" step="1" value="1" style="width: 80%; max-width: 600px;">
+            </div>
+            <div class="readout">
+                Energy: <span id="energy-readout">1</span> GeV — <span id="status-readout">Forces are Distinct</span>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>From Two Forces to One</h2>
+            <p>The key players in this story are the force-carrying particles, or bosons:</p>
+            <ul>
+                <li><strong>Electromagnetism</strong> is carried by the massless <strong>photon (γ)</strong>.</li>
+                <li><strong>The Weak Force</strong> is carried by three very massive particles: the <strong>W⁺, W⁻, and Z⁰ bosons</strong>.</li>
+            </ul>
+            <h3>Low Energy (Our World)</h3>
+            <p>At low energies, the Higgs field gives mass to the W and Z bosons, making them very heavy (around 80-90 GeV/c²). This large mass makes the weak force extremely short-ranged and appear very different from the long-ranged electromagnetic force with its massless photon. In the simulation, you see four distinct particles with different properties.</p>
+
+            <h3>High Energy (The Early Universe)</h3>
+            <p>As you increase the energy slider past the "electroweak scale" of about 100 GeV, the underlying symmetry of nature is restored. In this high-energy environment, the Higgs mechanism no longer gives mass to the W and Z bosons. They become massless, just like the photon.</p>
+            <p>In this state, the four particles are indistinguishable and are all part of a single, unified electroweak interaction. They are often referred to as W¹, W², W³, and B⁰, which then mix to form the photon, W, and Z particles we see at low energies. The simulation visualizes this by having the massive particle icons "transform" and merge into a single family of four identical, massless, wavy-line icons, showing that the distinction between them has vanished.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.clientWidth, height = canvas.clientHeight;
+        canvas.width = width; canvas.height = height;
+
+        const energySlider = document.getElementById('energy-slider');
+        const energyReadout = document.getElementById('energy-readout');
+        const statusReadout = document.getElementById('status-readout');
+
+        const UNIFICATION_ENERGY = 100; // GeV
+
+        const particles = [
+            { name: 'γ', lowE_char: 'γ', x: 0.2, mass: 0, color: '#fbc02d' },
+            { name: 'W⁺', lowE_char: 'W⁺', x: 0.4, mass: 80.4, color: '#d32f2f' },
+            { name: 'W⁻', lowE_char: 'W⁻', x: 0.6, mass: 80.4, color: '#1976d2' },
+            { name: 'Z⁰', lowE_char: 'Z⁰', x: 0.8, mass: 91.2, color: '#757575' },
+        ];
+
+        function drawParticle(p, energy) {
+            const x = width * p.x;
+            const y = height / 2;
+            const unification_frac = Math.min(1, energy / UNIFICATION_ENERGY);
+
+            const currentMass = p.mass * (1 - unification_frac);
+            const radius = 15 + p.mass/5 * (1 - unification_frac);
+
+            // Draw as a solid circle (massive) or wavy line (massless)
+            if (currentMass > 1) {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                for(let i=0; i<20; i++) {
+                    const segX = x - 10 + i;
+                    const segY = y + Math.sin(i*0.5 + Date.now()*0.005)*5;
+                    if(i===0) ctx.moveTo(segX, segY);
+                    else ctx.lineTo(segX, segY);
+                }
+                ctx.stroke();
+            }
+
+            // Text label
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            const char = unification_frac > 0.9 ? 'W/B' : p.lowE_char;
+            ctx.fillText(char, x, y + 6);
+
+            // Mass readout
+            ctx.font = '14px sans-serif';
+            ctx.fillText(`${currentMass.toFixed(1)} GeV`, x, y + 80);
+        }
+
+        function draw() {
+            width = canvas.clientWidth; height = canvas.clientHeight;
+            canvas.width = width; canvas.height = height;
+            ctx.clearRect(0,0,width,height);
+
+            const energy = parseFloat(energySlider.value);
+            const unification_frac = Math.min(1, energy / UNIFICATION_ENERGY);
+
+            // Draw separating lines
+            ctx.strokeStyle = `rgba(255, 255, 255, ${1 - unification_frac * 0.8})`;
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10,10]);
+            for(let i=1; i<4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(width * (i/4 + 1/8), height * 0.1);
+                ctx.lineTo(width * (i/4 + 1/8), height * 0.9);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // Move particles together as unification approaches
+            const spacing = 0.2;
+            const center = 0.5;
+            particles.forEach((p, i) => {
+                const targetX = center + (i - 1.5) * spacing * (1 - unification_frac * 0.8);
+                p.x = targetX;
+                drawParticle(p, energy);
+            });
+
+            // Update readouts
+            energyReadout.textContent = `${energy.toFixed(0)}`;
+            if (energy < UNIFICATION_ENERGY) {
+                statusReadout.textContent = "Forces are Distinct";
+                statusReadout.style.color = "#8c9eff";
+            } else {
+                statusReadout.textContent = "Electroweak Unification!";
+                statusReadout.style.color = "#ffab40";
+            }
+        }
+
+        energySlider.addEventListener('input', draw);
+        window.addEventListener('resize', draw);
+        draw();
+    });
+    </script>
+</body>
+</html>

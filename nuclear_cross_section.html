@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuclear Cross-Sections</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #00695c;
+            --accent-color: #00897b;
+            --control-bg: #fff;
+            --control-border: #e0e0e0;
+            --canvas-bg: #e0f2f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; padding-bottom: 15px; }
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 300px; background: var(--canvas-bg); border-radius: 4px; }
+
+        .readout { text-align: center; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+
+        @media (max-width: 700px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nuclear Cross-Sections</h1>
+            <p class="subtitle">Visualizing the energy-dependent probability of a nuclear reaction.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>How likely is it that a particle fired at an atomic nucleus will actually hit it and cause a reaction? In nuclear physics, this probability is described by a quantity called the <strong>cross-section (σ)</strong>. It can be thought of as the effective "target area" the nucleus presents to the incoming particle. This area is not fixed; it depends strongly on the energy of the incoming particle. At certain "resonance" energies, the cross-section can become enormous, far larger than the physical size of the nucleus. This simulation visualizes how the cross-section changes with energy and how that affects the number of reactions in a particle beam experiment.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <label for="energy-slider">Beam Energy: <span id="energy-value">50</span></label>
+                <input type="range" id="energy-slider" min="1" max="100" step="0.5" value="50" style="width: 80%; max-width: 600px;">
+                <button id="fire-btn" style="margin-left: 20px;">Fire Beam</button>
+            </div>
+
+            <div class="sim-panel">
+                <h3>Particle Beam Experiment</h3>
+                <canvas id="sim-canvas" class="sim-canvas"></canvas>
+                <div class="readout">Hits: <span id="hits-value">0</span> | Misses: <span id="misses-value">0</span></div>
+            </div>
+            <div class="sim-panel">
+                <h3>Cross-Section (σ) vs. Energy</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+                 <div class="readout">σ = <span id="sigma-value">0.00</span> barns</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const simCanvas = document.getElementById('sim-canvas');
+        const sCtx = simCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            energy: document.getElementById('energy-slider'),
+            fire: document.getElementById('fire-btn'),
+        };
+        const values = {
+            energy: document.getElementById('energy-value'),
+            hits: document.getElementById('hits-value'),
+            misses: document.getElementById('misses-value'),
+            sigma: document.getElementById('sigma-value'),
+        };
+
+        let state = { energy: 50 };
+        let targets = [];
+        let particles = [];
+        let hitCount = 0, missCount = 0;
+
+        const crossSectionData = [];
+        function generateCrossSection() {
+            const resonance1 = { center: 30, width: 2, height: 10 };
+            const resonance2 = { center: 75, width: 5, height: 5 };
+            for(let e=0; e<=100; e+=0.5) {
+                let sigma = 0.5; // Base cross-section
+                sigma += resonance1.height * Math.exp(-Math.pow(e - resonance1.center, 2) / (2 * resonance1.width**2));
+                sigma += resonance2.height * Math.exp(-Math.pow(e - resonance2.center, 2) / (2 * resonance2.width**2));
+                crossSectionData.push({e, sigma});
+            }
+        }
+
+        function getSigmaForEnergy(energy) {
+             const point = crossSectionData.find(d => d.e >= energy);
+             return point ? point.sigma : 0.5;
+        }
+
+        function setup() {
+            targets = [];
+            for(let i=0; i<5; i++) {
+                targets.push({
+                    x: simCanvas.width * 0.7 + Math.random() * 50,
+                    y: simCanvas.height * 0.2 + Math.random() * simCanvas.height * 0.6,
+                    r: 8
+                });
+            }
+            hitCount = 0;
+            missCount = 0;
+            updateUI();
+        }
+
+        function fireBeam() {
+            resetCounts();
+            particles = [];
+            for (let i=0; i<100; i++) {
+                particles.push({
+                    x: -10,
+                    y: Math.random() * simCanvas.height,
+                    hit: false
+                });
+            }
+        }
+
+        function resetCounts() {
+            hitCount = 0;
+            missCount = 0;
+            values.hits.textContent = hitCount;
+            values.misses.textContent = missCount;
+        }
+
+        function draw() {
+            // Draw sim
+            sCtx.clearRect(0,0,simCanvas.width, simCanvas.height);
+            const sigma = getSigmaForEnergy(state.energy);
+            const sigma_radius = Math.sqrt(sigma / Math.PI) * 10; // visual scaling
+
+            targets.forEach(t => {
+                // Draw cross-section area
+                sCtx.fillStyle = 'rgba(255, 87, 34, 0.3)';
+                sCtx.beginPath();
+                sCtx.arc(t.x, t.y, sigma_radius, 0, Math.PI * 2);
+                sCtx.fill();
+                // Draw nucleus
+                sCtx.fillStyle = '#4527a0';
+                sCtx.beginPath();
+                sCtx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+                sCtx.fill();
+            });
+
+            sCtx.fillStyle = '#00695c';
+            particles.forEach(p => {
+                sCtx.beginPath();
+                sCtx.arc(p.x, p.y, 2, 0, Math.PI*2);
+                sCtx.fill();
+            });
+
+            // Draw graph
+            gCtx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
+            const w = graphCanvas.width, h = graphCanvas.height;
+            const margin = {t:20, r:20, b:40, l:40};
+            const x = e => margin.l + (e/100) * (w - margin.l - margin.r);
+            const y = s => (h - margin.b) - (s/12) * (h - margin.t - margin.b);
+
+            gCtx.strokeStyle = '#333';
+            gCtx.strokeRect(margin.l, margin.t, w-margin.l-margin.r, h-margin.t-margin.b);
+            gCtx.fillText("Energy", w/2, h-10);
+            gCtx.save();
+            gCtx.translate(15, h/2); gCtx.rotate(-Math.PI/2);
+            gCtx.fillText("Cross-Section (σ)", 0, 0);
+            gCtx.restore();
+
+            gCtx.strokeStyle = '#00695c';
+            gCtx.lineWidth = 2;
+            gCtx.beginPath();
+            crossSectionData.forEach((d, i) => {
+                if(i===0) gCtx.moveTo(x(d.e), y(d.sigma));
+                else gCtx.lineTo(x(d.e), y(d.sigma));
+            });
+            gCtx.stroke();
+
+            // Current energy marker
+            gCtx.strokeStyle = '#d32f2f';
+            const currentX = x(state.energy);
+            gCtx.beginPath();
+            gCtx.moveTo(currentX, margin.t);
+            gCtx.lineTo(currentX, h - margin.b);
+            gCtx.stroke();
+        }
+
+        function updateUI() {
+            values.energy.textContent = state.energy.toFixed(1);
+            values.sigma.textContent = getSigmaForEnergy(state.energy).toFixed(2);
+            values.hits.textContent = hitCount;
+            values.misses.textContent = missCount;
+        }
+
+        function animate() {
+            if (particles.length > 0) {
+                 particles.forEach(p => {
+                    p.x += 5;
+                    if (!p.hit) {
+                        const sigma = getSigmaForEnergy(state.energy);
+                        const sigma_radius = Math.sqrt(sigma / Math.PI) * 10;
+                        targets.forEach(t => {
+                            if (Math.hypot(p.x - t.x, p.y - t.y) < sigma_radius) {
+                                p.hit = true;
+                                hitCount++;
+                            }
+                        });
+                    }
+                });
+                particles = particles.filter(p => p.x < simCanvas.width + 10);
+                if(particles.length === 0) {
+                     missCount = 100 - hitCount;
+                }
+                updateUI();
+            }
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        controls.energy.addEventListener('input', e => {
+            state.energy = parseFloat(e.target.value);
+            updateUI();
+        });
+        controls.fire.addEventListener('click', fireBeam);
+
+        generateCrossSection();
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>

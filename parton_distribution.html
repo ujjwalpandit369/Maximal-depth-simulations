@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parton Distribution Functions (PDFs)</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --header-color: #004d40;
+            --accent-color: #00796b;
+            --control-bg: #fff;
+            --control-border: #e0e0e0;
+            --canvas-bg: #e0f2f1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; padding-bottom: 15px; }
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 400px; background: var(--canvas-bg); border-radius: 4px; }
+
+        @media (max-width: 800px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Parton Distribution Functions</h1>
+            <p class="subtitle">A visualization of the dynamic structure of a proton.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>What is a proton made of? The simple high school picture is three quarks (two "up" and one "down"). But the reality, as revealed by high-energy experiments, is far more complex. A proton is a roiling, dynamic sea of fundamental particles: the three "valence" quarks are swimming in a soup of constantly appearing and annihilating virtual "sea" quarks, antiquarks, and the <strong>gluons</strong> that bind them all together. <strong>Parton Distribution Functions (PDFs)</strong> are mathematical functions that describe the probability of finding a particular type of particle (a "parton") inside a proton carrying a certain fraction of the proton's total momentum. This simulation visualizes how our picture of the proton changes as we probe it at higher and higher energy scales.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <label for="energy-slider"><strong>Energy Scale (Q²): <span id="energy-value">2</span> GeV²</strong></label><br>
+                <input type="range" id="energy-slider" min="1" max="100" step="1" value="2" style="width: 80%; max-width: 600px;">
+            </div>
+
+            <div class="sim-panel">
+                <h3>Proton Structure</h3>
+                <canvas id="proton-canvas" class="sim-canvas"></canvas>
+            </div>
+            <div class="sim-panel">
+                <h3>Parton Distributions xf(x, Q²)</h3>
+                <canvas id="graph-canvas" class="sim-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const protonCanvas = document.getElementById('proton-canvas');
+        const pCtx = protonCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const energySlider = document.getElementById('energy-slider');
+        const energyValue = document.getElementById('energy-value');
+
+        let state = { Q2: 2 };
+        let seaParticles = [];
+
+        function setup() {
+            seaParticles = [];
+            const numSea = Math.floor(state.Q2 * 2);
+            for(let i=0; i<numSea; i++) {
+                const angle = Math.random() * 2 * Math.PI;
+                const radius = Math.random() * 100 + 50;
+                seaParticles.push({
+                    x: protonCanvas.width/2 + Math.cos(angle) * radius,
+                    y: protonCanvas.height/2 + Math.sin(angle) * radius,
+                    vx: (Math.random()-0.5), vy: (Math.random()-0.5),
+                    type: Math.random() > 0.3 ? 'gluon' : 'sea',
+                    life: Math.random() * 50
+                });
+            }
+        }
+
+        function drawProton() {
+            const w = protonCanvas.width, h = protonCanvas.height;
+            pCtx.clearRect(0,0,w,h);
+
+            // Proton boundary
+            pCtx.strokeStyle = 'rgba(0, 121, 107, 0.5)';
+            pCtx.lineWidth = 10;
+            pCtx.beginPath();
+            pCtx.arc(w/2, h/2, 180, 0, Math.PI*2);
+            pCtx.stroke();
+
+            // Valence quarks
+            const valence = [
+                {x: w/2, y: h/2 - 60, type: 'up'},
+                {x: w/2 - 50, y: h/2 + 40, type: 'up'},
+                {x: w/2 + 50, y: h/2 + 40, type: 'down'},
+            ];
+            valence.forEach(q => {
+                pCtx.fillStyle = q.type === 'up' ? '#d32f2f' : '#1976d2';
+                pCtx.beginPath();
+                pCtx.arc(q.x, q.y, 20, 0, Math.PI*2);
+                pCtx.fill();
+                pCtx.fillStyle = '#fff';
+                pCtx.font = 'bold 20px sans-serif';
+                pCtx.textAlign = 'center';
+                pCtx.fillText(q.type.charAt(0).toUpperCase(), q.x, q.y+7);
+            });
+
+            // Sea particles
+            seaParticles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                p.life--;
+                if(p.life < 0) {
+                     const angle = Math.random() * 2 * Math.PI;
+                     const radius = Math.random() * 100 + 50;
+                     p.x = w/2 + Math.cos(angle) * radius;
+                     p.y = h/2 + Math.sin(angle) * radius;
+                     p.life = 50;
+                }
+                pCtx.fillStyle = p.type === 'gluon' ? 'rgba(255, 202, 40, 0.7)' : 'rgba(150,150,150,0.7)';
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.type === 'gluon' ? 3 : 5, 0, Math.PI*2);
+                pCtx.fill();
+            });
+        }
+
+        function pdf(type, x, Q2) {
+            // Simplified model of PDF evolution
+            const logQ2 = Math.log(Q2);
+            const N_u = 2.0 * Math.pow(x, 0.4 - 0.05*logQ2) * Math.pow(1-x, 3 + 0.5*logQ2);
+            const N_d = 1.0 * Math.pow(x, 0.4 - 0.05*logQ2) * Math.pow(1-x, 4 + 0.5*logQ2);
+            const N_g = 0.5 * logQ2 * Math.pow(x, -0.1) * Math.pow(1-x, 5);
+
+            if (type === 'up') return N_u + N_g*0.1;
+            if (type === 'down') return N_d + N_g*0.1;
+            if (type === 'gluon') return N_g;
+            return 0;
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width, h = graphCanvas.height;
+            gCtx.clearRect(0,0,w,h);
+            const margin = {t:20, r:20, b:40, l:50};
+
+            // Axes
+            gCtx.strokeStyle = '#333';
+            gCtx.strokeRect(margin.l, margin.t, w-margin.l-margin.r, h-margin.t-margin.b);
+            gCtx.fillText("x (momentum fraction)", w/2, h - 10);
+
+            // Plot curves
+            ['gluon', 'down', 'up'].forEach(type => {
+                gCtx.strokeStyle = type==='up' ? '#d32f2f' : type==='down' ? '#1976d2' : '#ffc107';
+                gCtx.lineWidth = 3;
+                gCtx.beginPath();
+                for(let i=1; i<w-margin.l-margin.r; i++) {
+                    const x = i / (w-margin.l-margin.r);
+                    const y_val = x * pdf(type, x, state.Q2);
+                    const y = (h - margin.b) - y_val * (h - margin.t - margin.b) / 0.6;
+                    if(i===1) gCtx.moveTo(margin.l + i, y);
+                    else gCtx.lineTo(margin.l + i, y);
+                }
+                gCtx.stroke();
+            });
+        }
+
+        function update() {
+            state.Q2 = parseFloat(energySlider.value);
+            values.energy.textContent = state.Q2.toFixed(0);
+            setup(); // re-create sea particles
+            drawGraph();
+        }
+
+        function animate() {
+            drawProton();
+            requestAnimationFrame(animate);
+        }
+
+        energySlider.addEventListener('input', update);
+
+        setup();
+        drawGraph();
+        animate();
+    });
+    </script>
+</body>
+</html>
