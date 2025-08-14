@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultrasound Imaging (B-Mode) Simulation</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #e9ecef;
+            --tissue-skin: #f0c2ac;
+            --tissue-fat: #f9e79f;
+            --tissue-muscle: #d98880;
+            --tissue-fluid: #aed6f1;
+            --tissue-bone: #fdfefe;
+        }
+        [data-theme="dark"] {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #58a6ff;
+            --secondary-color: #8b949e;
+            --border-color: #444c56;
+            --canvas-bg: #0d1117;
+            --control-bg: #161b22;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .metadata-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 20px; }
+        .main-simulation-area { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        canvas { display: block; width: 100%; background: var(--canvas-bg); border: 1px solid var(--border-color); border-radius: 8px; }
+        .canvas-wrapper { position: relative; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        #tissue-editor .layer { border: 1px solid var(--border-color); padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        #tissue-editor .layer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        #tissue-editor .layer-header span { font-weight: bold; }
+        .remove-layer-btn { background-color: #dc3545; font-size: 0.8em; padding: 5px 8px; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Ultrasound Imaging (B-Mode) Simulation</h1>
+            <p class="subtitle">How high-frequency sound waves create images of tissues inside the body.</p>
+            <div class="metadata-bar">Estimated Runtime: Real-time | Recommended Device: Desktop</div>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    Ultrasound imaging is a safe and widely used medical technique that lets us peer inside the human body without any cutting or radiation. It works like a sophisticated form of sonar: a handheld probe, called a transducer, sends out pulses of high-frequency sound that are too high for us to hear. These sound waves travel into the body and bounce back as echoes when they hit the boundaries between different types of tissue, like the edge of an organ or a blood vessel. The ultrasound machine listens for these returning echoes, measuring how long they took to return and how strong they are. By translating this timing and strength information into position and brightness, the machine can construct a detailed, real-time, black-and-white image of our internal anatomy.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="control-group">
+                        <button id="start-scan-btn" style="width: 100%;">Start New Scan</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="frequency-slider">Frequency: <output id="frequency-output">5.0</output> MHz</label>
+                        <input type="range" id="frequency-slider" min="2" max="15" step="0.5" value="5.0" style="width:100%;">
+                        <small>Higher frequency gives better detail but less penetration.</small>
+                    </div>
+                     <div class="control-group">
+                        <label for="attenuation-slider">Global Attenuation: <output id="attenuation-output">0.5</output> dB/cm/MHz</label>
+                        <input type="range" id="attenuation-slider" min="0.1" max="1.5" step="0.1" value="0.5" style="width:100%;">
+                        <small>How quickly sound loses energy in tissue.</small>
+                    </div>
+                    <hr>
+                    <h3>Tissue Model Editor</h3>
+                    <div id="tissue-editor"></div>
+                    <div class="button-group">
+                        <button id="add-layer-btn">Add Tissue Layer</button>
+                    </div>
+                    <hr>
+                    <h3>Presets</h3>
+                    <div class="button-group">
+                        <button id="preset-cyst">Simple Cyst</button>
+                        <button id="preset-mass">Solid Mass</button>
+                        <button id="preset-bone">Bone Shadow</button>
+                    </div>
+                     <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="main-simulation-area">
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Tissue Model & Pulse Animation</div>
+                        <canvas id="tissue-canvas" width="300" height="600"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">A-Mode (Echo Amplitude vs. Depth)</div>
+                        <canvas id="amode-canvas" width="300" height="600"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">B-Mode Image (Brightness vs. Depth)</div>
+                        <canvas id="bmode-canvas" width="300" height="600"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — How It Works</h2>
+                <p>Let's demystify how sound creates a picture. The process can be broken down into a few simple steps.</p>
+
+                <h4>Step 1: The Probe Sends a "Chirp"</h4>
+                <p>The doctor places a probe (a transducer) on your skin with some gel. This probe contains special crystals that act like tiny speakers. When electricity is applied, they vibrate rapidly, sending a short, directional pulse of high-frequency sound into your body. This is shown in the "Tissue Model" canvas as a yellow line moving downwards.</p>
+
+                <h4>Step 2: Sound Travels and Hits Boundaries</h4>
+                <p>The sound wave travels through different types of tissues (fat, muscle, organ walls). Each tissue type has a different property called <strong>acoustic impedance</strong>—basically, how much it resists the passage of sound. When the sound wave hits a boundary between two tissues with different impedances, part of the sound is reflected back as an echo, and part continues deeper.</p>
+
+                <h4>Step 3: Listening for the Echoes</h4>
+                <p>After sending the pulse, the crystals in the probe switch to "microphone mode." They listen for the returning echoes. The strength of an echo depends on how big the impedance difference was. A large difference (like between soft tissue and bone) creates a very strong, bright echo.</p>
+
+                <h4>Step 4: Timing is Everything (A-Mode)</h4>
+                <p>The machine knows the average speed of sound in human tissue (about 1540 m/s). By measuring the precise time it takes for an echo to return, it can calculate exactly how deep the boundary is.
+                <ul>
+                    <li>A <strong>quick</strong> echo comes from a <strong>shallow</strong> structure.</li>
+                    <li>A <strong>delayed</strong> echo comes from a <strong>deep</strong> structure.</li>
+                </ul>
+                The "A-Mode" canvas shows this raw data: it's a graph of echo strength (Amplitude) versus depth. Each peak on the graph represents an echo from a tissue boundary.
+                </p>
+
+                <h4>Step 5: From Lines to Pixels (B-Mode)</h4>
+                <p>The final step is to create the image we recognize. The machine takes the A-Mode data and converts it into a single line of pixels.
+                <ul>
+                    <li>The <strong>position</strong> of the pixel is determined by the echo's travel time (depth).</li>
+                    <li>The <strong>brightness</strong> of the pixel is determined by the echo's strength. Strong echo = bright pixel. No echo = black pixel.</li>
+                </ul>
+                This single line of pixels is called a "scan line."
+                </p>
+
+                <h4>Step 6: Building the Full Picture</h4>
+                <p>The probe doesn't just send one pulse. It sends hundreds of pulses, sweeping the beam across a plane like a fan. Each pulse creates one scan line. By placing all these scan lines side-by-side, the machine builds the complete 2D B-Mode (Brightness Mode) image that you see on the screen. In our simulation, we animate this process, building the image from left to right.</p>
+                <p><strong>Everyday Analogy: Bat Sonar.</strong> A bat sends out high-pitched squeaks and listens for the echoes to navigate and find insects. It can tell how far away an object is by how long the echo takes to return. Ultrasound is a medical application of the exact same principle.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Physics of Ultrasound</h2>
+                <p>The image formation is governed by a few key physical principles.</p>
+
+                <h4>1. Acoustic Impedance (Z)</h4>
+                <p>This is the fundamental property of a tissue that determines how sound travels through it. It's the product of the tissue's density (ρ) and the speed of sound within it (v).</p>
+                <p><code>Z = ρ * v</code></p>
+                <p>Units are in Rayls or, more commonly in medicine, Megarayls (MRayls). Water has Z ≈ 1.5 MRayls, while bone has Z ≈ 7.8 MRayls.</p>
+
+                <h4>2. Reflection at a Boundary</h4>
+                <p>When sound hits a boundary between two tissues (with impedances Z₁ and Z₂), the fraction of the sound intensity that is reflected is given by the intensity reflection coefficient, R.</p>
+                <p><code>R = ( (Z₂ - Z₁) / (Z₂ + Z₁) )²</code></p>
+                <p><strong>Example:</strong> At a muscle (Z₁≈1.7) to fat (Z₂≈1.38) boundary, R = ((1.38 - 1.7) / (1.38 + 1.7))² ≈ <strong>0.01</strong>, or 1%. This is a weak echo. At a soft tissue (Z₁≈1.6) to bone (Z₂≈7.8) boundary, R ≈ <strong>0.43</strong>, or 43%. This is a very strong echo.</p>
+
+                <h4>3. Depth Calculation</h4>
+                <p>The depth (d) of a reflector is calculated from the round-trip time (t) of the echo and the average speed of sound in soft tissue (v ≈ 1540 m/s).</p>
+                <p><code>d = v * t / 2</code></p>
+                <p>The factor of 2 is crucial because the time `t` includes the pulse traveling to the boundary *and* back again.</p>
+
+                <h4>4. Attenuation</h4>
+                <p>As sound travels through tissue, its energy is absorbed and converted to heat. This loss of intensity is called attenuation. It increases with both distance and frequency.</p>
+                <p><code>Intensity(d) = Intensity₀ * 10^(-α * f * d / 10)</code></p>
+                <p>Where `α` is the attenuation coefficient in dB/cm/MHz, `f` is the frequency in MHz, and `d` is the distance in cm. This is why high-frequency probes give great detail for shallow structures but can't see deep into the body—the signal fades away too quickly.</p>
+            </section>
+
+            <section id="advanced-notes">
+                <h2>Advanced Notes & Artifacts</h2>
+                <p>Real ultrasound imaging is more complex and subject to several important effects and artifacts.</p>
+                <ul>
+                    <li><strong>Axial Resolution:</strong> The ability to distinguish two objects that are close together along the direction of the beam. It's determined by the spatial pulse length. Since higher frequency means shorter wavelength and thus shorter pulses, <strong>higher frequency gives better axial resolution</strong>.</li>
+                    <li><strong>Lateral Resolution:</strong> The ability to distinguish two objects that are side-by-side. It's determined by the width of the ultrasound beam.</li>
+                    <li><strong>Acoustic Shadowing:</strong> When the ultrasound beam hits a highly reflective surface like bone or a gallstone, most of the sound is reflected. Very little sound penetrates beyond it, creating a dark "shadow" in the image behind the object. You can see this with the "Bone Shadow" preset.</li>
+                    <li><strong>Acoustic Enhancement:</strong> The opposite of shadowing. When the beam passes through a structure with very low attenuation, like a fluid-filled cyst, the sound loses less energy than it would in the surrounding tissue. Therefore, the tissues *behind* the cyst appear artificially bright because the beam hitting them is stronger than expected. This is a key clue for identifying cysts.</li>
+                    <li><strong>Doppler Ultrasound:</strong> A different mode that uses the Doppler effect to measure the velocity of blood flow. Moving blood cells shift the frequency of the returning echoes, which can be color-coded to show flow towards (red) or away from (blue) the probe.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+<script>
+class UltrasoundSim {
+    constructor() {
+        this.tissueCanvas = document.getElementById('tissue-canvas');
+        this.aModeCanvas = document.getElementById('amode-canvas');
+        this.bModeCanvas = document.getElementById('bmode-canvas');
+        this.tissueCtx = this.tissueCanvas.getContext('2d');
+        this.aModeCtx = this.aModeCanvas.getContext('2d');
+        this.bModeCtx = this.bModeCanvas.getContext('2d');
+
+        this.params = {
+            frequency: 5.0, // MHz
+            attenuation: 0.5, // dB/cm/MHz
+            speedOfSound: 1540, // m/s
+            maxDepth: 10, // cm
+        };
+
+        this.tissueLayers = [];
+        this.scanState = {
+            isScanning: false,
+            pulseDepth: 0,
+            currentScanline: 0,
+            maxScanlines: this.bModeCanvas.width,
+            animationFrameId: null,
+        };
+
+        this.tissueColors = {
+            'Skin': '#f0c2ac', 'Fat': '#f9e79f', 'Muscle': '#d98880',
+            'Fluid': '#aed6f1', 'Bone': '#fdfefe', 'Tumor': '#bca0dc', 'Default': '#d5d8dc'
+        };
+
+        this.initControls();
+        this.setPreset('cyst');
+    }
+
+    initControls() {
+        document.getElementById('start-scan-btn').addEventListener('click', () => this.startScan());
+        document.getElementById('add-layer-btn').addEventListener('click', () => this.addLayer());
+
+        document.getElementById('frequency-slider').addEventListener('input', e => {
+            this.params.frequency = parseFloat(e.target.value);
+            document.getElementById('frequency-output').textContent = this.params.frequency.toFixed(1);
+        });
+        document.getElementById('attenuation-slider').addEventListener('input', e => {
+            this.params.attenuation = parseFloat(e.target.value);
+            document.getElementById('attenuation-output').textContent = this.params.attenuation.toFixed(1);
+        });
+
+        document.getElementById('preset-cyst').addEventListener('click', () => this.setPreset('cyst'));
+        document.getElementById('preset-mass').addEventListener('click', () => this.setPreset('mass'));
+        document.getElementById('preset-bone').addEventListener('click', () => this.setPreset('bone'));
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') {
+                 document.documentElement.removeAttribute('data-theme');
+             } else {
+                 document.documentElement.setAttribute('data-theme', 'dark');
+             }
+             this.drawAllStatic();
+        });
+    }
+
+    setPreset(type) {
+        this.tissueLayers = [];
+        switch(type) {
+            case 'cyst':
+                this.addLayer({ type: 'Fat', thickness: 2, impedance: 1.38 });
+                this.addLayer({ type: 'Muscle', thickness: 1, impedance: 1.70 });
+                this.addLayer({ type: 'Fluid', thickness: 3, impedance: 1.50 });
+                this.addLayer({ type: 'Muscle', thickness: 4, impedance: 1.70 });
+                break;
+            case 'mass':
+                this.addLayer({ type: 'Fat', thickness: 2, impedance: 1.38 });
+                this.addLayer({ type: 'Muscle', thickness: 1, impedance: 1.70 });
+                this.addLayer({ type: 'Tumor', thickness: 3, impedance: 1.62 });
+                this.addLayer({ type: 'Muscle', thickness: 4, impedance: 1.70 });
+                break;
+            case 'bone':
+                this.addLayer({ type: 'Fat', thickness: 2, impedance: 1.38 });
+                this.addLayer({ type: 'Muscle', thickness: 2, impedance: 1.70 });
+                this.addLayer({ type: 'Bone', thickness: 3, impedance: 7.8 });
+                this.addLayer({ type: 'Muscle', thickness: 3, impedance: 1.70 });
+                break;
+        }
+        this.updateTissueEditor();
+        this.startScan();
+    }
+
+    addLayer(config = {}) {
+        const defaultConfig = {
+            type: 'Muscle',
+            thickness: 2.0, // cm
+            impedance: 1.70, // MRayls
+            id: Date.now()
+        };
+        this.tissueLayers.push({ ...defaultConfig, ...config });
+        this.updateTissueEditor();
+    }
+
+    removeLayer(id) {
+        this.tissueLayers = this.tissueLayers.filter(layer => layer.id !== id);
+        this.updateTissueEditor();
+    }
+
+    updateTissueEditor() {
+        const editor = document.getElementById('tissue-editor');
+        editor.innerHTML = '';
+        this.tissueLayers.forEach((layer, index) => {
+            const div = document.createElement('div');
+            div.className = 'layer';
+            div.innerHTML = `
+                <div class="layer-header">
+                    <span>Layer ${index + 1}</span>
+                    <button class="remove-layer-btn" data-id="${layer.id}">Remove</button>
+                </div>
+                <label>Type:
+                    <select data-id="${layer.id}" class="layer-type">
+                        <option>Skin</option><option>Fat</option><option>Muscle</option>
+                        <option>Fluid</option><option>Bone</option><option>Tumor</option>
+                    </select>
+                </label>
+                <label>Thickness (cm): <input type="range" class="layer-thickness" data-id="${layer.id}" min="0.5" max="5" step="0.1" value="${layer.thickness}"></label>
+                <label>Impedance (MRayls): <input type="range" class="layer-impedance" data-id="${layer.id}" min="1.0" max="8.0" step="0.01" value="${layer.impedance}"></label>
+            `;
+            editor.appendChild(div);
+            div.querySelector('.layer-type').value = layer.type;
+        });
+
+        editor.querySelectorAll('.remove-layer-btn').forEach(btn =>
+            btn.addEventListener('click', e => this.removeLayer(parseInt(e.target.dataset.id)))
+        );
+        editor.querySelectorAll('input, select').forEach(input =>
+            input.addEventListener('change', e => this.updateLayerFromUI(e.target))
+        );
+    }
+
+    updateLayerFromUI(element) {
+        const id = parseInt(element.dataset.id);
+        const layer = this.tissueLayers.find(l => l.id === id);
+        if (!layer) return;
+
+        switch(element.className) {
+            case 'layer-type': layer.type = element.value; break;
+            case 'layer-thickness': layer.thickness = parseFloat(element.value); break;
+            case 'layer-impedance': layer.impedance = parseFloat(element.value); break;
+        }
+        this.startScan();
+    }
+
+    startScan() {
+        if (this.scanState.animationFrameId) {
+            cancelAnimationFrame(this.scanState.animationFrameId);
+        }
+        this.scanState.isScanning = true;
+        this.scanState.pulseDepth = 0;
+        this.scanState.currentScanline = 0;
+        this.bModeCtx.clearRect(0, 0, this.bModeCanvas.width, this.bModeCanvas.height);
+        this.scanLoop();
+    }
+
+    scanLoop() {
+        this.update();
+        this.drawAllStatic();
+        this.drawPulse();
+
+        if (this.scanState.isScanning) {
+            this.scanState.animationFrameId = requestAnimationFrame(() => this.scanLoop());
+        }
+    }
+
+    update() {
+        if (!this.scanState.isScanning) return;
+
+        this.scanState.pulseDepth += 0.2; // cm per frame (visual only)
+        if (this.scanState.pulseDepth > this.params.maxDepth) {
+            this.scanState.pulseDepth = 0;
+            this.drawBModeLine(this.scanState.currentScanline);
+            this.scanState.currentScanline++;
+            if (this.scanState.currentScanline >= this.scanState.maxScanlines) {
+                this.scanState.isScanning = false;
+            }
+        }
+    }
+
+    getScanlineData() {
+        let echoes = [];
+        let currentDepth = 0;
+        let previousImpedance = 1.54; // Gel
+        let intensity = 1.0;
+
+        for (const layer of this.tissueLayers) {
+            // Attenuation to reach the layer
+            const travel_dist_cm = currentDepth + layer.thickness / 2;
+            const attenuation_db = this.params.attenuation * this.params.frequency * travel_dist_cm;
+            intensity = Math.pow(10, -attenuation_db / 10);
+
+            // Reflection at the start of the layer
+            const R = Math.pow((layer.impedance - previousImpedance) / (layer.impedance + previousImpedance), 2);
+            echoes.push({ depth: currentDepth, amplitude: R * intensity });
+
+            currentDepth += layer.thickness;
+            previousImpedance = layer.impedance;
+        }
+        return echoes;
+    }
+
+    drawAllStatic() {
+        this.drawTissueModel();
+        this.drawAMode();
+    }
+
+    drawTissueModel() {
+        const ctx = this.tissueCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        let currentY = 0;
+        const totalThickness = this.tissueLayers.reduce((sum, l) => sum + l.thickness, 0);
+        const scale = h / Math.max(this.params.maxDepth, totalThickness);
+
+        this.tissueLayers.forEach(layer => {
+            const layerHeight = layer.thickness * scale;
+            ctx.fillStyle = this.tissueColors[layer.type] || this.tissueColors['Default'];
+            ctx.fillRect(0, currentY, w, layerHeight);
+
+            ctx.strokeStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(0, currentY);
+            ctx.lineTo(w, currentY);
+            ctx.stroke();
+
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${layer.type} (${layer.thickness.toFixed(1)}cm)`, w/2, currentY + 20);
+
+            currentY += layerHeight;
+        });
+    }
+
+    drawPulse() {
+        if (!this.scanState.isScanning) return;
+        const ctx = this.tissueCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const totalThickness = this.tissueLayers.reduce((sum, l) => sum + l.thickness, 0);
+        const scale = h / Math.max(this.params.maxDepth, totalThickness);
+
+        const pulseY = this.scanState.pulseDepth * scale;
+
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, pulseY);
+        ctx.lineTo(w, pulseY);
+        ctx.stroke();
+    }
+
+    drawAMode() {
+        const ctx = this.aModeCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const totalThickness = this.tissueLayers.reduce((sum, l) => sum + l.thickness, 0);
+        const scaleY = h / Math.max(this.params.maxDepth, totalThickness);
+
+        const echoes = this.getScanlineData();
+
+        ctx.strokeStyle = this.primaryColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+
+        let lastX = 0, lastY = h;
+        echoes.forEach(echo => {
+            const y = echo.depth * scaleY;
+            const x = echo.amplitude * w * 0.8; // Max amplitude is 80% of width
+
+            // Draw a spike for the echo
+            ctx.lineTo(lastX, y - 5);
+            ctx.lineTo(x, y);
+            ctx.lineTo(lastX, y + 5);
+        });
+        ctx.lineTo(lastX, h);
+        ctx.stroke();
+
+        // Draw depth markers
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        for (let d = 0; d <= this.params.maxDepth; d += 2) {
+            const y = d * scaleY;
+            ctx.fillText(`${d} cm`, 5, y + 5);
+            ctx.beginPath();
+            ctx.moveTo(w-20, y);
+            ctx.lineTo(w, y);
+            ctx.strokeStyle = '#aaa';
+            ctx.stroke();
+        }
+    }
+
+    drawBModeLine(scanlineX) {
+        const ctx = this.bModeCtx;
+        const h = ctx.canvas.height;
+        const totalThickness = this.tissueLayers.reduce((sum, l) => sum + l.thickness, 0);
+        const scaleY = h / Math.max(this.params.maxDepth, totalThickness);
+
+        const echoes = this.getScanlineData();
+
+        let imageData = ctx.getImageData(scanlineX, 0, 1, h);
+
+        // Add some noise/variation to make it look less uniform
+        const horizontalVariation = Math.sin(scanlineX * Math.PI / this.scanState.maxScanlines * 4);
+
+        echoes.forEach(echo => {
+            const y = Math.floor(echo.depth * scaleY);
+            // Brightness based on amplitude
+            let brightness = Math.floor(echo.amplitude * 255 * (1 + horizontalVariation * 0.1));
+            brightness = Math.min(255, Math.max(0, brightness));
+
+            // Axial resolution is based on frequency
+            const pulseLength = Math.max(1, 10 - this.params.frequency);
+            for (let i = -Math.floor(pulseLength/2); i < Math.ceil(pulseLength/2); i++) {
+                if (y + i >= 0 && y + i < h) {
+                    const idx = (y + i) * 4;
+                    imageData.data[idx] = brightness;
+                    imageData.data[idx+1] = brightness;
+                    imageData.data[idx+2] = brightness;
+                    imageData.data[idx+3] = 255;
+                }
+            }
+        });
+
+        ctx.putImageData(imageData, scanlineX, 0);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new UltrasoundSim();
+});
+</script>
+</body>
+</html>

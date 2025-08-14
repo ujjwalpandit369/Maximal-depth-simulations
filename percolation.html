@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Percolation Theory: Emergence of a Spanning Cluster</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --control-bg: #ecf0f1;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --info-bg: #d1ecf1;
+            --info-text: #0c5460;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --accent-color: #e74c3c;
+            --border-color: #555;
+            --canvas-bg: #111;
+            --control-bg: #2c3e50;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
+            --info-bg: #0c5460;
+            --info-text: #d1ecf1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            font-size: 16px;
+        }
+        .container { max-width: 1200px; margin: auto; background: var(--bg-color); padding: 20px; border-radius: 8px; }
+        h1, h2, h3, h4 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        h3 { font-size: 1.5em; }
+        p { margin-bottom: 1em; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .metadata-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; border: 1px solid var(--border-color); padding: 5px; border-radius: 5px; }
+        .suggestion-box { background-color: var(--info-bg); color: var(--info-text); padding: 15px; margin-bottom: 20px; border-radius: 5px; font-size: 0.9em; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls { flex: 1; min-width: 300px; background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-container { flex: 2; min-width: 400px; position: relative; }
+        canvas { display: block; width: 100%; aspect-ratio: 1/1; background: var(--canvas-bg); border: 1px solid var(--border-color); border-radius: 8px; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; }
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .control-group output { font-weight: bold; color: var(--primary-color); }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .button-group button, .share-button, .theme-toggle, .export-button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .button-group button:hover, .share-button:hover, .theme-toggle:hover, .export-button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; font-family: "Courier New", Courier, monospace; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        .error-panel, .self-check-panel { display: none; padding: 15px; margin-top: 20px; border-radius: 5px; background-color: var(--error-bg); color: var(--error-text); border: 1px solid #f5c6cb; }
+        .status-box { padding: 15px; margin-top: 20px; border-radius: 5px; text-align: center; font-size: 1.2em; font-weight: bold; }
+        .status-spanning { background-color: #d4edda; color: #155724; }
+        .status-not-spanning { background-color: #f8d7da; color: #721c24; }
+        .warning-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+        .warning-box { background: var(--bg-color); padding: 30px; border-radius: 10px; text-align: center; max-width: 400px; }
+        @media (max-width: 768px) { .simulation-area { flex-direction: column; } h1 { font-size: 2em; } h2 { font-size: 1.5em; } body { padding: 10px; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="self-check-panel" class="self-check-panel"></div>
+
+        <header>
+            <h1>Percolation Theory</h1>
+            <p class="subtitle">Visualizing the sudden emergence of a connected path across a random grid.</p>
+            <div class="metadata-bar">
+                Estimated Runtime: Instantaneous | Recommended Device: Desktop | Approx. HTML Size: <span id="html-size"></span> KB
+            </div>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    Percolation theory is the study of how things connect and flow through random systems. Imagine pouring water onto a square piece of cloth with some threads that are waterproof and some that are not. If only a few threads absorb water (a low "occupation probability"), the water will just create small, isolated wet spots. But if enough threads are absorbent, you'll suddenly reach a tipping point where a single wet path forms all the way from the top to the bottom. This simulation lets you control the randomness of a grid and see this magical "tipping point" — called the critical threshold — where a system-spanning connection suddenly appears out of nowhere.
+                </p>
+            </section>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — A Gentle Introduction</h2>
+                <p>Let's explore the fascinating idea of percolation. It's a surprisingly simple concept with deep implications in physics, materials science, and even epidemiology. We'll build it up from scratch.</p>
+
+                <h4>Step 1: The Grid and its Sites</h4>
+                <p>Look at the simulation canvas. It's a simple grid of squares, like a chessboard. Each square is called a "site." Our entire world, for this simulation, is this grid. Initially, it's empty.</p>
+
+                <h4>Step 2: To Be or Not to Be (Occupied)</h4>
+                <p>Now, we introduce randomness. We go through every single site on the grid and decide whether to "fill" it or leave it empty. The chance of a site being filled is called the <strong>Occupation Probability, `p`</strong>. You control this with a slider.
+                <ul>
+                    <li>If `p = 0`, no sites are filled. The grid is empty.</li>
+                    <li>If `p = 1`, every single site is filled. The grid is solid.</li>
+                    <li>If `p = 0.5`, each site has a 50/50 chance of being filled. On average, half the grid will be filled.</li>
+                </ul>
+                In our simulation, filled sites are colored blue.
+                </p>
+
+                <h4>Step 3: Finding Friends (Clusters)</h4>
+                <p>When two filled sites are right next to each other (not diagonally), we consider them connected. A group of connected sites is called a <strong>cluster</strong>. In the simulation, we find the largest cluster and color it orange to make it stand out.</p>
+
+                <h4>Step 4: The Tipping Point (The Critical Threshold, `p_c`)</h4>
+                <p>This is where the magic happens. When `p` is low (say, 0.4), you'll see many small, isolated orange clusters. They are like small islands in a sea of empty sites. Now, slowly increase `p` using the slider. You'll see the islands grow and start to merge.
+                <br>
+                Keep increasing `p`. You will notice something dramatic. Around `p = 0.59`, the small islands will suddenly merge into one giant "continent" that stretches all the way from the left side of the grid to the right side. This continent is called a <strong>spanning cluster</strong>. The probability `p` at which this typically happens is a fundamental number called the <strong>critical threshold, `p_c`</strong>. For a 2D square grid, `p_c ≈ 0.5927`.
+                </p>
+
+                <h4>Step 5: Why is this a Big Deal?</h4>
+                <p>
+                This sudden change from a disconnected system to a connected one is a type of <strong>phase transition</strong>, just like water freezing into ice at 0°C. Below `p_c`, information (or a fluid, or a disease) is contained in local areas. Above `p_c`, it can spread across the entire system.
+                <br>
+                <strong>Everyday Analogy: A Forest Fire.</strong> Imagine a forest where trees are planted randomly. The occupation probability `p` is the density of the trees.
+                <ul>
+                    <li><strong>Low `p` (Sparse Forest):</strong> If lightning strikes a tree, the fire will likely burn that one tree and die out because the other trees are too far away. The fire is contained in a small cluster.</li>
+                    <li><strong>High `p` (Dense Forest):</strong> If lightning strikes a tree, the fire will easily jump to its neighbors, and then to their neighbors, and so on. A massive wildfire can spread across the entire forest. A spanning cluster has formed!</li>
+                </ul>
+                <strong>Visualization Analogy: Dripping Ink on Paper.</strong> Imagine dropping ink onto a piece of paper. Each drop makes a small, circular stain. As you add more drops randomly, the stains start to touch and merge. At first, you have separate blobs. But at a critical density of ink drops, one giant, interconnected blob will suddenly form, potentially connecting the top and bottom of the page. The system has percolated.
+                </p>
+            </section>
+
+            <section id="parameters-summary">
+                <h2>Parameters & Controls Summary</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter Name</th>
+                            <th>Units</th>
+                            <th>Default</th>
+                            <th>Range</th>
+                            <th>Description & Worked Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Grid Size (N)</td>
+                            <td>sites per side</td>
+                            <td>64</td>
+                            <td>16 - 256</td>
+                            <td>The number of sites in one row or column of the grid. The total number of sites is N×N. Larger grids give more accurate results but are slower to compute.
+                            <br><strong>Example:</strong> For N = <strong>64</strong>, the grid has 64 × 64 = <strong>4096</strong> total sites.</td>
+                        </tr>
+                        <tr>
+                            <td>Occupation Probability (p)</td>
+                            <td>(dimensionless)</td>
+                            <td>0.59</td>
+                            <td>0.0 - 1.0</td>
+                            <td>The probability that any given site will be "occupied" (filled). This is the main parameter you will adjust to see the percolation transition.
+                            <br><strong>Example:</strong> If N=64 and p=<strong>0.5</strong>, the expected number of occupied sites is 4096 × 0.5 = <strong>2048</strong>.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <div class="simulation-area">
+                <div class="canvas-container">
+                    <canvas id="simulationCanvas" width="512" height="512"></canvas>
+                    <div id="status-box" class="status-box">Generating...</div>
+                </div>
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="reset-btn" aria-label="Generate New Grid (r)">Generate New Grid</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="p-slider">Occupation Probability (p): <output id="p-output">0.590</output></label>
+                        <input type="range" id="p-slider" min="0" max="1" step="0.001" value="0.59" aria-label="Occupation Probability">
+                        <p style="font-size:0.9em; color: var(--secondary-color);">Critical threshold p&#8342; &approx; 0.5927</p>
+                    </div>
+                    <div class="control-group">
+                        <label for="n-slider">Grid Size (N): <output id="n-output">64</output>x<output id="n-output-2">64</output></label>
+                        <input type="range" id="n-slider" min="16" max="256" step="16" value="64" aria-label="Grid Size">
+                    </div>
+
+                    <div class="preset-buttons">
+                        <h4>Presets</h4>
+                        <div class="button-group">
+                            <button id="preset-subcritical">Subcritical (p=0.5)</button>
+                            <button id="preset-critical">Critical (p=0.593)</button>
+                            <button id="preset-supercritical">Supercritical (p=0.7)</button>
+                        </div>
+                    </div>
+                     <div class="control-group">
+                        <label for="perf-mode-toggle">
+                            <input type="checkbox" id="perf-mode-toggle" aria-label="Performance Mode Toggle"> Real-time Update
+                        </label>
+                        <p style="font-size:0.9em; color: var(--secondary-color);">Uncheck for large grids if slow.</p>
+                    </div>
+                    <hr>
+                    <h4>Export & Share</h4>
+                     <div class="button-group">
+                        <button id="export-png-btn" class="export-button" aria-label="Export PNG (e)">Export PNG</button>
+                        <button id="export-json-btn" class="export-button">Export JSON</button>
+                    </div>
+                    <button id="share-btn" class="share-button" style="width:100%; margin-top:10px;">Copy Shareable Link</button>
+                    <hr>
+                    <div class="button-group">
+                         <button id="theme-toggle" class="theme-toggle">Toggle Dark Mode</button>
+                    </div>
+                </div>
+            </div>
+
+            <section id="walkthroughs">
+                <h2>Worked Walkthroughs & Micro-Experiments</h2>
+
+                <h4>Finding the Tipping Point</h4>
+                <p>This is the core experiment. We will manually find the critical probability `p_c` for a specific grid.
+                <br><strong>Analogy:</strong> This is like adding sand to a sandpile, one grain at a time. For a long time, nothing happens, and then one grain triggers a huge avalanche. We are looking for the "one grain" of probability that connects the whole system.
+                <br><strong>Example:</strong>
+                <ol>
+                    <li>Set `p` to <strong>0.550</strong>. Click "Generate New Grid". You'll see isolated orange clusters. The status box says "NO SPANNING CLUSTER".</li>
+                    <li>Slowly drag the `p` slider to the right. As you cross `p=0.58`, you'll see the largest cluster get much bigger.</li>
+                    <li>At some point, for this specific random grid, maybe at `p=<strong>0.595</strong>`, the status box will suddenly turn green and say "SPANNING CLUSTER FOUND!". You have crossed the threshold for this instance. The numeric change in the size of the largest cluster at this point is huge.</li>
+                </ol>
+                </p>
+                <ul>
+                    <li><strong>Micro-Experiment 1:</strong> Set N=64. Set p=0.593. Click "Generate New Grid" 10 times. How many times does it form a spanning cluster? You'll see it's about a 50/50 chance, because we are right at the true critical point.</li>
+                    <li><strong>Micro-Experiment 2:</strong> Set N=32. Find the approximate `p` where spanning occurs. Now set N=128. Find the `p` again. You'll notice the transition for the larger grid is much "sharper" and happens more reliably close to the theoretical value of 0.5927. This demonstrates how the theoretical `p_c` is defined for an infinite grid.</li>
+                </ul>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Algorithm</h2>
+                <p>How do we find the clusters and check if one spans the grid? We use a classic graph traversal algorithm called <strong>Breadth-First Search (BFS)</strong>.</p>
+
+                <h4>1. The Grid and State</h4>
+                <p>We represent the N×N grid as a 2D array. Each site can be empty (0) or occupied (1). We also need a second N×N `visited` array, to make sure we don't count the same site twice.</p>
+                <p><code>grid[i][j] = 1 // Occupied</code><br>
+                   <code>visited[i][j] = false // Initially</code></p>
+
+                <h4>2. The Search Algorithm (BFS)</h4>
+                <p>The goal is to find all connected components (clusters).</p>
+                <pre style="background: #eee; padding: 10px; border-radius: 5px; color: #333;">
+For each site (r, c) from top-left to bottom-right:
+  If grid[r][c] is occupied AND visited[r][c] is false:
+    // We've found the start of a new, unexplored cluster!
+    Start a BFS from (r, c) to find all its members.
+                </pre>
+                <p>The BFS process for a single cluster works like this:</p>
+                <p><strong>Plain English:</strong> Imagine you're at an occupied site. You put it in a "to-do" list (a queue). While the list isn't empty, you take a site off, add it to your current cluster, and look at its four neighbors (up, down, left, right). If a neighbor is occupied and you haven't seen it before, you add it to the "to-do" list and mark that you've now seen it.</p>
+
+                <h4>3. Checking for Spanning</h4>
+                <p>After we find all the sites in a single cluster, we check if it spans the grid. A simple way to do this is to see if the cluster contains a site in the first column and also a site in the last column.</p>
+                <p><code>let touches_left = false;</code><br>
+                   <code>let touches_right = false;</code><br>
+                   <code>For each site (r, c) in current_cluster:</code><br>
+                   <code>  if c == 0: touches_left = true;</code><br>
+                   <code>  if c == N-1: touches_right = true;</code><br>
+                   <code>if touches_left and touches_right:</code><br>
+                   <code>  return "SPANNING CLUSTER FOUND!"</code>
+                </p>
+                <p><strong>Numerical Stability:</strong> The algorithm is very stable. Its performance is directly tied to the grid size. The complexity is O(N²), because in the worst case, we have to visit every site and its neighbors once. This is why the simulation can become slow for very large values of N.</p>
+            </section>
+
+            <section id="faq">
+                <h2>FAQ & Troubleshooting</h2>
+                <dl>
+                    <dt>1. I set p = 0.5927, but my grid doesn't have a spanning cluster. Why?</dt>
+                    <dd>The value p_c ≈ 0.5927 is the critical probability for an *infinitely large* grid. For any finite grid, there's random variation. At p_c, there's roughly a 50% chance of spanning. Try generating a few new grids; some will span, some won't.</dd>
+
+                    <dt>2. What is this useful for in the real world?</dt>
+                    <dd>Tons! Modeling the flow of oil through porous rock, the spread of forest fires, the conductivity of materials made of mixed conducting and insulating particles, the spread of diseases in a population, and the resilience of communication networks.</dd>
+
+                    <dt>3. Why does the largest cluster's color change?</dt>
+                    <dd>We color all occupied sites light blue. Then, we find all the clusters and identify the single largest one. We re-color the sites in that largest cluster to orange. If that cluster also happens to span the grid, we color it green.</dd>
+
+                    <dt>4. What's the difference between site and bond percolation?</dt>
+                    <dd>This is <strong>site percolation</strong>, where the sites themselves are random. In <strong>bond percolation</strong>, all sites are present, but the *connections (bonds)* between them are random. The concepts are similar, but the critical probabilities are different (for a square grid, p_c is 0.5 for bond percolation).</dd>
+
+                    <dt>5. The simulation is slow when I use a big grid. How can I speed it up?</dt>
+                    <dd>The main cause of slowness is re-drawing and re-calculating on every tiny slider move. Uncheck the "Real-time Update" box. Now, the simulation will only run when you stop moving the slider or click the "Generate" button. This makes exploring large grids much smoother.</dd>
+
+                    <dt>6. Why does the page freeze with a very large Grid Size (e.g., 256)?</dt>
+                    <dd>A 256x256 grid has 65,536 sites. The analysis algorithm has to check each one, which can take a few hundred milliseconds of processing. If "Real-time Update" is on, it tries to do this many times a second as you drag the slider, which can freeze the browser tab. Use the "Real-time Update" toggle as advised.</dd>
+                </dl>
+            </section>
+        </main>
+    </div>
+
+<script>
+class PercolationSim {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            N: 64, // Grid size
+            p: 0.59, // Occupation probability
+            realtimeUpdate: true,
+        };
+
+        this.grid = [];
+        this.visited = [];
+        this.largestCluster = [];
+        this.spanningCluster = [];
+        this.doesSpan = false;
+
+        this.colors = {
+            empty: 'var(--canvas-bg)',
+            occupied: 'var(--secondary-color)',
+            largest: 'orange',
+            spanning: '#28a745',
+        };
+
+        // This is to prevent slider from firing too many events
+        this.request = null;
+    }
+
+    updateParams(newParams) {
+        Object.assign(this.params, newParams);
+
+        // Debounce mechanism for non-realtime update
+        if (this.request) {
+            cancelAnimationFrame(this.request);
+        }
+
+        this.request = requestAnimationFrame(() => {
+            this.run();
+            this.request = null;
+        });
+    }
+
+    run() {
+        this.generateGrid();
+        this.findClusters();
+        this.draw();
+        this.updateStatus();
+    }
+
+    generateGrid() {
+        this.grid = [];
+        for (let r = 0; r < this.params.N; r++) {
+            this.grid[r] = [];
+            for (let c = 0; c < this.params.N; c++) {
+                this.grid[r][c] = (Math.random() < this.params.p) ? 1 : 0;
+            }
+        }
+    }
+
+    findClusters() {
+        this.visited = [];
+        for (let r = 0; r < this.params.N; r++) {
+            this.visited[r] = new Array(this.params.N).fill(false);
+        }
+
+        this.largestCluster = [];
+        this.spanningCluster = [];
+        this.doesSpan = false;
+
+        for (let r = 0; r < this.params.N; r++) {
+            for (let c = 0; c < this.params.N; c++) {
+                if (this.grid[r][c] === 1 && !this.visited[r][c]) {
+                    const currentCluster = this.bfs(r, c);
+
+                    if (currentCluster.length > this.largestCluster.length) {
+                        this.largestCluster = currentCluster;
+                    }
+                }
+            }
+        }
+
+        // Now check if the largest cluster spans
+        if (this.largestCluster.length > 0) {
+            let touchesLeft = false;
+            let touchesRight = false;
+            for (const site of this.largestCluster) {
+                if (site.c === 0) touchesLeft = true;
+                if (site.c === this.params.N - 1) touchesRight = true;
+            }
+            if (touchesLeft && touchesRight) {
+                this.doesSpan = true;
+                this.spanningCluster = this.largestCluster;
+            }
+        }
+    }
+
+    bfs(startR, startC) {
+        const queue = [{ r: startR, c: startC }];
+        this.visited[startR][startC] = true;
+        const clusterSites = [];
+        let head = 0;
+
+        while(head < queue.length) {
+            const { r, c } = queue[head++];
+            clusterSites.push({ r, c });
+
+            // Check neighbors
+            const neighbors = [
+                { dr: -1, dc: 0 }, { dr: 1, dc: 0 },
+                { dr: 0, dc: -1 }, { dr: 0, dc: 1 }
+            ];
+
+            for (const neighbor of neighbors) {
+                const newR = r + neighbor.dr;
+                const newC = c + neighbor.dc;
+
+                if (newR >= 0 && newR < this.params.N && newC >= 0 && newC < this.params.N &&
+                    this.grid[newR][newC] === 1 && !this.visited[newR][newC]) {
+                    this.visited[newR][newC] = true;
+                    queue.push({ r: newR, c: newC });
+                }
+            }
+        }
+        return clusterSites;
+    }
+
+    draw() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        const cellSize = this.canvas.width / this.params.N;
+
+        const theme = document.documentElement.getAttribute('data-theme');
+        const occupiedColor = theme === 'dark' ? '#3498db' : '#3498db';
+        const bgColor = theme === 'dark' ? '#111' : '#fff';
+
+        // Draw background
+        this.ctx.fillStyle = bgColor;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw all occupied sites first
+        this.ctx.fillStyle = occupiedColor;
+        for (let r = 0; r < this.params.N; r++) {
+            for (let c = 0; c < this.params.N; c++) {
+                if (this.grid[r][c] === 1) {
+                    this.ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        // Draw largest cluster
+        this.ctx.fillStyle = this.colors.largest;
+        for (const site of this.largestCluster) {
+            this.ctx.fillRect(site.c * cellSize, site.r * cellSize, cellSize, cellSize);
+        }
+
+        // Draw spanning cluster on top
+        if (this.doesSpan) {
+            this.ctx.fillStyle = this.colors.spanning;
+            for (const site of this.spanningCluster) {
+                this.ctx.fillRect(site.c * cellSize, site.r * cellSize, cellSize, cellSize);
+            }
+        }
+    }
+
+    updateStatus() {
+        const statusBox = document.getElementById('status-box');
+        if (this.doesSpan) {
+            statusBox.textContent = 'SPANNING CLUSTER FOUND!';
+            statusBox.className = 'status-box status-spanning';
+        } else {
+            statusBox.textContent = 'NO SPANNING CLUSTER';
+            statusBox.className = 'status-box status-not-spanning';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sim = new PercolationSim('simulationCanvas');
+
+    const controls = {
+        resetBtn: document.getElementById('reset-btn'),
+        pSlider: document.getElementById('p-slider'),
+        pOutput: document.getElementById('p-output'),
+        nSlider: document.getElementById('n-slider'),
+        nOutput: document.getElementById('n-output'),
+        nOutput2: document.getElementById('n-output-2'),
+        perfModeToggle: document.getElementById('perf-mode-toggle'),
+    };
+
+    function updateP(value) {
+        controls.pOutput.textContent = parseFloat(value).toFixed(3);
+        if (sim.params.realtimeUpdate) {
+            sim.updateParams({ p: parseFloat(value) });
+        }
+    }
+
+    function updateN(value) {
+        const n = parseInt(value);
+        controls.nOutput.textContent = n;
+        controls.nOutput2.textContent = n;
+        if (sim.params.realtimeUpdate) {
+             sim.updateParams({ N: n });
+        }
+    }
+
+    controls.resetBtn.addEventListener('click', () => sim.run());
+
+    controls.pSlider.addEventListener('input', e => updateP(e.target.value));
+    controls.pSlider.addEventListener('change', e => {
+        if (!sim.params.realtimeUpdate) {
+            sim.updateParams({ p: parseFloat(e.target.value) });
+        }
+    });
+
+    controls.nSlider.addEventListener('input', e => updateN(e.target.value));
+    controls.nSlider.addEventListener('change', e => {
+        if (!sim.params.realtimeUpdate) {
+            sim.updateParams({ N: parseInt(e.target.value) });
+        }
+    });
+
+    controls.perfModeToggle.addEventListener('change', e => {
+        sim.params.realtimeUpdate = e.target.checked;
+    });
+
+    // Presets
+    function applyPreset(p, n) {
+        controls.pSlider.value = p;
+        controls.pOutput.textContent = p.toFixed(3);
+        controls.nSlider.value = n;
+        controls.nOutput.textContent = n;
+        controls.nOutput2.textContent = n;
+        sim.updateParams({ p: p, N: n });
+    }
+    document.getElementById('preset-subcritical').addEventListener('click', () => applyPreset(0.50, 64));
+    document.getElementById('preset-critical').addEventListener('click', () => applyPreset(0.593, 128));
+    document.getElementById('preset-supercritical').addEventListener('click', () => applyPreset(0.70, 64));
+
+    // Export & Share
+    document.getElementById('export-png-btn').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `percolation_sim_p${sim.params.p.toFixed(3)}_N${sim.params.N}.png`;
+        link.href = sim.canvas.toDataURL('image/png');
+        link.click();
+    });
+    document.getElementById('export-json-btn').addEventListener('click', () => {
+        const data = { params: sim.params, timestamp: new Date().toISOString() };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `percolation_params_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+    document.getElementById('share-btn').addEventListener('click', () => {
+        const paramsString = btoa(JSON.stringify(sim.params));
+        const url = `${window.location.href.split('#')[0]}#params=${paramsString}`;
+        navigator.clipboard.writeText(url).then(() => alert('Shareable link copied to clipboard!'), () => alert('Failed to copy link.'));
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', e => {
+        if (document.activeElement.tagName === 'INPUT') return;
+        if (e.code === 'KeyR') sim.run();
+        if (e.code === 'KeyE') document.getElementById('export-png-btn').click();
+    });
+
+    // Theme
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+        sim.draw(); // Redraw with new theme colors
+    });
+
+    // URL param loading
+    function loadParamsFromURL() {
+        const hash = window.location.hash;
+        if (hash.startsWith('#params=')) {
+            try {
+                const paramsString = atob(hash.substring(8));
+                const params = JSON.parse(paramsString);
+                applyPreset(params.p, params.N);
+            } catch (e) {
+                console.error('Failed to load params from URL', e);
+            }
+        }
+    }
+
+    // Self-check
+    function runSelfCheck() {
+        const panel = document.getElementById('self-check-panel');
+        let errors = [];
+        if (!sim.canvas) errors.push("Canvas element not found.");
+        if (!controls.resetBtn) errors.push("Reset button not found.");
+        if (errors.length > 0) {
+            panel.style.display = 'block';
+            panel.innerHTML = '<strong>Self-Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+        }
+    }
+
+    // Initial run
+    document.getElementById('html-size').textContent = (new Blob([document.documentElement.outerHTML]).size / 1024).toFixed(1);
+    runSelfCheck();
+    loadParamsFromURL();
+    sim.run();
+});
+</script>
+</body>
+</html>

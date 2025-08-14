@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Econophysics: The Lux-Marchesi Model</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --header-color: #be185d;
+            --accent-color: #ec4899;
+            --control-bg: #fff;
+            --control-border: #e5e7eb;
+            --canvas-bg: #fce7f3;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #4b5563; margin-top: 0; }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { text-align: center; border-bottom: 1px solid var(--control-border); padding-bottom: 15px; }
+        .control-group { display: inline-block; margin: 0 15px; }
+
+        .sim-canvas { width: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        #price-canvas { height: 350px; }
+        #pop-canvas { height: 150px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Lux-Marchesi Agent-Based Model</h1>
+            <p class="subtitle">An econophysics model of financial market dynamics.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why do financial markets experience periods of calm followed by sudden, violent crashes or bubbles? The <strong>Lux-Marchesi model</strong> is an influential agent-based model from econophysics that provides an explanation. It populates a market with different types of traders: <strong>fundamentalists</strong>, who believe the price will return to a rational value, and <strong>chartists</strong>, who follow recent trends. Crucially, agents can switch strategies based on which approach seems more profitable. This simulation demonstrates how this strategy-switching can create complex feedback loops, leading to emergent phenomena like <strong>volatility clustering</strong>—a key "stylized fact" of real financial markets.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <button id="run-pause-btn">Run</button>
+                <button id="reset-btn" style="margin-left: 10px;">Reset</button>
+                <div class="control-group" style="margin-left: 30px;">
+                    <label>Strategy Switch Speed: <span id="switch-value">1.0</span></label>
+                    <input type="range" id="switch-slider" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+            </div>
+            <h3>Price and Volatility</h3>
+            <canvas id="price-canvas" class="sim-canvas"></canvas>
+            <h3>Agent Population</h3>
+            <canvas id="pop-canvas" class="sim-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const priceCanvas = document.getElementById('price-canvas');
+        const pCtx = priceCanvas.getContext('2d');
+        const popCanvas = document.getElementById('pop-canvas');
+        const popCtx = popCanvas.getContext('2d');
+
+        const controls = {
+            run: document.getElementById('run-pause-btn'),
+            reset: document.getElementById('reset-btn'),
+            switching: document.getElementById('switch-slider'),
+        };
+        const values = {
+            switching: document.getElementById('switch-value'),
+        };
+
+        const NUM_AGENTS = 100;
+        let agents = [];
+        let priceHistory = [];
+        let popHistory = [];
+        let state = { isRunning: false, switchSpeed: 1.0 };
+        const FUNDAMENTAL_PRICE = 100;
+
+        function setup() {
+            priceHistory = [FUNDAMENTAL_PRICE];
+            popHistory = [];
+            agents = [];
+            for(let i=0; i<NUM_AGENTS; i++) {
+                agents.push({
+                    strategy: Math.random() < 0.6 ? 'fundamentalist' : 'chartist',
+                });
+            }
+            updateConfig();
+            draw();
+        }
+
+        function update() {
+            if (!state.isRunning) return;
+
+            const currentPrice = priceHistory[priceHistory.length - 1];
+            const priceTrend = priceHistory.length > 5 ? (currentPrice - priceHistory[priceHistory.length - 5]) / 5 : 0;
+
+            let excessDemand = 0;
+            agents.forEach(agent => {
+                if (agent.strategy === 'fundamentalist') {
+                    excessDemand += 0.1 * (FUNDAMENTAL_PRICE - currentPrice);
+                } else { // Chartist
+                    excessDemand += 1.0 * priceTrend;
+                }
+            });
+
+            const priceChange = 0.5 * excessDemand + (Math.random() - 0.5) * 2;
+            const newPrice = Math.max(1, currentPrice + priceChange);
+            priceHistory.push(newPrice);
+            if(priceHistory.length > priceCanvas.width) priceHistory.shift();
+
+            // Strategy switching
+            const fundamentalistProfit = Math.abs(FUNDAMENTAL_PRICE - currentPrice); // Simplified fitness
+            const chartistProfit = Math.abs(priceTrend) * 10; // Simplified fitness
+            const U_f = -fundamentalistProfit;
+            const U_c = -chartistProfit;
+
+            agents.forEach(agent => {
+                const prob_f_to_c = Math.exp(state.switchSpeed * (U_c - U_f));
+                const prob_c_to_f = Math.exp(state.switchSpeed * (U_f - U_c));
+
+                if (agent.strategy === 'fundamentalist' && Math.random() < prob_f_to_c*0.01) {
+                    agent.strategy = 'chartist';
+                } else if (agent.strategy === 'chartist' && Math.random() < prob_c_to_f*0.01) {
+                    agent.strategy = 'fundamentalist';
+                }
+            });
+
+            const numChartists = agents.filter(a => a.strategy === 'chartist').length;
+            popHistory.push(numChartists / NUM_AGENTS);
+            if(popHistory.length > popCanvas.width) popHistory.shift();
+        }
+
+        function draw() {
+            // Draw price chart
+            pCtx.clearRect(0,0,priceCanvas.width, priceCanvas.height);
+            const maxPrice = Math.max(...priceHistory, FUNDAMENTAL_PRICE) * 1.2;
+            pCtx.strokeStyle = '#be185d';
+            pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            priceHistory.forEach((p, i) => {
+                const y = priceCanvas.height - (p/maxPrice) * priceCanvas.height;
+                if(i===0) pCtx.moveTo(i, y);
+                else pCtx.lineTo(i, y);
+            });
+            pCtx.stroke();
+
+            // Draw population chart
+            popCtx.clearRect(0,0,popCanvas.width, popCanvas.height);
+            // Fundamentalists
+            popCtx.fillStyle = 'rgba(0, 121, 107, 0.5)';
+            popCtx.beginPath();
+            popCtx.moveTo(0, popCanvas.height);
+            popHistory.forEach((ratio, i) => {
+                popCtx.lineTo(i, popCanvas.height * (1-ratio));
+            });
+            popCtx.lineTo(popHistory.length-1, popCanvas.height);
+            popCtx.closePath();
+            popCtx.fill();
+            // Chartists
+            popCtx.fillStyle = 'rgba(190, 24, 93, 0.5)';
+            popCtx.beginPath();
+            popCtx.moveTo(0, popCanvas.height);
+            popHistory.forEach((ratio, i) => {
+                popCtx.lineTo(i, popCanvas.height * (1-ratio));
+            });
+            popCtx.lineTo(popHistory.length-1, 0);
+            popCtx.lineTo(0,0);
+            popCtx.closePath();
+            popCtx.fill();
+        }
+
+        let lastTime = 0;
+        function animate(time) {
+            if (state.isRunning && time - lastTime > 50) {
+                update();
+                draw();
+                lastTime = time;
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function updateConfig() {
+            state.switchSpeed = parseFloat(controls.switching.value);
+            values.switching.textContent = state.switchSpeed.toFixed(1);
+        }
+
+        controls.run.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            controls.run.textContent = state.isRunning ? 'Pause' : 'Run';
+        });
+        controls.reset.addEventListener('click', setup);
+        controls.switching.addEventListener('input', updateConfig);
+
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>
