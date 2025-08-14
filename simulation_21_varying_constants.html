@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Universe with Varying Fundamental Constants</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --code-bg: #e9e9e9;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+        }
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --primary-color: #bb86fc;
+            --secondary-color: #03dac6;
+            --border-color: #444;
+            --canvas-bg: #000;
+            --code-bg: #333;
+            --error-bg: #5a2c30;
+            --error-text: #f8d7da;
+            --success-bg: #224a30;
+            --success-text: #d4edda;
+            --warning-bg: #665100;
+            --warning-text: #fff3cd;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: var(--bg-color);
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .suggestion-box { background-color: var(--code-bg); border: 1px solid var(--border-color); padding: 10px; margin-bottom: 20px; font-size: 0.9em; }
+        .suggestion-box button { margin: 0 5px; }
+        .error-panel, .self-check-panel {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .error-panel { background-color: var(--error-bg); color: var(--error-text); }
+        .self-check-panel.fail { background-color: var(--error-bg); color: var(--error-text); }
+        .self-check-panel.pass { background-color: var(--success-bg); color: var(--success-text); }
+        .warning-box { background-color: var(--warning-bg); color: var(--warning-text); padding: 15px; border-radius: 4px; margin: 1em 0; }
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .controls {
+            flex: 1;
+            min-width: 300px;
+        }
+        .canvas-container {
+            flex: 2;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #simulationCanvas {
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            width: 100%;
+            aspect-ratio: 16 / 9;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group label { margin-bottom: 5px; font-weight: bold; }
+        .control-group input[type="range"] { width: 100%; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button, .preset-buttons button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .button-bar button:hover, .preset-buttons button:hover {
+            opacity: 0.9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+        th { background-color: var(--code-bg); }
+        code {
+            background-color: var(--code-bg);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .collapsible {
+            background-color: var(--code-bg);
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.1em;
+            margin-top: 10px;
+        }
+        .active, .collapsible:hover {
+            background-color: #ccc;
+        }
+        .content {
+            padding: 0 18px;
+            display: none;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-top: none;
+        }
+        .perf-meter { font-size: 0.8em; color: var(--secondary-color); text-align: right; }
+        #dev-console {
+            background: var(--code-bg);
+            color: var(--text-color);
+            height: 150px;
+            overflow-y: scroll;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -70px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="self-check-panel" class="self-check-panel"></div>
+        <div class="suggestion-box">
+            <strong>Quick Tune:</strong>
+            <button onclick="applySuggestion('audience', 'beginner')">Audience: Beginner</button>
+            <button onclick="applySuggestion('audience', 'intermediate')">Intermediate</button>
+            <button onclick="applySuggestion('audience', 'advanced')">Advanced</button>
+            |
+            <button onclick="applySuggestion('analogy', 'everyday')">Analogy: Everyday</button>
+            <button onclick="applySuggestion('analogy', 'mechanical')">Mechanical</button>
+            <button onclick="applySuggestion('analogy', 'visual')">Visual</button>
+            |
+            <button onclick="applySuggestion('intensity', 'light')">Intensity: Light</button>
+            <button onclick="applySuggestion('intensity', 'medium')">Medium</button>
+            <button onclick="applySuggestion('intensity', 'heavy')">Heavy</button>
+        </div>
+
+        <header>
+            <h1>A Universe with Varying Fundamental Constants</h1>
+            <p class="subtitle">Simulating Big Bang Nucleosynthesis and the effect of a changing fine-structure constant (α).</p>
+            <p class="meta-bar">
+                Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Our universe is governed by a set of fundamental rules, or "constants," like the speed of light or the strength of gravity. Scientists have long wondered: what if these constants were different? What if they changed over the history of the universe? This simulation explores that idea by focusing on one constant, the fine-structure constant (alpha, or α), which controls the strength of electromagnetism. We'll travel back to the first few minutes after the Big Bang, a period called "Big Bang Nucleosynthesis" (BBN), when the first atomic nuclei (like hydrogen and helium) were forged. You will see how changing the value of α in the early universe would have altered the amounts of these primordial elements, potentially leading to a universe very different from our own.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — A Gentle Introduction</h2>
+            <p>Welcome! This guide will walk you through the fascinating science behind this simulation. We'll assume no prior knowledge and use simple steps and analogies.</p>
+
+            <h3>Step 1: The First Three Minutes</h3>
+            <p>Imagine the universe right after the Big Bang. It was incredibly hot and dense, a searing soup of fundamental particles. There were no atoms, no stars, no galaxies—just energy and tiny particles whizzing around. This period, from about one second to a few minutes after the Big Bang, is when the first, simplest atomic nuclei were created. This process is called <strong>Big Bang Nucleosynthesis (BBN)</strong>. The main products were Hydrogen (the simplest nucleus, just one proton) and Helium (two protons and two neutrons). Our simulation focuses on this crucial era.</p>
+
+            <h3>Step 2: The Key Players - Protons and Neutrons</h3>
+            <p>The main building blocks for BBN were protons and neutrons. In the very early, hot soup, they could freely change into one another. A neutron could turn into a proton, and a proton could turn into a neutron. They were in a state of balance. As the universe expanded, it cooled down. Neutrons are slightly heavier than protons, so as things cooled, it became easier for heavy neutrons to turn into lighter protons than the other way around. This tilted the balance in favor of protons.</p>
+
+            <h3>Step 3: The "Freeze-Out"</h3>
+            <p>Eventually, the universe became so cool and spread out that the reactions converting neutrons to protons stopped happening frequently. The ratio of neutrons to protons was "frozen" in place (at about 1 neutron for every 7 protons). This moment is called <strong>freeze-out</strong>. Why is this important? Because the number of neutrons available at this moment determines exactly how much Helium can be created. All the Helium in the early universe was made from these leftover neutrons.</p>
+
+            <h3>Step 4: The Constant in Question - Alpha (α)</h3>
+            <p>Now, let's introduce our special ingredient: the <strong>fine-structure constant, α</strong>. Think of α as the "volume knob" for electromagnetism. It dictates how strongly charged particles (like protons and electrons) interact. It affects everything from the structure of atoms to the energy released in nuclear reactions. Physicists have measured α very precisely in our present-day universe, but what if it was different in the past?</p>
+
+            <h3>Step 5: How α Changes the Recipe</h3>
+            <p>The value of α has a subtle but critical effect on the mass difference between a neutron and a proton. A portion of their mass comes from electromagnetic effects. If you change α, you slightly change this mass difference.
+            <ul>
+                <li>If α were <strong>larger</strong> in the past, the neutron-proton mass difference would be larger. This would make neutrons even more unstable and eager to decay into protons. The "freeze-out" would happen earlier at a hotter temperature, leaving <strong>fewer</strong> neutrons around. Fewer neutrons mean less raw material to build Helium.</li>
+                <li>If α were <strong>smaller</strong> in the past, the opposite would happen. The mass difference would shrink, freeze-out would be delayed, and more neutrons would survive, leading to <strong>more</strong> Helium.</li>
+            </ul>
+            This simulation lets you control this "what if" scenario and see the consequences directly.</p>
+
+            <h3>Everyday Analogy: Baking Primordial Bread</h3>
+            <p>Think of BBN as baking "primordial bread" (Helium). Your main ingredients are flour (protons) and a special, rare yeast (neutrons).
+            <ul>
+                <li>The <strong>temperature</strong> of the universe is like the oven temperature. It starts high and gradually cools.</li>
+                <li>The <strong>yeast (neutrons)</strong> is unstable; if you wait too long, it goes bad (decays into flour/protons).</li>
+                <li>The <strong>fine-structure constant, α</strong>, is like the humidity in your kitchen. If the humidity (α) is high, the yeast (neutrons) goes bad much faster. You have to work quickly! This means you end up with less yeast when it's time to bake, resulting in a smaller, denser loaf (less Helium). If humidity is low, the yeast lasts longer, and you can make a bigger, fluffier loaf (more Helium).</li>
+            </ul>
+            This simulation lets you be the cosmic baker, adjusting the "humidity" (α) to see how it changes your primordial bread.</p>
+
+            <h3>Visualization Analogy: A Cooling, Expanding Ballroom</h3>
+            <p>Imagine a chaotic ballroom dance right after the Big Bang. The dancers are protons and neutrons.
+            <ul>
+                <li>The <strong>ballroom</strong> itself is the universe, and it's constantly expanding.</li>
+                <li>The <strong>music tempo</strong> is the temperature. It starts incredibly fast and gradually slows down.</li>
+                <li>At first, the music is so fast (so hot) that dancers can freely swap partners, and it's easy for a "neutron dancer" to become a "proton dancer" and vice-versa.</li>
+                <li>The <strong>fine-structure constant, α</strong>, is a rule that gives neutron dancers slightly heavier shoes. If you turn α up, their shoes get even heavier, making them tire out and switch to being a lighter-shoed proton dancer more quickly.</li>
+                <li>As the music slows (universe cools), it becomes hard to swap partners. This is "freeze-out." The ratio of neutron-to-proton dancers gets locked in.</li>
+                <li>Finally, the music is slow enough for dancers to form stable pairs (protons and neutrons binding into Deuterium) and then quartets (Helium). The number of quartets you can form depends entirely on how many neutron dancers were left after the freeze-out.</li>
+            </ul>
+            In this simulation, you control the "shoe weight" rule (α) and watch how it changes the final dance formation.</p>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter Name</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Min/Max</th>
+                        <th>Example Values</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>α Variation (Δα/α)</td>
+                        <td>%</td>
+                        <td>0</td>
+                        <td>-5% to +5%</td>
+                        <td>-2% (Light), 0% (Medium), 4% (Heavy)</td>
+                        <td>The percentage change in the fine-structure constant compared to today's value.</td>
+                    </tr>
+                    <tr>
+                        <td>Total Particles</td>
+                        <td>count</td>
+                        <td>2000</td>
+                        <td>200 to 10000</td>
+                        <td>500 (Light), 2000 (Medium), 8000 (Heavy)</td>
+                        <td>Total number of baryons (protons + neutrons) in the simulation box. Affects visual density and statistics.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>Worked Example: Neutron-Proton Mass Difference</h3>
+            <p>The neutron-proton mass difference, Q, is key. Q ≈ 1.293 MeV. A part of this comes from electromagnetic effects and is proportional to α. Let's model this simply as <code>Q_new = Q_today * (1 + k * Δα/α)</code>, where <code>k</code> is a sensitivity factor (we'll use k ≈ 0.6).
+            <br>
+            If we set <strong>Δα/α = +4% = 0.04</strong>:
+            <br>
+            <code>Q_new = 1.293 MeV * (1 + 0.6 * 0.04) = 1.293 * (1 + 0.024) = 1.293 * 1.024 ≈ <strong>1.324 MeV</strong></code>.
+            <br>
+            This 2.4% increase in the mass difference seems small, but it has a significant effect on the neutron-to-proton ratio at freeze-out, which depends exponentially on <code>-Q/T</code>.</p>
+        </section>
+
+        <div id="confirmation-dialog" class="warning-box" style="display: none;">
+            <p><strong>Warning:</strong> The selected settings ("Heavy" or high particle count) may be computationally intensive and could cause your browser to slow down or become unresponsive. Do you wish to proceed?</p>
+            <button id="confirm-heavy-load">Yes, Proceed</button>
+            <button id="cancel-heavy-load">Cancel</button>
+        </div>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas" width="800" height="450"></canvas>
+                <div id="sim-info" style="text-align: center; margin-top: 10px;"></div>
+                <div class="perf-meter">FPS: <span id="fps-meter">--</span> | Sim Time: <span id="sim-time-display">0</span> s | Temp: <span id="sim-temp-display">--</span> GK</div>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                    <button id="step-btn" aria-label="Step (Right Arrow)">Step</button>
+                    <button id="reset-btn" aria-label="Reset (r)">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="speed-slider">Speed:</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" step="0.1" value="1" aria-label="Simulation Speed">
+                    <span id="speed-value">1.0x</span>
+                </div>
+                <hr>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="alpha-slider">α Variation (Δα/α): <span id="alpha-value">0</span>%</label>
+                        <input type="range" id="alpha-slider" min="-5" max="5" step="0.1" value="0" aria-label="Alpha Variation">
+                    </div>
+                    <div class="control-group">
+                        <label for="particles-slider">Total Particles: <span id="particles-value">2000</span></label>
+                        <input type="range" id="particles-slider" min="200" max="10000" step="100" value="2000" aria-label="Total Particles">
+                    </div>
+                </div>
+                <hr>
+                <h3>Presets</h3>
+                <div class="preset-buttons button-bar">
+                    <button id="preset-light">Light: Standard Model</button>
+                    <button id="preset-medium">Medium: Higher α</button>
+                    <button id="preset-heavy">Heavy: Lower α</button>
+                </div>
+                <hr>
+                <h3>Options</h3>
+                <div class="button-bar">
+                    <button id="export-png-btn" aria-label="Export PNG (e)">Export PNG</button>
+                    <button id="export-json-btn">Export JSON</button>
+                    <button id="share-btn">Share Preset</button>
+                </div>
+                <div class="control-group" style="margin-top: 10px;">
+                     <input type="checkbox" id="perf-mode-toggle" onchange="togglePerformanceMode(this.checked)">
+                     <label for="perf-mode-toggle">Low-res Performance Mode</label>
+                </div>
+            </div>
+        </section>
+
+        <section id="presets-explained">
+            <h2>Try These Examples</h2>
+            <div class="preset-example">
+                <h3>1. Light Demo — Standard Model</h3>
+                <p>This preset uses the accepted value of α (0% variation) and a small number of particles for a quick run.</p>
+                <p><strong>Expect to observe:</strong> A final Helium-4 mass fraction of approximately <strong>24-25%</strong>. This is the standard, text-book result for BBN.</p>
+                <button onclick="applyPreset('light')">Run "Standard Model"</button>
+                <code>{"delta_alpha_pct": 0, "total_particles": 500}</code>
+            </div>
+            <div class="preset-example">
+                <h3>2. Medium Demo — A Universe with Higher α</h3>
+                <p>This preset simulates a universe where α was 2% stronger in the past. It uses a moderate number of particles.</p>
+                <p><strong>Expect to observe:</strong> A final Helium-4 mass fraction that is <strong>lower</strong> than the standard model, perhaps around <strong>22-23%</strong>. Notice that freeze-out happens slightly earlier.</p>
+                <button onclick="applyPreset('medium')">Run "Higher α"</button>
+                <code>{"delta_alpha_pct": 2, "total_particles": 2000}</code>
+            </div>
+            <div class="preset-example">
+                <h3>3. Extreme Demo — A Universe with Lower α</h3>
+                <p>This preset explores a 2% weaker α and uses a large number of particles for better statistics (may run slow).</p>
+                <p><strong>Expect to observe:</strong> A final Helium-4 mass fraction that is <strong>higher</strong> than the standard model, possibly <strong>26-27%</strong>. The neutron-to-proton ratio at freeze-out will be higher.</p>
+                <button onclick="applyPreset('heavy')">Run "Lower α"</button>
+                <code>{"delta_alpha_pct": -2, "total_particles": 5000}</code>
+            </div>
+        </section>
+
+        <button class="collapsible">Worked Walkthroughs and Micro-Experiments (Click to expand)</button>
+        <div class="content">
+            <h3>Walkthrough: Changing the Fine-Structure Constant (α)</h3>
+            <p>The most important parameter is the variation in α. Let's see its effect.</p>
+            <ol>
+                <li><strong>Start with the default: Δα/α = 0%.</strong> Run the simulation. Note the final Helium mass fraction (Yp). It should be around 0.245 (or 24.5%).</li>
+                <li><strong>Increase α: Set Δα/α to +4%.</strong> Run the simulation again. You will see the final Helium fraction drop to ~0.22. Why? The neutron-proton mass difference increased. This caused neutrons to decay into protons more readily, so fewer neutrons were available when it came time to form Helium. The numeric difference is 0.245 - 0.22 = <strong>-0.025</strong>.</li>
+                <li><strong>Decrease α: Set Δα/α to -4%.</strong> Now, the Helium fraction will rise to ~0.265. The smaller mass difference allowed more neutrons to survive until nucleosynthesis began. The numeric difference from the standard is 0.265 - 0.245 = <strong>+0.020</strong>.</li>
+            </ol>
+            <p><strong>Analogy Check:</strong> This matches our "baking bread" analogy. Higher α (more humidity) made the yeast (neutrons) spoil faster, resulting in a smaller loaf (less Helium).</p>
+
+            <h3>Micro-Experiments</h3>
+            <ol>
+                <li><strong>Pinpointing Freeze-out:</strong> Set preset to "Standard Model". Pause the simulation when the temperature (T) is around 0.8 MeV (8 GK). Note the n/(n+p) ratio. This is roughly the freeze-out point. Expected value: ~1/7 or 0.14.</li>
+                <li><strong>The Deuterium Bottleneck:</strong> Continue the simulation. Notice that Helium doesn't form in large amounts until the temperature drops much lower, to around 0.07 MeV (0.7 GK). This is the "Deuterium bottleneck" - Deuterium couldn't hold together in the intense heat before this point.</li>
+                <li><strong>Max-α vs Min-α:</strong> Set Δα/α to its maximum (+5%). Run and record the final Helium fraction. Now set it to its minimum (-5%) and do the same. What is the total range of possible Helium abundances in this model? Expected range: roughly 0.21 to 0.28.</li>
+                <li><strong>The Importance of Neutron Decay:</strong> Run the standard simulation but pause it right after freeze-out (T ~ 0.8 MeV). Let it sit paused for a moment, then step forward slowly. You will see the neutron count slowly tick down even though no reactions are happening. This is free neutron decay, a slow but steady process.</li>
+                <li><strong>Particle Count and Noise:</strong> Run the "Light" preset. Note the final Helium percentage. Now run the "Heavy" preset (with Δα/α set to 0). The final percentage will be much closer to the theoretical 24.5% value. Why? More particles reduce the statistical noise and give a more accurate average result.</li>
+            </ol>
+        </div>
+
+        <button class="collapsible">Core Theory — The Equations (Click to expand)</button>
+        <div class="content">
+            <p>Here are the simplified equations governing the simulation.</p>
+            <h3>1. Expansion Rate (Hubble Parameter)</h3>
+            <p>The expansion of the universe is driven by the energy density. In the early, radiation-dominated universe, the Hubble parameter H is given by:</p>
+            <p><code>H ≈ 1.66 * g_star^0.5 * T^2 / M_plank</code></p>
+            <p><strong>Plain English:</strong> The expansion rate (H) depends on the temperature (T) squared. Hotter universe = faster expansion. <code>g_star</code> counts the number of particle species, and <code>M_plank</code> is the Planck mass, a fundamental constant.
+            <br><strong>Example:</strong> At T = 1 MeV, H is enormous. The universe's size is doubling very rapidly.</p>
+
+            <h3>2. Neutron-to-Proton Ratio</h3>
+            <p>The equilibrium ratio of neutrons (n) to protons (p) is determined by a Boltzmann factor:</p>
+            <p><code>n/p = exp(-Q / T)</code></p>
+            <p>Where <code>Q = m_n - m_p</code> is the neutron-proton mass difference (~1.293 MeV).</p>
+            <p><strong>Plain English:</strong> Because neutrons are heavier (Q > 0), the universe prefers the lighter protons. As temperature (T) drops, the ratio n/p drops exponentially.
+            <br><strong>Example:</strong> At a high temperature of T=10 MeV, <code>n/p = exp(-1.293/10) ≈ 0.88</code> (almost equal numbers). At T=0.5 MeV, <code>n/p = exp(-1.293/0.5) ≈ 0.076</code> (far fewer neutrons).</p>
+
+            <h3>3. The Effect of α on Q</h3>
+            <p>We model the change in Q due to a change in α as:</p>
+            <p><code>Q_new = Q_today * (1 + 0.6 * Δα/α)</code></p>
+            <p><strong>Plain English:</strong> The mass difference Q changes proportionally to the change in α. The factor 0.6 is a theoretical estimate of the sensitivity.
+            <br><strong>Example:</strong> If α increases by 2% (Δα/α = 0.02), then <code>Q_new = 1.293 * (1 + 0.6 * 0.02) = 1.308 MeV</code>.</p>
+
+            <h3>4. Freeze-out Condition</h3>
+            <p>Freeze-out occurs when the weak interaction rate (Γ) equals the expansion rate (H).</p>
+            <p><code>Γ(T_freeze) ≈ H(T_freeze)</code></p>
+            <p><strong>Plain English:</strong> Protons and neutrons stop converting into each other when the universe is expanding so fast that they can't find each other in time to interact. This "freezes" the n/p ratio at its value at <code>T_freeze</code>. After this, the only thing that changes the neutron count is their natural decay.</p>
+
+            <h3>5. Final Helium Abundance (Yp)</h3>
+            <p>Almost all neutrons available after freeze-out and decay end up in Helium-4 nuclei (2 protons, 2 neutrons). The predicted mass fraction of Helium is:</p>
+            <p><code>Yp ≈ 2 * (n/p)_final / (1 + (n/p)_final)</code></p>
+            <p><strong>Plain English:</strong> The amount of Helium you get is directly related to the neutron-to-proton ratio after freeze-out. Double the neutrons, you roughly double the Helium.
+            <br><strong>Example:</strong> If the final ratio is n/p = 1/7, then <code>Yp ≈ 2 * (1/7) / (1 + 1/7) = (2/7) / (8/7) = 2/8 = 0.25</code>, or 25% of the universe's baryonic mass becomes Helium.</p>
+        </div>
+
+        <button class="collapsible">Advanced Notes & Extensions (Click to expand)</button>
+        <div class="content">
+            <h3>Numerical Stability & Approximations</h3>
+            <p>This simulation is a simplified model. Here's what we've approximated:</p>
+            <ul>
+                <li><strong>Simplified Reaction Network:</strong> Real BBN involves a network of over a dozen reactions. We are only explicitly considering the neutron-proton conversion and then assuming all available neutrons instantly form Helium once the Deuterium bottleneck is passed. This is a major simplification. A real calculation tracks Deuterium, Tritium, Helium-3, Lithium-7, etc.</li>
+                <li><strong>Instantaneous Freeze-out:</strong> Freeze-out is a gradual process, not an instant event. Our simulation models it more sharply for clarity.</li>
+                <li><strong>Homogeneity:</strong> We assume the universe is perfectly smooth and uniform. Small-scale density fluctuations are ignored.</li>
+            </ul>
+            <h3>Possible Extensions</h3>
+            <ul>
+                <li><strong>Full Reaction Network:</strong> An advanced user could extend the Javascript code to include rate equations for other light elements like Deuterium (D), Tritium (T), and Helium-3 (He3). You would need to add variables for their abundances and update them at each timestep based on temperature-dependent reaction rates found in nuclear physics literature. For example, the rate of D + D -> He3 + n.</li>
+                <li><strong>Neutrino Physics:</strong> The energy density of the universe (g*) depends on the number of neutrino species. One could add a parameter to change this from the standard 3, to see how it affects the expansion rate and thus the final Helium abundance.</li>
+                <li><strong>Baryon-to-Photon Ratio (η):</strong> We've assumed a fixed value for η, which determines the overall density of matter. Making this a slider would be another way to explore BBN, as it's a crucial cosmological parameter. A higher η leads to more efficient nucleosynthesis and less leftover Deuterium.</li>
+            </ul>
+        </div>
+
+        <button class="collapsible">Analogies & Intuition (Click to expand)</button>
+        <div class="content">
+            <h3>1. Physical Everyday Analogy: Popcorn Making</h3>
+            <p>Imagine making popcorn on a stove.
+            <ul>
+                <li><strong>Kernels:</strong> These are the protons and neutrons.</li>
+                <li><strong>Heat:</strong> The temperature of the early universe.</li>
+                <li><strong>The "Pop":</strong> The moment a proton and neutron bind to form a nucleus.</li>
+                <li><strong>The Fine-Structure Constant α:</strong> This is like the <strong>oil</strong> you use. With the right oil (standard α), popping is efficient. If you use a "thicker" oil (higher α), the kernels (protons/neutrons) have a harder time moving and getting together, so fewer of them pop successfully into Helium. If you use a "thinner" oil (lower α), they combine more easily.</li>
+                <li><strong>Limitation:</strong> This analogy doesn't capture the expansion of the universe or the crucial neutron-to-proton ratio freeze-out, which is the real driver of the final abundances.</li>
+            </ul>
+            </p>
+
+            <h3>2. Visualization Analogy: Colored Dots on an Expanding Balloon</h3>
+            <p>
+            <ul>
+                <li>Imagine a balloon with red dots (protons) and blue dots (neutrons) drawn on it.</li>
+                <li><strong>Expansion:</strong> As you inflate the balloon, the dots spread apart, just like particles in the expanding universe.</li>
+                <li><strong>Temperature:</strong> The surface of the balloon is vibrating rapidly at first (high temperature), and the vibrations slowly die down.</li>
+                <li><strong>Binding:</strong> When the vibrations are too strong, any dots that touch immediately fly apart. As the vibrations calm down (cooling), dots that bump into each other can stick. A red and blue dot form a purple dot (Deuterium). Two purple dots can merge into a black dot (Helium).</li>
+                <li><strong>The Fine-Structure Constant α:</strong> This is a rule about how "sticky" the dots are. A higher α makes them less sticky, so you have to wait for the balloon to be vibrating very little before they can combine. This means fewer dots will have a chance to stick together before they are too far apart.</li>
+                <li><strong>Limitation:</strong> This helps visualize expansion and cooling, but doesn't explain why the initial number of red and blue dots is what it is (the freeze-out process).</li>
+            </ul>
+            </p>
+
+            <h3>3. Computational Analogy: A Cellular Automaton with Decaying States</h3>
+            <p>
+            <ul>
+                <li>Think of a grid of cells, like in Conway's Game of Life. Each cell can be in one of three states: "Proton," "Neutron," or "Bound" (e.g., Helium).</li>
+                <li><strong>Rules:</strong> The simulation proceeds in discrete time steps. At each step, rules are applied:
+                    <ol>
+                        <li><strong>Expansion:</strong> The grid size increases.</li>
+                        <li><strong>Conversion Rule:</strong> A "Neutron" cell has a probability of turning into a "Proton" cell. This probability depends on a global "Temperature" variable.</li>
+                        <li><strong>Binding Rule:</strong> If a "Neutron" cell is adjacent to a "Proton" cell, and the "Temperature" is below a certain threshold, they both can become "Bound" cells.</li>
+                    </ol>
+                </li>
+                <li><strong>The Fine-Structure Constant α:</strong> This constant directly modifies the probability in the "Conversion Rule." A higher α increases the chance a Neutron becomes a Proton at any given temperature.</li>
+                <li><strong>Limitation:</strong> This analogy is quite abstract but is closest to how the simulation is actually computed. It correctly frames the process as a competition between different probabilistic rules over time. Its weakness is the lack of intuitive physical grounding.</li>
+            </ul>
+            </p>
+        </div>
+
+        <button class="collapsible">FAQ & Troubleshooting (Click to expand)</button>
+        <div class="content">
+            <dl>
+                <dt><strong>1. Why does Helium production stop?</strong></dt>
+                <dd>Two reasons: First, almost all the available free neutrons get used up. Second, as the universe expands and cools, the density and temperature drop too low for nuclear reactions to happen efficiently. The particles are too far apart and moving too slowly to overcome the electrostatic repulsion between nuclei.</dd>
+                <dt><strong>2. Why isn't all matter Helium?</strong></dt>
+                <dd>Because protons vastly outnumbered neutrons (by about 7 to 1) after freeze-out. Once all the neutrons were locked up in Helium nuclei, the remaining protons had nothing to fuse with. These leftover protons became the nuclei of ordinary Hydrogen atoms.</dd>
+                <dt><strong>3. Where did the other elements come from?</strong></dt>
+                <dd>Almost all elements heavier than Helium (like the Carbon, Oxygen, and Iron in you) were not made in the Big Bang. They were forged much, much later in the cores of stars and in supernova explosions.</dd>
+                <dt><strong>4. Is the fine-structure constant actually changing?</strong></dt>
+                <dd>This is a topic of active research! Some controversial astronomical observations have hinted at a tiny change in α over billions of years, but most experiments and observations show no change, so the standard model assumes it is a true constant. This simulation explores the hypothetical "what if."</dd>
+                <dt><strong>5. The simulation is running slow. What can I do?</strong></dt>
+                <dd>Try these steps: 1) Reduce the "Total Particles" using the slider. 2) Check the "Low-res Performance Mode" box, which reduces the drawing frequency. 3) Close other demanding browser tabs or applications.</dd>
+                <dt><strong>6. The canvas is blank or frozen.</strong></dt>
+                <dd>This can happen if you set the particle count extremely high. Try hitting the "Reset" button. If that doesn't work, reload the page. The default settings are designed to be safe. If the problem persists, open the browser's developer console (usually F12), copy any error messages you see in the "Console" tab, and report them.</dd>
+                <dt><strong>7. What do the different colors on the canvas mean?</strong></dt>
+                <dd>The simulation shows protons (e.g., red), neutrons (e.g., blue), and Helium-4 nuclei (e.g., purple). You can see the neutrons gradually get consumed to form Helium.</dd>
+            </dl>
+        </div>
+
+        <button class="collapsible">Developer Console (Click to expand)</button>
+        <div class="content">
+            <p>Shows runtime logs and error messages for debugging.</p>
+            <div id="dev-console"></div>
+        </div>
+
+    </div>
+
+    <script>
+    // --- Self-Checking and Dev Console ---
+    const devConsole = document.getElementById('dev-console');
+    function log(message) {
+        console.log(message);
+        const p = document.createElement('p');
+        p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        devConsole.prepend(p);
+    }
+    window.onerror = function(message, source, lineno, colno, error) {
+        log(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+        const errorPanel = document.createElement('div');
+        errorPanel.className = 'error-panel';
+        errorPanel.innerHTML = `<strong>A runtime error occurred.</strong> Please check the Developer Console for details.`;
+        document.body.prepend(errorPanel);
+        return true;
+    };
+
+    function runSelfChecks() {
+        const panel = document.getElementById('self-check-panel');
+        let checksPassed = true;
+        let report = '<h3>Self-Check Report</h3><ul>';
+
+        function check(name, condition) {
+            if (condition) {
+                report += `<li>✔️ ${name}: Pass</li>`;
+            } else {
+                report += `<li>❌ ${name}: Fail</li>`;
+                checksPassed = false;
+            }
+        }
+
+        check('Canvas element found', !!document.getElementById('simulationCanvas'));
+        check('Play/Pause button found', !!document.getElementById('play-pause-btn'));
+        check('Reset button found', !!document.getElementById('reset-btn'));
+        check('Alpha slider found', !!document.getElementById('alpha-slider'));
+        check('Preset buttons found', document.querySelectorAll('.preset-buttons button').length >= 3);
+
+        report += '</ul>';
+        panel.innerHTML = report;
+        if (checksPassed) {
+            panel.classList.add('pass');
+            panel.innerHTML += '<p>All checks passed. The simulation should be functional.</p>';
+        } else {
+            panel.classList.add('fail');
+            panel.innerHTML += '<p>Some checks failed. The simulation may not work as expected. Please report this issue.</p>';
+        }
+    }
+
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let particles = [];
+    let isRunning = false;
+    let animationFrameId;
+    let lastTime = 0;
+    let fps = 0;
+    let frameCount = 0;
+    let fpsLastTime = 0;
+
+    // Simulation state
+    let simState = {};
+
+    // Constants
+    const Q_MeV = 1.293; // n-p mass difference in MeV
+    const G_F_sq = 5.29e-44; // Fermi constant squared in m^2 MeV^-2
+    const M_plank = 1.22e22; // Planck Mass in MeV
+    const neutron_lifetime_s = 879.4; // Neutron lifetime in seconds
+
+    const presets = {
+        light: { delta_alpha_pct: 0, total_particles: 500 },
+        medium: { delta_alpha_pct: 2, total_particles: 2000 },
+        heavy: { delta_alpha_pct: -2, total_particles: 5000 }
+    };
+
+    let config = {
+        delta_alpha_pct: 0,
+        total_particles: 2000,
+        speed: 1,
+        perfMode: false,
+    };
+
+    function resetSimulation() {
+        log('Resetting simulation...');
+        simState = {
+            time_s: 0.1, // Start at t=0.1s
+            temp_GK: 30, // Corresponds to T ~ 3 MeV
+            n_protons: 0,
+            n_neutrons: 0,
+            n_helium: 0,
+            log: [],
+            freezeout_happened: false,
+            nucleosynthesis_started: false,
+        };
+
+        // Initial n/p ratio at high T
+        const initial_Q = getQ();
+        const initial_temp_MeV = simState.temp_GK / 11.6045;
+        const initial_ratio = Math.exp(-initial_Q / initial_temp_MeV);
+
+        simState.n_neutrons = Math.round(config.total_particles * initial_ratio / (1 + initial_ratio));
+        simState.n_protons = config.total_particles - simState.n_neutrons;
+
+        particles = [];
+        for (let i = 0; i < simState.n_protons; i++) particles.push({ type: 'p' });
+        for (let i = 0; i < simState.n_neutrons; i++) particles.push({ type: 'n' });
+
+        // Give them random positions for visualization
+        particles.forEach(p => {
+            p.x = Math.random();
+            p.y = Math.random();
+            p.vx = (Math.random() - 0.5) * 0.01;
+            p.vy = (Math.random() - 0.5) * 0.01;
+        });
+
+        simState.log.push({
+            time: simState.time_s,
+            temp: simState.temp_GK,
+            Yp: 0,
+            n_frac: simState.n_neutrons / config.total_particles
+        });
+
+        updateUIFromState();
+        draw();
+        log('Simulation reset complete.');
+    }
+
+    function getQ() {
+        // Q_new = Q_today * (1 + 0.6 * Δα/α)
+        return Q_MeV * (1 + 0.6 * (config.delta_alpha_pct / 100));
+    }
+
+    function getHubbleRate(temp_MeV) {
+        // H ~ 1.66 * g_star^0.5 * T^2 / M_plank
+        const g_star = 10.75; // for e+, e-, photons, 3 neutrinos
+        return 1.66 * Math.sqrt(g_star) * temp_MeV * temp_MeV / M_plank;
+    }
+
+    function getWeakRate(temp_MeV) {
+        // Γ ~ G_F^2 * T^5
+        // This is a proportionality, we need to scale it.
+        // The actual rate is ~0.3 s^-1 at T=1 MeV.
+        return 0.3 * Math.pow(temp_MeV, 5);
+    }
+
+    function simulationStep(dt) {
+        if (simState.temp_GK < 0.1) return; // End of simulation
+
+        const temp_MeV = simState.temp_GK / 11.6045;
+        const Q = getQ();
+
+        // Time-temperature relation in radiation era: T ~ 1/sqrt(t)
+        // So t ~ 1/T^2. dt = -2/T^3 dT. For a small step:
+        const next_temp_MeV = temp_MeV * 0.999; // Cool down a bit
+        const current_t = 1.32 / (temp_MeV * temp_MeV); // approx relation t(s) and T(MeV)
+        const next_t = 1.32 / (next_temp_MeV * next_temp_MeV);
+        dt = (next_t - current_t) * config.speed;
+        simState.time_s += dt;
+        simState.temp_GK = next_temp_MeV * 11.6045;
+
+        const H = getHubbleRate(temp_MeV);
+        const Gamma_weak = getWeakRate(temp_MeV);
+
+        // --- Freeze-out logic ---
+        if (!simState.freezeout_happened && Gamma_weak < H) {
+            simState.freezeout_happened = true;
+            simState.freezeout_temp = simState.temp_GK;
+            log(`Freeze-out occurred at T ≈ ${simState.temp_GK.toFixed(2)} GK (t ≈ ${simState.time_s.toFixed(1)}s)`);
+        }
+
+        // --- Neutron-Proton conversion ---
+        if (!simState.freezeout_happened) {
+            // In equilibrium, approach Boltzmann ratio
+            const target_n_p_ratio = Math.exp(-Q / temp_MeV);
+            const target_neutrons = config.total_particles * target_n_p_ratio / (1 + target_n_p_ratio);
+
+            // Move towards equilibrium
+            const diff = target_neutrons - simState.n_neutrons;
+            const change = diff * (1 - Math.exp(-Gamma_weak * dt)); // Relaxation
+            simState.n_neutrons += change;
+            simState.n_protons -= change;
+        } else {
+            // After freeze-out, only decay
+            const decay_prob = 1 - Math.exp(-dt / neutron_lifetime_s);
+            const decayed_neutrons = simState.n_neutrons * decay_prob;
+            simState.n_neutrons -= decayed_neutrons;
+            simState.n_protons += decayed_neutrons;
+        }
+
+        // --- Nucleosynthesis logic ---
+        const deuterium_binding_energy_MeV = 2.22;
+        // Simplified: starts when T drops below ~0.1 MeV
+        if (temp_MeV < 0.08 && !simState.nucleosynthesis_started) {
+            simState.nucleosynthesis_started = true;
+            log(`Nucleosynthesis begins at T ≈ ${simState.temp_GK.toFixed(2)} GK (t ≈ ${simState.time_s.toFixed(1)}s)`);
+
+            // Assume all available neutrons are rapidly converted to He-4
+            // Each He-4 needs 2 neutrons
+            const he_formed = Math.floor(simState.n_neutrons / 2);
+            simState.n_helium += he_formed;
+            simState.n_neutrons -= he_formed * 2;
+            simState.n_protons -= he_formed * 2; // Protons also consumed
+        }
+    }
+
+    function updateUIFromState() {
+        document.getElementById('sim-time-display').textContent = simState.time_s.toExponential(2);
+        document.getElementById('sim-temp-display').textContent = simState.temp_GK.toExponential(2);
+
+        const total_mass = config.total_particles; // assume m_p ~ m_n
+        const he_mass = simState.n_helium * 4;
+        const Yp = total_mass > 0 ? he_mass / total_mass : 0;
+
+        const info_html = `
+            Protons: ${Math.round(simState.n_protons)} |
+            Neutrons: ${Math.round(simState.n_neutrons)} |
+            Helium-4: ${simState.n_helium} |
+            <b>He Mass Fraction (Yp): ${Yp.toFixed(4)}</b>
+        `;
+        document.getElementById('sim-info').innerHTML = info_html;
+    }
+
+    function draw() {
+        if (!ctx) return;
+
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // Scale factor 'a' is proportional to 1/T
+        const scale = (30 / simState.temp_GK);
+
+        ctx.fillStyle = 'rgba(100, 100, 255, 0.1)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect( (width - width*scale)/2, (height - height*scale)/2, width * scale, height * scale);
+
+        let p_drawn = 0;
+        let n_drawn = 0;
+        let he_drawn = 0;
+        const p_to_draw = Math.round(simState.n_protons);
+        const n_to_draw = Math.round(simState.n_neutrons);
+        const he_to_draw = simState.n_helium;
+
+        const max_visual_particles = config.perfMode ? 300 : 1000;
+        const viz_fraction = Math.min(1, max_visual_particles / config.total_particles);
+
+        particles.forEach(p => {
+            if (Math.random() > viz_fraction) return;
+
+            p.x += p.vx * scale;
+            p.y += p.vy * scale;
+            if (p.x > 1 || p.x < 0) p.vx *= -1;
+            if (p.y > 1 || p.y < 0) p.vy *= -1;
+
+            let type_to_draw = 'p'; // default
+            if (n_drawn < n_to_draw) {
+                type_to_draw = 'n';
+                n_drawn++;
+            } else if (p_drawn < p_to_draw) {
+                type_to_draw = 'p';
+                p_drawn++;
+            } else if (he_drawn < he_to_draw * 4) { // 4 particles per He
+                 type_to_draw = 'he';
+                 he_drawn++;
+            } else {
+                return;
+            }
+
+            ctx.beginPath();
+            let radius = 2;
+            switch(type_to_draw) {
+                case 'p': ctx.fillStyle = 'red'; break;
+                case 'n': ctx.fillStyle = 'blue'; break;
+                case 'he': ctx.fillStyle = 'purple'; radius=4; break;
+            }
+
+            const canvas_x = (width - width*scale)/2 + p.x * width * scale;
+            const canvas_y = (height - height*scale)/2 + p.y * height * scale;
+            ctx.arc(canvas_x, canvas_y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const deltaTime = (timestamp - lastTime) / 1000;
+
+        if (isRunning) {
+            simulationStep(deltaTime);
+            updateUIFromState();
+        }
+
+        frameCount++;
+        if (timestamp > fpsLastTime + 1000) {
+            fps = frameCount;
+            frameCount = 0;
+            fpsLastTime = timestamp;
+            document.getElementById('fps-meter').textContent = fps;
+        }
+
+        if (!config.perfMode || frameCount % 3 === 0) {
+             draw();
+        }
+
+        lastTime = timestamp;
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('play-pause-btn').addEventListener('click', togglePlayPause);
+        document.getElementById('step-btn').addEventListener('click', () => {
+            if (!isRunning) {
+                simulationStep(0.016); // step with a fixed delta
+                updateUIFromState();
+                draw();
+            }
+        });
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            isRunning = false;
+            document.getElementById('play-pause-btn').textContent = 'Play';
+            resetSimulation();
+        });
+
+        const speedSlider = document.getElementById('speed-slider');
+        speedSlider.addEventListener('input', e => {
+            config.speed = parseFloat(e.target.value);
+            document.getElementById('speed-value').textContent = `${config.speed.toFixed(1)}x`;
+        });
+
+        const alphaSlider = document.getElementById('alpha-slider');
+        alphaSlider.addEventListener('input', e => {
+            config.delta_alpha_pct = parseFloat(e.target.value);
+            document.getElementById('alpha-value').textContent = `${config.delta_alpha_pct.toFixed(1)}`;
+            resetSimulation();
+        });
+
+        const particlesSlider = document.getElementById('particles-slider');
+        particlesSlider.addEventListener('input', e => {
+            config.total_particles = parseInt(e.target.value, 10);
+            document.getElementById('particles-value').textContent = config.total_particles;
+        });
+        particlesSlider.addEventListener('change', () => resetSimulation()); // Reset only when user releases slider
+
+        document.getElementById('preset-light').addEventListener('click', () => applyPreset('light'));
+        document.getElementById('preset-medium').addEventListener('click', () => applyPreset('medium'));
+        document.getElementById('preset-heavy').addEventListener('click', () => applyPreset('heavy'));
+
+        document.getElementById('export-png-btn').addEventListener('click', exportPNG);
+        document.getElementById('export-json-btn').addEventListener('click', exportJSON);
+        document.getElementById('share-btn').addEventListener('click', sharePreset);
+
+        document.addEventListener('keydown', e => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+            if (e.code === 'ArrowRight') { e.preventDefault(); document.getElementById('step-btn').click(); }
+            if (e.key === 'r') { e.preventDefault(); document.getElementById('reset-btn').click(); }
+            if (e.key === 'e') { e.preventDefault(); document.getElementById('export-png-btn').click(); }
+        });
+    }
+
+    function togglePlayPause() {
+        isRunning = !isRunning;
+        document.getElementById('play-pause-btn').textContent = isRunning ? 'Pause' : 'Play';
+        log(isRunning ? 'Simulation started.' : 'Simulation paused.');
+    }
+
+    function applyPreset(presetName) {
+        const preset = presets[presetName];
+        if (!preset) return;
+
+        const heavyLoad = preset.total_particles > 4000 || presetName === 'heavy';
+        if (heavyLoad) {
+            const dialog = document.getElementById('confirmation-dialog');
+            dialog.style.display = 'block';
+            document.getElementById('confirm-heavy-load').onclick = () => {
+                dialog.style.display = 'none';
+                loadPreset(preset);
+            };
+            document.getElementById('cancel-heavy-load').onclick = () => {
+                dialog.style.display = 'none';
+            };
+        } else {
+            loadPreset(preset);
+        }
+    }
+
+    function loadPreset(preset) {
+        config.delta_alpha_pct = preset.delta_alpha_pct;
+        config.total_particles = preset.total_particles;
+
+        document.getElementById('alpha-slider').value = config.delta_alpha_pct;
+        document.getElementById('alpha-value').textContent = config.delta_alpha_pct.toFixed(1);
+        document.getElementById('particles-slider').value = config.total_particles;
+        document.getElementById('particles-value').textContent = config.total_particles;
+
+        resetSimulation();
+        if (!isRunning) {
+            togglePlayPause();
+        }
+        log(`Applied preset: ${JSON.stringify(preset)}`);
+    }
+
+    function exportPNG() {
+        const link = document.createElement('a');
+        link.download = `bbn_simulation_${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        log('Exported canvas as PNG.');
+    }
+
+    function exportJSON() {
+        const data = {
+            parameters: config,
+            timestamp: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const link = document.createElement('a');
+        link.download = `bbn_params_${Date.now()}.json`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        log('Exported parameters as JSON.');
+    }
+
+    function sharePreset() {
+        const data = { p: config.delta_alpha_pct, n: config.total_particles };
+        const jsonString = JSON.stringify(data);
+        const urlFragment = `#preset=${btoa(jsonString)}`;
+        const url = window.location.href.split('#')[0] + urlFragment;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Shareable link copied to clipboard!');
+            log('Shareable link copied.');
+        }, () => {
+            alert('Failed to copy link.');
+            log('Failed to copy shareable link.');
+        });
+    }
+
+    function loadPresetFromURL() {
+        if (window.location.hash.startsWith('#preset=')) {
+            try {
+                const encoded = window.location.hash.substring(8);
+                const decoded = atob(encoded);
+                const data = JSON.parse(decoded);
+                const preset = {
+                    delta_alpha_pct: parseFloat(data.p) || 0,
+                    total_particles: parseInt(data.n, 10) || 2000
+                };
+                log('Loading preset from URL...');
+                loadPreset(preset);
+            } catch (e) {
+                log('Failed to load preset from URL hash.');
+                console.error(e);
+            }
+        }
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        log(`Dark mode ${document.body.classList.contains('dark-mode') ? 'enabled' : 'disabled'}.`);
+    }
+
+    function togglePerformanceMode(isPerf) {
+        config.perfMode = isPerf;
+        log(`Performance mode ${isPerf ? 'enabled' : 'disabled'}.`);
+    }
+
+    function applySuggestion(type, value) {
+        alert(`Suggestion applied: ${type} = ${value}. (This is a demonstrative feature)`);
+        log(`User suggestion: ${type} = ${value}.`);
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        runSelfChecks();
+        canvas = document.getElementById('simulationCanvas');
+        if (!canvas) {
+            log("FATAL: Canvas not found. Aborting.");
+            return;
+        }
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        resetSimulation();
+        loadPresetFromURL();
+
+        // Setup collapsible sections
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                if (content.style.display === 'block') {
+                    content.style.display = 'none';
+                } else {
+                    content.style.display = 'block';
+                }
+            });
+        });
+
+        animationFrameId = requestAnimationFrame(gameLoop);
+        log("Initialization complete. Ready.");
+    };
+    </script>
+</body>
+</html>
