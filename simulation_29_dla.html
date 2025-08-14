@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Diffusion-Limited Aggregation (DLA)</title>
+    <style>
+        :root {
+            --bg-color: #fdfdfd;
+            --text-color: #333;
+            --header-color: #6a0dad; /* A purple for "biophysics" */
+            --control-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --accent-color: #9b59b6;
+            --accent-light: #f5eef8;
+        }
+
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --header-color: #bb86fc;
+            --control-bg: #1e1e1e;
+            --border-color: #333333;
+            --accent-color: #ab98c9;
+            --accent-light: #2a2a2a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        #canvas-container {
+            flex: 3;
+            min-width: 300px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            background-color: #000;
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 280px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #8e44ad; }
+        #reset-btn { background-color: #c0392b; }
+        #reset-btn:hover { background-color: #a93226; }
+
+        .performance-meter {
+            font-size: 0.9em;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Diffusion-Limited Aggregation (DLA)</h1>
+        <p class="subtitle">A model for growing natural, fractal patterns.</p>
+        <div class="meta-bar">
+            Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 20 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            How do complex, branching structures like snowflakes, lightning bolts, or coral reefs form? Diffusion-Limited Aggregation (DLA) is a simple but powerful computer model that mimics this type of growth. The simulation starts with a single "seed" particle. Then, other particles are released one by one and perform a "random walk," meandering aimlessly through space. If a wandering particle happens to bump into the central cluster, it sticks permanently. This process is repeated thousands of times. Because the outermost branches are more likely to be hit by new particles, they screen the inner regions, leading to the spontaneous formation of a beautiful, tree-like **fractal** structure.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+
+        <h3>1. The Seed</h3>
+        <p>The simulation starts with a single, stationary particle at the very center of the canvas. This is our seed, the beginning of everything.</p>
+
+        <h3>2. The Random Walker</h3>
+        <p>A new particle, the "walker," is created at a random point on a large circle, far away from the seed. You can see it as a bright white dot. This walker then begins to move randomly, one step at a time in a random direction (up, down, left, or right). This is called a "random walk" or Brownian motion.</p>
+
+        <h3>3. The Sticking Rule</h3>
+        <p>The walker continues its journey until it bumps into any particle that is already part of the central cluster. The moment it touches, its journey is over. It "sticks" to the cluster and becomes a permanent part of it. A new walker is then released, and the process repeats.</p>
+
+        <h3>4. Fractal Growth</h3>
+        <p>You might expect this process to create a solid, circular blob. But it doesn't! Why? Imagine the cluster after a few branches have formed. It's much harder for a new walker to navigate the narrow fjords to reach the center. It's far more likely to get stuck on one of the outer tips. This "screening" effect is the key. The tips grow faster than the core, resulting in the intricate, branching structure you see. This is a **fractal**: a pattern that looks similar at different scales of magnification.</p>
+
+        <h3>Analogy: The First Person at a Party</h3>
+        <p>Imagine you're the first person to arrive at a big, empty party room (you're the seed). Guests (walkers) start entering from all the doors around the room and wander about aimlessly. When a guest bumps into you, they stop and start talking. When the next guest bumps into either you or the first guest, they also stop and join the conversation. Soon, a small cluster of people forms. A new guest entering the room is much more likely to bump into someone on the edge of this growing conversation-clump than to find their way to you in the middle. The clump will grow outwards in stringy, branching lines, not as a solid circle of people.</p>
+    </section>
+
+    <section class="section">
+        <h2>Simulation Controls</h2>
+        <div class="simulation-layout">
+            <div id="canvas-container">
+                <canvas id="dla-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-group">
+                    <button id="run-pause-btn">Pause</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="particles-slider">Target Particles: <span id="particles-value">5000</span></label>
+                    <input type="range" id="particles-slider" min="500" max="20000" step="100" value="5000">
+                </div>
+
+                <div class="control-group">
+                    <label for="speed-slider">Walkers per Frame: <span id="speed-value">10</span></label>
+                    <input type="range" id="speed-slider" min="1" max="100" step="1" value="10">
+                </div>
+
+                <div class="performance-meter">
+                    <div>Particles in Cluster: <span id="cluster-size-value">0</span></div>
+                    <div>Cluster Radius: <span id="cluster-radius-value">0</span> px</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Core Theory</h2>
+        <p>DLA is an algorithm, not a single equation. Its properties are studied statistically. The key steps are:</p>
+        <ol>
+            <li>Initialize a grid with a seed particle at the center.</li>
+            <li>Define a "launch radius" R<sub>L</sub>, slightly larger than the current cluster radius, and a "kill radius" R<sub>K</sub>, much larger than R<sub>L</sub>.</li>
+            <li>Launch a new walker at a random position on the circle defined by R<sub>L</sub>.</li>
+            <li>Move the walker one step in a random direction.</li>
+            <li>Check for neighbors. If the walker is adjacent to a cluster particle, add it to the cluster and go to step 2.</li>
+            <li>Check for distance. If the walker's distance from the center exceeds R<sub>K</sub>, remove it and go to step 3.</li>
+            <li>Repeat from step 4.</li>
+        </ol>
+        <p>The most important property of the resulting structure is its **fractal dimension (D)**. For a 2D DLA cluster, D ≈ 1.71. A fractal dimension is a way of measuring how completely a shape fills space. For comparison:</p>
+        <ul>
+            <li>A line has D = 1.</li>
+            <li>A filled square has D = 2.</li>
+        </ul>
+        <p>A value of 1.71 means the DLA cluster is more complex than a simple line, but much more tenuous and less space-filling than a solid disk. This is a quantitative measure of its "branchiness."</p>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        canvas: document.getElementById('dla-canvas'),
+        runPauseBtn: document.getElementById('run-pause-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        particlesSlider: document.getElementById('particles-slider'),
+        particlesValue: document.getElementById('particles-value'),
+        speedSlider: document.getElementById('speed-slider'),
+        speedValue: document.getElementById('speed-value'),
+        clusterSizeValue: document.getElementById('cluster-size-value'),
+        clusterRadiusValue: document.getElementById('cluster-radius-value'),
+        themeToggle: document.getElementById('theme-toggle'),
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+    let width, height, centerX, centerY;
+
+    // --- Simulation State ---
+    let simState = {
+        isRunning: true,
+        animationFrameId: null,
+        grid: null,
+        walkers: [],
+        clusterSize: 0,
+        maxRadiusSq: 0,
+        hue: 0,
+    };
+
+    // --- Simulation Parameters ---
+    let params = {
+        targetParticles: 5000,
+        walkersPerFrame: 10,
+        gridSize: 0
+    };
+
+    function setup() {
+        width = elements.canvas.width;
+        height = elements.canvas.height;
+        params.gridSize = Math.min(width, height);
+        centerX = Math.floor(params.gridSize / 2);
+        centerY = Math.floor(params.gridSize / 2);
+
+        simState.grid = new Uint8Array(params.gridSize * params.gridSize).fill(0);
+        simState.walkers = [];
+        simState.clusterSize = 0;
+        simState.maxRadiusSq = 0;
+        simState.hue = 0;
+
+        // Add seed particle
+        addParticle(centerX, centerY);
+
+        for (let i = 0; i < params.walkersPerFrame; i++) {
+            simState.walkers.push(createWalker());
+        }
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+        drawParticle(centerX, centerY);
+    }
+
+    function createWalker() {
+        const launchRadius = Math.min(params.gridSize/2 - 10, Math.sqrt(simState.maxRadiusSq) + 10);
+        const angle = Math.random() * 2 * Math.PI;
+        return {
+            x: Math.floor(centerX + launchRadius * Math.cos(angle)),
+            y: Math.floor(centerY + launchRadius * Math.sin(angle)),
+        };
+    }
+
+    function addParticle(x, y) {
+        const index = y * params.gridSize + x;
+        if (simState.grid[index] === 0) {
+            simState.grid[index] = 1;
+            simState.clusterSize++;
+            const rSq = (x - centerX)**2 + (y - centerY)**2;
+            if (rSq > simState.maxRadiusSq) {
+                simState.maxRadiusSq = rSq;
+            }
+            drawParticle(x, y);
+        }
+    }
+
+    function drawParticle(x, y) {
+        ctx.fillStyle = `hsl(${simState.hue}, 100%, 60%)`;
+        ctx.fillRect(x, y, 1, 1);
+        simState.hue = (simState.hue + 0.05) % 360;
+    }
+
+    function simulationStep() {
+        if (simState.clusterSize >= params.targetParticles) {
+            pause();
+            return;
+        }
+
+        for (let i = 0; i < simState.walkers.length; i++) {
+            let walker = simState.walkers[i];
+
+            // Random walk
+            const r = Math.random();
+            if (r < 0.25) walker.x++;
+            else if (r < 0.5) walker.x--;
+            else if (r < 0.75) walker.y++;
+            else walker.y--;
+
+            // Check for sticking
+            let stuck = false;
+            // Check 4 neighbors (more efficient than 8)
+            const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+            for (const [dx, dy] of neighbors) {
+                const nx = walker.x + dx;
+                const ny = walker.y + dy;
+                if (nx >= 0 && nx < params.gridSize && ny >= 0 && ny < params.gridSize) {
+                    if (simState.grid[ny * params.gridSize + nx] === 1) {
+                        addParticle(walker.x, walker.y);
+                        simState.walkers[i] = createWalker();
+                        stuck = true;
+                        break;
+                    }
+                }
+            }
+
+            if (stuck) continue;
+
+            // Check kill radius
+            const killRadius = Math.min(params.gridSize - 5, (Math.sqrt(simState.maxRadiusSq) + 5) * 2);
+            const distSq = (walker.x - centerX)**2 + (walker.y - centerY)**2;
+            if (distSq > killRadius**2) {
+                simState.walkers[i] = createWalker();
+            }
+        }
+    }
+
+    function gameLoop() {
+        if (!simState.isRunning) return;
+
+        for (let i = 0; i < params.walkersPerFrame; i++) {
+            simulationStep();
+        }
+
+        updateUI();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function updateUI() {
+        elements.clusterSizeValue.textContent = simState.clusterSize;
+        elements.clusterRadiusValue.textContent = Math.sqrt(simState.maxRadiusSq).toFixed(2);
+    }
+
+    function run() {
+        if (simState.isRunning) return;
+        simState.isRunning = true;
+        elements.runPauseBtn.textContent = 'Pause';
+        gameLoop();
+    }
+
+    function pause() {
+        simState.isRunning = false;
+        elements.runPauseBtn.textContent = 'Run';
+    }
+
+    function reset() {
+        pause();
+        params.targetParticles = parseInt(elements.particlesSlider.value);
+        params.walkersPerFrame = parseInt(elements.speedSlider.value);
+        setup();
+        run();
+    }
+
+    // --- Event Listeners ---
+    elements.runPauseBtn.addEventListener('click', () => simState.isRunning ? pause() : run());
+    elements.resetBtn.addEventListener('click', reset);
+
+    elements.particlesSlider.addEventListener('input', e => elements.particlesValue.textContent = e.target.value);
+    elements.speedSlider.addEventListener('input', e => elements.speedValue.textContent = e.target.value);
+
+    elements.particlesSlider.addEventListener('change', e => {
+        params.targetParticles = parseInt(e.target.value);
+        if (!simState.isRunning && simState.clusterSize < params.targetParticles) run();
+    });
+    elements.speedSlider.addEventListener('change', e => params.walkersPerFrame = parseInt(e.target.value));
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+    });
+
+    // --- Initial Setup ---
+    function init() {
+        const dpr = 1; // Keep it 1:1 for pixel art
+        const rect = elements.canvas.getBoundingClientRect();
+        elements.canvas.width = Math.floor(rect.width * dpr);
+        elements.canvas.height = Math.floor(rect.height * dpr);
+
+        params.targetParticles = parseInt(elements.particlesSlider.value);
+        elements.particlesValue.textContent = params.targetParticles;
+        params.walkersPerFrame = parseInt(elements.speedSlider.value);
+        elements.speedValue.textContent = params.walkersPerFrame;
+
+        setup();
+        run();
+    }
+
+    init();
+});
+</script>
+
+</body>
+</html>

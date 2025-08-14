@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Materials Physics - Sintering</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --header-color: #bf360c; /* A deep orange/red for materials */
+            --control-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --accent-color: #ff7043;
+            --accent-light: #fbe9e7;
+            --particle-color: '#455a64';
+        }
+
+        .dark-mode {
+            --bg-color: #212121;
+            --text-color: #e0e0e0;
+            --header-color: #ff8a65;
+            --control-bg: #373737;
+            --border-color: #424242;
+            --accent-color: #ffab91;
+            --accent-light: #4e342e;
+            --particle-color: '#b0bec5';
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        #canvas-container {
+            flex: 3;
+            min-width: 300px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 280px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #f4511e; }
+        #reset-btn { background-color: #757575; }
+        #reset-btn:hover { background-color: #616161; }
+
+        .performance-meter {
+            font-size: 0.9em;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Materials Physics - Sintering</h1>
+        <p class="subtitle">Visualizing how powders become solid objects through heat.</p>
+        <div class="meta-bar">
+            Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 25 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            How do you turn a pile of metal or ceramic powder into a strong, solid part without melting it? The answer is **sintering**. This industrial process involves heating a compacted powder (called a "green body") to a high temperature, but below its melting point. At this temperature, the atoms get energized and start to diffuse, or move, between the particles. This atomic motion causes the individual particles to fuse together where they touch, forming "necks" that grow over time. As the necks grow, the particles pull closer, shrinking the empty spaces (pores) between them and causing the whole object to become denser and stronger. This simulation conceptually models this process, showing how distinct particles blend into a single, solid mass.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+
+        <h3>1. The "Green Body"</h3>
+        <p>The simulation begins with a collection of separate, circular particles. In materials science, this initial state of loosely packed powder is called a "green body." It is porous and mechanically weak.</p>
+
+        <h3>2. Adding Heat (The Temperature Slider)</h3>
+        <p>Sintering is activated by heat. In this simulation, the **Temperature** slider doesn't represent an exact temperature, but rather the *energy* available for the sintering process to occur. A higher temperature provides more energy, making the process happen much faster. When you press "Run," you are applying this heat over time.</p>
+
+        <h3>3. Neck Growth and Densification</h3>
+        <p>Watch closely where the particles touch. You will see two key things happen:</p>
+        <ul>
+            <li><strong>Neck Growth:</strong> The particles will begin to fuse, forming "necks" of solid material between them. This is because atoms move from the surface of the particles to the small, curved contact points to reduce the system's overall surface energy.</li>
+            <li><strong>Densification:</strong> As the necks grow, the centers of the particles will slowly pull closer together. Notice that the overall size of the cluster of particles shrinks. The empty spaces, or "pores," between the particles also shrink and become more rounded. This increase in density is what gives the final part its strength.</li>
+        </ul>
+
+        <h3>Analogy: Fusing Soap Bubbles</h3>
+        <p>Think of a collection of soap bubbles. Nature always tries to minimize surface energy, and for bubbles, this means minimizing the total surface area of the soap film. When two bubbles touch, they don't stay as two perfect spheres; they form a flat wall between them. When many bubbles clump together, they form a honeycomb structure to reduce as much surface area as possible. Sintering is driven by the same principle. A powder has an enormous amount of surface area. By fusing together and shrinking the pores, the particles reduce their total surface area, moving to a more stable, lower-energy state.</p>
+    </section>
+
+    <section class="section">
+        <h2>Simulation Controls</h2>
+        <div class="simulation-layout">
+            <div id="canvas-container">
+                <canvas id="sintering-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-group">
+                    <button id="run-pause-btn">Run</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (Rate): <span id="temp-value">5</span></label>
+                    <input type="range" id="temp-slider" min="1" max="20" step="1" value="5">
+                </div>
+
+                <div class="control-group">
+                    <label for="density-slider">Initial Packing: <span id="density-value">0.7</span></label>
+                    <input type="range" id="density-slider" min="0.5" max="0.9" step="0.05" value="0.7">
+                </div>
+
+                <div class="performance-meter">
+                    <div>Sintering Time: <span id="time-value">0</span></div>
+                    <div>Densification: <span id="densification-value">0.0</span>%</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Core Theory Simplified</h2>
+        <p>This simulation is a conceptual model. Real sintering is a complex thermodynamic process. The key takeaway is that it's driven by a desire to reduce the total **surface free energy** of the system.</p>
+        <ul>
+            <li><strong>Driving Force:</strong> A fine powder has a vast amount of surface area compared to a single solid block of the same mass. High surface energy is unfavorable. By heating the material, atoms gain enough mobility to move.</li>
+            <li><strong>Material Transport:</strong> Atoms diffuse (move) from areas of low curvature (the surface of the particles) to areas of high negative curvature (the sharp "v" at the contact point, or neck). This flattens the surfaces and builds the neck.</li>
+            <li><strong>Metaballs Model:</strong> This simulation uses a "metaballs" visualization. Each particle is a center of influence. The colored area is where the combined influence of all particles is above a certain threshold. As we increase the "strength" of each particle over time (simulating neck growth), their fields of influence overlap more and they appear to merge and blend, creating the organic look of sintering.</li>
+            <li><strong>Densification Model:</strong> In this simulation, when a neck between two particles grows, we apply a small, artificial force pulling their centers together. This simulates the net effect of material transport, which causes the entire "powder compact" to shrink and become more dense.</li>
+        </ul>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        canvas: document.getElementById('sintering-canvas'),
+        runPauseBtn: document.getElementById('run-pause-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        tempSlider: document.getElementById('temp-slider'),
+        tempValue: document.getElementById('temp-value'),
+        densitySlider: document.getElementById('density-slider'),
+        densityValue: document.getElementById('density-value'),
+        timeValue: document.getElementById('time-value'),
+        densificationValue: document.getElementById('densification-value'),
+        themeToggle: document.getElementById('theme-toggle'),
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+    let width, height;
+
+    // --- Simulation State ---
+    let simState = {
+        isRunning: false,
+        animationFrameId: null,
+        particles: [],
+        time: 0,
+        initialAvgDist: 1,
+    };
+
+    // --- Simulation Parameters ---
+    let params = {
+        temperature: 5,
+        packing: 0.7,
+        particleRadius: 15,
+        numParticles: 40,
+    };
+
+    class Particle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.vx = 0;
+            this.vy = 0;
+            this.radius = params.particleRadius * (1 + (Math.random() - 0.5) * 0.2);
+            this.strength = this.radius * this.radius;
+        }
+
+        draw() {
+            // This is just for debug, the main drawing is the metaballs
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(255,0,0,0.2)';
+            ctx.stroke();
+        }
+    }
+
+    function setup() {
+        width = elements.canvas.width;
+        height = elements.canvas.height;
+        simState.time = 0;
+        simState.particles = [];
+
+        // Simple packing algorithm
+        const spacing = params.particleRadius * 2 / Math.sqrt(params.packing);
+        const cols = Math.floor(width / spacing);
+        const rows = Math.floor(height / spacing);
+        const xOffset = (width - cols * spacing) / 2 + spacing/2;
+        const yOffset = (height - rows * spacing) / 2 + spacing/2;
+
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                if (simState.particles.length < params.numParticles) {
+                    const x = j * spacing + xOffset + (Math.random() - 0.5) * 5;
+                    const y = i * spacing + yOffset + (Math.random() - 0.5) * 5;
+                    simState.particles.push(new Particle(x, y));
+                }
+            }
+        }
+
+        simState.initialAvgDist = calculateAverageDistance();
+        draw();
+    }
+
+    function calculateAverageDistance() {
+        let totalDist = 0;
+        let pairs = 0;
+        for (let i = 0; i < simState.particles.length; i++) {
+            for (let j = i + 1; j < simState.particles.length; j++) {
+                const p1 = simState.particles[i];
+                const p2 = simState.particles[j];
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                totalDist += Math.sqrt(dx*dx + dy*dy);
+                pairs++;
+            }
+        }
+        return pairs > 0 ? totalDist / pairs : 1;
+    }
+
+    function simulationStep() {
+        const dt = 0.01;
+        simState.time += dt * params.temperature;
+
+        // --- Densification ---
+        const densificationFactor = 0.0001 * params.temperature;
+        for (const p1 of simState.particles) {
+            p1.vx = 0;
+            p1.vy = 0;
+        }
+        for (let i = 0; i < simState.particles.length; i++) {
+            for (let j = i + 1; j < simState.particles.length; j++) {
+                const p1 = simState.particles[i];
+                const p2 = simState.particles[j];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const distSq = dx*dx + dy*dy;
+                const combinedRadius = p1.radius + p2.radius;
+
+                if (distSq < (combinedRadius * 1.5)**2) {
+                    const force = densificationFactor * (1 - distSq / ((combinedRadius*1.5)**2));
+                    p1.vx += force * dx;
+                    p1.vy += force * dy;
+                    p2.vx -= force * dx;
+                    p2.vy -= force * dy;
+                }
+            }
+        }
+
+        for (const p of simState.particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+        }
+    }
+
+    function draw() {
+        // Metaballs rendering
+        const resolution = 4; // Lower is higher quality
+        const threshold = 1.0;
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+        const neckGrowth = simState.time * 0.1;
+
+        const particleColor = getComputedStyle(document.documentElement).getPropertyValue('--particle-color');
+        const r = parseInt(particleColor.slice(1,3), 16);
+        const g = parseInt(particleColor.slice(3,5), 16);
+        const b = parseInt(particleColor.slice(5,7), 16);
+
+        for (let y = 0; y < height; y += resolution) {
+            for (let x = 0; x < width; x += resolution) {
+                let sum = 0;
+                for (const p of simState.particles) {
+                    const dx = x - p.x;
+                    const dy = y - p.y;
+                    const distSq = dx*dx + dy*dy;
+                    sum += (p.strength + neckGrowth) / distSq;
+                }
+
+                if (sum > threshold) {
+                    for (let ry = 0; ry < resolution; ry++) {
+                        for (let rx = 0; rx < resolution; rx++) {
+                            const index = ((y + ry) * width + (x + rx)) * 4;
+                            data[index] = r;
+                            data[index + 1] = g;
+                            data[index + 2] = b;
+                            data[index + 3] = 255;
+                        }
+                    }
+                }
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        updateUI();
+    }
+
+    function gameLoop() {
+        if (!simState.isRunning) return;
+
+        simulationStep();
+        draw();
+
+        simState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function updateUI() {
+        elements.timeValue.textContent = simState.time.toFixed(2);
+        const currentAvgDist = calculateAverageDistance();
+        const densification = Math.max(0, (1 - currentAvgDist / simState.initialAvgDist) * 100);
+        elements.densificationValue.textContent = densification.toFixed(1);
+    }
+
+    function run() {
+        if (simState.isRunning) return;
+        simState.isRunning = true;
+        elements.runPauseBtn.textContent = 'Pause';
+        gameLoop();
+    }
+
+    function pause() {
+        simState.isRunning = false;
+        elements.runPauseBtn.textContent = 'Run';
+    }
+
+    function reset() {
+        pause();
+        params.temperature = parseInt(elements.tempSlider.value);
+        params.packing = parseFloat(elements.densitySlider.value);
+        setup();
+        elements.runPauseBtn.textContent = 'Run';
+    }
+
+    // --- Event Listeners ---
+    elements.runPauseBtn.addEventListener('click', () => simState.isRunning ? pause() : run());
+    elements.resetBtn.addEventListener('click', reset);
+
+    elements.tempSlider.addEventListener('input', e => {
+        params.temperature = parseInt(e.target.value);
+        elements.tempValue.textContent = params.temperature;
+    });
+    elements.densitySlider.addEventListener('input', e => {
+        params.packing = parseFloat(e.target.value);
+        elements.densityValue.textContent = params.packing.toFixed(2);
+    });
+    elements.densitySlider.addEventListener('change', reset);
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        // Redraw needed if not running
+        if (!simState.isRunning) draw();
+    });
+
+    // --- Initial Setup ---
+    function init() {
+        // Use a fixed size canvas for performance
+        elements.canvas.width = 500;
+        elements.canvas.height = 500;
+        reset();
+    }
+
+    init();
+});
+</script>
+
+</body>
+</html>

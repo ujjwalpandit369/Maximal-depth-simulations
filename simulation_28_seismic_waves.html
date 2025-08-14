@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Earthquake Epicenter Triangulation</title>
+    <style>
+        :root {
+            --bg-color: #f7f6f1;
+            --text-color: #3d3d3d;
+            --header-color: #8c4b32;
+            --control-bg: #ffffff;
+            --border-color: #d7d4cb;
+            --accent-color: #a67b5b;
+            --accent-light: #f3efe9;
+            --p-wave-color: rgba(52, 152, 219, 0.5);
+            --s-wave-color: rgba(231, 76, 60, 0.5);
+        }
+
+        .dark-mode {
+            --bg-color: #2d2d2d;
+            --text-color: #e0e0e0;
+            --header-color: #d9a075;
+            --control-bg: #3d3d3d;
+            --border-color: #5d5d5d;
+            --accent-color: #bfa085;
+            --accent-light: #4a4a4a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .main-content { flex: 2; min-width: 400px; }
+        .controls { flex: 1; min-width: 300px; }
+
+        #map-canvas {
+            width: 100%;
+            aspect-ratio: 1.5 / 1;
+            border: 1px solid var(--border-color);
+            background-color: var(--accent-light);
+        }
+
+        .seismograms { margin-top: 20px; }
+        .seismo-container { margin-bottom: 10px; }
+        .seismo-canvas {
+            width: 100%;
+            height: 60px;
+            border: 1px solid var(--border-color);
+            background-color: #fff;
+        }
+        .dark-mode .seismo-canvas { background-color: #555; }
+
+        .triangulation-tool { background: var(--accent-light); padding: 15px; border-radius: 8px; }
+        .station-control { margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .station-control label { font-weight: bold; flex-basis: 80px; }
+        .station-control input { flex-grow: 1; padding: 5px; }
+        .station-control button { flex-shrink: 0; }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #8c6a4d; }
+
+        #start-btn, #reveal-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        #message-box {
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #eafaf1;
+            color: #2d6a4f;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .dark-mode #message-box { background-color: #2d6a4f; color: #d8f3e5; }
+
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Earthquake Epicenter Triangulation</h1>
+        <p class="subtitle">Using seismic waves to locate an earthquake's source.</p>
+        <div class="meta-bar">
+            Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 30 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            When an earthquake occurs, how do scientists know exactly where it happened? They use a process called triangulation, which relies on data from seismograph stations around the world. An earthquake releases different types of energy waves that travel through the Earth at different speeds. The two main types are fast-moving **P-waves** and slower **S-waves**. By measuring the time gap between the arrival of the P-wave and the S-wave at a station, scientists can calculate how far away the earthquake is from that station. This simulation lets you be the seismologist. You'll analyze virtual seismograms, calculate distances, and draw circles on a map. The one point where three circles intersect is the earthquake's epicenter!
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide: The S-P Method</h2>
+
+        <h3>1. Create an Earthquake</h3>
+        <p>Click the "Start/New Earthquake" button. This will create a secret earthquake somewhere on the map. You'll see two circular waves expand from this hidden point: a blue P-wave (Primary, or Pressure wave) and a red S-wave (Secondary, or Shear wave). Notice that the blue wave travels faster than the red one.</p>
+
+        <h3>2. Reading the Seismograms</h3>
+        <p>The three triangles on the map are seismograph stations. Below the map, you'll see a seismogram for each one. A seismogram is just a graph of ground shaking over time. When a wave hits a station, its seismogram will show a "wiggle."</p>
+        <ul>
+            <li>The **first, smaller wiggle** is the arrival of the P-wave.</li>
+            <li>The **second, larger wiggle** is the arrival of the S-wave.</li>
+        </ul>
+        <p>The time difference between these two arrivals is called the **S-P time interval**. Your job is to measure this time gap for each of the three stations.</p>
+
+        <h3>Analogy: Thunder and Lightning</h3>
+        <p>This process is very similar to figuring out how far away a thunderstorm is. You see the flash of **lightning** (the P-wave) almost instantly because light is very fast. Then you count the seconds until you hear the **thunder** (the S-wave), which travels much slower. The longer the time gap, the farther away the storm is. The S-P interval works exactly the same way.</p>
+
+        <h3>3. Calculating the Distance</h3>
+        <p>A larger S-P interval means a greater distance to the earthquake. For this simulation, we use a simple formula:</p>
+        <p style="text-align:center; font-size: 1.2em; font-family: monospace;">Distance (km) = S-P Interval (s) × 8</p>
+        <p>For each station, take the S-P time from its seismogram, multiply it by 8, and you'll have the distance in kilometers from that station to the epicenter.</p>
+
+        <h3>4. Triangulation</h3>
+        <p>Knowing the distance from one station isn't enough; it only tells you the earthquake is *somewhere* on a circle of that radius. To find the exact spot, you need at least three stations.</p>
+        <p>In the "Triangulation Tool," enter the distance you calculated for each station and click "Draw Circle."
+        <ul>
+            <li>The first circle narrows down the location to its circumference.</li>
+            <li>The second circle intersects the first at two possible points.</li>
+            <li>The third circle will intersect with the other two at only **one point**. That point is the epicenter!</li>
+        </ul>
+        Once you've found it, click "Reveal Epicenter" to check your work.</p>
+    </section>
+
+    <section class="section">
+        <h2>The Simulation</h2>
+        <div class="simulation-layout">
+            <div class="main-content">
+                <canvas id="map-canvas"></canvas>
+                <div class="seismograms">
+                    <div class="seismo-container" id="seismo-1-container">
+                        <label>Station A Seismogram</label>
+                        <canvas class="seismo-canvas" id="seismo-1-canvas" height="60"></canvas>
+                    </div>
+                    <div class="seismo-container" id="seismo-2-container">
+                        <label>Station B Seismogram</label>
+                        <canvas class="seismo-canvas" id="seismo-2-canvas" height="60"></canvas>
+                    </div>
+                    <div class="seismo-container" id="seismo-3-container">
+                        <label>Station C Seismogram</label>
+                        <canvas class="seismo-canvas" id="seismo-3-canvas" height="60"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <h3>Your Mission</h3>
+                <p>An earthquake has occurred! Use the data from the seismograms to find its epicenter.</p>
+                <button id="start-btn">Start / New Earthquake</button>
+                <div id="message-box"></div>
+                <div class="triangulation-tool">
+                    <h4>Triangulation Tool</h4>
+                    <p>Formula: <code>Distance = (S-P Time) × 8</code></p>
+                    <div class="station-control">
+                        <label for="dist-a">Station A:</label>
+                        <input type="number" id="dist-a" placeholder="Enter distance (km)">
+                        <button id="draw-a">Draw Circle</button>
+                    </div>
+                    <div class="station-control">
+                        <label for="dist-b">Station B:</label>
+                        <input type="number" id="dist-b" placeholder="Enter distance (km)">
+                        <button id="draw-b">Draw Circle</button>
+                    </div>
+                    <div class="station-control">
+                        <label for="dist-c">Station C:</label>
+                        <input type="number" id="dist-c" placeholder="Enter distance (km)">
+                        <button id="draw-c">Draw Circle</button>
+                    </div>
+                </div>
+                <br>
+                <button id="reveal-btn">Reveal Epicenter</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Advanced Topic: P- and S-Wave Shadow Zones</h2>
+        <p>While this simulation focuses on triangulation, the properties of P- and S-waves also help us understand the Earth's internal structure. The Earth has a solid mantle, a liquid outer core, and a solid inner core.</p>
+        <ul>
+            <li><strong>S-Wave Shadow Zone:</strong> S-waves are shear waves, which cannot travel through liquids. When an earthquake occurs, the liquid outer core blocks S-waves from reaching the opposite side of the planet. This creates a large "shadow zone" where no S-waves are detected from that earthquake. This was the primary evidence that proved the outer core is liquid.</li>
+            <li><strong>P-Wave Shadow Zone:</strong> P-waves are compressional waves and can travel through both solids and liquids. However, when they hit the liquid outer core, they are sharply refracted (bent), similar to how light bends when entering water. This refraction creates a ring-shaped shadow zone where no direct P-waves are detected.</li>
+        </ul>
+        <p>By analyzing these shadow zones from thousands of earthquakes, seismologists have been able to map the precise size and depth of the Earth's core and mantle.</p>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        mapCanvas: document.getElementById('map-canvas'),
+        seismoCanvases: [
+            document.getElementById('seismo-1-canvas'),
+            document.getElementById('seismo-2-canvas'),
+            document.getElementById('seismo-3-canvas'),
+        ],
+        startBtn: document.getElementById('start-btn'),
+        revealBtn: document.getElementById('reveal-btn'),
+        distInputs: [
+            document.getElementById('dist-a'),
+            document.getElementById('dist-b'),
+            document.getElementById('dist-c'),
+        ],
+        drawBtns: [
+            document.getElementById('draw-a'),
+            document.getElementById('draw-b'),
+            document.getElementById('draw-c'),
+        ],
+        messageBox: document.getElementById('message-box'),
+        themeToggle: document.getElementById('theme-toggle'),
+    };
+
+    const mapCtx = elements.mapCanvas.getContext('2d');
+    const seismoCtxs = elements.seismoCanvases.map(c => c.getContext('2d'));
+    let width, height;
+
+    // --- Simulation State ---
+    let simState = {
+        running: false,
+        animationFrameId: null,
+        time: 0,
+        epicenter: { x: 0, y: 0 },
+        stations: [],
+        pWaveRadius: 0,
+        sWaveRadius: 0,
+        drawnCircles: [null, null, null],
+        revealed: false,
+    };
+
+    // --- Physics/Sim Constants ---
+    const V_P = 6; // km/s
+    const V_S = 3.5; // km/s
+    const PIXELS_PER_KM = 0.5;
+    const TIME_SCALE = 2; // Speeds up animation
+    const SP_FACTOR = 1 / (1/V_S - 1/V_P); // This is the 'k' in Distance = k * (S-P time)
+
+    function setup() {
+        width = elements.mapCanvas.width;
+        height = elements.mapCanvas.height;
+
+        simState.stations = [
+            { name: 'A', x: width * 0.2, y: height * 0.25 },
+            { name: 'B', x: width * 0.8, y: height * 0.35 },
+            { name: 'C', x: width * 0.5, y: height * 0.8 },
+        ];
+        drawMap();
+    }
+
+    function startNewEarthquake() {
+        simState.running = true;
+        simState.time = 0;
+        simState.pWaveRadius = 0;
+        simState.sWaveRadius = 0;
+        simState.drawnCircles = [null, null, null];
+        simState.revealed = false;
+        elements.messageBox.style.display = 'none';
+        elements.distInputs.forEach(input => input.value = '');
+
+        // Place epicenter randomly
+        simState.epicenter = {
+            x: width * (0.1 + Math.random() * 0.8),
+            y: height * (0.1 + Math.random() * 0.8),
+        };
+
+        simState.stations.forEach((station, i) => {
+            const dx = station.x - simState.epicenter.x;
+            const dy = station.y - simState.epicenter.y;
+            station.dist = Math.sqrt(dx*dx + dy*dy) / PIXELS_PER_KM;
+            station.p_arrival_time = station.dist / V_P;
+            station.s_arrival_time = station.dist / V_S;
+        });
+
+        if (simState.animationFrameId) cancelAnimationFrame(simState.animationFrameId);
+        gameLoop();
+    }
+
+    function drawMap() {
+        mapCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-light');
+        mapCtx.fillRect(0, 0, width, height);
+
+        // Draw stations
+        simState.stations.forEach(s => {
+            mapCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--header-color');
+            mapCtx.beginPath();
+            mapCtx.moveTo(s.x, s.y - 10);
+            mapCtx.lineTo(s.x - 10, s.y + 7);
+            mapCtx.lineTo(s.x + 10, s.y + 7);
+            mapCtx.closePath();
+            mapCtx.fill();
+            mapCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+            mapCtx.font = '14px sans-serif';
+            mapCtx.textAlign = 'center';
+            mapCtx.fillText(s.name, s.x, s.y + 22);
+        });
+
+        // Draw user circles
+        simState.drawnCircles.forEach((radius, i) => {
+            if (radius !== null) {
+                const station = simState.stations[i];
+                mapCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--header-color');
+                mapCtx.lineWidth = 2;
+                mapCtx.beginPath();
+                mapCtx.arc(station.x, station.y, radius * PIXELS_PER_KM, 0, 2 * Math.PI);
+                mapCtx.stroke();
+            }
+        });
+
+        if (simState.running) {
+            // Draw waves
+            mapCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--p-wave-color');
+            mapCtx.lineWidth = 3;
+            mapCtx.beginPath();
+            mapCtx.arc(simState.epicenter.x, simState.epicenter.y, simState.pWaveRadius, 0, 2 * Math.PI);
+            mapCtx.stroke();
+
+            mapCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--s-wave-color');
+            mapCtx.lineWidth = 4;
+            mapCtx.beginPath();
+            mapCtx.arc(simState.epicenter.x, simState.epicenter.y, simState.sWaveRadius, 0, 2 * Math.PI);
+            mapCtx.stroke();
+        }
+
+        if(simState.revealed) {
+            mapCtx.strokeStyle = '#ff0000';
+            mapCtx.lineWidth = 3;
+            mapCtx.beginPath();
+            mapCtx.moveTo(simState.epicenter.x - 15, simState.epicenter.y - 15);
+            mapCtx.lineTo(simState.epicenter.x + 15, simState.epicenter.y + 15);
+            mapCtx.moveTo(simState.epicenter.x + 15, simState.epicenter.y - 15);
+            mapCtx.lineTo(simState.epicenter.x - 15, simState.epicenter.y + 15);
+            mapCtx.stroke();
+        }
+    }
+
+    function drawSeismograms() {
+        seismoCtxs.forEach((ctx, i) => {
+            const s = simState.stations[i];
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('.dark-mode .seismo-canvas', 'background-color');
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw timeline
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, h/2);
+            ctx.lineTo(w, h/2);
+            ctx.stroke();
+
+            // Draw ticks
+            const maxTime = 150;
+            for(let t=0; t <= maxTime; t += 10) {
+                const x = (t / maxTime) * w;
+                ctx.beginPath();
+                ctx.moveTo(x, h/2 - 5);
+                ctx.lineTo(x, h/2 + 5);
+                ctx.stroke();
+            }
+
+            // Draw P-wave
+            if (simState.time >= s.p_arrival_time) {
+                drawWave(ctx, s.p_arrival_time, 10, 0.2, maxTime);
+            }
+            // Draw S-wave
+            if (simState.time >= s.s_arrival_time) {
+                drawWave(ctx, s.s_arrival_time, 25, 0.3, maxTime);
+            }
+        });
+    }
+
+    function drawWave(ctx, arrivalTime, amplitude, duration, maxTime) {
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const startX = (arrivalTime / maxTime) * w;
+        const waveDuration = duration * maxTime;
+        const endX = ((arrivalTime + waveDuration) / maxTime) * w;
+
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(startX, h/2);
+
+        for (let x = startX; x < endX; x++) {
+            const phase = (x - startX) / (endX - startX);
+            const y = h/2 + Math.sin(phase * 8 * Math.PI) * amplitude * Math.sin(phase * Math.PI);
+            ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+
+    function gameLoop() {
+        simState.time += TIME_SCALE * (1/60); // approx time step
+        simState.pWaveRadius = simState.time * V_P * PIXELS_PER_KM;
+        simState.sWaveRadius = simState.time * V_S * PIXELS_PER_KM;
+
+        drawMap();
+        drawSeismograms();
+
+        if (simState.pWaveRadius > width * 1.5) {
+            simState.running = false;
+            elements.messageBox.textContent = "All waves have passed. Calculate the distances!";
+            elements.messageBox.style.display = 'block';
+        } else {
+            simState.animationFrameId = requestAnimationFrame(gameLoop);
+        }
+    }
+
+    // --- Event Listeners ---
+    elements.startBtn.addEventListener('click', startNewEarthquake);
+
+    elements.drawBtns.forEach((btn, i) => {
+        btn.addEventListener('click', () => {
+            const dist = parseFloat(elements.distInputs[i].value);
+            if (!isNaN(dist) && dist > 0) {
+                simState.drawnCircles[i] = dist;
+                drawMap();
+            }
+        });
+    });
+
+    elements.revealBtn.addEventListener('click', () => {
+        simState.revealed = true;
+        drawMap();
+        // Check if user was close
+        const userCircles = simState.drawnCircles.filter(r => r !== null);
+        if(userCircles.length === 3) {
+            let totalError = 0;
+            simState.stations.forEach((s, i) => {
+                const correctDist = s.dist;
+                const userDist = simState.drawnCircles[i];
+                totalError += Math.abs(correctDist - userDist) / correctDist;
+            });
+            const avgError = (totalError / 3) * 100;
+            if (avgError < 10) {
+                 elements.messageBox.textContent = `Excellent work! Your triangulation is very accurate (avg error: ${avgError.toFixed(1)}%).`;
+            } else {
+                 elements.messageBox.textContent = `Good attempt! The revealed epicenter is marked with an X. Compare your circles. (Avg error: ${avgError.toFixed(1)}%)`;
+            }
+            elements.messageBox.style.display = 'block';
+        }
+    });
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        drawMap();
+        drawSeismograms();
+    });
+
+    // --- Initial Setup ---
+    console.log(`SP_FACTOR (k) is approx ${SP_FACTOR.toFixed(2)}`);
+    setup();
+
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: The Coriolis Effect on Weather Systems</title>
+    <style>
+        :root {
+            --bg-color: #eaf8ff;
+            --text-color: #2c3e50;
+            --header-color: #2980b9;
+            --control-bg: #ffffff;
+            --border-color: #bde0fe;
+            --accent-color: #3498db;
+            --accent-light: #dbeeff;
+            --low-pressure-color: #e74c3c;
+        }
+
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --header-color: #5dade2;
+            --control-bg: #34495e;
+            --border-color: #4a627a;
+            --accent-color: #5dade2;
+            --accent-light: #3e566e;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        #canvas-container {
+            flex: 3;
+            min-width: 300px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            background-color: var(--accent-light);
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 280px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .control-group .button-group button.active {
+            background-color: var(--header-color);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+
+        #reset-btn {
+            background-color: var(--low-pressure-color);
+            width: 100%;
+            margin-top: 10px;
+        }
+        #reset-btn:hover { background-color: #c0392b; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--accent-light); }
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: The Coriolis Effect</h1>
+        <p class="subtitle">Visualizing how the Earth's rotation creates spinning weather systems.</p>
+        <div class="meta-bar">
+            Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 25 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Why do hurricanes spin? The answer lies in the Coriolis effect. Air, like any fluid, wants to flow from high-pressure areas to low-pressure areas. However, because the Earth is constantly rotating, this straightforward path gets deflected. This simulation shows air parcels trying to flow into a central low-pressure zone ("L"). In the Northern Hemisphere, the Earth's spin creates an apparent force that pushes them to the right of their direction of travel, resulting in a counter-clockwise spiral. In the Southern Hemisphere, the deflection is to the left, causing a clockwise spiral. This effect is what gives cyclones, hurricanes, and typhoons their characteristic spin.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+
+        <h3>1. The Setup: Pressure and Air Flow</h3>
+        <p>The blue area on the canvas is our map. The big "L" in the center represents a **low-pressure zone**. Think of it like a drain in a sink. The air surrounding it is at a higher pressure. Just as water flows towards the drain, air is pulled towards the low-pressure center. This pull is called the **Pressure Gradient Force**. If the Earth didn't rotate, the white air parcels would simply flow straight into the center.</p>
+
+        <h3>2. The Twist: Earth's Rotation</h3>
+        <p>The Earth is a spinning ball. When you move over a long distance on this spinning surface, you experience a strange deflection. This is not a real force, but an *apparent* one caused by you being in a rotating frame of reference. It's called the **Coriolis effect**.</p>
+        <p><strong>Analogy: The Merry-Go-Round.</strong> Imagine you are on a spinning merry-go-round. Your friend is also on it, across from you. If you try to roll a ball in a straight line to your friend, what happens? From your point of view, the ball seems to curve away! It's not because a mysterious force pushed the ball, but because your friend's position has rotated while the ball was in transit. The Earth is just a giant, slow merry-go-round.</p>
+
+        <h3>3. The Rules of Deflection</h3>
+        <p>The Coriolis effect follows two simple rules that you can test in the simulation:</p>
+        <ul>
+            <li>In the **Northern Hemisphere**, moving objects are deflected to the **RIGHT**.</li>
+            <li>In the **Southern Hemisphere**, moving objects are deflected to the **LEFT**.</li>
+        </ul>
+        <p>Use the "Hemisphere" buttons to see this in action. Notice how the air parcels curve to form a spiral. This balance between the inward pressure force and the sideways Coriolis force creates the rotation.</p>
+
+        <h3>4. Latitude Matters</h3>
+        <p>The Coriolis effect is strongest at the poles and zero at the equator. Use the **Latitude** slider to see this. At 90° (the pole), the deflection is maximum, creating a tight spiral. At 0° (the equator), there is no deflection at all—the parcels flow straight in. This is why hurricanes can't form or cross the equator!</p>
+    </section>
+
+    <section class="section">
+        <h2>Parameters & Controls</h2>
+        <div class="simulation-layout">
+            <div id="canvas-container">
+                <canvas id="c-canvas" width="600" height="600"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label>Hemisphere</label>
+                    <div class="button-group">
+                        <button id="btn-north" class="active">Northern</button>
+                        <button id="btn-south">Southern</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="lat-slider">Latitude: <span id="lat-value">45</span>°</label>
+                    <input type="range" id="lat-slider" min="0" max="90" step="1" value="45">
+                </div>
+
+                <div class="control-group">
+                    <label for="pressure-slider">Pressure Strength: <span id="pressure-value">2</span></label>
+                    <input type="range" id="pressure-slider" min="1" max="10" step="0.5" value="2">
+                </div>
+
+                <div class="control-group">
+                    <label for="parcels-slider">Air Parcels: <span id="parcels-value">100</span></label>
+                    <input type="range" id="parcels-slider" min="10" max="300" step="10" value="100">
+                </div>
+
+                <button id="reset-btn">Reset Simulation</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Core Theory</h2>
+        <p>The motion of each air parcel is governed by Newton's second law (<code>F_net = ma</code>). The net force is the sum of three main forces:</p>
+
+        <h4>1. Pressure Gradient Force (F<sub>PGF</sub>)</h4>
+        <p>This force pushes air from high to low pressure. In our simulation, it's a simplified force pointing directly towards the center.</p>
+        <p><code>F<sub>PGF</sub> = -C₁ * (position - center)</code></p>
+        <p>Where C₁ is a constant related to the pressure strength.</p>
+
+        <h4>2. Coriolis Force (F<sub>Coriolis</sub>)</h4>
+        <p>The apparent force due to the Earth's rotation. Its magnitude is proportional to the parcel's velocity (v) and the sine of the latitude (φ).</p>
+        <p><code>|F<sub>Coriolis</sub>| = 2 * Ω * v * sin(φ)</code></p>
+        <p>Where Ω is the Earth's rotation rate. The force's direction is always perpendicular to the velocity vector `v` (to the right in the N. Hemisphere, left in the S. Hemisphere).</p>
+        <p><em>Example:</em> In the Northern Hemisphere, if a parcel has velocity `v = (v_x, v_y)`, the Coriolis force vector is `F_Coriolis ∝ (v_y, -v_x)`. This is a 90° right-hand turn.</p>
+
+        <h4>3. Friction (F<sub>friction</sub>)</h4>
+        <p>A simple drag force that opposes motion, preventing infinite speeds.</p>
+        <p><code>F<sub>friction</sub> = -C₂ * v</code></p>
+        <p>Where C₂ is a friction coefficient.</p>
+    </section>
+
+    <section class="section">
+        <h2>Micro-Experiments</h2>
+        <ol>
+            <li><strong>Confirming Rotation Direction:</strong> Start with the default Northern Hemisphere setting. Observe the counter-clockwise rotation. Click "Southern," then "Reset." Confirm that the rotation is now clockwise.</li>
+            <li><strong>The Equatorial Dead Zone:</strong> Set the "Latitude" slider to <strong>0°</strong>. Click "Reset." What happens to the air parcels? They should flow directly into the low-pressure center without any rotation, demonstrating why cyclones do not form at the equator.</li>
+            <li><strong>Polar Vortex:</strong> Set the "Latitude" slider to <strong>90°</strong>. Reset the simulation. How does the spiral pattern compare to the default 45°? It should be much tighter and more circular, as the deflecting Coriolis force is at its maximum strength.</li>
+            <li><strong>Strong vs. Weak Systems:</strong> Set "Latitude" to 60°. Set "Pressure Strength" to its maximum (10). Run the simulation. Note how the parcels are pulled inwards strongly. Now, reset and set "Pressure Strength" to its minimum (1). The parcels will now form wide, lazy circles as the Coriolis force is more dominant than the weak pull to the center.</li>
+        </ol>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        canvas: document.getElementById('c-canvas'),
+        btnNorth: document.getElementById('btn-north'),
+        btnSouth: document.getElementById('btn-south'),
+        latSlider: document.getElementById('lat-slider'),
+        latValue: document.getElementById('lat-value'),
+        pressureSlider: document.getElementById('pressure-slider'),
+        pressureValue: document.getElementById('pressure-value'),
+        parcelsSlider: document.getElementById('parcels-slider'),
+        parcelsValue: document.getElementById('parcels-value'),
+        resetBtn: document.getElementById('reset-btn'),
+        themeToggle: document.getElementById('theme-toggle'),
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+    let width, height, centerX, centerY;
+
+    // --- Simulation State & Parameters ---
+    let parcels = [];
+    let params = {
+        isNorthernHemisphere: true,
+        latitude: 45,
+        pressureStrength: 2,
+        numParcels: 100,
+    };
+    let animationFrameId;
+
+    // --- Particle Class ---
+    class Parcel {
+        constructor() {
+            const angle = Math.random() * 2 * Math.PI;
+            const radius = Math.random() * width * 0.1 + width * 0.45;
+            this.x = centerX + radius * Math.cos(angle);
+            this.y = centerY + radius * Math.sin(angle);
+            this.vx = 0;
+            this.vy = 0;
+            this.trail = [];
+        }
+
+        update() {
+            // 1. Pressure Gradient Force
+            const p_dx = centerX - this.x;
+            const p_dy = centerY - this.y;
+            const p_dist = Math.sqrt(p_dx * p_dx + p_dy * p_dy);
+            const p_forceX = (p_dx / p_dist) * params.pressureStrength;
+            const p_forceY = (p_dy / p_dist) * params.pressureStrength;
+
+            // 2. Coriolis Force
+            const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            const coriolisMag = 0.1 * speed * Math.sin(params.latitude * Math.PI / 180);
+
+            let c_forceX = 0;
+            let c_forceY = 0;
+            if (speed > 0.1) {
+                const hemisphereSign = params.isNorthernHemisphere ? 1 : -1;
+                c_forceX = hemisphereSign * this.vy / speed * coriolisMag;
+                c_forceY = -hemisphereSign * this.vx / speed * coriolisMag;
+            }
+
+            // 3. Friction
+            const frictionX = -0.05 * this.vx;
+            const frictionY = -0.05 * this.vy;
+
+            // Net force and acceleration (mass = 1)
+            const ax = p_forceX + c_forceX + frictionX;
+            const ay = p_forceY + c_forceY + frictionY;
+
+            this.vx += ax;
+            this.vy += ay;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Trail
+            this.trail.push({x: this.x, y: this.y});
+            if (this.trail.length > 50) {
+                this.trail.shift();
+            }
+
+            // Respawn if it gets too close to center or leaves
+            if (p_dist < 20 || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+                 Object.assign(this, new Parcel());
+            }
+        }
+
+        draw() {
+            // Draw Trail
+            ctx.beginPath();
+            ctx.moveTo(this.trail[0].x, this.trail[0].y);
+            for (let i = 1; i < this.trail.length; i++) {
+                ctx.lineTo(this.trail[i].x, this.trail[i].y);
+            }
+            const trailAlpha = document.body.classList.contains('dark-mode') ? 0.3 : 0.15;
+            ctx.strokeStyle = `rgba(44, 62, 80, ${trailAlpha})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Draw Parcel
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+            ctx.fill();
+        }
+    }
+
+    function setup() {
+        width = elements.canvas.width;
+        height = elements.canvas.height;
+        centerX = width / 2;
+        centerY = height / 2;
+
+        parcels = [];
+        for (let i = 0; i < params.numParcels; i++) {
+            parcels.push(new Parcel());
+        }
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+        gameLoop();
+    }
+
+    function drawBackground() {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-light');
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw Low pressure center
+        ctx.font = `bold ${width/10}px sans-serif`;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--low-pressure-color');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = 0.5;
+        ctx.fillText('L', centerX, centerY);
+        ctx.globalAlpha = 1.0;
+    }
+
+    function gameLoop() {
+        drawBackground();
+        parcels.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function updateParamsFromUI() {
+        params.isNorthernHemisphere = elements.btnNorth.classList.contains('active');
+        params.latitude = parseInt(elements.latSlider.value);
+        params.pressureStrength = parseFloat(elements.pressureSlider.value);
+        params.numParcels = parseInt(elements.parcelsSlider.value);
+
+        elements.latValue.textContent = params.latitude;
+        elements.pressureValue.textContent = params.pressureStrength.toFixed(1);
+        elements.parcelsValue.textContent = params.numParcels;
+    }
+
+    function reset() {
+        updateParamsFromUI();
+        setup();
+    }
+
+    // --- Event Listeners ---
+    elements.btnNorth.addEventListener('click', () => {
+        elements.btnNorth.classList.add('active');
+        elements.btnSouth.classList.remove('active');
+        reset();
+    });
+
+    elements.btnSouth.addEventListener('click', () => {
+        elements.btnSouth.classList.add('active');
+        elements.btnNorth.classList.remove('active');
+        reset();
+    });
+
+    elements.latSlider.addEventListener('input', updateParamsFromUI);
+    elements.pressureSlider.addEventListener('input', updateParamsFromUI);
+    elements.parcelsSlider.addEventListener('input', updateParamsFromUI);
+
+    elements.latSlider.addEventListener('change', reset);
+    elements.pressureSlider.addEventListener('change', reset);
+    elements.parcelsSlider.addEventListener('change', reset);
+
+    elements.resetBtn.addEventListener('click', reset);
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+    });
+
+    // --- Initial Setup ---
+    // Use ResizeObserver to handle canvas resizing
+    new ResizeObserver(() => {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = elements.canvas.getBoundingClientRect();
+        elements.canvas.width = rect.width * dpr;
+        elements.canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        reset();
+    }).observe(elements.canvas);
+});
+</script>
+
+</body>
+</html>

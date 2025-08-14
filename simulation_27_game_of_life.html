@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Conway's Game of Life</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --header-color: #4a4a4a;
+            --control-bg: #ffffff;
+            --border-color: #dcdcdc;
+            --accent-color: #3273dc; /* A neutral blue */
+            --accent-light: #eef3fc;
+            --cell-color: #363636;
+            --grid-color: #dbdbdb;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #f5f5f5;
+            --header-color: #ffffff;
+            --control-bg: #2a2a2a;
+            --border-color: #4a4a4a;
+            --accent-color: #4899ff;
+            --accent-light: #363636;
+            --cell-color: #76ff03; /* A bright "terminal" green */
+            --grid-color: #303030;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        #canvas-container {
+            flex: 3;
+            min-width: 300px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            cursor: crosshair;
+            image-rendering: pixelated; /* Ensures sharp grid lines */
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 280px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"], .control-group select { width: 100%; padding: 5px; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #276cda; }
+
+        .performance-meter {
+            font-size: 0.9em;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Conway's Game of Life</h1>
+        <p class="subtitle">A cellular automaton demonstrating emergent complexity.</p>
+        <div class="meta-bar">
+            Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 28 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            The Game of Life, created by mathematician John Conway, is not a game in the traditional sense. It's a "zero-player game," meaning its evolution is determined by its initial state, requiring no further input. It's a world of cells on a grid, each one either "alive" or "dead." A few simple rules govern whether a cell will live, die, or be born based on how many living neighbors it has. Despite the simplicity of these rules, the Game of Life produces an astonishing variety of complex and beautiful patterns that move, grow, and interact. It's a famous example of **emergence**, where complex global behavior arises from simple local interactions.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+
+        <h3>1. The Grid and The Cells</h3>
+        <p>The simulation area is a grid of cells. Each cell can be in one of two states: **alive** (a colored square) or **dead** (the background). You can click and drag on the grid to create your own starting patterns.</p>
+
+        <h3>2. The Rules of Life</h3>
+        <p>The fate of every cell is determined at each "tick" or "generation" of the simulation. To decide if a cell will be alive or dead in the next generation, we look at its eight neighbors (horizontally, vertically, and diagonally).</p>
+        <ul>
+            <li><strong>Birth:</strong> A dead cell with **exactly 3** live neighbors becomes a live cell.</li>
+            <li><strong>Survival:</strong> A live cell with **2 or 3** live neighbors survives to the next generation.</li>
+            <li><strong>Death:</strong> A live cell with fewer than 2 live neighbors dies (underpopulation). A live cell with more than 3 live neighbors dies (overpopulation).</li>
+        </ul>
+        <p>That's it! These three rules are applied to every cell on the grid simultaneously to compute the next generation.</p>
+
+        <h3>3. Patterns of Life</h3>
+        <p>From these rules, fascinating patterns emerge. Use the "Load Preset" dropdown to see some famous examples:</p>
+        <ul>
+            <li><strong>Still Lifes (e.g., Block, Beehive):</strong> These are stable patterns that do not change from one generation to the next.</li>
+            <li><strong>Oscillators (e.g., Blinker, Pulsar):</strong> These patterns repeat themselves over a cycle of a few generations.</li>
+            <li><strong>Spaceships (e.g., Glider, LWSS):</strong> These patterns move across the grid, eventually returning to their original shape but in a different location. The Glider is the most famous of these.</li>
+            <li><strong>Complex Patterns (e.g., Gosper Glider Gun):</strong> These are larger, engineered patterns that can act as "factories," producing an endless stream of other patterns like gliders.</li>
+        </ul>
+        <p>Try loading a "Glider" and then using the "Step" button to watch it move one generation at a time.</p>
+    </section>
+
+    <section class="section">
+        <h2>Interactive Simulation</h2>
+        <div class="simulation-layout">
+            <div id="canvas-container">
+                <canvas id="life-canvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-group">
+                    <button id="run-pause-btn">Run</button>
+                    <button id="step-btn">Step</button>
+                    <button id="clear-btn">Clear</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="speed-slider">Speed: <span id="speed-value">10</span> fps</label>
+                    <input type="range" id="speed-slider" min="1" max="60" step="1" value="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="grid-size-select">Grid Size</label>
+                    <select id="grid-size-select">
+                        <option value="50">50x50 (Fast)</option>
+                        <option value="100" selected>100x100 (Default)</option>
+                        <option value="200">200x200 (Slow)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="preset-select">Load Preset</label>
+                    <select id="preset-select">
+                        <option value="none">-- Select a Pattern --</option>
+                        <option value="random">Random</option>
+                        <optgroup label="Spaceships">
+                            <option value="glider">Glider</option>
+                            <option value="lwss">Lightweight Spaceship</option>
+                        </optgroup>
+                        <optgroup label="Oscillators">
+                            <option value="blinker">Blinker</option>
+                            <option value="toad">Toad</option>
+                            <option value="pulsar">Pulsar</option>
+                        </optgroup>
+                        <optgroup label="Still Lifes">
+                            <option value="block">Block</option>
+                            <option value="beehive">Beehive</option>
+                        </optgroup>
+                        <optgroup label="Complex">
+                            <option value="gun">Gosper Glider Gun</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="performance-meter">
+                    <div>Generation: <span id="generation-value">0</span></div>
+                    <div>Population: <span id="population-value">0</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Micro-Experiments</h2>
+        <ol>
+            <li><strong>The Simplest Oscillator:</strong> Clear the grid. Draw a straight line of three live cells, either horizontally or vertically. Click "Step" repeatedly. You've created a "Blinker," which flips back and forth every generation.</li>
+            <li><strong>Glider Race:</strong> Load a "Glider" preset. Let it travel for a bit. Pause the simulation. Now, draw another glider somewhere else on the grid. Will they collide? Will they pass through each other? (Hint: They are just patterns, not physical objects).</li>
+            <li><strong>From Chaos comes Order:</strong> Select the "Random" preset. Run the simulation at high speed. A chaotic mess of cells will quickly boil down, leaving behind a collection of stable still lifes and simple oscillators, with a few gliders escaping the wreckage.</li>
+            <li><strong>Design a Still Life:</strong> Can you create a pattern of 4 or 5 cells that doesn't change when you click "Step"? Start with a 2x2 "Block" (which is a preset) and see if you can add a cell to it without it collapsing.</li>
+        </ol>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        canvas: document.getElementById('life-canvas'),
+        runPauseBtn: document.getElementById('run-pause-btn'),
+        stepBtn: document.getElementById('step-btn'),
+        clearBtn: document.getElementById('clear-btn'),
+        speedSlider: document.getElementById('speed-slider'),
+        speedValue: document.getElementById('speed-value'),
+        gridSizeSelect: document.getElementById('grid-size-select'),
+        presetSelect: document.getElementById('preset-select'),
+        generationValue: document.getElementById('generation-value'),
+        populationValue: document.getElementById('population-value'),
+        themeToggle: document.getElementById('theme-toggle'),
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+
+    // --- Simulation State ---
+    let simState = {
+        grid: [],
+        nextGrid: [],
+        size: 100,
+        isRunning: false,
+        generation: 0,
+        population: 0,
+        lastFrameTime: 0,
+        interval: 100, // ms per frame
+    };
+
+    // --- Presets ---
+    const presets = {
+        glider: [[1,0],[2,1],[0,2],[1,2],[2,2]],
+        lwss: [[0,1],[0,3],[1,0],[2,0],[3,0],[4,0],[4,1],[4,2],[3,3]],
+        blinker: [[1,0],[1,1],[1,2]],
+        toad: [[1,0],[2,0],[3,0],[0,1],[1,1],[2,1]],
+        pulsar: [[0,2],[0,3],[0,4],[0,8],[0,9],[0,10],[2,0],[2,5],[2,7],[2,12],[3,0],[3,5],[3,7],[3,12],[4,0],[4,5],[4,7],[4,12],[5,2],[5,3],[5,4],[5,8],[5,9],[5,10],[7,2],[7,3],[7,4],[7,8],[7,9],[7,10],[8,0],[8,5],[8,7],[8,12],[9,0],[9,5],[9,7],[9,12],[10,0],[10,5],[10,7],[10,12],[12,2],[12,3],[12,4],[12,8],[12,9],[12,10]],
+        block: [[0,0],[1,0],[0,1],[1,1]],
+        beehive: [[1,0],[2,0],[0,1],[3,1],[1,2],[2,2]],
+        gun: [[0,24],[1,22],[1,24],[2,12],[2,13],[2,20],[2,21],[2,34],[2,35],[3,11],[3,15],[3,20],[3,21],[3,34],[3,35],[4,0],[4,1],[4,10],[4,16],[4,20],[4,21],[5,0],[5,1],[5,10],[5,14],[5,16],[5,17],[5,22],[5,24],[6,10],[6,16],[6,24],[7,11],[7,15],[8,12],[8,13]]
+    };
+
+    function createGrid(size) {
+        simState.grid = Array.from({ length: size }, () => Array(size).fill(0));
+        simState.nextGrid = Array.from({ length: size }, () => Array(size).fill(0));
+    }
+
+    function update() {
+        let population = 0;
+        for (let i = 0; i < simState.size; i++) {
+            for (let j = 0; j < simState.size; j++) {
+                const state = simState.grid[i][j];
+                const neighbors = countNeighbors(i, j);
+
+                if (state === 1 && (neighbors < 2 || neighbors > 3)) {
+                    simState.nextGrid[i][j] = 0; // Death
+                } else if (state === 0 && neighbors === 3) {
+                    simState.nextGrid[i][j] = 1; // Birth
+                } else {
+                    simState.nextGrid[i][j] = state; // Survival
+                }
+                if(simState.nextGrid[i][j] === 1) population++;
+            }
+        }
+
+        [simState.grid, simState.nextGrid] = [simState.nextGrid, simState.grid];
+        simState.generation++;
+        simState.population = population;
+    }
+
+    function countNeighbors(x, y) {
+        let count = 0;
+        for (let i = -1; i < 2; i++) {
+            for (let j = -1; j < 2; j++) {
+                if (i === 0 && j === 0) continue;
+                const col = (x + i + simState.size) % simState.size;
+                const row = (y + j + simState.size) % simState.size;
+                count += simState.grid[col][row];
+            }
+        }
+        return count;
+    }
+
+    function draw() {
+        const cellSize = elements.canvas.width / simState.size;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
+        ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--cell-color');
+        for (let i = 0; i < simState.size; i++) {
+            for (let j = 0; j < simState.size; j++) {
+                if (simState.grid[i][j] === 1) {
+                    ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+
+        // Draw grid lines for smaller grids
+        if (simState.size <= 100) {
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid-color');
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= simState.size; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * cellSize, 0);
+                ctx.lineTo(i * cellSize, elements.canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * cellSize);
+                ctx.lineTo(elements.canvas.width, i * cellSize);
+                ctx.stroke();
+            }
+        }
+
+        elements.generationValue.textContent = simState.generation;
+        elements.populationValue.textContent = simState.population;
+    }
+
+    function gameLoop(timestamp) {
+        if (!simState.isRunning) return;
+
+        if (timestamp - simState.lastFrameTime >= simState.interval) {
+            simState.lastFrameTime = timestamp;
+            update();
+            draw();
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function run() {
+        if (simState.isRunning) return;
+        simState.isRunning = true;
+        elements.runPauseBtn.textContent = 'Pause';
+        requestAnimationFrame(gameLoop);
+    }
+
+    function pause() {
+        simState.isRunning = false;
+        elements.runPauseBtn.textContent = 'Run';
+    }
+
+    function step() {
+        pause();
+        update();
+        draw();
+    }
+
+    function clearGrid() {
+        pause();
+        simState.generation = 0;
+        simState.population = 0;
+        simState.grid.forEach(row => row.fill(0));
+        draw();
+    }
+
+    function loadPreset(name) {
+        clearGrid();
+        if (name === 'none') return;
+
+        if (name === 'random') {
+            let population = 0;
+            for (let i = 0; i < simState.size; i++) {
+                for (let j = 0; j < simState.size; j++) {
+                    if (Math.random() < 0.3) {
+                        simState.grid[i][j] = 1;
+                        population++;
+                    }
+                }
+            }
+            simState.population = population;
+        } else {
+            const pattern = presets[name];
+            const offsetX = Math.floor(simState.size / 2 - 5);
+            const offsetY = Math.floor(simState.size / 2 - 5);
+            let population = 0;
+            pattern.forEach(([x, y]) => {
+                const gridX = x + offsetX;
+                const gridY = y + offsetY;
+                if (gridX >= 0 && gridX < simState.size && gridY >= 0 && gridY < simState.size) {
+                    simState.grid[gridX][gridY] = 1;
+                    population++;
+                }
+            });
+            simState.population = population;
+        }
+        draw();
+    }
+
+    function handleCanvasClick(event) {
+        const rect = elements.canvas.getBoundingClientRect();
+        const scaleX = elements.canvas.width / rect.width;
+        const scaleY = elements.canvas.height / rect.height;
+        const x = (event.clientX - rect.left) * scaleX;
+        const y = (event.clientY - rect.top) * scaleY;
+
+        const cellSize = elements.canvas.width / simState.size;
+        const i = Math.floor(x / cellSize);
+        const j = Math.floor(y / cellSize);
+
+        if (i >= 0 && i < simState.size && j >= 0 && j < simState.size) {
+            simState.grid[i][j] = simState.grid[i][j] === 1 ? 0 : 1;
+            simState.population += simState.grid[i][j] === 1 ? 1 : -1;
+            draw();
+        }
+    }
+
+    function setup() {
+        pause();
+        simState.size = parseInt(elements.gridSizeSelect.value);
+        simState.generation = 0;
+        simState.population = 0;
+        createGrid(simState.size);
+        draw();
+    }
+
+    // --- Event Listeners ---
+    elements.runPauseBtn.addEventListener('click', () => simState.isRunning ? pause() : run());
+    elements.stepBtn.addEventListener('click', step);
+    elements.clearBtn.addEventListener('click', clearGrid);
+
+    elements.speedSlider.addEventListener('input', (e) => {
+        simState.interval = 1000 / parseInt(e.target.value);
+        elements.speedValue.textContent = e.target.value;
+    });
+
+    elements.gridSizeSelect.addEventListener('change', setup);
+    elements.presetSelect.addEventListener('change', (e) => loadPreset(e.target.value));
+
+    let isDrawing = false;
+    elements.canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        handleCanvasClick(e);
+    });
+    elements.canvas.addEventListener('mousemove', (e) => {
+        if (isDrawing) handleCanvasClick(e);
+    });
+    elements.canvas.addEventListener('mouseup', () => isDrawing = false);
+    elements.canvas.addEventListener('mouseleave', () => isDrawing = false);
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        draw(); // Redraw with new theme colors
+    });
+
+    // --- Initial Setup ---
+    new ResizeObserver(() => {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = elements.canvas.getBoundingClientRect();
+        elements.canvas.width = rect.width * dpr;
+        elements.canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        draw();
+    }).observe(elements.canvas);
+
+    simState.interval = 1000 / parseInt(elements.speedSlider.value);
+    elements.speedValue.textContent = elements.speedSlider.value;
+    setup();
+});
+</script>
+
+</body>
+</html>
