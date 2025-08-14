@@ -14,6 +14,9 @@
             --canvas-bg: #fff;
             --photon-color: #ffcc00;
             --ship-color: #c0c0c0;
+            --code-bg: #e6f2ff;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
         }
         .dark-mode {
             --bg-color: #000030;
@@ -24,6 +27,9 @@
             --canvas-bg: #00001a;
             --photon-color: #ffff00;
             --ship-color: #888888;
+            --code-bg: #001f4d;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
         }
         body {
             font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
@@ -61,7 +67,7 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 2rem;
+            gap: 1rem;
             align-items: center;
         }
         .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -86,16 +92,27 @@
             font-size: 1.2rem;
             text-align: center;
         }
-        .info-box { padding: 0.5rem; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 5px; }
-        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+        .info-box { padding: 0.5rem; background-color: var(--code-bg); border: 1px solid var(--border-color); border-radius: 5px; }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        dl dt { font-weight: bold; color: var(--primary-color); }
+        dl dd { margin-bottom: 1rem; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 5px; margin-bottom: 1rem; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <main>
+        <div id="quality-check-panel" class="error-panel"></div>
         <header>
             <h1>The Light Clock and Time Dilation</h1>
             <p>A classic thought experiment demonstrating why time slows down for moving objects.</p>
-            <div style="text-align:center; margin: 1rem 0;">
+            <div style="text-align:center; margin: 1rem 0; font-size: 0.8rem; color: var(--secondary-color);">
+                <span>Recommended device: Desktop</span> |
                 <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
             </div>
         </header>
@@ -121,14 +138,17 @@
                 </div>
             </div>
             <div class="controls-area">
-                 <div>
+                 <div class="control-group">
                     <label for="velocity-slider"><strong>Spaceship Velocity (v):</strong></label>
-                    <input type="range" id="velocity-slider" min="0" max="0.999" step="0.001" value="0.8">
+                    <input type="range" id="velocity-slider" min="0" max="0.999" step="0.001" value="0.8" aria-label="Spaceship Velocity">
                     <span id="velocity-value">0.800</span> c
                 </div>
                 <div class="button-group">
-                    <button id="earth-view-btn" class="active">View from Earth</button>
-                    <button id="ship-view-btn">View from Ship</button>
+                    <button id="earth-view-btn" class="active" aria-label="Switch to Earth reference frame">View from Earth</button>
+                    <button id="ship-view-btn" aria-label="Switch to Ship reference frame">View from Ship</button>
+                </div>
+                 <div class="button-group">
+                     <button id="export-png-btn" title="Export current frame as PNG">Export PNG</button>
                 </div>
             </div>
         </div>
@@ -178,10 +198,49 @@
             </p>
             <p>Since v is always less than c, &gamma; is always greater than or equal to 1. This means t' (the time interval on the moving clock) is always longer than t (the time interval on the stationary clock).</p>
         </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Does time *really* slow down?</dt>
+                <dd>Yes. This is not a trick of perception or a mechanical issue with the clock. Time itself flows at different rates for observers in relative motion. This has been confirmed in countless experiments, from particle accelerators to atomic clocks on airplanes and GPS satellites.</dd>
+                <dt>2. What happens at the speed of light (v=c)?</dt>
+                <dd>As v approaches c, the Lorentz factor &gamma; approaches infinity. This means time would slow to a complete stop for an object moving at the speed of light, as seen by an outside observer. This is one reason why objects with mass can never reach the speed of light.</dd>
+                <dt>3. What is the Twin Paradox?</dt>
+                <dd>The Twin Paradox asks: if one twin flies off in a spaceship and returns, who is actually younger? Relativity says the moving twin's clock runs slow, so they should be younger. But from the ship's perspective, the Earth twin was moving, so *they* should be younger. The paradox is resolved by noting that the spaceship twin had to accelerate, turn around, and decelerate. This breaks the symmetry of the situation; the traveling twin is the one who truly experiences less time.</dd>
+                <dt>4. Why don't we notice this in everyday life?</dt>
+                <dd>Because the speeds we experience are incredibly small compared to the speed of light. At the speed of a car or even a jet plane, the Lorentz factor &gamma; is so close to 1 (e.g., 1.0000000000005) that the effect of time dilation is completely negligible.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <ul id="log-output"></ul>
+            </div>
+        </details>
     </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality Checks ---
+        const qcPanel = document.getElementById('quality-check-panel');
+        if (!document.getElementById('main-canvas')) {
+            qcPanel.textContent = 'ERROR: Main canvas not found.';
+            qcPanel.style.display = 'block';
+            return;
+        }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        const log = (message) => {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        };
+        log('Simulation initialized.');
+
+        // --- DOM Elements ---
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
         const velocitySlider = document.getElementById('velocity-slider');
@@ -192,45 +251,40 @@
         const earthViewBtn = document.getElementById('earth-view-btn');
         const shipViewBtn = document.getElementById('ship-view-btn');
         const themeToggle = document.getElementById('theme-toggle');
+        const exportPngBtn = document.getElementById('export-png-btn');
 
         const width = canvas.width;
         const height = canvas.height;
         const clock_h = 150;
-        const c = 10; // Speed of light in pixels per tick
+        const c = 10;
 
         let v = parseFloat(velocitySlider.value);
         let frame = 'earth';
         let time_s = 0, time_m = 0;
         let photon_s = { y: 50, vy: c };
-        let photon_m = { y: 50, vy: 0, vx: 0 };
-        let clock_m_x = width * 0.75;
+        let photon_m = { y: 50, vy_component: 0 };
+        let clock_s = { x: width * 0.25 };
+        let clock_m = { x: width * 0.75 };
 
         const getColors = () => ({
             bg: document.body.classList.contains('dark-mode') ? '#00001a' : '#fff',
             text: document.body.classList.contains('dark-mode') ? '#e0e0ff' : '#000080',
             photon: document.body.classList.contains('dark-mode') ? '#ffff00' : '#ffcc00',
             ship: document.body.classList.contains('dark-mode') ? '#888888' : '#c0c0c0',
-            path: document.body.classList.contains('dark-mode') ? '#ffffff44' : '#00000044',
         });
 
         function reset() {
+            log(`Resetting simulation. Frame: ${frame}, v: ${v}`);
             time_s = 0; time_m = 0;
             photon_s = { y: 50, vy: c };
-            clock_m_x = width * 0.75;
-            updatePhotonM();
-        }
-
-        function updatePhotonM() {
-             const gamma = 1 / Math.sqrt(1 - v*v);
-             const v_pixels = v * c;
-
-             if (frame === 'earth') {
-                photon_m.vy = c / gamma;
-                photon_m.vx = v_pixels;
-             } else { // ship frame
-                photon_m.vy = c;
-                photon_m.vx = 0;
-             }
+            photon_m = { y: 50, vy_component: c / (1 / Math.sqrt(1 - v*v)) };
+            if (frame === 'earth') {
+                 clock_s.x = width * 0.25;
+                 clock_m.x = width * 0.75;
+            } else {
+                 clock_s.x = width * 0.75;
+                 clock_m.x = width * 0.25;
+            }
         }
 
         function draw() {
@@ -238,63 +292,62 @@
             ctx.fillStyle = colors.bg;
             ctx.fillRect(0, 0, width, height);
 
-            // Draw stationary clock
-            const clock_s_x = width * 0.25;
+            // Draw clocks
             ctx.fillStyle = colors.ship;
-            ctx.fillRect(clock_s_x - 50, 50 - 5, 100, 10);
-            ctx.fillRect(clock_s_x - 50, 50 + clock_h - 5, 100, 10);
-
-            // Draw moving clock
-            ctx.fillRect(clock_m_x - 50, 50 - 5, 100, 10);
-            ctx.fillRect(clock_m_x - 50, 50 + clock_h - 5, 100, 10);
+            ctx.fillRect(clock_s.x - 50, 50 - 5, 100, 10);
+            ctx.fillRect(clock_s.x - 50, 50 + clock_h - 5, 100, 10);
+            ctx.fillRect(clock_m.x - 50, 50 - 5, 100, 10);
+            ctx.fillRect(clock_m.x - 50, 50 + clock_h - 5, 100, 10);
 
             // Draw photons
             ctx.fillStyle = colors.photon;
             ctx.beginPath();
-            ctx.arc(clock_s_x, photon_s.y, 5, 0, 2*Math.PI);
+            ctx.arc(clock_s.x, photon_s.y, 5, 0, 2*Math.PI);
             ctx.fill();
 
             ctx.beginPath();
-            ctx.arc(clock_m_x, photon_m.y, 5, 0, 2*Math.PI);
+            ctx.arc(clock_m.x, photon_m.y, 5, 0, 2*Math.PI);
             ctx.fill();
         }
 
         function update() {
-            const v_pixels = v * c;
             const gamma = 1 / Math.sqrt(1 - v*v);
+            const v_pixels = v * c;
 
-            // Update stationary clock
-            photon_s.y += photon_s.vy;
-            if (photon_s.y > 50 + clock_h || photon_s.y < 50) {
-                photon_s.vy *= -1;
-                time_s += 0.5;
-            }
-
-            // Update moving clock
             if (frame === 'earth') {
-                clock_m_x += v_pixels;
-                if (clock_m_x > width + 50) clock_m_x = -50;
+                // Stationary clock photon just moves up and down
+                photon_s.y += photon_s.vy;
+                if (photon_s.y > 50 + clock_h || photon_s.y < 50) {
+                    photon_s.vy *= -1;
+                    time_s += 0.5;
+                }
+                // Moving clock moves, its photon moves diagonally
+                clock_m.x += v_pixels;
+                if (clock_m.x > width + 50) clock_m.x = -50;
 
-                // For photon, we need to calculate its velocity components
-                const v_photon_y = c / gamma;
-                photon_m.y += photon_m.vy > 0 ? v_photon_y : -v_photon_y;
-
-                if (photon_m.y > 50 + clock_h || photon_m.y < 50) {
-                    photon_m.vy = photon_m.y > 50 + clock_h ? -c/gamma : c/gamma;
+                photon_m.y += photon_m.vy_component;
+                 if (photon_m.y > 50 + clock_h || photon_m.y < 50) {
+                    photon_m.vy_component *= -1;
                     time_m += 0.5;
                 }
-
             } else { // Ship frame
-                const earth_clock_x = width * 0.25 - v_pixels * (time_s * (c/clock_h));
-                // This part is complex, for now we just show the clocks ticking
-                photon_m.y += photon_m.vy;
+                 // Ship's clock is now stationary
+                photon_m.y += c; // Ticks at normal rate
                 if (photon_m.y > 50 + clock_h || photon_m.y < 50) {
-                    photon_m.vy *= -1;
+                    photon_m.vy_component = (photon_m.y > 50 + clock_h) ? -c : c;
                     time_m += 0.5;
+                }
+                // Earth clock moves
+                clock_s.x -= v_pixels;
+                if (clock_s.x < -50) clock_s.x = width + 50;
+
+                photon_s.y += c / gamma;
+                if (photon_s.y > 50 + clock_h || photon_s.y < 50) {
+                    photon_s.vy = (photon_s.y > 50 + clock_h) ? -c/gamma : c/gamma;
+                    time_s += 0.5;
                 }
             }
 
-            // Update displays
             timeStationaryDisplay.textContent = time_s.toFixed(2);
             timeMovingDisplay.textContent = time_m.toFixed(2);
             gammaDisplay.textContent = gamma.toFixed(3);
@@ -303,7 +356,6 @@
             requestAnimationFrame(update);
         }
 
-        // --- Event Listeners ---
         velocitySlider.addEventListener('input', e => {
             v = parseFloat(e.target.value);
             velocityValue.textContent = v.toFixed(3);
@@ -318,7 +370,6 @@
         });
 
         shipViewBtn.addEventListener('click', () => {
-            alert("Conceptual view: In the ship's frame, its own clock ticks normally while the Earth clock appears to run slow. The animation will now show the ship's clock ticking at the 'normal' rate.");
             frame = 'ship';
             shipViewBtn.classList.add('active');
             earthViewBtn.classList.remove('active');
@@ -329,8 +380,17 @@
             document.body.classList.toggle('dark-mode');
         });
 
+        exportPngBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `time-dilation_${new Date().toISOString()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            log('Exported PNG.');
+        });
+
         reset();
         update();
+        log('Simulation running.');
     });
     </script>
 </body>

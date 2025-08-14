@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbits as Geodesics in Curved Spacetime</title>
+    <style>
+        :root {
+            --bg-color: #eaf4f4;
+            --text-color: #2b2d42;
+            --primary-color: #d80032;
+            --secondary-color: #8d99ae;
+            --border-color: #d8e2dc;
+            --canvas-bg: #fff;
+            --star-color: #ffc300;
+            --planet-color: #0077b6;
+        }
+        .dark-mode {
+            --bg-color: #2b2d42;
+            --text-color: #edf2f4;
+            --primary-color: #ef233c;
+            --secondary-color: #8d99ae;
+            --border-color: #434a65;
+            --canvas-bg: #1a1d2b;
+            --star-color: #ffc300;
+            --planet-color: #00b4d8;
+        }
+        body {
+            font-family: 'Baskerville', 'Palatino Linotype', Palatino, 'serif';
+            line-height: 1.7;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 1100px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        .panel {
+            flex: 1;
+            min-width: 400px;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            max-width: 100%;
+            height: auto;
+            cursor: move;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #a41623; }
+        .dark-mode button:hover { background-color: #d90429; }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Orbits as Geodesics in Curved Spacetime</h1>
+            <p>Visualizing why a planetary orbit is considered a "straight line."</p>
+            <div style="text-align:center; margin-top: 1rem;">
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                We typically think of a planet's orbit as a curved path, caused by the "force" of gravity from its star. General Relativity offers a revolutionary alternative: gravity is not a force. Instead, the star's mass curves the fabric of spacetime around it. The planet is simply moving in the "straightest possible line" through this now-curved spacetime. A straight line on a curved surface is called a <strong>geodesic</strong>. This simulation shows this duality. On the left, you see the familiar curved orbit in 3D space. On the right, you see the planet's path (its "worldline") traced on the curved spacetime created by the star, showing how this same motion can be viewed as a geodesic.
+            </p>
+        </section>
+
+        <div class="controls-area">
+            <div class="control-group">
+                <label for="mass-slider">Star Mass:</label>
+                <input type="range" id="mass-slider" min="50" max="200" step="10" value="100">
+            </div>
+            <div class="control-group">
+                <label for="velocity-slider">Planet Initial Velocity:</label>
+                <input type="range" id="velocity-slider" min="0.5" max="1.5" step="0.1" value="1.0">
+            </div>
+            <button id="animate-btn">Launch Planet</button>
+        </div>
+
+        <div class="container">
+            <div class="panel">
+                <h3>View 1: 3D Space (Curved Path)</h3>
+                <canvas id="orbit-canvas" width="450" height="450"></canvas>
+            </div>
+            <div class="panel">
+                <h3>View 2: Spacetime (Geodesic Path)</h3>
+                <canvas id="spacetime-canvas" width="450" height="450"></canvas>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Two Views</h3>
+            <p>This simulation presents two different ways of looking at the exact same physical event: a planet orbiting a star.</p>
+            <ul>
+                <li><strong>3D Space View (Left):</strong> This is the view we are familiar with. It shows the star at the center and the planet moving along a curved, elliptical path. This is the orbit as it would appear if you were observing it from afar in space.</li>
+                <li><strong>Spacetime View (Right):</strong> This is a more abstract but more fundamental view. It shows the "rubber sheet" of spacetime being curved by the star's mass. The path drawn here is the planet's <strong>worldline</strong>—its trajectory through both space and time. Notice how this path follows the natural "groove" or contour of the curved spacetime. This is the geodesic.</li>
+            </ul>
+
+            <h3>2. What is a Geodesic?</h3>
+            <p>A geodesic is the shortest and "straightest" possible path between two points on a given surface. On a flat surface like a piece of paper, a geodesic is a simple straight line. But on a curved surface, a geodesic can look curved to an outside observer.</p>
+            <p><strong>Analogy: An Airline Flight.</strong> Imagine you want to fly from New York to Rome. If you look at a flat world map, the flight path looks like a long, pronounced arc, not a straight line. Why? Because the pilots are flying the shortest possible route over the curved surface of the Earth. That arc *is* the geodesic on the sphere. A planetary orbit is the exact same concept, but for a path through curved 4D spacetime instead of a curved 2D surface.</p>
+
+            <h3>3. Gravity as Geometry</h3>
+            <p>
+                This leads to the core insight of General Relativity. The planet is not being "pulled" by a force. It feels no force at all; it is in a state of perfect free-fall. It is simply following its natural tendency to move in a straight line. The "illusion" of a force only appears because the spacetime it is moving through has been curved by the mass of the star. In Einstein's view, <strong>gravity is geometry</strong>. The simulation shows that the "curved" path on the left and the "straight" path on the right are just two different ways of describing the same geodesic motion.
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>The Geodesic Equation</h2>
+            <p>
+                In General Relativity, the path of a freely falling particle is described by the geodesic equation. In its full form, it involves Christoffel symbols (&Gamma;) which encode all the information about the curvature of spacetime.
+            </p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                d<sup>2</sup>x<sup>&mu;</sup>/d&tau;<sup>2</sup> + &Gamma;<sup>&mu;</sup><sub>&alpha;&beta;</sub> (dx<sup>&alpha;</sup>/d&tau;)(dx<sup>&beta;</sup>/d&tau;) = 0
+            </p>
+            <p>
+                This equation essentially says that the acceleration of an object along its worldline is zero, when accounting for the effects of curvature. It is the relativistic equivalent of Newton's first law (an object in motion stays in motion with the same speed and in the same direction unless acted upon by a force). In General Relativity, gravity is not considered a force, so an orbiting planet is simply following its inertial, "straightest" path. Our simulation uses a much simpler Newtonian gravity calculation to generate the orbit, but the path it generates is a very good approximation of a true geodesic in the weak gravity of a star.
+            </p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const orbitCanvas = document.getElementById('orbit-canvas');
+        const spacetimeCanvas = document.getElementById('spacetime-canvas');
+        const oCtx = orbitCanvas.getContext('2d');
+        const sCtx = spacetimeCanvas.getContext('2d');
+
+        const massSlider = document.getElementById('mass-slider');
+        const velocitySlider = document.getElementById('velocity-slider');
+        const animateBtn = document.getElementById('animate-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let starMass = 100;
+        let planetInitialV = 1.0;
+        let planet = { x: 150, y: 0, z: 0, vx: 0, vy: 0, vz: -planetInitialV };
+        let worldline = [];
+        let animationId;
+        let camAngle = { x: 0.5, y: -0.5 };
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#1a1d2b' : '#fff',
+            star: '#ffc300',
+            planet: document.body.classList.contains('dark-mode') ? '#00b4d8' : '#0077b6',
+            grid: document.body.classList.contains('dark-mode') ? '#434a65' : '#d8e2dc',
+        });
+
+        // --- 3D Projection for Orbit View ---
+        const projectOrbit = (p) => {
+            let {x, y, z} = p;
+            const size = orbitCanvas.width;
+            const cosY = Math.cos(camAngle.y); const sinY = Math.sin(camAngle.y);
+            let tempX = x * cosY - z * sinY;
+            let tempZ = x * sinY + z * cosY;
+            x = tempX; z = tempZ;
+
+            const cosX = Math.cos(camAngle.x); const sinX = Math.sin(camAngle.x);
+            let tempY = y * cosX - z * sinX;
+            tempZ = y * sinX + z * cosX;
+            y = tempY; z = tempZ;
+
+            z += 5;
+            const pScale = 200 / z;
+            return {
+                x: x * pScale + size / 2,
+                y: -y * pScale + size / 2,
+                scale: pScale
+            };
+        };
+
+        function drawOrbit() {
+            const colors = getColors();
+            oCtx.fillStyle = colors.bg;
+            oCtx.fillRect(0, 0, orbitCanvas.width, orbitCanvas.height);
+
+            // Star
+            const star_p = projectOrbit({x:0, y:0, z:0});
+            oCtx.fillStyle = colors.star;
+            oCtx.beginPath();
+            oCtx.arc(star_p.x, star_p.y, 10, 0, 2*Math.PI);
+            oCtx.fill();
+
+            // Planet
+            const planet_p = projectOrbit(planet);
+            oCtx.fillStyle = colors.planet;
+            oCtx.beginPath();
+            oCtx.arc(planet_p.x, planet_p.y, 5 * Math.max(0.2, planet_p.scale/20), 0, 2*Math.PI);
+            oCtx.fill();
+        }
+
+        // --- 3D Projection for Spacetime View ---
+        const projectSpacetime = (p) => {
+             let {x, y, z} = p;
+            const size = spacetimeCanvas.width;
+            const cosY = Math.cos(camAngle.y); const sinY = Math.sin(camAngle.y);
+            let tempX = x * cosY - z * sinY;
+            let tempZ = x * sinY + z * cosY;
+            x = tempX; z = tempZ;
+
+            const cosX = Math.cos(camAngle.x); const sinX = Math.sin(camAngle.x);
+            let tempY = y * cosX - z * sinX;
+            tempZ = y * sinX + z * cosX;
+            y = tempY; z = tempZ;
+
+            z += 8;
+            const pScale = 3 / z;
+            return {
+                x: x * pScale * size * 0.1 + size / 2,
+                y: -y * pScale * size * 0.1 + size / 2,
+            };
+        };
+
+        const getGridDeformation = (x, z, mass) => {
+            const dist = Math.sqrt(x*x + z*z);
+            return -mass / (dist + 5);
+        };
+
+        function drawSpacetime() {
+            const colors = getColors();
+            sCtx.fillStyle = colors.bg;
+            sCtx.fillRect(0, 0, spacetimeCanvas.width, spacetimeCanvas.height);
+
+            // Draw grid
+            const gridSize = 20;
+            const gridPoints = [];
+            for (let i = 0; i <= gridSize; i++) {
+                gridPoints[i] = [];
+                for (let j = 0; j <= gridSize; j++) {
+                    const x = (i - gridSize/2) * 0.8;
+                    const z = (j - gridSize/2) * 0.8;
+                    const y = getGridDeformation(x, z, starMass);
+                    gridPoints[i][j] = projectSpacetime({x, y, z});
+                }
+            }
+            sCtx.strokeStyle = colors.grid;
+            sCtx.lineWidth = 1;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    sCtx.beginPath();
+                    sCtx.moveTo(gridPoints[i][j].x, gridPoints[i][j].y);
+                    sCtx.lineTo(gridPoints[i+1][j].x, gridPoints[i+1][j].y);
+                    sCtx.lineTo(gridPoints[i+1][j+1].x, gridPoints[i+1][j+1].y);
+                    sCtx.stroke();
+                }
+            }
+
+            // Draw worldline
+            sCtx.strokeStyle = colors.planet;
+            sCtx.lineWidth = 3;
+            sCtx.beginPath();
+            worldline.forEach((p, i) => {
+                const proj_p = projectSpacetime(p);
+                if (i === 0) sCtx.moveTo(proj_p.x, proj_p.y);
+                else sCtx.lineTo(proj_p.x, proj_p.y);
+            });
+            sCtx.stroke();
+        }
+
+        function update() {
+            // Simple Newtonian gravity simulation
+            const dx = -planet.x;
+            const dy = -planet.y;
+            const dz = -planet.z;
+            const distSq = dx*dx + dy*dy + dz*dz;
+            const dist = Math.sqrt(distSq);
+            const force = starMass / distSq;
+
+            const ax = force * dx / dist;
+            const ay = force * dy / dist;
+            const az = force * dz / dist;
+
+            planet.vx += ax * 0.1;
+            planet.vy += ay * 0.1;
+            planet.vz += az * 0.1;
+
+            planet.x += planet.vx;
+            planet.y += planet.vy;
+            planet.z += planet.vz;
+
+            // Add point to worldline. Use time as the 'y' coordinate
+            const time_y = worldline.length * 0.02 - 5;
+            worldline.push({x: planet.x/50, y: time_y, z: planet.z/50});
+            if (worldline.length > 500) worldline.shift();
+
+            drawOrbit();
+            drawSpacetime();
+
+            animationId = requestAnimationFrame(update);
+        }
+
+        function startAnimation() {
+            cancelAnimationFrame(animationId);
+            starMass = parseFloat(massSlider.value);
+            planetInitialV = parseFloat(velocitySlider.value);
+            planet = { x: 150, y: 0, z: 0, vx: 0, vy: 0, vz: -planetInitialV };
+            worldline = [];
+            update();
+        }
+
+        animateBtn.addEventListener('click', startAnimation);
+        themeToggle.addEventListener('click', () => {
+            drawOrbit();
+            drawSpacetime();
+        });
+
+        // Mouse drag to rotate camera
+        let isDragging = false;
+        let lastMouse = {x:0, y:0};
+        const setupDrag = (canvas) => {
+            canvas.addEventListener('mousedown', e => {
+                isDragging = true;
+                lastMouse = {x: e.clientX, y: e.clientY};
+            });
+        };
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        window.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouse.x;
+            const dy = e.clientY - lastMouse.y;
+            camAngle.y += dx * 0.01;
+            camAngle.x += dy * 0.01;
+            lastMouse = {x: e.clientX, y: e.clientY};
+            if (!animationId) {
+                drawOrbit();
+                drawSpacetime();
+            }
+        });
+        setupDrag(orbitCanvas);
+        setupDrag(spacetimeCanvas);
+
+        drawOrbit();
+        drawSpacetime();
+    });
+    </script>
+</body>
+</html>

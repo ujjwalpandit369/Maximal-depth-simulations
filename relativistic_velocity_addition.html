@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativistic Velocity Addition</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #004d40;
+            --secondary-color: #00796b;
+            --border-color: #b2dfdb;
+            --canvas-bg: #e0f2f1;
+            --ship-color: #80cbc4;
+            --probe-color: #ffab40;
+            --classical-color: #ef5350;
+            --relativistic-color: #42a5f5;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+        }
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --primary-color: #80cbc4;
+            --secondary-color: #4db6ac;
+            --border-color: #444;
+            --canvas-bg: #212121;
+            --ship-color: #4db6ac;
+            --probe-color: #ffd54f;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
+        }
+        body {
+            font-family: 'Roboto', 'Helvetica', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 1rem;
+        }
+        .results-area {
+            width: 100%;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.2rem;
+        }
+        .result-box { padding: 0.5rem; border-radius: 4px; border: 2px solid; }
+        #classical-box { border-color: var(--classical-color); color: var(--classical-color); }
+        #relativistic-box { border-color: var(--relativistic-color); color: var(--relativistic-color); }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        dl dt { font-weight: bold; color: var(--primary-color); }
+        dl dd { margin-bottom: 1rem; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 5px; margin-bottom: 1rem; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <main>
+        <div id="quality-check-panel" class="error-panel"></div>
+        <header>
+            <h1>Relativistic Velocity Addition</h1>
+            <p>Why you can't just add speeds in Special Relativity.</p>
+            <div style="text-align:center; margin-top: 1rem; font-size: 0.8rem; color: var(--secondary-color);">
+                <span>Recommended device: Desktop</span> |
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                If you are on a train moving at 50 km/h and you throw a ball forward at 10 km/h, someone on the ground sees the ball moving at 60 km/h. Our everyday intuition tells us to just add the velocities. But this simple addition breaks down at speeds close to the speed of light. If a spaceship moving at 60% the speed of light (0.6c) fires a probe forward at 0.6c, the probe does *not* travel at 1.2c! This is impossible, as nothing can exceed the speed of light. Einstein's theory provides a new formula for adding velocities that ensures the speed of light is the ultimate cosmic speed limit. This simulation lets you set the speeds and see the difference between the (wrong) classical addition and the (correct) relativistic addition.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="800" height="250"></canvas>
+            <div class="results-area">
+                <div id="classical-box" class="result-box">
+                    <strong>Classical Addition (v + u'):</strong><br><span id="classical-result">1.200</span> c
+                </div>
+                <div id="relativistic-box" class="result-box">
+                    <strong>Relativistic Addition (u):</strong><br><span id="relativistic-result">0.882</span> c
+                </div>
+            </div>
+            <div class="controls-area">
+                <div class="control-group">
+                    <label for="v-slider">Mothership Velocity (v): <span id="v-value">0.600</span> c</label>
+                    <input type="range" id="v-slider" min="0" max="0.99" step="0.01" value="0.6" aria-label="Mothership Velocity">
+                </div>
+                <div class="control-group">
+                    <label for="u-prime-slider">Probe Velocity (relative to ship, u'): <span id="u-prime-value">0.600</span> c</label>
+                    <input type="range" id="u-prime-slider" min="-0.99" max="0.99" step="0.01" value="0.6" aria-label="Probe Velocity">
+                </div>
+                <div class="button-group">
+                     <button id="export-png-btn" title="Export current frame as PNG">Export PNG</button>
+                     <button id="export-json-btn" title="Export parameters as JSON">Export JSON</button>
+                </div>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Setup</h3>
+            <p>
+                The animation shows a large mothership moving from left to right. Its speed, as seen by a stationary observer on the ground, is <strong>v</strong>. The mothership fires a small probe in the same direction. The probe's speed, as measured by someone *on the mothership*, is <strong>u'</strong>. The question is: what is the probe's speed <strong>u</strong> as measured by the stationary observer on the ground?
+            </p>
+            <h3>2. Classical vs. Relativistic Addition</h3>
+            <p>
+                Use the sliders to set both `v` and `u'` to 0.6c.
+                <ul>
+                    <li>The <strong>Classical Addition</strong> box shows the answer our intuition expects: <code>0.6 + 0.6 = 1.2c</code>. This result is faster than the speed of light, which is physically impossible.</li>
+                    <li>The <strong>Relativistic Addition</strong> box shows the correct answer calculated using Einstein's formula: <code>u ≈ 0.882c</code>. Notice that this is much less than 1.2c and, crucially, it is still less than 1.0c.</li>
+                </ul>
+                Try cranking both sliders up to their maximum of 0.99c. The classical result is 1.98c. The relativistic result is ~0.9999c. No matter what values you choose, the relativistic result will never exceed the speed of light. The formula has a built-in "speed limit."
+            </p>
+            <h3>3. Firing Backwards</h3>
+            <p>
+                What if the probe is fired backwards? Use the "Probe Velocity" slider and move it into the negative values. Set the mothership velocity `v` to 0.7c and the probe velocity `u'` to -0.5c.
+                <ul>
+                    <li>Classically, the result is <code>0.7 - 0.5 = 0.2c</code>. The probe moves forward at 0.2c.</li>
+                    <li>Relativistically, the result is <code>(0.7 - 0.5) / (1 + 0.7*(-0.5)) = 0.2 / (1 - 0.35) = 0.2 / 0.65 ≈ 0.308c</code>.
+                </ul>
+                The results are different! This shows that the formula is not just for preventing faster-than-light travel, but is the correct way to transform velocities between reference frames for all speeds.
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>The Velocity Addition Formula</h2>
+            <p>
+                Let frame S be the ground observer's frame. Let frame S' be the mothership's frame, moving at velocity <code>v</code> relative to S. The probe moves at velocity <code>u'</code> relative to S'. We want to find the probe's velocity <code>u</code> in the ground frame S.
+            </p>
+            <p>The relativistic velocity addition formula is derived from the Lorentz transformations for space and time:</p>
+            <p style="text-align:center; font-size:1.4rem; font-family:monospace;">
+                u = (v + u') / (1 + vu'/c<sup>2</sup>)
+            </p>
+            <p>
+                Let's look at the "speed limit" property. Imagine the mothership is moving at nearly the speed of light (<code>v ≈ c</code>) and fires a probe that also moves at nearly the speed of light relative to the ship (<code>u' ≈ c</code>).
+                <br>
+                Classically, <code>u = c + c = 2c</code>.
+                <br>
+                Relativistically, <code>u = (c + c) / (1 + c*c/c²) = 2c / (1 + 1) = 2c / 2 = c</code>.
+                <br>
+                Even in this most extreme case, the final velocity as seen from the ground is still just <code>c</code>. The formula elegantly preserves the speed of light as the universal speed limit.
+            </p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h3>1. The Escalator Analogy (Physical)</h3>
+            <p>
+                Imagine an escalator (the mothership) moving up at speed `v`. You (the probe) start walking up the escalator at speed `u'`. To an observer watching from the ground, your total speed is `v + u'`. This is our classical intuition. But what if the escalator moves at the speed of light? And you turn on a flashlight? The light from your flashlight doesn't move at `c + c`. Relativity introduces a "spacetime friction" term in the denominator (`1 + vu'/c²`) that prevents this from happening.
+            </p>
+            <h3>2. The Map Projection Analogy (Visualization)</h3>
+            <p>
+                Trying to add relativistic velocities is like trying to add distances on a Mercator map projection of the Earth. If you measure 1000km north from the equator, and then another 1000km north, you don't end up 2000km from your start in a straight line, because the map distorts distances as you get closer to the poles. The velocity addition formula is like the correct geometric rule for adding displacements on the curved "map" of spacetime velocities (which is technically a hyperbolic space, not a sphere).
+            </p>
+            <h3>3. The "Rapidity" Analogy (Computational)</h3>
+            <p>
+                In relativity, there is a quantity called "rapidity" (<code>&phi;</code>) which is related to velocity by <code>v/c = tanh(&phi;)</code>. The magic of rapidity is that unlike velocities, rapidities *do* add linearly! The relativistic velocity addition formula is just a disguised version of <code>&phi;<sub>total</sub> = &phi;<sub>v</sub> + &phi;<sub>u'</sub></code>. The formula `u = (v+u')/(1+vu')` is what you get when you convert the simple addition of rapidities back into the language of velocities.
+            </p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why can't we just add speeds?</dt>
+                <dd>Because space and time are not separate; they are intertwined into spacetime. The Lorentz transformations, which are the correct "rules" for spacetime, lead directly to the more complex velocity addition formula. Simple addition is just an excellent approximation at low speeds.</dd>
+                <dt>2. What happens if I set the probe velocity to be negative?</dt>
+                <dd>This corresponds to firing the probe backwards from the mothership. The formula works perfectly for this case as well. You can see that the resulting velocity is still different from the simple classical subtraction.</dd>
+                <dt>3. What if the motion is not in a straight line?</dt>
+                <dd>There are more complex versions of the formula for adding velocities in two or three dimensions, but they are all based on the same principles and all respect the speed of light as the ultimate limit.</dd>
+                <dt>4. Has this been experimentally tested?</dt>
+                <dd>Yes, extensively. Particle accelerators routinely accelerate particles to 0.9999...c. The behavior of these particles and their collisions can only be explained using relativistic formulas for velocity, momentum, and energy. The theory is confirmed daily in experiments around the world.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <p>Runtime metrics and errors will appear here.</p>
+                <ul id="log-output"></ul>
+            </div>
+        </details>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality Checks ---
+        const qcPanel = document.getElementById('quality-check-panel');
+        if (!document.getElementById('main-canvas')) {
+            qcPanel.textContent = 'ERROR: Main canvas not found.';
+            qcPanel.style.display = 'block';
+            return;
+        }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        const log = (message) => {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        };
+        log('Simulation initialized.');
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const themeToggle = document.getElementById('theme-toggle');
+        const vSlider = document.getElementById('v-slider');
+        const uPrimeSlider = document.getElementById('u-prime-slider');
+        const vValue = document.getElementById('v-value');
+        const uPrimeValue = document.getElementById('u-prime-value');
+        const classicalResult = document.getElementById('classical-result');
+        const relativisticResult = document.getElementById('relativistic-result');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+
+        let v = 0.6, u_prime = 0.6;
+        let shipX = 0, probeX = 0;
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#212121' : '#e0f2f1',
+            ship: document.body.classList.contains('dark-mode') ? '#4db6ac' : '#00796b',
+            probe: document.body.classList.contains('dark-mode') ? '#ffd54f' : '#ffab40',
+            text: document.body.classList.contains('dark-mode') ? '#e0e0e0' : '#333',
+        });
+
+        function updateCalculations() {
+            v = parseFloat(vSlider.value);
+            u_prime = parseFloat(uPrimeSlider.value);
+
+            vValue.textContent = v.toFixed(3);
+            uPrimeValue.textContent = u_prime.toFixed(3);
+
+            const classical_u = v + u_prime;
+            const relativistic_u = (v + u_prime) / (1 + v * u_prime);
+
+            classicalResult.textContent = `${classical_u.toFixed(3)} c`;
+            relativisticResult.textContent = `${relativistic_u.toFixed(3)} c`;
+        }
+
+        function draw() {
+            const colors = getColors();
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw mothership
+            ctx.fillStyle = colors.ship;
+            ctx.fillRect(shipX, canvas.height/2 - 40, 150, 80);
+
+            // Draw probe
+            ctx.fillStyle = colors.probe;
+            ctx.fillRect(probeX, canvas.height/2 - 10, 30, 20);
+
+            // Draw speedometer
+            const relativistic_u = (v + u_prime) / (1 + v * u_prime);
+            const speed = Math.abs(relativistic_u);
+            ctx.strokeStyle = colors.text;
+            ctx.fillStyle = colors.text;
+            ctx.font = '14px monospace';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(700, 50, 40, Math.PI, 2*Math.PI);
+            ctx.stroke();
+            ctx.fillText("c", 735, 55);
+            ctx.fillText("0", 660, 55);
+
+            const angle = Math.PI + speed * Math.PI;
+            ctx.beginPath();
+            ctx.moveTo(700, 50);
+            ctx.lineTo(700 - 35 * Math.cos(angle), 50 - 35 * Math.sin(angle));
+            ctx.stroke();
+        }
+
+        function animate() {
+            const relativistic_u = (v + u_prime) / (1 + v * u_prime);
+            const scale = 150; // pixels per c
+
+            shipX += v * scale * 0.1;
+            probeX += relativistic_u * scale * 0.1;
+
+            if (shipX > canvas.width) {
+                shipX = -150;
+                probeX = -150;
+            }
+
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        vSlider.addEventListener('input', updateCalculations);
+        uPrimeSlider.addEventListener('input', updateCalculations);
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        exportPngBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `relativistic-velocity-addition_${new Date().toISOString()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            log('Exported PNG.');
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            const data = { v, u_prime, timestamp: new Date().toISOString() };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'velocity-params.json';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            log('Exported JSON.');
+        });
+
+        updateCalculations();
+        animate();
+        log('Simulation running.');
+    });
+    </script>
+</body>
+</html>

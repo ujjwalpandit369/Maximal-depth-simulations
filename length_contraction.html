@@ -14,6 +14,9 @@
             --canvas-bg: #fff;
             --ship-color: #c0392b;
             --tunnel-color: #2c3e50;
+            --code-bg: #eee;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
         }
         .dark-mode {
             --bg-color: #2c3e50;
@@ -24,6 +27,9 @@
             --canvas-bg: #34495e;
             --ship-color: #e74c3c;
             --tunnel-color: #ecf0f1;
+            --code-bg: #3e4a5a;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -86,12 +92,22 @@
             font-size: 1.1rem;
             text-align: center;
         }
-        .info-box { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .info-box { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px; background-color: var(--code-bg);}
         code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        dl dt { font-weight: bold; color: var(--primary-color); }
+        dl dd { margin-bottom: 1rem; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 5px; margin-bottom: 1rem; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <main>
+        <div id="quality-check-panel" class="error-panel"></div>
         <header>
             <h1>Length Contraction Explorer</h1>
             <p>Visualizing the paradox of the fast-moving spaceship and the tunnel.</p>
@@ -123,14 +139,14 @@
             <div class="controls-area">
                  <div>
                     <label for="velocity-slider"><strong>Spaceship Velocity (v):</strong></label>
-                    <input type="range" id="velocity-slider" min="0" max="0.999" step="0.001" value="0.6">
+                    <input type="range" id="velocity-slider" min="0" max="0.999" step="0.001" value="0.6" aria-label="Spaceship Velocity">
                     <span id="velocity-value">0.600</span> c
                 </div>
                 <div class="button-group">
-                    <button id="tunnel-view-btn" class="active">View from Tunnel</button>
-                    <button id="ship-view-btn">View from Ship</button>
+                    <button id="tunnel-view-btn" class="active" aria-label="Switch to Tunnel reference frame">View from Tunnel</button>
+                    <button id="ship-view-btn" aria-label="Switch to Ship reference frame">View from Ship</button>
                 </div>
-                <button id="animate-btn">Animate</button>
+                <button id="animate-btn" aria-label="Start Animation">Animate</button>
             </div>
         </div>
 
@@ -175,10 +191,49 @@
             </p>
             <p>The key is the time transformation. Notice how the new time t' depends not only on the old time t but also on the old position x. Two events that are simultaneous in the first frame (have the same t) but happen at different locations (different x) will have <strong>different times</strong> in the new frame. This is the mathematical root of the relativity of simultaneity.</p>
         </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Does the ship *really* shrink?</dt>
+                <dd>No, not in its own reference frame. The pilot would never feel squished. Length contraction is a relational effect: an object's length is measured to be different by observers who are moving relative to it. There is no physical compression happening to the object.</dd>
+                <dt>2. What would the pilot see if they looked at the tunnel?</dt>
+                <dd>The pilot would see the tunnel rushing towards them, and it would appear visually shorter (contracted) than its rest length. This is what the "View from Ship" demonstrates.</dd>
+                <dt>3. So does the ship fit or not?</dt>
+                <dd>The question itself is flawed because it assumes the concept of "fitting" (being entirely inside at one moment in time) is absolute. It is not. The answer depends on who you ask. In the tunnel's frame, it fits. In the ship's frame, it does not. Both are correct descriptions of reality.</dd>
+                <dt>4. Is this related to time dilation?</dt>
+                <dd>Yes, absolutely. Length contraction and time dilation are two sides of the same coin. They are both consequences of the way spacetime is structured, as described by the Lorentz transformations. You cannot have one without the other.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <ul id="log-output"></ul>
+            </div>
+        </details>
     </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality Checks ---
+        const qcPanel = document.getElementById('quality-check-panel');
+        if (!document.getElementById('main-canvas')) {
+            qcPanel.textContent = 'ERROR: Main canvas not found.';
+            qcPanel.style.display = 'block';
+            return;
+        }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        const log = (message) => {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        };
+        log('Simulation initialized.');
+
+        // --- DOM Elements ---
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
         const velocitySlider = document.getElementById('velocity-slider');
@@ -271,6 +326,7 @@
             cancelAnimationFrame(animationId);
             ship_pos_x = -200;
             let startTime = null;
+            log(`Starting animation in ${frame} frame.`);
 
             const frameLoop = (time) => {
                 if (!startTime) startTime = time;
@@ -291,6 +347,8 @@
 
                 if (!end_condition) {
                     animationId = requestAnimationFrame(frameLoop);
+                } else {
+                     log('Animation finished.');
                 }
             };
             animationId = requestAnimationFrame(frameLoop);
@@ -298,41 +356,42 @@
 
         function updateEventLog() {
             const gamma = 1 / Math.sqrt(1 - v*v);
-            let ship_len_current, tunnel_len_current;
-            let ship_start_x, tunnel_start_x;
+            let ship_len, tunnel_len, ship_x, tunnel_x;
+            let eventText = "Approaching...";
 
             if (frame === 'tunnel') {
-                ship_len_current = proper_len_ship / gamma;
-                tunnel_len_current = proper_len_tunnel;
-                ship_start_x = ship_pos_x / 2; // scale back to meters
-                tunnel_start_x = (canvas.width/2 - tunnel_len_current) / 2;
+                ship_len = proper_len_ship / gamma;
+                tunnel_len = proper_len_tunnel;
+                ship_x = ship_pos_x;
+                tunnel_x = (canvas.width - tunnel_len*2) / 2;
 
-                const nose_enters_time = (tunnel_start_x - ship_start_x) / v;
-                const tail_enters_time = (tunnel_start_x - (ship_start_x + ship_len_current)) / v;
+                const nose_enters = ship_x + ship_len*2 > tunnel_x;
+                const tail_enters = ship_x > tunnel_x;
+                const nose_exits = ship_x + ship_len*2 > tunnel_x + tunnel_len*2;
+                const tail_exits = ship_x > tunnel_x + tunnel_len*2;
 
-                const nose_exits_time = (tunnel_start_x + tunnel_len_current - ship_start_x) / v;
-                const tail_exits_time = (tunnel_start_x + tunnel_len_current - (ship_start_x + ship_len_current)) / v;
-
-                if (tail_exits_time > 0 && nose_enters_time < 0) {
-                     eventLog.textContent = "Ship is inside tunnel";
-                } else if (nose_exits_time > 0 && tail_enters_time < 0) {
-                     eventLog.textContent = "Passing through...";
+                if(nose_enters && !tail_exits) {
+                    if(tail_enters && !nose_exits) eventText = "Ship fits inside!";
+                    else if (tail_enters && nose_exits) eventText = "Nose has exited.";
+                    else if (!tail_enters && !nose_exits) eventText = "Nose is inside.";
                 } else {
-                     eventLog.textContent = "Outside";
+                    eventText = "Outside";
                 }
 
             } else { // ship frame
-                ship_len_current = proper_len_ship;
-                tunnel_len_current = proper_len_tunnel / gamma;
-                tunnel_start_x = ship_pos_x / 2;
-                ship_start_x = (canvas.width/2 - ship_len_current) / 2;
+                ship_len = proper_len_ship;
+                tunnel_len = proper_len_tunnel / gamma;
+                tunnel_x = ship_pos_x;
+                ship_x = (canvas.width - ship_len*2) / 2;
 
-                if (tunnel_start_x < ship_start_x + ship_len_current && (tunnel_start_x + tunnel_len_current) > ship_start_x) {
-                    eventLog.textContent = "Tunnel is passing by";
-                } else {
-                    eventLog.textContent = "Outside";
-                }
+                const nose_at_tunnel_exit = ship_x + ship_len*2 < tunnel_x + tunnel_len*2;
+                const tail_at_tunnel_entrance = ship_x > tunnel_x;
+
+                if (nose_at_tunnel_exit && tail_at_tunnel_entrance) eventText = "Passing through (doesn't fit)";
+                else if (ship_x < tunnel_x + tunnel_len*2 && ship_x + ship_len*2 > tunnel_x) eventText = "Passing through...";
+
             }
+             eventLog.textContent = eventText;
         }
 
         // --- Event Listeners ---
@@ -348,6 +407,7 @@
             shipViewBtn.classList.remove('active');
             cancelAnimationFrame(animationId);
             updateUI();
+            log("Switched to Tunnel View.");
         });
 
         shipViewBtn.addEventListener('click', () => {
@@ -356,6 +416,7 @@
             tunnelViewBtn.classList.remove('active');
             cancelAnimationFrame(animationId);
             updateUI();
+            log("Switched to Ship View.");
         });
 
         animateBtn.addEventListener('click', animate);

@@ -15,6 +15,9 @@
             --elevator-color: #c0c0c0;
             --ball-color: #ff4500;
             --laser-color: #00ff00;
+            --code-bg: #eee;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
         }
         .dark-mode {
             --bg-color: #1a1a1a;
@@ -26,6 +29,9 @@
             --elevator-color: #888;
             --ball-color: #ff6347;
             --laser-color: #32cd32;
+            --code-bg: #333;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
         }
         body {
             font-family: 'Constantia', 'Lucida Bright', Lucidabright, 'Lucida Serif', Lucida, 'DejaVu Serif', 'Bitstream Vera Serif', 'Liberation Serif', Georgia, serif;
@@ -80,11 +86,21 @@
         }
         button:hover, button.active { background-color: var(--secondary-color); }
         canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
-        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        dl dt { font-weight: bold; color: var(--primary-color); }
+        dl dd { margin-bottom: 1rem; }
+        .error-panel { display: none; background-color: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 5px; margin-bottom: 1rem; }
+        .dev-console { margin-top: 1rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; background-color: var(--code-bg); cursor: pointer; }
+        .dev-console-content { padding: 1rem; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9em; }
     </style>
 </head>
 <body>
     <main>
+        <div id="quality-check-panel" class="error-panel"></div>
         <header>
             <h1>The Equivalence Principle: Gravity vs. Acceleration</h1>
             <p>Einstein's "happiest thought" visualized in an elevator.</p>
@@ -106,27 +122,27 @@
                 <div class="control-panel">
                     <h3>Scenario</h3>
                     <div class="button-group">
-                        <button id="gravity-btn" class="active">On Earth (Gravity)</button>
-                        <button id="accel-btn">In Space (Acceleration)</button>
+                        <button id="gravity-btn" class="active" aria-label="Set scenario to a stationary elevator on Earth">On Earth (Gravity)</button>
+                        <button id="accel-btn" aria-label="Set scenario to an accelerating elevator in space">In Space (Acceleration)</button>
                     </div>
                 </div>
                 <div class="control-panel">
                     <h3>Parameters</h3>
                     <div id="gravity-controls">
                         <label for="g-slider">Gravity (g): <span id="g-value">9.8</span> m/s²</label><br>
-                        <input type="range" id="g-slider" min="1" max="20" step="0.1" value="9.8">
+                        <input type="range" id="g-slider" min="1" max="20" step="0.1" value="9.8" aria-label="Gravitational Field Strength">
                     </div>
                     <div id="accel-controls" style="display:none;">
                         <label for="a-slider">Acceleration (a): <span id="a-value">9.8</span> m/s²</label><br>
-                        <input type="range" id="a-slider" min="1" max="20" step="0.1" value="9.8">
+                        <input type="range" id="a-slider" min="1" max="20" step="0.1" value="9.8" aria-label="Elevator Acceleration">
                     </div>
                 </div>
                 <div class="control-panel">
                     <h3>Experiments</h3>
                     <div class="button-group">
-                        <button id="drop-btn">Drop Ball</button>
-                        <button id="laser-btn">Fire Laser</button>
-                        <button id="reset-btn">Reset</button>
+                        <button id="drop-btn" aria-label="Drop a ball">Drop Ball</button>
+                        <button id="laser-btn" aria-label="Fire a laser">Fire Laser</button>
+                        <button id="reset-btn" aria-label="Reset experiment">Reset</button>
                     </div>
                 </div>
             </div>
@@ -175,10 +191,47 @@
             </p>
             <p>The Equivalence Principle makes the powerful claim that since this bending `d` happens in the accelerating frame, it must also happen in a gravitational field `g`. Therefore, gravity must bend light by the same amount. This was a stunning prediction that was later confirmed by observing the light from distant stars bending as it passed by the Sun during a solar eclipse.</p>
         </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Is this principle always true?</dt>
+                <dd>The principle as stated (perfect equivalence between uniform gravity and uniform acceleration) applies to a small, local region of spacetime. Over larger regions, tidal forces can be used to distinguish gravity from acceleration. For example, on Earth, two balls dropped side-by-side will fall on paths that converge towards the center of the Earth, whereas in a uniformly accelerating rocket, their paths would be perfectly parallel.</dd>
+                <dt>2. Why was this Einstein's "happiest thought"?</dt>
+                <dd>Because it provided the crucial link between gravity and geometry. If gravity is indistinguishable from acceleration, and acceleration is a property of spacetime geometry (an object's worldline), then gravity must also be a property of spacetime geometry. This insight was the key that unlocked the full theory of General Relativity.</dd>
+                <dt>3. Does gravity really bend light?</dt>
+                <dd>Yes, absolutely. The effect is called gravitational lensing and is a vital tool in modern astronomy. Astronomers use the lensing effect of massive galaxy clusters to see magnified images of even more distant galaxies that lie behind them.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <ul id="log-output"></ul>
+            </div>
+        </details>
     </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality Checks ---
+        const qcPanel = document.getElementById('quality-check-panel');
+        if (!document.getElementById('main-canvas')) {
+            qcPanel.textContent = 'ERROR: Main canvas not found.';
+            qcPanel.style.display = 'block';
+            return;
+        }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        const log = (message) => {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        };
+        log('Simulation initialized.');
+
+        // --- DOM Elements ---
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d');
         const themeToggle = document.getElementById('theme-toggle');
@@ -200,7 +253,6 @@
         let g = 9.8, a = 9.8;
         let animationId;
         let particles = [];
-        let time = 0;
 
         const getColors = () => ({
             bg: document.body.classList.contains('dark-mode') ? '#2a2a2a' : '#fff',
@@ -259,6 +311,8 @@
 
             if (!allDone) {
                 animationId = requestAnimationFrame(update);
+            } else {
+                log("Experiment animation finished.");
             }
         }
 
@@ -266,9 +320,9 @@
             cancelAnimationFrame(animationId);
             particles = [];
             drawElevator();
+            log("Experiment reset.");
         }
 
-        // --- Event Listeners ---
         gSlider.addEventListener('input', e => { g = parseFloat(e.target.value); gValue.textContent = g.toFixed(1); });
         aSlider.addEventListener('input', e => { a = parseFloat(e.target.value); aValue.textContent = a.toFixed(1); });
 
@@ -279,6 +333,7 @@
             gravityControls.style.display = 'block';
             accelControls.style.display = 'none';
             reset();
+            log("Switched to Gravity scenario.");
         });
         accelBtn.addEventListener('click', () => {
             scenario = 'acceleration';
@@ -287,6 +342,7 @@
             accelControls.style.display = 'block';
             gravityControls.style.display = 'none';
             reset();
+            log("Switched to Acceleration scenario.");
         });
 
         dropBtn.addEventListener('click', () => {
@@ -294,6 +350,7 @@
             particles.push({
                 type: 'ball', x: canvas.width/2, y: 75, vx: 0, vy: 0, path: [], done: false
             });
+            log("Dropping ball...");
             update();
         });
         laserBtn.addEventListener('click', () => {
@@ -302,6 +359,7 @@
             particles.push({
                 type: 'laser', x: 75, y: startY, vx: 15, vy: 0, startX: 75, startY: startY, path: [], done: false
             });
+            log("Firing laser...");
             update();
         });
         resetBtn.addEventListener('click', reset);
