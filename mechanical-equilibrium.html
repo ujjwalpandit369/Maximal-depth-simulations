@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mechanical: Stable, Unstable, and Neutral Equilibrium</title>
+    <style>
+        :root {
+            --primary-color: #007bff; --primary-hover: #0056b3;
+            --text-color: #212529; --bg-color: #f8f9fa;
+            --section-bg: #ffffff; --border-color: #dee2e6;
+            --subtle-bg: #e9ecef;
+        }
+        body.high-contrast {
+            --primary-color: #00ffff; --primary-hover: #00cccc;
+            --text-color: #ffffff; --bg-color: #000000;
+            --section-bg: #111111; --border-color: #555555;
+            --subtle-bg: #333333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        header { text-align: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        h2 { margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        h3 { text-align: center; margin-top: 0; margin-bottom: 0.5rem; font-weight: normal; color: #6c757d;}
+        body.high-contrast h3 { color: #aaaaaa; }
+        .subtitle { font-size: 1.1rem; color: #6c757d; }
+        body.high-contrast .subtitle { color: #bbbbbb; }
+        #metadata-bar { font-size: 0.9rem; color: #6c757d; margin-top: 1rem; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 1rem; }
+        body.high-contrast #metadata-bar { color: #bbbbbb; }
+        main { max-width: 1000px; margin: 0 auto; }
+        section { margin-bottom: 2rem; padding: 1.5rem; background-color: var(--section-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Sim Layout */
+        .sim-layout-container { display: flex; flex-direction: column; gap: 0.5rem; }
+        .sim-panel { flex: 1; }
+        .sim-panel canvas { width: 100%; height: auto; border: 1px solid var(--border-color); border-radius: 4px; background-color: #fdfdfd; cursor: grab; }
+        .sim-panel canvas:active { cursor: grabbing; }
+        body.high-contrast .sim-panel canvas { background-color: #0a0a0a; }
+
+        /* Controls */
+        #controls { padding: 1rem; margin-bottom: 1rem; background: var(--subtle-bg); border-radius: 8px; }
+        .controls-main { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; justify-content: center; }
+        .control-group { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+        .control-group label { margin-bottom: 0.5rem; font-weight: bold; }
+        .control-group output { font-family: monospace; }
+        #controls .button-group { display: flex; gap: 0.5rem; align-items: center; }
+
+        button {
+            padding: 0.5rem 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);
+            background-color: var(--primary-color); color: white; border-radius: 5px;
+            cursor: pointer; transition: background-color 0.2s, transform 0.1s, color 0.2s;
+        }
+        body.high-contrast button { color: black; }
+        button:hover, button:focus { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        button.active { background-color: #28a745; border-color: #28a745; }
+        body.high-contrast button.active { color: white; }
+
+        /* Other styles */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border: 1px solid var(--border-color); }
+        th { background-color: var(--subtle-bg); }
+        code { font-family: monospace; background-color: var(--subtle-bg); padding: .2em .4em; border-radius: 3px; font-size: 85%; }
+        #suggestion-box { background-color: #eef7ff; border: 1px solid var(--primary-color); border-radius: 5px; padding: 1rem; margin-bottom: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        body.high-contrast #suggestion-box { background-color: #1a1a1a; }
+        #suggestion-box p { margin: 0 0 0.5rem 0; }
+        #suggestion-box .button-group button { background-color: var(--section-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
+        #suggestion-box .button-group button.selected { background-color: var(--primary-color); color: white; }
+        body.high-contrast #suggestion-box .button-group button.selected { color: black; }
+        footer { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: center; color: #6c757d; font-size: 0.9rem; }
+        #dev-console { margin-top: 1rem; background: var(--subtle-bg); border: 1px solid var(--border-color); border-radius: 8px; text-align: left; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        #dev-console-header { cursor: pointer; padding: 0.5rem 1rem; margin: 0; background: var(--subtle-bg); border-radius: 8px 8px 0 0; }
+        #dev-console-content { max-height: 200px; overflow-y: auto; padding: 0.5rem 1rem; display: none; }
+        #dev-console-content.open { display: block; }
+        #dev-log { list-style-type: none; padding: 0; margin: 0; font-family: monospace; font-size: 0.85rem; }
+        #dev-log li { padding: 2px 0; border-bottom: 1px solid #e0e0e0; }
+        body.high-contrast #dev-log li { border-bottom-color: #444; }
+        .equation { background-color: var(--subtle-bg); padding: 1rem; border-radius: 5px; margin: 1rem 0; font-family: monospace; text-align: center; font-size: 1.1rem; line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <p>Tune this simulation to your liking:</p>
+        <div class="button-group">
+            <button data-pref="audience" data-value="beginner">Audience: Beginner</button>
+            <button data-pref="audience" data-value="intermediate">Audience: Intermediate</button>
+            <button data-pref="audience" data-value="advanced">Audience: Advanced</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>Mechanical Equilibrium</h1>
+        <p class="subtitle">A simulation of a ball on a curved surface.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span>
+            <span>Recommended Device: Desktop/Tablet</span>
+            <span id="html-size"></span>
+            <button id="theme-toggle-btn" aria-label="Toggle high contrast theme">Toggle Contrast</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <section id="simulation-area">
+             <div id="controls">
+                <div class="controls-main">
+                    <div class="button-group">
+                        <strong>Surface Type:</strong>
+                        <button id="surface-stable-btn" class="active" title="A surface with valleys (stable points)">Stable</button>
+                        <button id="surface-unstable-btn" title="A surface with hills (unstable points)">Unstable</button>
+                        <button id="surface-neutral-btn" title="A flat surface (neutral equilibrium)">Neutral</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="gravity-slider">Gravity: <output id="gravity-value">0.05</output></label>
+                        <input type="range" id="gravity-slider" min="0" max="0.2" step="0.01" value="0.05">
+                    </div>
+                    <div class="control-group">
+                        <label for="damping-slider">Damping: <output id="damping-value">0.990</output></label>
+                        <input type="range" id="damping-slider" min="0.95" max="1.0" step="0.001" value="0.99">
+                    </div>
+                    <div class="button-group">
+                        <button id="reset-btn" title="Return ball to its starting position">Reset Ball</button>
+                        <button id="export-png-btn" title="Download the current view as a PNG image">Export PNG</button>
+                        <button id="share-btn" title="Copy a shareable link">Share</button>
+                    </div>
+                </div>
+            </div>
+            <div class="sim-layout-container">
+                <div class="sim-panel">
+                    <h3>Physical Space</h3>
+                    <canvas id="main-canvas" width="800" height="300"></canvas>
+                </div>
+                <div class="sim-panel">
+                    <h3>Potential Energy (U)</h3>
+                    <canvas id="energy-canvas" width="800" height="150"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation demonstrates the three types of mechanical equilibrium by visualizing a ball on a curved surface. <strong>Equilibrium</strong> is a state of balance where an object doesn't move. By dragging the ball to different positions and releasing it, you can discover which points are stable (like a valley), unstable (like a hill), or neutral (like a flat plain). The lower graph shows the ball's <strong>Potential Energy</strong>, revealing the deep connection between energy landscapes and stability: all systems naturally seek to minimize their potential energy.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. What is Equilibrium?</h3>
+            <p>In simple terms, equilibrium means no change. It's a state of balance. If you place a book on a flat table, it's in equilibrium; it won't suddenly fly off. In physics, this means the net force on the object is zero. But not all states of balance are the same. This simulation explores the three flavors of equilibrium.</p>
+
+            <h3>2. The Three Flavors of Balance</h3>
+            <p>Use the "Surface Type" buttons at the top to switch between landscapes that highlight each type of equilibrium.</p>
+            <ul>
+                <li><strong>Stable Equilibrium (a marble in a bowl):</strong> Select the "Stable" surface. You'll see a landscape of valleys. Place the ball at the very bottom of a valley. It's in equilibrium. Now, drag it slightly up the side and release it. It rolls back and forth, eventually settling back at the bottom. A stable equilibrium is a state that the system returns to after being disturbed.</li>
+                <li><strong>Unstable Equilibrium (a pencil on its tip):</strong> Select the "Unstable" surface. This is a landscape of hills. Try to balance the ball perfectly on the very top of a hill. It's possible, and the net force is zero, so it's technically in equilibrium. But the slightest nudge—even a tiny vibration—will cause it to roll away and never return. This is an unstable equilibrium.</li>
+                <li><strong>Neutral Equilibrium (a ball on a flat floor):</strong> Select the "Neutral" surface. The landscape is perfectly flat. Place the ball anywhere. It's in equilibrium. Now, move it to a new spot. It is still in equilibrium. In neutral equilibrium, an object can be displaced and will happily remain in its new position without trying to return or flee.</li>
+            </ul>
+
+            <h3>3. The Secret: Potential Energy</h3>
+            <p>Why does the ball always roll downhill? The answer is <strong>Potential Energy</strong>. You can think of potential energy, `U`, as stored energy an object has due to its position. An object held high has more potential energy than one on the floor. A fundamental principle of nature is that <strong>systems tend to move towards the state of lowest possible potential energy</strong>.</p>
+            <p>The bottom canvas shows a graph of the potential energy. Notice that it has the exact same shape as the physical surface!
+            <ul>
+                <li>A valley bottom is a <strong>minimum</strong> of potential energy. This is a stable point.</li>
+                <li>A hilltop is a <strong>maximum</strong> of potential energy. This is an unstable point.</li>
+                <li>A flat surface has <strong>constant</strong> potential energy. This is neutral.</li>
+            </ul>
+            The ball is just trying to find the lowest point on the energy graph, which is the same as finding the lowest point on the physical surface.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory</h2>
+            <h4>Force and Potential Energy</h4>
+            <p>The connection between force and potential energy is one of the most important ideas in physics. For a one-dimensional system like this, the force `F` an object feels is the negative derivative (or slope) of its potential energy `U` with respect to its position `x`.</p>
+            <p class="equation">F = - dU/dx</p>
+            <p>This means the force points in the direction that makes the potential energy decrease the fastest—it points "downhill" on the energy graph. An equilibrium state is defined as a point where the net force is zero.</p>
+            <p class="equation">F = 0  &nbsp;&nbsp;⇒&nbsp;&nbsp; dU/dx = 0</p>
+            <p>This confirms our observation: equilibrium points are the locations where the potential energy graph is flat (has zero slope)—the tops of hills and the bottoms of valleys.</p>
+
+            <h4>Determining Stability</h4>
+            <p>How do we mathematically distinguish between stable and unstable points? We use the second derivative of the potential energy.</p>
+            <ul>
+                <li><strong>Stable Equilibrium:</strong> At a valley bottom, the curve is shaped like a U. It is "concave up". This corresponds to a positive second derivative: <code>d²U/dx² > 0</code>.</li>
+                <li><strong>Unstable Equilibrium:</strong> At a hilltop, the curve is shaped like an upside-down U. It is "concave down". This corresponds to a negative second derivative: <code>d²U/dx² < 0</code>.</li>
+                <li><strong>Neutral Equilibrium:</strong> On a flat surface, the curve is a straight line, and the second derivative is zero: <code>d²U/dx² = 0</code>.</li>
+            </ul>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <table>
+                <thead>
+                    <tr><th>Control</th><th>Default</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Surface Type</strong></td>
+                        <td>Stable</td>
+                        <td>Stable, Unstable, Neutral</td>
+                        <td>Changes the shape of the surface, altering the potential energy landscape.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gravity</strong></td>
+                        <td>0.05</td>
+                        <td>[0, 0.2]</td>
+                        <td>Controls the strength of the force pulling the ball downhill. Higher gravity makes the ball accelerate faster.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Damping</strong></td>
+                        <td>0.990</td>
+                        <td>[0.95, 1.0]</td>
+                        <td>Controls the amount of friction in the system. A value of 1.0 means zero friction (the ball will roll forever). A lower value makes the ball settle down more quickly.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group" style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="window.setSurface('stable');">Demonstrate Stability</button>
+                <button onclick="window.setSurface('unstable');">Demonstrate Instability</button>
+                <button onclick="window.setSurface('neutral');">Demonstrate Neutrality</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Finding an Equilibrium Point</h4>
+            <ol>
+                <li>Select the "Stable" surface.</li>
+                <li>Drag the ball to the very bottom of one of the valleys and release it. Its velocity is zero, and the slope of the surface is zero, so the force on it is zero. It is in <strong>stable equilibrium</strong>.</li>
+                <li>Now, drag the ball to the very peak of a hill and try to balance it. This is an <strong>unstable equilibrium</strong> point. The slightest error in placement will cause it to roll away.</li>
+            </ol>
+            <h4>The Effect of Damping</h4>
+            <ol>
+                <li>Select the "Stable" surface and set the <strong>Damping</strong> slider to its maximum value, <strong>1.000</strong>.</li>
+                <li>Drag the ball up the side of a valley and release it. Notice that it oscillates back and forth without ever losing energy. It never settles at the bottom.</li>
+                <li>Now, set the Damping slider to a lower value, like <strong>0.980</strong>. Release the ball from the same spot. It now quickly loses energy and settles at the bottom of the valley. Damping is what allows systems to find their stable equilibrium.</li>
+            </ol>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li>Select the "Stable" surface. Set Damping to 1.0. Release the ball from the side of a valley. Does it ever stop? This is a frictionless system.</li>
+                <li>On the "Stable" surface, find the two points with the lowest potential energy. Are they the same height?</li>
+                <li>On the "Unstable" surface, try to balance the ball on a peak. Now, set Gravity to its maximum value. Is it harder or easier to balance? Why?</li>
+                <li>Set the surface to "Neutral". Place the ball anywhere and give it a gentle nudge by dragging it just a tiny bit and releasing. Does it ever stop? Why is its final velocity different from the "Stable" case?</li>
+                <li>With low Damping (e.g., 0.998) on the "Stable" surface, release the ball from a high point. Count how many times it oscillates before it effectively stops. Now set Damping to a lower value (0.980) and repeat.</li>
+            </ol>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>Beyond Mechanical Systems</h4>
+            <p>The concept of a potential energy landscape is incredibly powerful and used throughout science.
+            <ul>
+                <li>In <strong>chemistry</strong>, the "position" might be the distance between two atoms in a molecule. A stable equilibrium is a chemical bond, which is a minimum of potential energy. An unstable point might be the transition state of a chemical reaction.</li>
+                <li>In <strong>economics</strong>, a "potential" function could represent market stability. A stable equilibrium is a healthy market, while an unstable one could lead to a crash.</li>
+                <li>In <strong>ecology</strong>, the potential landscape could represent the health of an ecosystem, with valleys being resilient states and hilltops being fragile tipping points.</li>
+            </ul>
+            The core idea—that systems seek minima in an abstract energy-like landscape—is universal.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. The Hiker in the Mountains</h4>
+            <p>Imagine you are a hiker in a mountain range, and you are very tired. The landscape is the potential energy surface.
+            <ul>
+                <li>You will naturally walk downhill to expend the least effort. This is like the ball seeking a lower potential energy.</li>
+                <li>When you reach the bottom of a valley, you can rest. This is a stable equilibrium. If you wander a little up the side, you'll easily come back to the bottom.</li>
+                <li>If you are balanced on a sharp mountain peak, you are technically not moving, but you feel very precarious. Any misstep will send you tumbling down. This is an unstable equilibrium.</li>
+                <li>If you are on a vast, flat plateau, you can walk a few steps and stop, and you are just as comfortable as before. This is neutral equilibrium.</li>
+            </ul>
+            </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why does the Potential Energy graph have the same shape as the surface?</dt>
+                <dd>In this simple mechanical system, the gravitational potential energy is directly proportional to height (`U = mgh`). Since we assume mass `m` and gravity `g` are constant, the shape of the energy graph `U(x)` is identical to the shape of the height graph `h(x)`.</dd>
+                <dt>2. What is "damping"?</dt>
+                <dd>Damping represents energy loss in the system, typically due to friction or air resistance. In our simulation, we model it by reducing the ball's velocity by a small percentage on each time step. Without damping, the ball would oscillate forever, never settling into equilibrium.</dd>
+                <dt>3. The ball seems to go through the surface sometimes. Why?</dt>
+                <dd>This is an artifact of the simple numerical simulation. We calculate the force at the ball's current position and use it to move the ball to a new position. If the time step or velocity is large, this new position might be "inside" the curve. A more advanced physics engine would use more sophisticated collision detection and response to prevent this.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sim = {
+            mainCanvas: null, mCtx: null, mWidth: 800, mHeight: 300,
+            energyCanvas: null, eCtx: null, eWidth: 800, eHeight: 150,
+            ball: { x: 150, y: 0, vx: 0, radius: 12 },
+            gravity: 0.05,
+            damping: 0.99,
+            isDragging: false,
+            surfaceType: 'stable',
+            surfaceFn: null,
+            colors: {
+                bg: '#FFFFFF', line: '#007bff', ball: '#d9534f',
+                energyLine: '#28a745', energyPoint: '#dc3545', text: '#333333'
+            },
+            highContrastColors: {
+                bg: '#000000', line: '#00ffff', ball: '#ff8888',
+                energyLine: '#aaffaa', energyPoint: '#ff5555', text: '#FFFFFF'
+            }
+        };
+
+        const elements = {};
+
+        const surfaceFunctions = {
+            stable: (x) => sim.mHeight / 2 + 60 * Math.cos(x * Math.PI / 200) + 30 * Math.cos(x * Math.PI / 75),
+            unstable: (x) => sim.mHeight / 2 - 60 * Math.cos(x * Math.PI / 200) - 30 * Math.cos(x * Math.PI / 75),
+            neutral: (x) => sim.mHeight / 1.5,
+        };
+
+        function init() {
+            getDOMElements();
+            sim.mainCanvas = elements.mainCanvas;
+            sim.mCtx = sim.mainCanvas.getContext('2d');
+            sim.energyCanvas = elements.energyCanvas;
+            sim.eCtx = sim.energyCanvas.getContext('2d');
+            addEventListeners();
+            setSurface('stable');
+            requestAnimationFrame(mainLoop);
+        }
+
+        function getDOMElements() {
+            const ids = [
+                'main-canvas', 'energy-canvas', 'surface-stable-btn', 'surface-unstable-btn',
+                'surface-neutral-btn', 'gravity-slider', 'damping-slider', 'gravity-value',
+                'damping-value', 'reset-btn', 'export-png-btn', 'share-btn',
+                'quality-check-panel', 'html-size', 'theme-toggle-btn',
+                'dev-console-header', 'dev-console-content', 'dev-log', 'performance-meter'
+            ];
+            ids.forEach(id => {
+                const camelCaseId = id.replace(/-./g, x => x[1].toUpperCase());
+                elements[camelCaseId] = document.getElementById(id);
+            });
+            elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+        }
+
+        function addEventListeners() {
+            sim.mainCanvas.addEventListener('mousedown', (e) => {
+                const rect = sim.mainCanvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const dist = Math.hypot(mouseX - sim.ball.x, mouseY - (sim.ball.y - sim.ball.radius));
+                if (dist < sim.ball.radius * 2) {
+                    sim.isDragging = true;
+                    sim.ball.vx = 0;
+                }
+            });
+            sim.mainCanvas.addEventListener('mousemove', (e) => {
+                if (!sim.isDragging) return;
+                const rect = sim.mainCanvas.getBoundingClientRect();
+                sim.ball.x = e.clientX - rect.left;
+                sim.ball.y = sim.surfaceFn(sim.ball.x);
+            });
+            sim.mainCanvas.addEventListener('mouseup', () => sim.isDragging = false);
+            sim.mainCanvas.addEventListener('mouseleave', () => sim.isDragging = false);
+
+            elements.surfaceStableBtn.addEventListener('click', () => setSurface('stable'));
+            elements.surfaceUnstableBtn.addEventListener('click', () => setSurface('unstable'));
+            elements.surfaceNeutralBtn.addEventListener('click', () => setSurface('neutral'));
+            elements.resetBtn.addEventListener('click', resetBall);
+
+            elements.gravitySlider.addEventListener('input', (e) => {
+                sim.gravity = parseFloat(e.target.value);
+                elements.gravityValue.textContent = sim.gravity.toFixed(2);
+            });
+            elements.dampingSlider.addEventListener('input', (e) => {
+                sim.damping = parseFloat(e.target.value);
+                elements.dampingValue.textContent = sim.damping.toFixed(3);
+            });
+
+            elements.exportPngBtn.addEventListener('click', exportPNG);
+            elements.shareBtn.addEventListener('click', shareState);
+            elements.themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                log(`Theme toggled to ${document.body.classList.contains('high-contrast') ? 'high contrast' : 'default'}.`);
+            });
+            elements.suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                    button.classList.add('selected');
+                });
+            });
+            elements.devConsoleHeader.addEventListener('click', () => elements.devConsoleContent.classList.toggle('open'));
+        }
+
+        function setSurface(type) {
+            sim.surfaceType = type;
+            sim.surfaceFn = surfaceFunctions[type];
+            ['stable', 'unstable', 'neutral'].forEach(t => {
+                elements[`surface${t.charAt(0).toUpperCase() + t.slice(1)}Btn`].classList.toggle('active', t === type);
+            });
+            resetBall();
+        }
+
+        function resetBall() {
+            sim.ball.x = 150;
+            sim.ball.vx = 0;
+            sim.ball.y = sim.surfaceFn(sim.ball.x);
+        }
+
+        function getSurfaceSlope(x) {
+            const dx = 0.1;
+            return (sim.surfaceFn(x + dx) - sim.surfaceFn(x - dx)) / (2 * dx);
+        }
+
+        function updatePhysics() {
+            if (sim.isDragging) return;
+            const slope = getSurfaceSlope(sim.ball.x);
+            const force_x = -sim.gravity * slope;
+            sim.ball.vx += force_x;
+            sim.ball.vx *= sim.damping;
+            sim.ball.x += sim.ball.vx;
+            if (sim.ball.x < 0) { sim.ball.x = 0; sim.ball.vx *= -0.5; }
+            if (sim.ball.x > sim.mWidth) { sim.ball.x = sim.mWidth; sim.ball.vx *= -0.5; }
+            sim.ball.y = sim.surfaceFn(sim.ball.x);
+        }
+
+        function draw() {
+            const colors = document.body.classList.contains('high-contrast') ? sim.highContrastColors : sim.colors;
+            sim.mCtx.fillStyle = colors.bg;
+            sim.mCtx.fillRect(0, 0, sim.mWidth, sim.mHeight);
+            sim.mCtx.strokeStyle = colors.line;
+            sim.mCtx.lineWidth = 3;
+            sim.mCtx.beginPath();
+            sim.mCtx.moveTo(0, sim.surfaceFn(0));
+            for (let x = 1; x < sim.mWidth; x++) sim.mCtx.lineTo(x, sim.surfaceFn(x));
+            sim.mCtx.stroke();
+            sim.mCtx.fillStyle = colors.ball;
+            sim.mCtx.beginPath();
+            sim.mCtx.arc(sim.ball.x, sim.ball.y - sim.ball.radius, sim.ball.radius, 0, 2 * Math.PI);
+            sim.mCtx.fill();
+
+            sim.eCtx.fillStyle = colors.bg;
+            sim.eCtx.fillRect(0, 0, sim.eWidth, sim.eHeight);
+            sim.eCtx.strokeStyle = colors.energyLine;
+            sim.eCtx.lineWidth = 2;
+            sim.eCtx.beginPath();
+            const energyY = (y) => sim.eHeight - (y / sim.mHeight * sim.eHeight * 0.8 + 10);
+            sim.eCtx.moveTo(0, energyY(sim.surfaceFn(0)));
+            for (let x = 1; x < sim.eWidth; x++) sim.eCtx.lineTo(x, energyY(sim.surfaceFn(x)));
+            sim.eCtx.stroke();
+            sim.eCtx.fillStyle = colors.energyPoint;
+            sim.eCtx.beginPath();
+            sim.eCtx.arc(sim.ball.x, energyY(sim.ball.y), 5, 0, 2 * Math.PI);
+            sim.eCtx.fill();
+        }
+
+        function mainLoop() {
+            updatePhysics();
+            draw();
+            updatePerfMeter();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Final Features & Utilities ---
+
+        function exportPNG() {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = sim.mWidth;
+            tempCanvas.height = sim.mHeight + sim.eHeight;
+            tempCtx.fillStyle = document.body.classList.contains('high-contrast') ? '#000' : '#FFF';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(sim.mainCanvas, 0, 0);
+            tempCtx.drawImage(sim.energyCanvas, 0, sim.mHeight);
+
+            const url = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'equilibrium_simulation.png';
+            link.href = url;
+            link.click();
+        }
+
+        function shareState() {
+            const state = {
+                surface: sim.surfaceType,
+                g: sim.gravity,
+                d: sim.damping
+            };
+            const encoded = btoa(JSON.stringify(state));
+            const url = `${window.location.origin}${window.location.pathname}#params=${encoded}`;
+            navigator.clipboard.writeText(url).then(() => log("Share link copied."), () => logError("Failed to copy link."));
+        }
+
+        function loadStateFromURL() {
+            if (!window.location.hash.startsWith('#params=')) return;
+            try {
+                const encoded = window.location.hash.substring(8);
+                const state = JSON.parse(atob(encoded));
+                if (state.surface && surfaceFunctions[state.surface]) setSurface(state.surface);
+                if (state.g) { sim.gravity = parseFloat(state.g); elements.gravitySlider.value = state.g; elements.gravityValue.textContent = state.g.toFixed(2); }
+                if (state.d) { sim.damping = parseFloat(state.d); elements.dampingSlider.value = state.d; elements.dampingValue.textContent = state.d.toFixed(3); }
+                log("Loaded state from URL.");
+            } catch (e) {
+                logError("Failed to load state from URL: " + e.message);
+            }
+        }
+
+        function log(message) { if (elements.devLog) { const li = document.createElement('li'); li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`; elements.devLog.prepend(li); } }
+        function logError(message) { if (elements.devLog) { const li = document.createElement('li'); li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`; elements.devLog.prepend(li); } console.error(message); }
+
+        function runQualityChecks() {
+            let errors = [];
+            for (const key in elements) {
+                if (elements[key] === null) errors.push(`Required element '#${key}' not found.`);
+            }
+            if (errors.length > 0) {
+                elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                elements.qualityCheckPanel.style.display = 'block';
+            } else { log("Quality checks passed."); }
+        }
+
+        function populateMetadata() {
+            const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            if (elements.htmlSize) elements.htmlSize.textContent = `Size: ${(htmlSize / 1024).toFixed(1)} KB`;
+        }
+
+        function updatePerfMeter() {
+            const now = performance.now();
+            const delta = now - (sim.lastFrameTime || now);
+            sim.lastFrameTime = now;
+            const fps = 1000 / delta;
+            sim.fpsAvg = (sim.fpsAvg || fps) * 0.95 + fps * 0.05;
+            if (elements.performanceMeter) elements.performanceMeter.textContent = `FPS: ${sim.fpsAvg.toFixed(1)}`;
+        }
+
+        init();
+        window.setSurface = setSurface;
+    });
+    </script>
+</body>
+</html>
