@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Harmonic Motion: Mass-Spring System</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #0f172a;
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #475569;
+            --border-color: #e2e8f0;
+            --code-bg: #e2e8f0;
+            --controls-bg: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --ke-color: #ef4444;
+            --pe-color: #3b82f6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            padding: 0 1rem;
+        }
+
+        h1, h2, h3 {
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        h1 { font-size: 2.5rem; text-align: center; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 2.5rem;}
+
+        .simulation-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            max-width: 100%;
+        }
+        #plot-canvas { margin-top: 1rem; width: 100%; height: 200px; }
+
+        .controls {
+            width: 350px;
+            flex-shrink: 0;
+            background-color: var(--controls-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .value-display { font-family: "Courier New", Courier, monospace; font-weight: bold; }
+
+        .info-panel {
+            background-color: var(--code-bg);
+            border: 1px solid #cbd5e1;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 5px;
+        }
+        .info-panel h4 { margin-top: 0; }
+        .energy-bars { display: flex; gap: 10px; height: 20px; }
+        .energy-bar { height: 100%; transition: width 0.1s linear; }
+        .ke-bar { background-color: var(--ke-color); }
+        .pe-bar { background-color: var(--pe-color); }
+
+        @media (max-width: 1100px) {
+            .simulation-area { flex-direction: column; }
+            .controls { width: 100%; max-width: 600px; margin: 0 auto; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Simple Harmonic Motion: Mass-Spring System</h1>
+            <p class="subtitle">An interactive laboratory for exploring oscillations, energy, and damping.</p>
+        </header>
+
+        <main>
+            <section id="simulation-container">
+                <h2>Interactive Simulation</h2>
+                <div class="simulation-area">
+                    <div id="canvas-container">
+                        <canvas id="main-canvas" width="800" height="200" aria-label="Animation of a mass-spring system"></canvas>
+                        <canvas id="plot-canvas" width="800" height="200" aria-label="Plot of position vs. time"></canvas>
+                    </div>
+                    <div class="controls">
+                        <div class="control-group">
+                            <button id="release-btn" aria-label="Release Mass">Release</button>
+                            <button id="reset-btn" aria-label="Reset Simulation">Reset</button>
+                        </div>
+                        <hr>
+                        <h3>Parameters</h3>
+                        <div class="control-group">
+                            <label for="mass-slider">Mass (m): <span id="mass-value" class="value-display">2.0</span> kg</label>
+                            <input type="range" id="mass-slider" min="0.5" max="10" step="0.1" value="2.0">
+                        </div>
+                        <div class="control-group">
+                            <label for="spring-slider">Spring Constant (k): <span id="spring-value" class="value-display">100</span> N/m</label>
+                            <input type="range" id="spring-slider" min="10" max="200" step="1" value="100">
+                        </div>
+                         <div class="control-group">
+                            <label for="damping-slider">Damping (b): <span id="damping-value" class="value-display">1.0</span></label>
+                            <input type="range" id="damping-slider" min="0" max="5" step="0.1" value="1.0">
+                        </div>
+                         <div class="control-group">
+                            <label for="displacement-slider">Initial Displacement (x₀): <span id="displacement-value" class="value-display">1.5</span> m</label>
+                            <input type="range" id="displacement-slider" min="0" max="2" step="0.1" value="1.5">
+                        </div>
+                         <div class="info-panel">
+                            <h4>Calculated Properties</h4>
+                            <p>Period (T): <span id="period-display">N/A</span> s</p>
+                            <p>Frequency (f): <span id="frequency-display">N/A</span> Hz</p>
+                            <h4>Energy</h4>
+                            <div class="energy-bars">
+                                <div id="ke-bar" class="energy-bar ke-bar" title="Kinetic Energy"></div>
+                                <div id="pe-bar" class="energy-bar pe-bar" title="Potential Energy"></div>
+                            </div>
+                            <small><span style="color:var(--ke-color)">■</span> Kinetic <span style="color:var(--pe-color)">■</span> Potential</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide to Oscillations</h2>
+
+                <h3>1. What is Simple Harmonic Motion?</h3>
+                <p>Simple Harmonic Motion (SHM) is a special type of repeating, back-and-forth motion. It happens whenever an object is pushed back towards a central "equilibrium" position by a force that is proportional to how far it is from that position. The farther you pull it, the stronger the restoring force. A mass on a spring is the classic example.</p>
+
+                <h3>2. Hooke's Law and the Spring</h3>
+                <p>The force exerted by an ideal spring is described by Hooke's Law: <code>F = -kx</code>.
+                <ul>
+                    <li><code>F</code> is the restoring force from the spring.</li>
+                    <li><code>k</code> is the <strong>spring constant</strong>. A high `k` means a stiff spring; a low `k` means a soft spring.</li>
+                    <li><code>x</code> is the displacement from the equilibrium (resting) position.</li>
+                    <li>The minus sign is crucial! It means the force always acts in the opposite direction to the displacement, pulling or pushing the mass back to the center.</li>
+                </ul>
+                </p>
+
+                <h3>3. Energy Transformation</h3>
+                <p>As the mass oscillates, energy is continuously converted between two forms:
+                <ul>
+                    <li><strong>Potential Energy (PE):</strong> This is the energy stored in the spring when it's stretched or compressed. It's maximum at the endpoints of the motion (when `x` is largest) and zero at the equilibrium position. (<code>PE = ½kx²</code>)</li>
+                    <li><strong>Kinetic Energy (KE):</strong> This is the energy of motion. It's maximum as the block passes through the equilibrium position (where it's moving fastest) and zero at the endpoints where it momentarily stops. (<code>KE = ½mv²</code>)</li>
+                </ul>
+                In the simulation, watch the <span style="color:var(--pe-color)">■</span> Potential and <span style="color:var(--ke-color)">■</span> Kinetic energy bars. In a system with no damping, their sum (the total energy) remains constant.
+                </p>
+
+                <h3>4. Damping: The Real World Intrudes</h3>
+                <p>In a perfect world, the mass would oscillate forever. In reality, forces like friction and air resistance cause the motion to die out. This is called <strong>damping</strong>. The <strong>Damping Coefficient (b)</strong> slider lets you control this effect. A higher damping value will cause the oscillations to decay more quickly, as energy is lost from the system (usually as heat).</p>
+
+                <h3>5. How to Use the Simulation</h3>
+                <ol>
+                    <li>Use the sliders to set the <strong>Mass</strong>, <strong>Spring Constant</strong>, <strong>Damping</strong>, and <strong>Initial Displacement</strong>.</li>
+                    <li>The Initial Displacement is how far you "stretch" the spring from its resting point.</li>
+                    <li>Press <strong>Release</strong> to start the oscillation.</li>
+                    <li>Observe the block's motion, the Position vs. Time graph, and the changing energy bars.</li>
+                    <li>Press <strong>Reset</strong> to stop the simulation and try a new set of parameters.</li>
+                </ol>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const config = {
+            m: 2.0, k: 100, b: 1.0, x0: 1.5,
+        };
+
+        const state = {
+            simulating: false,
+            time: 0,
+            x: 1.5, // position
+            v: 0,   // velocity
+            history: [],
+            maxEnergy: 1,
+        };
+
+        const dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            plotCanvas: document.getElementById('plot-canvas'),
+            releaseBtn: document.getElementById('release-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            massSlider: document.getElementById('mass-slider'),
+            massValue: document.getElementById('mass-value'),
+            springSlider: document.getElementById('spring-slider'),
+            springValue: document.getElementById('spring-value'),
+            dampingSlider: document.getElementById('damping-slider'),
+            dampingValue: document.getElementById('damping-value'),
+            displacementSlider: document.getElementById('displacement-slider'),
+            displacementValue: document.getElementById('displacement-value'),
+            periodDisplay: document.getElementById('period-display'),
+            frequencyDisplay: document.getElementById('frequency-display'),
+            keBar: document.getElementById('ke-bar'),
+            peBar: document.getElementById('pe-bar'),
+        };
+
+        let mainCtx, plotCtx, lastTime = 0;
+
+        function init() {
+            mainCtx = dom.mainCanvas.getContext('2d');
+            plotCtx = dom.plotCanvas.getContext('2d');
+            setupEventListeners();
+            resetSimulation();
+            requestAnimationFrame(animate);
+        }
+
+        function setupEventListeners() {
+            dom.releaseBtn.addEventListener('click', () => {
+                if (!state.simulating) {
+                    resetSimulation();
+                    state.simulating = true;
+                }
+            });
+            dom.resetBtn.addEventListener('click', resetSimulation);
+
+            dom.massSlider.addEventListener('input', e => { config.m = parseFloat(e.target.value); if(!state.simulating) resetSimulation(); });
+            dom.springSlider.addEventListener('input', e => { config.k = parseFloat(e.target.value); if(!state.simulating) resetSimulation(); });
+            dom.dampingSlider.addEventListener('input', e => { config.b = parseFloat(e.target.value); if(!state.simulating) resetSimulation(); });
+            dom.displacementSlider.addEventListener('input', e => { config.x0 = parseFloat(e.target.value); if(!state.simulating) resetSimulation(); });
+        }
+
+        function resetSimulation() {
+            state.simulating = false;
+            state.time = 0;
+            state.x = config.x0;
+            state.v = 0;
+            state.history = [];
+
+            updateUIFromConfig();
+            updateCalculatedProperties();
+            updateEnergyBars();
+            drawPlot();
+        }
+
+        function updateUIFromConfig() {
+            dom.massValue.textContent = config.m.toFixed(1);
+            dom.springValue.textContent = config.k.toFixed(0);
+            dom.dampingValue.textContent = config.b.toFixed(1);
+            dom.displacementValue.textContent = config.x0.toFixed(1);
+        }
+
+        function updateCalculatedProperties() {
+            if (config.m > 0 && config.k > 0) {
+                const period = 2 * Math.PI * Math.sqrt(config.m / config.k);
+                const frequency = 1 / period;
+                dom.periodDisplay.textContent = period.toFixed(3);
+                dom.frequencyDisplay.textContent = frequency.toFixed(3);
+            }
+        }
+
+        function updateEnergyBars() {
+            const PE = 0.5 * config.k * state.x * state.x;
+            const KE = 0.5 * config.m * state.v * state.v;
+
+            if (state.time === 0) {
+                 state.maxEnergy = PE + KE;
+            }
+            if (state.maxEnergy === 0) state.maxEnergy = 1;
+
+            const pePercent = Math.min(100, (PE / state.maxEnergy) * 100);
+            const kePercent = Math.min(100, (KE / state.maxEnergy) * 100);
+
+            dom.peBar.style.width = `${pePercent}%`;
+            dom.keBar.style.width = `${kePercent}%`;
+        }
+
+        function update(delta) {
+            if (!state.simulating) return;
+            if (delta > 0.1) return; // Skip large delta steps on tab resume
+
+            state.time += delta;
+
+            // F = -kx - bv
+            const force = -config.k * state.x - config.b * state.v;
+            const acceleration = force / config.m;
+
+            // Euler integration
+            state.v += acceleration * delta;
+            state.x += state.v * delta;
+
+            if (state.history.length > 500) state.history.shift();
+            state.history.push({ time: state.time, x: state.x });
+
+            updateEnergyBars();
+        }
+
+        function drawMain() {
+            const w = dom.mainCanvas.width;
+            const h = dom.mainCanvas.height;
+            const wallWidth = 20;
+            const equilibriumX = w / 3;
+            const scale = 100; // pixels per meter
+
+            mainCtx.fillStyle = '#f1f5f9';
+            mainCtx.fillRect(0, 0, w, h);
+
+            // Wall
+            mainCtx.fillStyle = '#94a3b8';
+            mainCtx.fillRect(0, 0, wallWidth, h);
+
+            // Mass
+            const blockWidth = 50;
+            const blockHeight = 50;
+            const blockX = equilibriumX + state.x * scale - blockWidth / 2;
+            const blockY = h / 2 - blockHeight / 2;
+            mainCtx.fillStyle = '#0f172a';
+            mainCtx.fillRect(blockX, blockY, blockWidth, blockHeight);
+
+            // Spring
+            const springEndX = blockX;
+            const springY = h / 2;
+            mainCtx.strokeStyle = '#475569';
+            mainCtx.lineWidth = 2;
+            mainCtx.beginPath();
+            mainCtx.moveTo(wallWidth, springY);
+            const segments = 20;
+            const segmentLength = (springEndX - wallWidth) / segments;
+            for (let i = 1; i < segments; i++) {
+                const yOffset = (i % 2 === 0) ? 10 : -10;
+                mainCtx.lineTo(wallWidth + i * segmentLength, springY + yOffset);
+            }
+            mainCtx.lineTo(springEndX, springY);
+            mainCtx.stroke();
+        }
+
+        function drawPlot() {
+            const w = dom.plotCanvas.width;
+            const h = dom.plotCanvas.height;
+
+            plotCtx.fillStyle = '#ffffff';
+            plotCtx.fillRect(0, 0, w, h);
+
+            if (state.history.length < 2) return;
+
+            plotCtx.strokeStyle = '#9ca3af';
+            plotCtx.lineWidth = 1;
+            plotCtx.beginPath();
+            plotCtx.moveTo(0, h/2);
+            plotCtx.lineTo(w, h/2);
+            plotCtx.stroke();
+
+            plotCtx.strokeStyle = config.b > 0 ? '#f87171' : '#1d4ed8';
+            plotCtx.lineWidth = 2;
+            plotCtx.beginPath();
+
+            const maxTime = state.history[state.history.length-1].time;
+            const timeWindow = 5;
+            const startTime = Math.max(0, maxTime - timeWindow);
+
+            const amplitude = Math.abs(config.x0) || 1;
+
+            for (let i = 0; i < state.history.length; i++) {
+                const point = state.history[i];
+                if(point.time < startTime) continue;
+
+                const px = ((point.time - startTime) / timeWindow) * w;
+                const py = (h / 2) - (point.x / amplitude) * (h / 2 - 10);
+
+                if (i === 0 || state.history[i-1].time < startTime) {
+                    plotCtx.moveTo(px, py);
+                } else {
+                    plotCtx.lineTo(px, py);
+                }
+            }
+            plotCtx.stroke();
+        }
+
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+            const delta = lastTime > 0 ? (timestamp - lastTime) / 1000 : 0;
+            lastTime = timestamp;
+
+            update(delta);
+            drawMain();
+            drawPlot();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    })();
+    </script>
+</body>
+</html>
