@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Positron Emission Tomography (PET)</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #333;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --border-color: #dcdfe6;
+            --accent-color: #3498db;
+            --accent-light: #eaf4fb;
+            --warning-color: #e74c3c;
+            --success-color: #2ecc71;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --header-color: #ffffff;
+            --control-bg: #34495e;
+            --border-color: #4a627a;
+            --accent-color: #5dade2;
+            --accent-light: #3e566e;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .suggestion-box {
+            background-color: var(--accent-light);
+            border: 1px solid var(--accent-color);
+            border-radius: 5px;
+            padding: 10px;
+            margin: 20px 0;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .suggestion-box button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--accent-light);
+        }
+
+        .controls-container, .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .simulation-visuals {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .canvas-wrapper {
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid var(--border-color);
+            background-color: #000;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            max-width: 400px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .control-group input[type="range"], .control-group input[type="number"] {
+            width: 100%;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button, .button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+            text-align: center;
+        }
+
+        button:hover, .button:hover {
+            background-color: #2980b9;
+        }
+
+        .preset-buttons button { background-color: #27ae60; }
+        .preset-buttons button:hover { background-color: #229954; }
+
+        .warning-button { background-color: var(--warning-color); }
+        .warning-button:hover { background-color: #c0392b; }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 160px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -80px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .performance-meter {
+            font-size: 0.8em;
+            background: var(--accent-light);
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        #warning-banner {
+            display: none;
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        #error-panel {
+            display: none;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+        }
+
+        .dev-console {
+            margin-top: 20px;
+        }
+
+        .dev-console details {
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .dev-console summary {
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .dev-console pre {
+            background-color: #fff;
+            color: #333;
+            padding: 10px;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        code {
+            font-family: var(--code-font);
+            background-color: var(--accent-light);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .controls-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .controls {
+                width: 100%;
+                max-width: none;
+            }
+            h1 { font-size: 2em; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Positron Emission Tomography (PET)</h1>
+        <p class="subtitle">Visualizing how we see inside the body using antimatter and gamma rays.</p>
+        <div class="meta-bar">
+            Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 45 KB
+        </div>
+        <div id="error-panel"></div>
+        <div class="suggestion-box">
+            Tune simulation complexity:
+            <button onclick="setAudience('beginner')">Beginner</button>
+            <button onclick="setAudience('intermediate')">Intermediate</button>
+            <button onclick="setAudience('advanced')">Advanced</button>
+            | Theme: <button id="theme-toggle">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <div id="warning-banner">
+        <strong>Warning:</strong> High simulation settings may slow down your browser.
+        <button onclick="document.getElementById('warning-banner').style.display='none'">Dismiss</button>
+    </div>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Positron Emission Tomography (PET) is a powerful medical imaging technique that lets doctors see how organs and tissues are working inside the body. It's especially good at finding cancer, checking blood flow to the heart, and studying brain activity. The patient is given a tiny, safe amount of a radioactive substance (a "tracer") that travels through the body. This tracer gives off tiny particles called positrons (a form of antimatter). When a positron meets an electron in your body, they disappear in a tiny flash of energy, creating two gamma rays that fly off in opposite directions. A ring of detectors around the patient spots these pairs of gamma rays. By tracking millions of these flashes, a computer can build a 3D map showing where the tracer collected, revealing important information about your health.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+        <p>Welcome to the world of medical physics! This guide will walk you through the concepts behind a PET scan, step by step.</p>
+
+        <h3>Step 1: The Radioactive Tracer</h3>
+        <p>
+            Everything starts with a special molecule called a radiotracer. The most common one is Fluorodeoxyglucose (FDG). It's basically a sugar molecule with a tiny radioactive tag attached (Fluorine-18). Why sugar? Because active cells, especially cancer cells, are very hungry and consume a lot of sugar. So, when FDG is injected, it naturally travels to and gets absorbed by these highly active areas.
+        </p>
+        <p>
+            In our simulation, we represent a cross-section of the body. We can place a "tumor" in this area, which will be a region that has a much higher chance of absorbing the tracer. You can control this with the <strong>Tracer Uptake Factor</strong> slider.
+        </p>
+
+        <h3>Step 2: Positron Emission & Annihilation</h3>
+        <p>
+            The "radioactive" part of the tracer means it's unstable. The Fluorine-18 nucleus will decay, and in doing so, it emits a <strong>positron</strong>. A positron is the antimatter twin of an electron—it has the same mass but a positive charge.
+        </p>
+        <p>
+            This newly born positron doesn't get very far. After traveling a millimeter or less (a distance we can simulate with the <strong>Positron Range</strong> parameter), it bumps into a nearby electron. Matter meets antimatter, and they annihilate each other!
+        </p>
+
+        <h3>Step 3: The Gamma Ray Signal</h3>
+        <p>
+            The annihilation converts the entire mass of the positron and electron into pure energy, according to Einstein's famous equation, E=mc². This energy is released as two high-energy light particles called <strong>gamma photons</strong> (or gamma rays).
+        </p>
+        <p>
+            Crucially, to conserve momentum, these two gamma photons fly off in almost perfectly opposite directions (180 degrees apart). This back-to-back signal is the key to how PET works. Our simulation shows these two photons as lines shooting out from the annihilation point.
+        </p>
+
+        <h3>Step 4: The Detector Ring</h3>
+        <p>
+            A PET scanner is essentially a giant ring of thousands of sensitive detectors. When a gamma photon hits a detector, it registers a "ping." The scanner's electronics are looking for a very specific event: two pings on opposite sides of the ring at the exact same time (a "coincidence event").
+        </p>
+        <p>
+            <strong>Everyday Analogy: The Firecracker in the Field.</strong> Imagine you're standing in the center of a large, circular field, and your friends form a perfect circle around the edge. You set off a special firecracker that shoots two sparks in perfectly opposite directions. You do this again and again. Your friends can't see you or the firecracker, but they shout out whenever they see a spark. If two friends on opposite sides of the circle shout "Spark!" at the same time, you know the firecracker must have gone off somewhere on the straight line between them. A PET scan does the same thing, but with gamma rays instead of sparks and detectors instead of friends.
+        </p>
+
+        <h3>Step 5: Drawing the Lines of Response (LORs)</h3>
+        <p>
+            When the scanner detects a coincidence event, it knows the annihilation happened somewhere along the line connecting the two triggered detectors. This line is called a <strong>Line of Response (LOR)</strong>.
+        </p>
+        <p>
+            In the "Reconstructed Image" canvas on the right, you'll see these LORs being drawn. Each line is a clue about where the tracer is located.
+        </p>
+
+        <h3>Step 6: Reconstructing the Image</h3>
+        <p>
+            A single LOR doesn't tell you much. But by collecting millions of them over several minutes, a pattern begins to emerge. Areas with lots of tracer will generate many annihilation events, and thus, many LORs will cross through that region.
+        </p>
+        <p>
+            A powerful computer algorithm, typically a method called <strong>Filtered Back-Projection</strong>, takes all these overlapping lines and reconstructs a 2D image (and ultimately a 3D image by combining many 2D slices). The brightest parts of the final image correspond to the areas where the most tracer accumulated—the hungry cancer cells! The <strong>Number of Events</strong> slider directly controls how many LORs are collected. Watch how the reconstructed image gets clearer as you increase this number.
+        </p>
+        <p>
+            <strong>Visualization Analogy: Painting with Lines.</strong> Imagine you have a black canvas and you're trying to draw a circle. Instead of a paintbrush, you only have a ruler and a can of white spray paint. You can only spray a faint line across the entire canvas. To draw a circle, you would spray thousands of lines that are tangent to the circle's edge. Where the lines overlap the most, the white paint builds up, and the circle's shape appears. Image reconstruction in PET is similar: it builds up a picture of tracer concentration by overlaying thousands of LORs.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Parameters & Controls Summary</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Units</th>
+                    <th>Default</th>
+                    <th>Range</th>
+                    <th>Description & Worked Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Number of Events</td>
+                    <td>events</td>
+                    <td>5000</td>
+                    <td>100 - 50000</td>
+                    <td>Total annihilation events to simulate. More events lead to a clearer, less noisy image but take longer. This is like increasing the exposure time on a camera.</td>
+                </tr>
+                <tr>
+                    <td>Tracer Uptake Factor</td>
+                    <td>ratio</td>
+                    <td>10</td>
+                    <td>1 - 50</td>
+                    <td>How much more likely the tracer is to accumulate in the tumor vs. normal tissue. A factor of 1 means uniform distribution (no tumor visible). <br><em>Example:</em> If the base probability of an event is P, inside the tumor it's <strong>10 × P</strong>.</td>
+                </tr>
+                <tr>
+                    <td>Tumor Size</td>
+                    <td>% of radius</td>
+                    <td>20</td>
+                    <td>5 - 50</td>
+                    <td>The radius of the circular "tumor" region as a percentage of the patient area radius.</td>
+                </tr>
+                <tr>
+                    <td>Positron Range</td>
+                    <td>pixels</td>
+                    <td>2</td>
+                    <td>0 - 10</td>
+                    <td>The average distance a positron travels before annihilation. This causes a fundamental physical blurring of the image. A range of 0 is a perfect, idealized scenario.</td>
+                </tr>
+                <tr>
+                    <td>Detector Efficiency</td>
+                    <td>%</td>
+                    <td>90</td>
+                    <td>10 - 100</td>
+                    <td>The probability that a detector will register a gamma photon that hits it. Lower efficiency means some real events are missed, degrading the image. <br><em>Example:</em> If 1000 photons hit detectors with 90% efficiency, about <strong>1000 * 0.90 = 900</strong> will be detected.</td>
+                </tr>
+                 <tr>
+                    <td>Scatter & Noise</td>
+                    <td>% of events</td>
+                    <td>5</td>
+                    <td>0 - 50</td>
+                    <td>Percentage of detected events that are random or scattered, creating false LORs that add noise to the final image. This simulates real-world imperfections.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="section">
+        <h2>Interactive Simulation Area</h2>
+        <div id="self-check-panel"></div>
+
+        <div class="controls-container">
+            <div class="simulation-visuals">
+                <div class="canvas-wrapper">
+                    <h3>PET Scanner and Events</h3>
+                    <canvas id="petCanvas" width="400" height="400"></canvas>
+                </div>
+                <div class="canvas-wrapper">
+                    <h3>Reconstructed Image (Sinogram)</h3>
+                    <canvas id="reconCanvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="button-group">
+                     <div class="tooltip">
+                        <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                        <span class="tooltiptext">Shortcut: Space</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="step-btn" aria-label="Step (Right Arrow)">Step</button>
+                        <span class="tooltiptext">Shortcut: →</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="reset-btn" aria-label="Reset (R)">Reset</button>
+                        <span class="tooltiptext">Shortcut: R</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="speed-slider">Speed: <span id="speed-value">1</span>x</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" step="0.1" value="1">
+                </div>
+
+                <div class="control-group">
+                    <label for="num-events-slider">Number of Events: <span id="num-events-value">5000</span></label>
+                    <input type="range" id="num-events-slider" min="100" max="50000" step="100" value="5000">
+                </div>
+
+                <div class="control-group">
+                    <label for="uptake-slider">Tracer Uptake Factor: <span id="uptake-value">10</span></label>
+                    <input type="range" id="uptake-slider" min="1" max="50" step="1" value="10">
+                </div>
+
+                <div class="control-group">
+                    <label for="tumor-size-slider">Tumor Size (%): <span id="tumor-size-value">20</span></label>
+                    <input type="range" id="tumor-size-slider" min="5" max="50" step="1" value="20">
+                </div>
+
+                <div class="control-group">
+                    <label for="positron-range-slider">Positron Range (px): <span id="positron-range-value">2</span></label>
+                    <input type="range" id="positron-range-slider" min="0" max="10" step="0.5" value="2">
+                </div>
+
+                <div class="control-group">
+                    <label for="efficiency-slider">Detector Efficiency (%): <span id="efficiency-value">90</span></label>
+                    <input type="range" id="efficiency-slider" min="10" max="100" step="1" value="90">
+                </div>
+
+                <div class="control-group">
+                    <label for="noise-slider">Scatter & Noise (%): <span id="noise-value">5</span></label>
+                    <input type="range" id="noise-slider" min="0" max="50" step="1" value="5">
+                </div>
+
+                <div class="control-group preset-buttons">
+                    <h3>Presets</h3>
+                    <div class="button-group">
+                        <button id="preset-healthy">Healthy</button>
+                        <button id="preset-tumor">Small Tumor</button>
+                        <button id="preset-advanced">Advanced Case</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Tools</h3>
+                     <div class="button-group">
+                        <div class="tooltip">
+                           <button id="export-png-btn" aria-label="Export PNG (E)">Export PNG</button>
+                           <span class="tooltiptext">Shortcut: E</span>
+                        </div>
+                        <button id="export-json-btn">Export JSON</button>
+                        <button id="share-btn">Share Preset</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="perf-toggle">
+                        <input type="checkbox" id="perf-toggle"> Performance Mode (fewer animations)
+                    </label>
+                </div>
+
+                <div class="performance-meter">
+                    <span>Events: <span id="events-counter">0</span></span><br>
+                    <span>FPS: <span id="fps-meter">...</span></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Try These Examples</h2>
+        <div id="preset-1">
+            <h3>Preset 1: Healthy Patient</h3>
+            <p>This preset simulates a scan of a healthy patient where the tracer is distributed evenly throughout the tissue. <strong>Expect to see a noisy, uniform grey image with no bright spots.</strong></p>
+            <button onclick="applyPreset(presets.healthy); runFromPreset();">Run "Healthy Patient" Preset</button>
+        </div>
+        <div id="preset-2">
+            <h3>Preset 2: Small, Active Tumor</h3>
+            <p>This is a classic PET scan scenario. A small, highly active tumor absorbs much more tracer than the surrounding tissue. <strong>Expect to see a distinct, bright spot forming in the center of the reconstructed image.</strong></p>
+            <button onclick="applyPreset(presets.tumor); runFromPreset();">Run "Small Tumor" Preset</button>
+        </div>
+        <div id="preset-3">
+            <h3>Preset 3: Advanced Case (Noisy & Blurred)</h3>
+            <p>This simulates a more challenging real-world case with significant positron range blurring, lower detector efficiency, and more noise. <strong>Expect a much fuzzier, less distinct image that requires more events to resolve.</strong></p>
+            <button onclick="applyPreset(presets.advanced); runFromPreset();">Run "Advanced Case" Preset</button>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Micro-Experiments</h2>
+        <ol>
+            <li><strong>The Power of Statistics:</strong> Set up the "Small Tumor" preset. Set <strong>Number of Events</strong> to <strong>500</strong>. Run the simulation. Note the noisy image. Now, reset and run it with <strong>20,000</strong> events. Observe how the tumor becomes much clearer. This shows why PET scans take time.</li>
+            <li><strong>Tumor Activity:</strong> Use the "Small Tumor" preset. Set <strong>Tracer Uptake Factor</strong> to <strong>3</strong>. Run and save a PNG. Now set it to <strong>30</strong>. Run and compare the images. The tumor in the second image should be significantly brighter relative to the background.</li>
+            <li><strong>The Limits of Resolution:</strong> Use the "Small Tumor" preset. Set <strong>Positron Range</strong> to <strong>0</strong>. Run the sim. Now, set it to <strong>10</strong> (the maximum). Run again. Notice how the bright spot in the second image is much more diffuse and blurry. This is a fundamental physical limit on PET resolution.</li>
+            <li><strong>Spot the Difference:</strong> Set <strong>Tumor Size</strong> to <strong>10%</strong> and run a high-event simulation. Then set it to <strong>40%</strong> and run again. Can you clearly see the difference in the size of the bright spot?</li>
+            <li><strong>Imperfect Detectors:</strong> Run the "Small Tumor" preset with <strong>Detector Efficiency</strong> at <strong>100%</strong>. Note how quickly the image forms. Now, set it to <strong>20%</strong>. The simulation will appear to run at the same speed, but the image will form much more slowly and be noisier for the same number of *simulated* events, because most are being missed.</li>
+            <li><strong>Fighting the Noise:</strong> Run the "Small Tumor" preset but increase <strong>Scatter & Noise</strong> to <strong>40%</strong>. The image will be full of random lines and the tumor will be hard to see. How many <strong>Events</strong> do you need to clearly distinguish the tumor from the noise?</li>
+            <li><strong>Is there a tumor?:</strong> Set <strong>Tracer Uptake Factor</strong> to <strong>1</strong>. This is identical to the "Healthy" preset. Slowly increase the factor to 1.5, then 2.0. At what point can you confidently say you see a "hot spot" in the reconstructed image?</li>
+        </ol>
+    </section>
+
+    <section class="section">
+        <h2>Core Theory</h2>
+        <h3>Positron Decay and Annihilation</h3>
+        <p>The process begins with beta-plus (β+) decay. A proton in the radioactive nucleus (e.g., Fluorine-18) turns into a neutron, emitting a positron (e⁺) and a neutrino (νₑ).</p>
+        <p><code>p → n + e⁺ + νₑ</code></p>
+        <p>This positron then annihilates with an electron (e⁻) from the surrounding tissue.</p>
+        <p><code>e⁺ + e⁻ → 2γ</code></p>
+        <p>Where <strong>γ</strong> represents a gamma photon. The energy of each photon is determined by the rest mass of the electron/positron, via Einstein's equation.</p>
+        <p><code>E = mₑc²</code></p>
+        <p><em>Plain English:</em> The positron and electron convert their mass into energy.
+        <br><em>Numeric Example:</em> The mass of an electron (mₑ) is 9.11 x 10⁻³¹ kg, and c is the speed of light (~3 x 10⁸ m/s). This gives an energy E of about 8.2 x 10⁻¹⁴ Joules, which is equal to <strong>511 kiloelectron-volts (keV)</strong>. So, two 511 keV photons are produced. This specific energy is a key signature PET scanners look for.</p>
+
+        <h3>Line of Response (LOR) and Back-Projection</h3>
+        <p>When two detectors at positions <strong>D₁</strong> and <strong>D₂</strong> register a coincidence, we define a Line of Response. The core of image reconstruction is back-projection. For every LOR, we add a value of '1' to every pixel (or voxel in 3D) that lies on that line in our image grid.</p>
+        <p><code>Image(x, y) = Σᵢ LORᵢ(x, y)</code></p>
+        <p><em>Plain English:</em> We're essentially "voting". Every LOR "votes" for all the pixels along its path. The pixels in the tumor get thousands of votes because many LORs pass through them, while background pixels get far fewer votes.
+        <br><em>Numeric Example:</em> Imagine a pixel at (10, 20). If the first LOR passes through it, its value becomes 1. If the second LOR also passes through it, its value becomes 2. If a third LOR misses it, its value stays at 2. After millions of events, the pixels within the tumor might have a value of 5,000, while background pixels have a value of 200.</p>
+        <p><strong>Approximation:</strong> This simulation uses simple back-projection. Real PET scanners use more advanced algorithms like <strong>Filtered Back-Projection (FBP)</strong> or iterative methods (OSEM), which correct for blurring and noise to produce much sharper, more accurate images.</p>
+    </section>
+
+    <section class="section">
+        <h2>Advanced Notes & Extensions</h2>
+        <ul>
+            <li><strong>Numerical Stability:</strong> This simulation is quite stable as it's based on discrete events. The main performance bottleneck is rendering on the canvas. The "Performance Mode" helps by reducing the number of objects drawn per frame, focusing on updating the reconstruction which is the core result.</li>
+            <li><strong>Improving Fidelity:</strong> A more advanced simulation could model the energy of detected photons. Sometimes, a photon scatters within the body (Compton scattering), losing some energy and changing direction. This results in a "false" LOR. Real scanners use an energy window (e.g., 450-600 keV) to reject many of these scattered events. Our <strong>Scatter & Noise</strong> parameter is a simple proxy for this.</li>
+            <li><strong>Extension Idea - Attenuation Correction:</strong> Gamma photons can be absorbed by the body and never reach the detector. This is more likely to happen if the annihilation occurs deep inside the body. Real scanners perform a quick CT scan first to create a density map of the patient, then use this map to correct for the probability of attenuation. You could add a "body density" factor to the simulation that reduces the <strong>Detector Efficiency</strong> for events originating from the center.</li>
+            <li><strong>Extension Idea - Time-of-Flight (TOF):</strong> Modern PET scanners can measure the tiny difference in arrival time between the two gamma photons (on the order of picoseconds). This doesn't pinpoint the event, but it can constrain its location to a small segment along the LOR instead of the whole line. This significantly improves image quality. To simulate this, instead of drawing a full line for an LOR, you would only brighten a small central portion of it.</li>
+        </ul>
+    </section>
+
+    <section class="section">
+        <h2>Analogies & Intuition</h2>
+        <ul>
+            <li>
+                <strong>Physical Analogy (Sound Location):</strong> Imagine you are blindfolded. If a firecracker goes off, you can tell its general direction. But if two firecrackers go off at once, one by your left ear and one by your right, it's confusing. Now, imagine a system where a sound source always produces two clicks: one right at the source, and another one second later 100 meters away. If you have microphones scattered around, and one picks up a click, and another one exactly one second later picks up a click, you can start to map where the source might be. PET's coincidence detection is a much more precise version of this, using the constant speed of light to draw a perfect line.
+            </li>
+            <li>
+                <strong>Visualization Analogy (Radon Transform):</strong> Image reconstruction in PET is a practical application of the inverse Radon Transform. Imagine having a 2D image and a special X-ray machine that can only measure the *total density* along a single line, but not where the density is on that line. The Radon Transform is the process of taking measurements (projections) at all possible angles and positions. The set of all these projections is called a sinogram (which is what our "Reconstructed Image" canvas technically represents). The inverse Radon transform is the mathematical process of converting that sinogram back into the original 2D image.
+            </li>
+            <li>
+                <strong>Computational Analogy (Brute-Force Search):</strong> Think of finding the tumor as a search problem on a grid. Each LOR is a piece of evidence. A naive approach would be to test every single pixel: "What if the tumor is here? How well does that hypothesis match the observed LORs?" This is computationally impossible. Back-projection is a much smarter, non-iterative method that says "Let the evidence itself build the solution." It's like crowd-sourcing the answer, where each LOR contributes its small piece of information, and the correct answer emerges from the consensus.
+            </li>
+        </ul>
+        <p><strong>Limitation of Analogies:</strong> All these analogies break down at the quantum level. The positron-electron annihilation is a probabilistic quantum event, and the gamma rays are quantum particles. The deterministic "firecracker" or "line drawing" analogies are helpful for the geometry but miss the inherent randomness and probability that are fundamental to the process and the source of noise in the final image.</p>
+    </section>
+
+    <section class="section">
+        <h2>FAQ & Troubleshooting</h2>
+        <dl>
+            <dt>1. Why is the reconstructed image so blurry and noisy at first?</dt>
+            <dd>Because it's built from random, individual events. Just like a photograph in very low light, it takes time (i.e., more events/photons) to collect enough information to form a clear picture. Increase the "Number of Events" to see the quality improve.</dd>
+            <dt>2. What is a positron?</dt>
+            <dd>It's a particle of antimatter. It's the twin of an electron, but with a positive electric charge. Our universe is made almost entirely of matter, so when antimatter appears, it doesn't last long before finding a matter particle to annihilate with.</dd>
+            <dt>3. Is the radiation from a PET scan dangerous?</dt>
+            <dd>The dose is carefully controlled to be as low as reasonably achievable while still getting a good diagnostic image. The radiotracers used have short half-lives, meaning they become non-radioactive quickly (e.g., Fluorine-18's half-life is about 110 minutes). The medical benefit is considered to far outweigh the small risk from the radiation dose.</dd>
+            <dt>4. Why use sugar (FDG) as the tracer?</dt>
+            <dd>Many types of cancer cells, and also very active tissues like the brain and heart, have very high metabolisms. This means they consume a lot of glucose (sugar) for energy. By tagging a sugar-like molecule, doctors can use the body's own metabolism to deliver the radioactive tracer right to the areas they want to study.</dd>
+            <dt>5. What's the difference between a PET scan and a CT or MRI scan?</dt>
+            <dd>CT and MRI are "anatomical" imaging techniques. They show the *structure* of the body—the shape of organs, bones, and tissues. PET is a "functional" or "molecular" imaging technique. It shows what the cells are *doing*—their metabolic activity. They are often used together (PET/CT) to overlay the functional PET data onto the anatomical CT map for a more complete picture.</dd>
+            <dt>6. The simulation is running slowly. What can I do?</dt>
+            <dd>First, try checking the "Performance Mode" box. This will stop drawing the individual photon lines, which uses the most processing power. You can also try reducing the "Number of Events" or using a different browser, as performance can vary.</dd>
+            <dt>7. What does the "Reconstructed Image" canvas represent?</dt>
+            <dd>It represents the raw data collected by the scanner, often called a sinogram. It's a 2D histogram where each pixel's brightness corresponds to the number of LORs that have passed through it. This is the image that gets processed by advanced algorithms to create the final, clear diagnostic images a doctor sees.</dd>
+            <dt>8. Why are there two canvases?</dt>
+            <dd>To separate the two key parts of the process. The left canvas ("PET Scanner") shows the physics: the annihilation events and the detection of gamma rays in the scanner. The right canvas ("Reconstructed Image") shows the result: how the computer uses the information from the detectors to build up an image of the tracer's location.</dd>
+        </dl>
+        <h3>Troubleshooting</h3>
+        <p>If the simulation doesn't start or a canvas is blank:
+            <ul>
+                <li>Try clicking the "Reset" button, then "Play".</li>
+                <li>Ensure your browser is up to date (e.g., Chrome, Firefox, Safari). This simulation uses modern JavaScript features.</li>
+                <li>Open your browser's developer console (usually by pressing F12) and look for any red error messages. The "Developer Console" section below might also capture the error. Copy and paste this information if you need to report a bug.</li>
+            </ul>
+        </p>
+    </section>
+
+    <div class="dev-console">
+        <details>
+            <summary>Developer Console</summary>
+            <pre id="log-output">Logs will appear here...</pre>
+        </details>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        petCanvas: document.getElementById('petCanvas'),
+        reconCanvas: document.getElementById('reconCanvas'),
+        playPauseBtn: document.getElementById('play-pause-btn'),
+        stepBtn: document.getElementById('step-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        speedSlider: document.getElementById('speed-slider'),
+        speedValue: document.getElementById('speed-value'),
+        numEventsSlider: document.getElementById('num-events-slider'),
+        numEventsValue: document.getElementById('num-events-value'),
+        uptakeSlider: document.getElementById('uptake-slider'),
+        uptakeValue: document.getElementById('uptake-value'),
+        tumorSizeSlider: document.getElementById('tumor-size-slider'),
+        tumorSizeValue: document.getElementById('tumor-size-value'),
+        positronRangeSlider: document.getElementById('positron-range-slider'),
+        positronRangeValue: document.getElementById('positron-range-value'),
+        efficiencySlider: document.getElementById('efficiency-slider'),
+        efficiencyValue: document.getElementById('efficiency-value'),
+        noiseSlider: document.getElementById('noise-slider'),
+        noiseValue: document.getElementById('noise-value'),
+        presetHealthy: document.getElementById('preset-healthy'),
+        presetTumor: document.getElementById('preset-tumor'),
+        presetAdvanced: document.getElementById('preset-advanced'),
+        exportPngBtn: document.getElementById('export-png-btn'),
+        exportJsonBtn: document.getElementById('export-json-btn'),
+        shareBtn: document.getElementById('share-btn'),
+        perfToggle: document.getElementById('perf-toggle'),
+        eventsCounter: document.getElementById('events-counter'),
+        fpsMeter: document.getElementById('fps-meter'),
+        warningBanner: document.getElementById('warning-banner'),
+        themeToggle: document.getElementById('theme-toggle'),
+        logOutput: document.getElementById('log-output'),
+        selfCheckPanel: document.getElementById('self-check-panel'),
+    };
+
+    // --- Contexts ---
+    const petCtx = elements.petCanvas.getContext('2d');
+    const reconCtx = elements.reconCanvas.getContext('2d');
+
+    // --- Simulation State ---
+    let simState = {
+        isRunning: false,
+        animationFrameId: null,
+        eventCount: 0,
+        lastTime: 0,
+        fps: 0,
+        frameCount: 0,
+        lastFpsUpdate: 0,
+        audience: 'intermediate'
+    };
+
+    // --- Simulation Parameters ---
+    let params = {};
+
+    const presets = {
+        healthy: {
+            numEvents: 10000,
+            uptakeFactor: 1,
+            tumorSize: 20,
+            positronRange: 2,
+            detectorEfficiency: 95,
+            noise: 2,
+        },
+        tumor: {
+            numEvents: 15000,
+            uptakeFactor: 15,
+            tumorSize: 20,
+            positronRange: 2,
+            detectorEfficiency: 90,
+            noise: 5,
+        },
+        advanced: {
+            numEvents: 30000,
+            uptakeFactor: 8,
+            tumorSize: 35,
+            positronRange: 8,
+            detectorEfficiency: 75,
+            noise: 15,
+        }
+    };
+
+    // --- Reconstruction Data ---
+    let reconData;
+
+    // --- Logging ---
+    const originalConsoleError = console.error;
+    console.error = function(message, ...args) {
+        elements.logOutput.textContent += `ERROR: ${message}\n`;
+        originalConsoleError.apply(console, [message, ...args]);
+    };
+    const log = (message) => {
+        elements.logOutput.textContent += message + '\n';
+        elements.logOutput.scrollTop = elements.logOutput.scrollHeight;
+    };
+
+    // --- Core Simulation Logic ---
+    function updateParamsFromUI() {
+        params = {
+            numEvents: parseInt(elements.numEventsSlider.value),
+            uptakeFactor: parseFloat(elements.uptakeSlider.value),
+            tumorSize: parseFloat(elements.tumorSizeSlider.value),
+            positronRange: parseFloat(elements.positronRangeSlider.value),
+            detectorEfficiency: parseFloat(elements.efficiencySlider.value),
+            noise: parseFloat(elements.noiseSlider.value),
+            speed: parseFloat(elements.speedSlider.value),
+            performanceMode: elements.perfToggle.checked,
+        };
+
+        // Update display values
+        elements.numEventsValue.textContent = params.numEvents;
+        elements.uptakeValue.textContent = params.uptakeFactor;
+        elements.tumorSizeValue.textContent = params.tumorSize;
+        elements.positronRangeValue.textContent = params.positronRange;
+        elements.efficiencyValue.textContent = params.detectorEfficiency;
+        elements.noiseValue.textContent = params.noise;
+        elements.speedValue.textContent = params.speed.toFixed(1);
+
+        if (params.numEvents > 30000) {
+            elements.warningBanner.style.display = 'block';
+        } else {
+            elements.warningBanner.style.display = 'none';
+        }
+    }
+
+    function applyPreset(preset) {
+        elements.numEventsSlider.value = preset.numEvents;
+        elements.uptakeSlider.value = preset.uptakeFactor;
+        elements.tumorSizeSlider.value = preset.tumorSize;
+        elements.positronRangeSlider.value = preset.positronRange;
+        elements.efficiencySlider.value = preset.detectorEfficiency;
+        elements.noiseSlider.value = preset.noise;
+        updateParamsFromUI();
+        resetSimulation();
+        log(`Applied preset.`);
+    }
+
+    window.applyPreset = applyPreset;
+
+    function resetSimulation() {
+        log('Resetting simulation...');
+        stopSimulation();
+        simState.eventCount = 0;
+
+        const width = elements.petCanvas.width;
+        const height = elements.petCanvas.height;
+
+        // Clear canvases
+        petCtx.clearRect(0, 0, width, height);
+        reconCtx.fillStyle = 'black';
+        reconCtx.fillRect(0, 0, width, height);
+
+        // Initialize reconstruction data
+        reconData = new Float32Array(width * height);
+
+        drawScanner();
+        updateUIState();
+    }
+
+    function drawScanner() {
+        const width = elements.petCanvas.width;
+        const height = elements.petCanvas.height;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const detectorRingRadius = width * 0.45;
+
+        // Draw detector ring
+        petCtx.strokeStyle = '#4a627a';
+        petCtx.lineWidth = 10;
+        petCtx.beginPath();
+        petCtx.arc(centerX, centerY, detectorRingRadius, 0, 2 * Math.PI);
+        petCtx.stroke();
+    }
+
+    function generateEvent() {
+        const width = elements.petCanvas.width;
+        const height = elements.petCanvas.height;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const patientRadius = width * 0.4;
+        const tumorRadius = patientRadius * (params.tumorSize / 100);
+
+        let x, y, r, angle;
+
+        // Decide if event is in tumor or normal tissue
+        const inTumor = Math.random() < (params.uptakeFactor / (params.uptakeFactor + 1));
+
+        if (params.uptakeFactor <= 1 || !inTumor) { // Uniform distribution
+            r = Math.sqrt(Math.random()) * patientRadius;
+        } else { // Tumor distribution
+            r = Math.sqrt(Math.random()) * tumorRadius;
+        }
+        angle = Math.random() * 2 * Math.PI;
+
+        const eventX = centerX + r * Math.cos(angle);
+        const eventY = centerY + r * Math.sin(angle);
+
+        // Add positron range blur
+        const rangeAngle = Math.random() * 2 * Math.PI;
+        const rangeDist = Math.random() * params.positronRange;
+        const annihilationX = eventX + rangeDist * Math.cos(rangeAngle);
+        const annihilationY = eventY + rangeDist * Math.sin(rangeAngle);
+
+        return { x: annihilationX, y: annihilationY };
+    }
+
+    function simulatePhotonDetection(annihilationPoint) {
+        // Decide if it's a true event or a noise event
+        if (Math.random() < (params.noise / 100)) {
+            return simulateNoiseEvent();
+        }
+
+        const width = elements.petCanvas.width;
+        const height = elements.petCanvas.height;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const detectorRingRadius = width * 0.45;
+
+        const angle = Math.random() * 2 * Math.PI;
+
+        const p1x = annihilationPoint.x - 1000 * Math.cos(angle);
+        const p1y = annihilationPoint.y - 1000 * Math.sin(angle);
+        const p2x = annihilationPoint.x + 1000 * Math.cos(angle);
+        const p2y = annihilationPoint.y + 1000 * Math.sin(angle);
+
+        // Check for detector efficiency
+        if (Math.random() > (params.detectorEfficiency / 100) || Math.random() > (params.detectorEfficiency / 100)) {
+            return null; // Event missed
+        }
+
+        // Project onto detector ring
+        const d1x = centerX + detectorRingRadius * Math.cos(angle + Math.PI);
+        const d1y = centerY + detectorRingRadius * Math.sin(angle + Math.PI);
+        const d2x = centerX + detectorRingRadius * Math.cos(angle);
+        const d2y = centerY + detectorRingRadius * Math.sin(angle);
+
+        return { d1: { x: d1x, y: d1y }, d2: { x: d2x, y: d2y }, annihilation: annihilationPoint };
+    }
+
+    function simulateNoiseEvent() {
+        const width = elements.petCanvas.width;
+        const height = elements.petCanvas.height;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const detectorRingRadius = width * 0.45;
+
+        const angle1 = Math.random() * 2 * Math.PI;
+        const angle2 = Math.random() * 2 * Math.PI;
+
+        const d1x = centerX + detectorRingRadius * Math.cos(angle1);
+        const d1y = centerY + detectorRingRadius * Math.sin(angle1);
+        const d2x = centerX + detectorRingRadius * Math.cos(angle2);
+        const d2y = centerY + detectorRingRadius * Math.sin(angle2);
+
+        return { d1: { x: d1x, y: d1y }, d2: { x: d2x, y: d2y }, isNoise: true };
+    }
+
+    function drawEvent(detection) {
+        if (!detection) return;
+
+        if (params.performanceMode) return;
+
+        // Draw annihilation point
+        petCtx.fillStyle = detection.isNoise ? '#f39c12' : '#e74c3c';
+        if (detection.annihilation) {
+            petCtx.beginPath();
+            petCtx.arc(detection.annihilation.x, detection.annihilation.y, 2, 0, 2 * Math.PI);
+            petCtx.fill();
+        }
+
+        // Draw LOR on pet canvas
+        petCtx.strokeStyle = detection.isNoise ? 'rgba(243, 156, 18, 0.5)' : 'rgba(52, 152, 219, 0.5)';
+        petCtx.lineWidth = 1;
+        petCtx.beginPath();
+        petCtx.moveTo(detection.d1.x, detection.d1.y);
+        petCtx.lineTo(detection.d2.x, detection.d2.y);
+        petCtx.stroke();
+
+        // Highlight detectors
+        petCtx.fillStyle = '#2ecc71';
+        petCtx.beginPath();
+        petCtx.arc(detection.d1.x, detection.d1.y, 8, 0, 2 * Math.PI);
+        petCtx.fill();
+        petCtx.beginPath();
+        petCtx.arc(detection.d2.x, detection.d2.y, 8, 0, 2 * Math.PI);
+        petCtx.fill();
+    }
+
+    function backProject(detection) {
+        if (!detection) return;
+
+        const width = elements.reconCanvas.width;
+        const height = elements.reconCanvas.height;
+
+        // Bresenham's line algorithm to find all pixels on the LOR
+        let x0 = Math.floor(detection.d1.x);
+        let y0 = Math.floor(detection.d1.y);
+        const x1 = Math.floor(detection.d2.x);
+        const y1 = Math.floor(detection.d2.y);
+
+        const dx = Math.abs(x1 - x0);
+        const dy = -Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1;
+        const sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy;
+
+        while (true) {
+            if (x0 >= 0 && x0 < width && y0 >= 0 && y0 < height) {
+                reconData[y0 * width + x0]++;
+            }
+            if (x0 === x1 && y0 === y1) break;
+            let e2 = 2 * err;
+            if (e2 >= dy) {
+                err += dy;
+                x0 += sx;
+            }
+            if (e2 <= dx) {
+                err += dx;
+                y0 += sy;
+            }
+        }
+    }
+
+    function drawReconstruction() {
+        const width = elements.reconCanvas.width;
+        const height = elements.reconCanvas.height;
+        const imageData = reconCtx.createImageData(width, height);
+        const data = imageData.data;
+
+        let maxVal = 0;
+        for (let i = 0; i < reconData.length; i++) {
+            if (reconData[i] > maxVal) {
+                maxVal = reconData[i];
+            }
+        }
+
+        if (maxVal === 0) maxVal = 1;
+
+        for (let i = 0; i < reconData.length; i++) {
+            const val = reconData[i];
+            const intensity = Math.pow(val / maxVal, 0.5) * 255; // Use power for better contrast
+            const p = i * 4;
+            data[p] = intensity;     // R
+            data[p + 1] = intensity; // G
+            data[p + 2] = intensity; // B
+            data[p + 3] = 255;       // A
+        }
+        reconCtx.putImageData(imageData, 0, 0);
+    }
+
+    function simulationStep() {
+        if (simState.eventCount >= params.numEvents) {
+            stopSimulation();
+            log('Target number of events reached.');
+            return;
+        }
+
+        const eventsPerStep = Math.max(1, Math.floor(params.speed));
+
+        // Clear pet canvas for animation
+        if (!params.performanceMode) {
+            petCtx.clearRect(0, 0, elements.petCanvas.width, elements.petCanvas.height);
+            drawScanner();
+        }
+
+        for (let i = 0; i < eventsPerStep; i++) {
+            if (simState.eventCount >= params.numEvents) break;
+
+            const annihilationPoint = generateEvent();
+            const detection = simulatePhotonDetection(annihilationPoint);
+
+            if (detection) {
+                if (!params.performanceMode) {
+                    drawEvent(detection);
+                }
+                backProject(detection);
+            }
+            simState.eventCount++;
+        }
+
+        // Only update reconstruction drawing periodically to save performance
+        if (simState.eventCount % (params.performanceMode ? 100 : 20) === 0 || simState.eventCount >= params.numEvents) {
+             drawReconstruction();
+        }
+
+        updateUIState();
+    }
+
+    function gameLoop(currentTime) {
+        if (!simState.isRunning) return;
+
+        const deltaTime = currentTime - simState.lastTime;
+        simState.lastTime = currentTime;
+
+        // FPS calculation
+        if (currentTime - simState.lastFpsUpdate > 1000) {
+            simState.fps = simState.frameCount;
+            simState.frameCount = 0;
+            simState.lastFpsUpdate = currentTime;
+            elements.fpsMeter.textContent = simState.fps;
+        }
+        simState.frameCount++;
+
+        simulationStep();
+        simState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function startSimulation() {
+        if (simState.isRunning) return;
+        log('Simulation started.');
+        simState.isRunning = true;
+        elements.playPauseBtn.textContent = 'Pause';
+        elements.playPauseBtn.setAttribute('aria-label', 'Pause (Space)');
+        simState.lastTime = performance.now();
+        simState.lastFpsUpdate = simState.lastTime;
+        simState.frameCount = 0;
+        simState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function stopSimulation() {
+        if (!simState.isRunning) return;
+        log('Simulation paused.');
+        simState.isRunning = false;
+        elements.playPauseBtn.textContent = 'Play';
+        elements.playPauseBtn.setAttribute('aria-label', 'Play (Space)');
+        cancelAnimationFrame(simState.animationFrameId);
+        // Final draw to ensure reconstruction is up to date
+        drawReconstruction();
+    }
+
+    function togglePlayPause() {
+        if (simState.isRunning) {
+            stopSimulation();
+        } else {
+            startSimulation();
+        }
+    }
+
+    function runFromPreset() {
+        resetSimulation();
+        startSimulation();
+    }
+    window.runFromPreset = runFromPreset;
+
+    function updateUIState() {
+        elements.eventsCounter.textContent = `${simState.eventCount} / ${params.numEvents}`;
+    }
+
+    // --- Event Listeners ---
+    elements.playPauseBtn.addEventListener('click', togglePlayPause);
+    elements.stepBtn.addEventListener('click', () => {
+        stopSimulation();
+        simulationStep();
+    });
+    elements.resetBtn.addEventListener('click', resetSimulation);
+
+    [elements.speedSlider, elements.numEventsSlider, elements.uptakeSlider, elements.tumorSizeSlider, elements.positronRangeSlider, elements.efficiencySlider, elements.noiseSlider, elements.perfToggle].forEach(el => {
+        el.addEventListener('input', updateParamsFromUI);
+    });
+
+    elements.presetHealthy.addEventListener('click', () => applyPreset(presets.healthy));
+    elements.presetTumor.addEventListener('click', () => applyPreset(presets.tumor));
+    elements.presetAdvanced.addEventListener('click', () => applyPreset(presets.advanced));
+
+    // --- Export & Share ---
+    elements.exportPngBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `pet_reconstruction_${Date.now()}.png`;
+        link.href = elements.reconCanvas.toDataURL();
+        link.click();
+        log('Exported PNG of reconstruction.');
+    });
+
+    elements.exportJsonBtn.addEventListener('click', () => {
+        const dataStr = JSON.stringify(params, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const link = document.createElement('a');
+        link.setAttribute('href', dataUri);
+        link.setAttribute('download', `pet_params_${Date.now()}.json`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        log('Exported parameters as JSON.');
+    });
+
+    elements.shareBtn.addEventListener('click', () => {
+        const url = new URL(window.location);
+        url.hash = btoa(JSON.stringify(params));
+        navigator.clipboard.writeText(url.toString()).then(() => {
+            alert('Sharable link copied to clipboard!');
+            log('Share link copied.');
+        }, () => {
+            alert('Failed to copy link.');
+            log('Failed to copy share link.');
+        });
+    });
+
+    // --- Keyboard Shortcuts ---
+    window.addEventListener('keydown', (e) => {
+        if (document.activeElement.tagName === 'INPUT') return;
+        switch(e.code) {
+            case 'Space':
+                e.preventDefault();
+                togglePlayPause();
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                elements.stepBtn.click();
+                break;
+            case 'KeyR':
+                e.preventDefault();
+                elements.resetBtn.click();
+                break;
+            case 'KeyE':
+                e.preventDefault();
+                elements.exportPngBtn.click();
+                break;
+        }
+    });
+
+    // --- Theme Toggle ---
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        log(`Theme changed to ${document.body.classList.contains('dark-mode') ? 'dark' : 'light'}.`);
+    });
+
+    // --- Audience Level ---
+    window.setAudience = (level) => {
+        simState.audience = level;
+        log(`Audience level set to: ${level}`);
+        // This is a placeholder for future functionality, like changing text or simplifying UI
+        alert(`Audience level set to ${level}. In a full implementation, this could change the UI or text complexity.`);
+    }
+
+    // --- Initialization ---
+    function selfCheck() {
+        let allOk = true;
+        let errors = [];
+        const required = ['petCanvas', 'reconCanvas', 'playPauseBtn', 'resetBtn', 'numEventsSlider'];
+        required.forEach(id => {
+            if (!document.getElementById(id)) {
+                allOk = false;
+                errors.push(`Critical element #${id} is missing.`);
+            }
+        });
+        if (typeof presets.healthy !== 'object' || typeof presets.tumor !== 'object') {
+            allOk = false;
+            errors.push('Preset data is missing or corrupt.');
+        }
+
+        if (!allOk) {
+            elements.selfCheckPanel.style.display = 'block';
+            elements.selfCheckPanel.innerHTML = `<strong>Page Self-Check Failed:</strong><br>${errors.join('<br>')}<br>The simulation may not work correctly. Please report this issue.`;
+        } else {
+             elements.selfCheckPanel.textContent = 'Page self-check passed.';
+             elements.selfCheckPanel.style.color = 'green';
+             setTimeout(() => { elements.selfCheckPanel.style.display = 'none'; }, 5000);
+        }
+        return allOk;
+    }
+
+    function loadFromUrl() {
+        if (window.location.hash) {
+            try {
+                const decoded = atob(window.location.hash.substring(1));
+                const urlParams = JSON.parse(decoded);
+                applyPreset(urlParams); // Use applyPreset to set all UI elements
+                log('Loaded parameters from URL.');
+            } catch (e) {
+                console.error("Failed to load params from URL hash", e);
+                log('Failed to parse parameters from URL, using default.');
+                applyPreset(presets.tumor);
+            }
+        } else {
+            applyPreset(presets.tumor);
+        }
+    }
+
+    // --- Final Setup ---
+    if (selfCheck()) {
+        loadFromUrl();
+        resetSimulation();
+    }
+});
+</script>
+
+</body>
+</html>

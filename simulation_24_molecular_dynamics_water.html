@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Molecular Dynamics of Water</title>
+    <style>
+        :root {
+            --bg-color: #f0f8ff;
+            --text-color: #333;
+            --header-color: #005a9c;
+            --control-bg: #ffffff;
+            --border-color: #d1e3f3;
+            --accent-color: #007bff;
+            --accent-light: #e6f2ff;
+            --warning-color: #dc3545;
+            --h-bond-color: rgba(255, 105, 180, 0.7); /* Hot pink */
+        }
+
+        .dark-mode {
+            --bg-color: #1a2a3a;
+            --text-color: #e0e6ec;
+            --header-color: #66b2ff;
+            --control-bg: #2a3b4c;
+            --border-color: #40566b;
+            --accent-color: #3399ff;
+            --accent-light: #2c3e50;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        #canvas-container {
+            flex: 3;
+            min-width: 300px;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            border: 1px solid var(--border-color);
+            background-color: #000;
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 280px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+
+        .preset-buttons button { background-color: #28a745; }
+        .preset-buttons button:hover { background-color: #218838; }
+
+        .performance-meter {
+            font-size: 0.8em;
+            background: var(--accent-light);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        #warning-banner {
+            display: none;
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            margin: 0 0 20px 0;
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+            text-align: center;
+        }
+        #warning-banner button {
+            background-color: #ffc107;
+            color: #212529;
+            border: none;
+            padding: 5px 10px;
+            margin-left: 15px;
+            cursor: pointer;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--accent-light); }
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Molecular Dynamics of Water</h1>
+        <p class="subtitle">Visualizing the microscopic dance of H₂O molecules and their hydrogen bonds.</p>
+        <div class="meta-bar">
+            Estimated Runtime: 1-10 minutes | Recommended Device: Desktop | Approx. HTML Size: 48 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <div id="warning-banner">
+        <strong>Performance Warning:</strong> You've set a high number of molecules. The simulation may run slowly.
+        <button id="confirm-heavy-load">Proceed</button>
+    </div>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Water is everywhere, but its behavior is secretly complex. At the microscopic level, liquid water is a chaotic, bustling crowd of H₂O molecules. Each molecule is a tiny magnet, with a negatively charged oxygen end and positively charged hydrogen ends. This polarity causes them to constantly attract and align with their neighbors, forming weak connections called <strong>hydrogen bonds</strong>. This simulation uses the principles of molecular dynamics (MD) to model this dance. It calculates the forces between molecules and uses them to predict their movement over tiny fractions of a second. You can watch as they jiggle, rotate, and swap partners, forming and breaking hydrogen bonds in a flickering, ever-changing network that gives water its unique properties.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+        <p>This simulation lets you be a molecular-level observer. Here's what you're looking at.</p>
+
+        <h3>1. The Molecules</h3>
+        <p>Each object is a single water molecule (H₂O). The large central atom is Oxygen (O), and the two smaller atoms are Hydrogen (H). We've simplified them to 2D. Notice their "V" shape. This shape is crucial.</p>
+
+        <h3>2. The Forces at Play</h3>
+        <p>Molecules don't move randomly; they are pushed and pulled by their neighbors. We simulate two main types of forces:</p>
+        <ul>
+            <li><strong>Repulsion/Attraction (Lennard-Jones):</strong> Like people in a crowd, molecules don't like being squeezed too close together (repulsion). But they feel a slight attraction to each other when they're at a comfortable distance (van der Waals force). This is a general, non-specific force.</li>
+            <li><strong>Electrostatic Force (The "Magnet" Effect):</strong> This is the most important force for water. The Oxygen atom is slightly negative, and the Hydrogens are slightly positive. A positive Hydrogen on one molecule is strongly attracted to a negative Oxygen on another. This specific, directional attraction is a <strong>hydrogen bond</strong>.</li>
+        </ul>
+
+        <h3>3. Hydrogen Bonds (The Flickering Lines)</h3>
+        <p>When you enable "Show H-Bonds", you'll see faint pink lines appear between molecules. A line is drawn when a Hydrogen atom of one molecule is close enough and correctly aligned with an Oxygen atom of another. Notice that these bonds are <strong>transient</strong>—they form, last for an unimaginably short time (picoseconds!), and then break as the molecules tumble and jiggle. This constant forming and breaking of bonds is what makes water a liquid.</p>
+
+        <h3>4. Temperature and Motion</h3>
+        <p>Temperature is just a measure of the average kinetic energy (energy of motion) of the molecules.
+            <ul>
+                <li>At <strong>low temperatures</strong> (like in the "Solid" preset), molecules have less energy. They slow down, lock into place with their neighbors via hydrogen bonds, and form a more ordered, crystal-like structure. They just vibrate in place.</li>
+                <li>At <strong>high temperatures</strong> (like in the "Gas" preset), molecules have so much energy they fly around rapidly. They move too fast to form lasting hydrogen bonds and are much farther apart.</li>
+                <li>In the <strong>liquid state</strong>, there's a perfect balance. Molecules have enough energy to move past each other, but not so much that they escape the attraction of their neighbors. This is the dynamic network of flickering bonds you see.</li>
+            </ul>
+        </p>
+
+        <h3>5. The Simulation Box</h3>
+        <p>The box has "periodic boundary conditions." This is a clever trick to simulate an infinite amount of water. When a molecule flies out one side of the box, it instantly reappears on the opposite side. This way, the molecules in the center always feel like they are part of a larger crowd, not just in a small, isolated container.</p>
+
+        <h3>Analogy: A Crowded Dance Floor</h3>
+        <p>Imagine a dance floor crowded with couples (the molecules). Each couple is holding hands (the strong chemical bonds within the molecule). Now, imagine each person also has magnetic patches on their shoulders (Oxygen) and hands (Hydrogen).
+        <ul>
+            <li><strong>Lennard-Jones:</strong> Dancers try to keep a bit of personal space, not bumping into each other.</li>
+            <li><strong>Hydrogen Bonds:</strong> As they dance and twirl, a magnetic hand from one person might get close to a magnetic shoulder of another person in a different couple, and they'll stick for a moment. This is a hydrogen bond.</li>
+            <li><strong>Temperature:</strong> The tempo of the music is the temperature. With slow music ("Solid"), the dancers form clumps and barely move. With fast music ("Gas"), they fly around wildly, rarely connecting. With a medium tempo ("Liquid"), they are constantly moving, breaking their magnetic connections, and forming new ones with other dancers as they pass by.</li>
+        </ul>
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Parameters & Controls</h2>
+        <div class="simulation-layout">
+            <div id="canvas-container">
+                <canvas id="mdCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="controls">
+                <div class="button-group">
+                    <button id="play-pause-btn">Play</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="num-molecules-slider">Number of Molecules: <span id="num-molecules-value">50</span></label>
+                    <input type="range" id="num-molecules-slider" min="10" max="200" step="1" value="50">
+                </div>
+
+                <div class="control-group">
+                    <label for="temp-slider">Target Temperature (K): <span id="temp-value">298</span></label>
+                    <input type="range" id="temp-slider" min="10" max="600" step="1" value="298">
+                </div>
+
+                <div class="control-group">
+                    <label for="speed-slider">Simulation Speed: <span id="speed-value">1</span>x</label>
+                    <input type="range" id="speed-slider" min="1" max="5" step="1" value="1">
+                </div>
+
+                <div class="control-group">
+                    <label><input type="checkbox" id="show-hbonds-check" checked> Show H-Bonds</label><br>
+                    <label><input type="checkbox" id="show-forces-check"> Show Forces</label>
+                </div>
+
+                <div class="control-group preset-buttons">
+                    <h3>Presets</h3>
+                    <div class="button-group">
+                        <button id="preset-solid">Solid</button>
+                        <button id="preset-liquid">Liquid</button>
+                        <button id="preset-gas">Gas</button>
+                    </div>
+                </div>
+
+                <div class="performance-meter">
+                    <div>Steps: <span id="steps-counter">0</span></div>
+                    <div>Current Temp: <span id="current-temp-value">...</span> K</div>
+                    <div>H-Bonds/Molecule: <span id="h-bond-avg">...</span></div>
+                    <div>Potential Energy: <span id="potential-energy">...</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Core Theory</h2>
+        <p>This simulation is a simplified 2D model. It uses the following principles.</p>
+
+        <h3>1. Potential Energy Functions</h3>
+        <p>The force between molecules is the negative gradient of the potential energy (<code>F = -∇V</code>). We sum two potentials:</p>
+
+        <h4>Lennard-Jones Potential (V<sub>LJ</sub>)</h4>
+        <p>This models the van der Waals interaction between the Oxygen atoms of two molecules separated by a distance <em>r</em>.</p>
+        <p><code>V<sub>LJ</sub>(r) = 4ε [ (σ/r)¹² - (σ/r)⁶ ]</code></p>
+        <p><em>Plain English:</em> The <code>(σ/r)¹²</code> term is a powerful repulsion at short distances (it grows very fast as <em>r</em> gets small). The <code>-(σ/r)⁶</code> term is a weaker, longer-range attraction. <em>ε</em> controls the depth of the attraction, and <em>σ</em> is the distance where the potential is zero.</p>
+
+        <h4>Electrostatic Potential (V<sub>q</sub>)</h4>
+        <p>This models the attraction/repulsion between the partial charges (q₁, q₂) on the atoms (Oxygens and Hydrogens) using a simplified Coulomb's Law.</p>
+        <p><code>V<sub>q</sub>(r) = k * (q₁ * q₂) / r</code></p>
+        <p><em>Plain English:</em> If charges are opposite (one +, one -), the potential is negative (attraction). If charges are the same (+,+ or -,-), the potential is positive (repulsion). The force gets weaker with distance <em>r</em>. This is what creates hydrogen bonds.</p>
+
+        <h3>2. Numerical Integration: Velocity Verlet</h3>
+        <p>To move the molecules, we need to integrate Newton's laws of motion (<code>F=ma</code>). We use a numerical method called Velocity Verlet, which is great for its energy conservation properties. For each molecule, at each timestep Δt:</p>
+        <ol>
+            <li>Update position: <code>x(t + Δt) = x(t) + v(t)Δt + 0.5a(t)Δt²</code></li>
+            <li>Calculate the new forces/acceleration at the new position: <code>a(t + Δt)</code></li>
+            <li>Update velocity: <code>v(t + Δt) = v(t) + 0.5 [a(t) + a(t + Δt)] Δt</code></li>
+        </ol>
+        <p>This process is repeated thousands of times to simulate the trajectory.</p>
+
+        <h3>3. Berendsen Thermostat</h3>
+        <p>To keep the temperature near the target, we gently rescale the velocities at each step. We calculate the current temperature <code>T_current</code> from the average kinetic energy of the molecules. Then we compute a scaling factor λ:</p>
+        <p><code>λ = sqrt(1 + (Δt/τ) * (T_target / T_current - 1))</code></p>
+        <p>And update each velocity: <code>v_new = v_old * λ</code>. The parameter τ determines how quickly the system is coupled to the "heat bath". A larger τ means a gentler, more realistic scaling.</p>
+    </section>
+
+    <section class="section">
+        <h2>Micro-Experiments</h2>
+        <ol>
+            <li><strong>The Melting Transition:</strong> Apply the "Solid" preset (e.g., 50 K). Note the ordered structure and high average number of H-bonds. Pause, then slowly drag the temperature slider to 298 K (Liquid). Press play. Watch the crystal structure break down into a disordered, flowing liquid.</li>
+            <li><strong>The Boiling Transition:</strong> Apply the "Liquid" preset (298 K). Let it stabilize. Now, increase the temperature to 600 K ("Gas"). Observe how the molecules gain speed, the box expands visually (as they push each other apart), and the average number of H-bonds per molecule drops close to zero.</li>
+            <li><strong>Role of H-Bonds:</strong> In a liquid state, pause the simulation. Uncheck "Show H-Bonds" and then check it again to make them clear. Identify a molecule and count its hydrogen bonds (both as a donor and acceptor). Step through the simulation slowly and see how these connections break and new ones form with other partners.</li>
+            <li><strong>What if water wasn't polar?</strong> To simulate this, we can't turn off charge entirely in this model, but we can see its effect. Compare the "Solid" preset (highly structured due to electrostatic alignment) with the "Gas" preset (where kinetic energy overwhelms electrostatic attraction). The difference in structure is almost entirely due to the electrostatic forces that create H-bonds.</li>
+            <li><strong>Condensation:</strong> Apply the "Gas" preset (600 K). Let it run. Now, suddenly drop the temperature to 298 K. Watch as the fast-moving molecules slow down and begin to clump together, forming transient hydrogen bonds as they condense into a liquid state.</li>
+        </ol>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        canvas: document.getElementById('mdCanvas'),
+        playPauseBtn: document.getElementById('play-pause-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        numMoleculesSlider: document.getElementById('num-molecules-slider'),
+        numMoleculesValue: document.getElementById('num-molecules-value'),
+        tempSlider: document.getElementById('temp-slider'),
+        tempValue: document.getElementById('temp-value'),
+        speedSlider: document.getElementById('speed-slider'),
+        speedValue: document.getElementById('speed-value'),
+        showHBondsCheck: document.getElementById('show-hbonds-check'),
+        showForcesCheck: document.getElementById('show-forces-check'),
+        presetSolid: document.getElementById('preset-solid'),
+        presetLiquid: document.getElementById('preset-liquid'),
+        presetGas: document.getElementById('preset-gas'),
+        stepsCounter: document.getElementById('steps-counter'),
+        currentTempValue: document.getElementById('current-temp-value'),
+        hBondAvg: document.getElementById('h-bond-avg'),
+        potentialEnergy: document.getElementById('potential-energy'),
+        themeToggle: document.getElementById('theme-toggle'),
+        warningBanner: document.getElementById('warning-banner'),
+        confirmHeavyLoadBtn: document.getElementById('confirm-heavy-load'),
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+    const width = elements.canvas.width;
+    const height = elements.canvas.height;
+
+    // --- Simulation State ---
+    let simState = {
+        isRunning: false,
+        animationFrameId: null,
+        stepCount: 0,
+        molecules: [],
+        allowRun: true,
+    };
+
+    // --- Simulation Parameters ---
+    let params = {
+        numMolecules: 50,
+        targetTemp: 298,
+        speed: 1,
+        showHBonds: true,
+        showForces: false,
+    };
+
+    // --- Physics Constants (scaled for simulation) ---
+    const C = {
+        // Molecule geometry
+        bondLength: 20, // H-O bond length
+        bondAngle: 104.5 * (Math.PI / 180), // H-O-H angle
+
+        // Radii for drawing
+        oxygenRadius: 8,
+        hydrogenRadius: 4,
+
+        // Lennard-Jones parameters (for O-O interaction)
+        epsilon: 0.8, // Depth of potential well
+        sigma: 30, // Distance at which potential is zero
+
+        // Electrostatics
+        k_e: 15000, // Coulomb constant
+        chargeO: -0.84, // Partial charge on Oxygen
+        chargeH: 0.42, // Partial charge on Hydrogen
+
+        // Hydrogen bond criteria
+        hBondMaxDist: 40,
+        hBondMaxAngle: 45 * (Math.PI / 180),
+
+        // Integrator and Thermostat
+        dt: 0.01, // timestep
+        kB: 1.0, // Boltzmann constant (scaled)
+        thermostatTau: 0.5, // Coupling time for thermostat
+    };
+
+    // --- Molecule Class ---
+    class Molecule {
+        constructor(x, y) {
+            this.pos = { x, y };
+            this.pos_old = { x: x - (Math.random()-0.5), y: y - (Math.random()-0.5) };
+            this.acc = { x: 0, y: 0 };
+            this.angle = Math.random() * 2 * Math.PI;
+            this.angVel = 0;
+            this.torque = 0;
+            this.momentOfInertia = 2 * C.bondLength**2; // Simplified
+        }
+
+        getAtoms() {
+            const h1_angle = this.angle - C.bondAngle / 2;
+            const h2_angle = this.angle + C.bondAngle / 2;
+            return {
+                O: { pos: this.pos, charge: C.chargeO },
+                H1: { pos: { x: this.pos.x + C.bondLength * Math.cos(h1_angle), y: this.pos.y + C.bondLength * Math.sin(h1_angle) }, charge: C.chargeH },
+                H2: { pos: { x: this.pos.x + C.bondLength * Math.cos(h2_angle), y: this.pos.y + C.bondLength * Math.sin(h2_angle) }, charge: C.chargeH }
+            };
+        }
+    }
+
+    function initMolecules() {
+        simState.molecules = [];
+        simState.stepCount = 0;
+        const num = params.numMolecules;
+        const boxSize = 0.9 * width;
+        const padding = 0.05 * width;
+        const moleculesPerRow = Math.ceil(Math.sqrt(num));
+        const spacing = boxSize / moleculesPerRow;
+
+        for (let i = 0; i < num; i++) {
+            const row = Math.floor(i / moleculesPerRow);
+            const col = i % moleculesPerRow;
+            const x = padding + col * spacing + (Math.random() - 0.5) * 10;
+            const y = padding + row * spacing + (Math.random() - 0.5) * 10;
+            if (x < width && y < height) {
+                simState.molecules.push(new Molecule(x, y));
+            }
+        }
+        calculateForces(); // Initial force calculation
+    }
+
+    function calculateForces() {
+        let totalPotentialEnergy = 0;
+
+        for (const m of simState.molecules) {
+            m.acc = { x: 0, y: 0 };
+            m.torque = 0;
+        }
+
+        for (let i = 0; i < simState.molecules.length; i++) {
+            for (let j = i + 1; j < simState.molecules.length; j++) {
+                const m1 = simState.molecules[i];
+                const m2 = simState.molecules[j];
+
+                // --- Lennard-Jones Force (between Oxygens) ---
+                let dx = m2.pos.x - m1.pos.x;
+                let dy = m2.pos.y - m1.pos.y;
+
+                // Periodic boundary conditions
+                if (dx > width / 2) dx -= width;
+                if (dx < -width / 2) dx += width;
+                if (dy > height / 2) dy -= height;
+                if (dy < -height / 2) dy += height;
+
+                const r2 = dx * dx + dy * dy;
+                if (r2 < (C.sigma * 4)**2) { // Cutoff
+                    const r = Math.sqrt(r2);
+                    const sr6 = (C.sigma / r)**6;
+                    const sr12 = sr6 * sr6;
+
+                    const potential = 4 * C.epsilon * (sr12 - sr6);
+                    totalPotentialEnergy += potential;
+
+                    const forceMag = 24 * C.epsilon / r2 * (2 * sr12 - sr6);
+                    const fx = forceMag * dx;
+                    const fy = forceMag * dy;
+
+                    m1.acc.x -= fx;
+                    m1.acc.y -= fy;
+                    m2.acc.x += fx;
+                    m2.acc.y += fy;
+                }
+
+                // --- Electrostatic Forces & Torques ---
+                const atoms1 = m1.getAtoms();
+                const atoms2 = m2.getAtoms();
+
+                for (const [name1, atom1] of Object.entries(atoms1)) {
+                    for (const [name2, atom2] of Object.entries(atoms2)) {
+                        let adx = atom2.pos.x - atom1.pos.x;
+                        let ady = atom2.pos.y - atom1.pos.y;
+
+                        // Periodic boundary for atoms (less accurate but ok for this sim)
+                        if (adx > width / 2) adx -= width;
+                        if (adx < -width / 2) adx += width;
+                        if (ady > height / 2) ady -= height;
+                        if (ady < -height / 2) ady += height;
+
+                        const ar2 = adx * adx + ady * ady;
+                        if (ar2 > 1) { // Avoid singularity
+                            const ar = Math.sqrt(ar2);
+                            const potential = C.k_e * atom1.charge * atom2.charge / ar;
+                            totalPotentialEnergy += potential;
+
+                            const forceMag = -potential / ar2;
+                            const afx = forceMag * adx;
+                            const afy = forceMag * ady;
+
+                            m1.acc.x -= afx;
+                            m1.acc.y -= afy;
+                            m2.acc.x += afx;
+                            m2.acc.y += afy;
+
+                            // Torque calculation
+                            const r1 = {x: atom1.pos.x - m1.pos.x, y: atom1.pos.y - m1.pos.y};
+                            const r2 = {x: atom2.pos.x - m2.pos.x, y: atom2.pos.y - m2.pos.y};
+                            m1.torque += r1.x * (-afy) - r1.y * (-afx);
+                            m2.torque += r2.x * (afy) - r2.y * (afx);
+                        }
+                    }
+                }
+            }
+        }
+        elements.potentialEnergy.textContent = totalPotentialEnergy.toFixed(2);
+    }
+
+    function integrate() {
+        const dt = C.dt;
+        const dt2 = dt * dt;
+
+        for (const m of simState.molecules) {
+            // --- Verlet for position ---
+            const next_x = 2 * m.pos.x - m.pos_old.x + m.acc.x * dt2;
+            const next_y = 2 * m.pos.y - m.pos_old.y + m.acc.y * dt2;
+
+            m.pos_old = { ...m.pos };
+
+            m.pos.x = next_x;
+            m.pos.y = next_y;
+
+            // --- Verlet for rotation (simplified) ---
+            const angAcc = m.torque / m.momentOfInertia;
+            m.angle += m.angVel * dt + 0.5 * angAcc * dt2;
+            m.angVel += angAcc * dt;
+
+            // Periodic boundary conditions
+            m.pos.x = (m.pos.x + width) % width;
+            m.pos.y = (m.pos.y + height) % height;
+        }
+    }
+
+    function applyThermostat() {
+        let currentKineticEnergy = 0;
+        for (const m of simState.molecules) {
+            const vx = (m.pos.x - m.pos_old.x) / C.dt;
+            const vy = (m.pos.y - m.pos_old.y) / C.dt;
+            currentKineticEnergy += 0.5 * (vx*vx + vy*vy);
+            currentKineticEnergy += 0.5 * m.momentOfInertia * m.angVel**2; // Rotational
+        }
+
+        const numDegreesOfFreedom = 3 * simState.molecules.length; // 2 translational, 1 rotational
+        const currentTemp = (2 * currentKineticEnergy) / (numDegreesOfFreedom * C.kB);
+        elements.currentTempValue.textContent = currentTemp.toFixed(1);
+
+        const targetTemp = params.targetTemp;
+        const lambda = Math.sqrt(1 + (C.dt / C.thermostatTau) * (targetTemp / currentTemp - 1));
+
+        if (lambda > 0.1 && lambda < 2) { // Avoid instability
+            for (const m of simState.molecules) {
+                const vx = m.pos.x - m.pos_old.x;
+                const vy = m.pos.y - m.pos_old.y;
+                m.pos_old.x = m.pos.x - vx * lambda;
+                m.pos_old.y = m.pos.y - vy * lambda;
+                m.angVel *= lambda;
+            }
+        }
+    }
+
+    function simulationStep() {
+        if (!simState.allowRun) return;
+
+        for (let i = 0; i < params.speed; i++) {
+            integrate();
+            calculateForces();
+            applyThermostat();
+            simState.stepCount++;
+        }
+        elements.stepsCounter.textContent = simState.stepCount;
+    }
+
+    function draw() {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
+        ctx.fillRect(0, 0, width, height);
+
+        const hBonds = params.showHBonds ? findHBonds() : {bonds: [], avg: 0};
+        if (params.showHBonds) {
+            drawHBonds(hBonds.bonds);
+            elements.hBondAvg.textContent = hBonds.avg.toFixed(2);
+        } else {
+            elements.hBondAvg.textContent = 'N/A';
+        }
+
+        for (const m of simState.molecules) {
+            drawMolecule(m);
+            if(params.showForces) drawForces(m);
+        }
+    }
+
+    function drawMolecule(m) {
+        const atoms = m.getAtoms();
+        // Draw bonds first
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(atoms.H1.pos.x, atoms.H1.pos.y);
+        ctx.lineTo(atoms.O.pos.x, atoms.O.pos.y);
+        ctx.lineTo(atoms.H2.pos.x, atoms.H2.pos.y);
+        ctx.stroke();
+
+        // Draw atoms
+        ctx.fillStyle = '#ff4136'; // Red for Oxygen
+        ctx.beginPath();
+        ctx.arc(atoms.O.pos.x, atoms.O.pos.y, C.oxygenRadius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#dddddd'; // White for Hydrogen
+        ctx.beginPath();
+        ctx.arc(atoms.H1.pos.x, atoms.H1.pos.y, C.hydrogenRadius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(atoms.H2.pos.x, atoms.H2.pos.y, C.hydrogenRadius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    function drawForces(m) {
+        ctx.strokeStyle = '#007bff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(m.pos.x, m.pos.y);
+        ctx.lineTo(m.pos.x + m.acc.x * 5, m.pos.y + m.acc.y * 5); // Scaled for visibility
+        ctx.stroke();
+    }
+
+    function findHBonds() {
+        const bonds = [];
+        let totalBonds = 0;
+        for (let i = 0; i < simState.molecules.length; i++) {
+            for (let j = i + 1; j < simState.molecules.length; j++) {
+                const m1 = simState.molecules[i];
+                const m2 = simState.molecules[j];
+                const atoms1 = m1.getAtoms();
+                const atoms2 = m2.getAtoms();
+
+                // Check H1(m1) with O(m2)
+                checkHBond(atoms1.H1, atoms1.O, atoms2.O, bonds);
+                // Check H2(m1) with O(m2)
+                checkHBond(atoms1.H2, atoms1.O, atoms2.O, bonds);
+                // Check H1(m2) with O(m1)
+                checkHBond(atoms2.H1, atoms2.O, atoms1.O, bonds);
+                // Check H2(m2) with O(m1)
+                checkHBond(atoms2.H2, atoms2.O, atoms1.O, bonds);
+            }
+        }
+        return { bonds, avg: simState.molecules.length > 0 ? bonds.length * 2 / simState.molecules.length : 0 };
+    }
+
+    function checkHBond(hAtom, oAtomDonor, oAtomAcceptor, bonds) {
+        let dx = oAtomAcceptor.pos.x - hAtom.pos.x;
+        let dy = oAtomAcceptor.pos.y - hAtom.pos.y;
+
+        // Periodic boundaries
+        if (dx > width / 2) dx -= width;
+        if (dx < -width / 2) dx += width;
+        if (dy > height / 2) dy -= height;
+        if (dy < -height / 2) dy += height;
+
+        const dist2 = dx*dx + dy*dy;
+        if (dist2 < C.hBondMaxDist**2) {
+            // Vector O-H
+            const oh_dx = hAtom.pos.x - oAtomDonor.pos.x;
+            const oh_dy = hAtom.pos.y - oAtomDonor.pos.y;
+            // Vector H-O_acceptor
+            const ho_dx = oAtomAcceptor.pos.x - hAtom.pos.x;
+            const ho_dy = oAtomAcceptor.pos.y - hAtom.pos.y;
+
+            const dot = oh_dx*ho_dx + oh_dy*ho_dy;
+            const mag_oh = Math.sqrt(oh_dx**2 + oh_dy**2);
+            const mag_ho = Math.sqrt(ho_dx**2 + ho_dy**2);
+
+            const angle = Math.acos(dot / (mag_oh * mag_ho));
+
+            if (Math.abs(angle) < C.hBondMaxAngle) {
+                bonds.push({ from: hAtom.pos, to: oAtomAcceptor.pos });
+            }
+        }
+    }
+
+    function drawHBonds(bonds) {
+        ctx.strokeStyle = C.h-bond-color;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        for (const bond of bonds) {
+            let dx = bond.to.x - bond.from.x;
+            let dy = bond.to.y - bond.from.y;
+            // Periodic boundaries
+            if (dx > width / 2) dx -= width;
+            if (dx < -width / 2) dx += width;
+            if (dy > height / 2) dy -= height;
+            if (dy < -height / 2) dy += height;
+
+            ctx.beginPath();
+            ctx.moveTo(bond.from.x, bond.from.y);
+            ctx.lineTo(bond.from.x + dx, bond.from.y + dy);
+            ctx.stroke();
+        }
+        ctx.setLineDash([]);
+    }
+
+    function gameLoop() {
+        if (!simState.isRunning) return;
+
+        simulationStep();
+        draw();
+
+        simState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function startSimulation() {
+        if (simState.isRunning || !simState.allowRun) return;
+        simState.isRunning = true;
+        elements.playPauseBtn.textContent = 'Pause';
+        gameLoop();
+    }
+
+    function stopSimulation() {
+        if (!simState.isRunning) return;
+        simState.isRunning = false;
+        elements.playPauseBtn.textContent = 'Play';
+        cancelAnimationFrame(simState.animationFrameId);
+    }
+
+    function togglePlayPause() {
+        if (simState.isRunning) stopSimulation();
+        else startSimulation();
+    }
+
+    function resetSimulation() {
+        stopSimulation();
+        updateParamsFromUI();
+        initMolecules();
+        startSimulation();
+    }
+
+    function updateParamsFromUI() {
+        params.numMolecules = parseInt(elements.numMoleculesSlider.value);
+        params.targetTemp = parseInt(elements.tempSlider.value);
+        params.speed = parseInt(elements.speedSlider.value);
+        params.showHBonds = elements.showHBondsCheck.checked;
+        params.showForces = elements.showForcesCheck.checked;
+
+        elements.numMoleculesValue.textContent = params.numMolecules;
+        elements.tempValue.textContent = params.targetTemp;
+        elements.speedValue.textContent = params.speed;
+
+        if (params.numMolecules > 100 && simState.allowRun) {
+            stopSimulation();
+            elements.warningBanner.style.display = 'block';
+            simState.allowRun = false;
+        }
+    }
+
+    // --- Event Listeners ---
+    elements.playPauseBtn.addEventListener('click', togglePlayPause);
+    elements.resetBtn.addEventListener('click', resetSimulation);
+    elements.numMoleculesSlider.addEventListener('input', updateParamsFromUI);
+    elements.tempSlider.addEventListener('input', updateParamsFromUI);
+    elements.speedSlider.addEventListener('input', updateParamsFromUI);
+    elements.showHBondsCheck.addEventListener('change', updateParamsFromUI);
+    elements.showForcesCheck.addEventListener('change', updateParamsFromUI);
+
+    elements.numMoleculesSlider.addEventListener('change', resetSimulation);
+    elements.tempSlider.addEventListener('change', resetSimulation);
+
+    elements.confirmHeavyLoadBtn.addEventListener('click', () => {
+        simState.allowRun = true;
+        elements.warningBanner.style.display = 'none';
+        resetSimulation();
+    });
+
+    // Presets
+    const presets = {
+        solid: { temp: 50 },
+        liquid: { temp: 298 },
+        gas: { temp: 600 }
+    };
+    elements.presetSolid.addEventListener('click', () => {
+        elements.tempSlider.value = presets.solid.temp;
+        resetSimulation();
+    });
+    elements.presetLiquid.addEventListener('click', () => {
+        elements.tempSlider.value = presets.liquid.temp;
+        resetSimulation();
+    });
+    elements.presetGas.addEventListener('click', () => {
+        elements.tempSlider.value = presets.gas.temp;
+        resetSimulation();
+    });
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+    });
+
+    // --- Initial Setup ---
+    updateParamsFromUI();
+    initMolecules();
+    startSimulation();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Econophysics: Binomial Option Pricing</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #00796b; /* A financial/teal green */
+            --secondary-color: #343a40;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #263238;
+            --text-color: #eceff1;
+            --primary-color: #4db6ac;
+            --secondary-color: #b0bec5;
+            --border-color: #546e7a;
+            --canvas-bg: #37474f;
+            --code-bg: #455a64;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 16 / 9; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Econophysics: Binomial Option Pricing</h1>
+            <p class="subtitle">A simple model for valuing financial options.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>A financial option gives you the right, but not the obligation, to buy or sell a stock at a set price in the future. Valuing such a contract today is a complex problem. The Binomial Option Pricing model is a foundational method in finance that simplifies this problem by assuming the stock price can only move to one of two possible values in each time step. This creates a branching "tree" of possible future prices. By knowing the option's value at the final branches (at expiration), we can work backwards through the tree to find its fair value today. This simulation visualizes the construction of this tree and the backward calculation.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Price Tree</h2>
+
+            <h3>Step 1: What is a Call Option?</h3>
+            <p>This simulation prices a simple "European call option." This gives the holder the right to buy a stock at a pre-agreed **Strike Price (`K`)** on a specific **Expiration Date**. For example, an option to buy a stock at K=$100. If, on the expiration date, the stock price `S` is $110, the option is worth $10, because you can use it to buy a $110 stock for only $100. If the stock price is $90, the option is worthless, because you wouldn't use it to buy a $90 stock for $100.</p>
+
+            <h3>Step 2: The Binomial Tree of Stock Prices</h3>
+            <p>The model's core idea is to simplify the random movement of a stock price. It assumes that in any given time step, the price `S` can only do two things:
+            <ul>
+                <li>Move up by a factor `u` (e.g., multiply by 1.1).</li>
+                <li>Move down by a factor `d` (e.g., multiply by 0.9).</li>
+            </ul>
+            By repeating this over several time steps, we can build a branching tree of all possible future stock prices. The simulation shows this tree.
+            </p>
+
+            <h3>Step 3: Value at the End of the Tree</h3>
+            <p>At the very last time step (the leaves of the tree), we know exactly what the option is worth. Its value is simply `max(0, S - K)`. The simulation calculates this value for each final node.</p>
+
+            <h3>Step 4: Working Backwards with "Risk-Neutral" Probabilities</h3>
+            <p>This is the clever part. How do we find the value of the option at a node *before* the end? We can't just average the two future possibilities, because an up-move might be more or less likely than a down-move. The model constructs a special "risk-neutral probability" `p` for an up-move. This isn't the real probability, but a mathematical tool that allows us to find the correct price.
+            <br><br>
+            The value of the option at any node is the **discounted expected value** of the two possible future nodes.
+            <br>
+            <code>Value_today = (p * Value_up + (1-p) * Value_down) / (1 + r)</code>
+            <br>
+            We take the weighted average of the two future values and then "discount" it back to the present using the risk-free interest rate `r`. The simulation applies this formula starting from the end of the tree and working backwards, node by node, until it reaches the start. The value at the very first node is the calculated fair price of the option today.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Model Parameters</h3>
+                <div class="control-group">
+                    <label>Initial Stock Price (S₀): <span id="s0-value">100</span></label>
+                    <input type="range" id="s0-slider" min="50" max="150" step="1" value="100">
+                </div>
+                <div class="control-group">
+                    <label>Strike Price (K): <span id="k-value">100</span></label>
+                    <input type="range" id="k-slider" min="50" max="150" step="1" value="100">
+                </div>
+                <div class="control-group">
+                    <label>Up-move factor (u): <span id="u-value">1.10</span></label>
+                    <input type="range" id="u-slider" min="1.01" max="1.3" step="0.01" value="1.10">
+                </div>
+                <div class="control-group">
+                    <label>Risk-free Rate (r %): <span id="r-value">5</span></label>
+                    <input type="range" id="r-slider" min="0" max="10" step="0.5" value="5">
+                </div>
+                 <div class="control-group">
+                    <label>Time Steps (N): <span id="n-value">5</span></label>
+                    <input type="range" id="n-slider" min="1" max="12" step="1" value="5">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Risk-Neutral Valuation</h3>
+            <p>The entire model is built on the principle of "no-arbitrage," which means there should be no opportunity for risk-free profit. This principle is used to derive the risk-neutral probability `p`.</p>
+            <p>The up-move `u` and down-move `d` factors are often derived from the stock's volatility `σ` and the length of a time step `Δt` (here, we set `Δt=1` for simplicity).</p>
+            <p><code>u = exp(σ * sqrt(Δt))</code> and <code>d = 1/u</code>.</p>
+            <p>The risk-neutral probability `p` is then calculated such that the expected return of the stock in the risk-neutral world equals the risk-free rate `r`.</p>
+            <p><code>p = (exp(r*Δt) - d) / (u - d)</code></p>
+            <h3>Backward Induction Formula</h3>
+            <p>The value of a European call option `f` at any node `(i, j)` (where `i` is the time step and `j` is the number of up-moves) is the discounted expected value of the option in the next time step.</p>
+            <p><code>f_i,j = exp(-r*Δt) * [ p * f_{i+1, j+1} + (1-p) * f_{i+1, j} ]</code></p>
+            <p>This process starts at the final time step `N`, where the option values are known from the payoff function:</p>
+            <p><code>f_N,j = max(0, S_N,j - K)</code></p>
+            <p>Where `S_N,j` is the stock price at the final node, given by `S₀ * u^j * d^(N-j)`.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+
+    let config = { S0: 100, K: 100, u: 1.1, r: 0.05, N: 5 };
+    let tree = [];
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        recalculate();
+    }
+
+    function recalculate() {
+        tree = [];
+        const N = config.N;
+        const d = 1 / config.u; // Ensure no arbitrage
+        const dt = 1; // Assume time to expiration T=N, so each step is 1 year
+        const R = Math.exp(config.r * dt);
+
+        const p = (R - d) / (config.u - d);
+        if (p < 0 || p > 1) {
+            // No-arbitrage condition violated
+            drawError();
+            return;
+        }
+
+        // Step 1: Build stock price tree
+        for (let i = 0; i <= N; i++) {
+            tree[i] = [];
+            for (let j = 0; j <= i; j++) {
+                const stockPrice = config.S0 * (config.u ** j) * (d ** (i - j));
+                tree[i][j] = { s: stockPrice, f: 0 };
+            }
+        }
+
+        // Step 2: Calculate option value at expiration
+        for (let j = 0; j <= N; j++) {
+            tree[N][j].f = Math.max(0, tree[N][j].s - config.K);
+        }
+
+        // Step 3: Work backwards through the tree
+        for (let i = N - 1; i >= 0; i--) {
+            for (let j = 0; j <= i; j++) {
+                const f_up = tree[i+1][j+1].f;
+                const f_down = tree[i+1][j].f;
+                const expected_f = p * f_up + (1 - p) * f_down;
+                tree[i][j].f = expected_f / R; // Discount back
+            }
+        }
+        draw();
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        if (tree.length === 0) return;
+
+        const N = config.N;
+        const x_step = width / (N + 1.5);
+
+        ctx.lineWidth = 1;
+        ctx.font = '12px Monospace';
+
+        for (let i = 0; i < N; i++) {
+            for (let j = 0; j <= i; j++) {
+                const y_step = height / (i + 2);
+                const x1 = i * x_step + 50;
+                const y1 = (j + 1) * y_step;
+
+                const y_step_next = height / (i + 3);
+                // Line to up-node
+                const x2_up = (i + 1) * x_step + 50;
+                const y2_up = (j + 1 + 1) * y_step_next;
+                ctx.strokeStyle = '#aaa';
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2_up, y2_up);
+                ctx.stroke();
+
+                // Line to down-node
+                const y2_down = (j + 1) * y_step_next;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2_up, y2_down);
+                ctx.stroke();
+            }
+        }
+
+        // Draw nodes
+        for (let i = 0; i <= N; i++) {
+            const y_step = height / (i + 2);
+            for (let j = 0; j <= i; j++) {
+                const node = tree[i][j];
+                const x = i * x_step + 50;
+                const y = (j + 1) * y_step;
+
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 35, 0, 2*Math.PI);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = 'bold 12px Monospace';
+                ctx.fillText(`S: ${node.s.toFixed(2)}`, x, y - 8);
+                ctx.font = '12px Monospace';
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+                ctx.fillText(`f: ${node.f.toFixed(2)}`, x, y + 10);
+            }
+        }
+    }
+
+    function drawError() {
+        const { width, height } = canvas;
+        ctx.clearRect(0,0,width,height);
+        ctx.fillStyle = 'red';
+        ctx.textAlign = 'center';
+        ctx.font = '16px Arial';
+        ctx.fillText("Arbitrage opportunity exists!", width/2, height/2 - 10);
+        ctx.fillText("Model is invalid. Ensure e^r is between d and u.", width/2, height/2 + 10);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        const sliders = ['s0', 'k', 'u', 'r', 'n'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', e => {
+                let key = id.toUpperCase();
+                if (id === 's0') key = 'S0';
+                if (id === 'r') config[key] = parseFloat(e.target.value) / 100;
+                else config[key] = parseFloat(e.target.value);
+
+                document.getElementById(`${id}-value`).textContent = e.target.value;
+                recalculate();
+            });
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); recalculate(); }
+
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation: Traffic Flow and Jamitons</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --text-color: #333;
+            --header-color: #d35400;
+            --control-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --accent-color: #e67e22;
+            --accent-light: #fdf3e6;
+        }
+
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --header-color: #f39c12;
+            --control-bg: #34495e;
+            --border-color: #4a627a;
+            --accent-color: #e67e22;
+            --accent-light: #4e4a42;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; margin-bottom: 0; }
+        .subtitle { text-align: center; font-style: italic; margin-bottom: 10px; opacity: 0.8; }
+        .meta-bar { text-align: center; font-size: 0.8em; color: #7f8c8d; margin-bottom: 20px; }
+
+        .section { margin-bottom: 40px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+
+        .simulation-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .main-content {
+            flex: 2;
+            min-width: 300px;
+        }
+
+        .controls {
+            flex: 1;
+            min-width: 280px;
+            background: var(--accent-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .canvas-container {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--border-color);
+            background-color: #ccc;
+        }
+
+        #spacetime-canvas {
+            image-rendering: pixelated; /* Keep pixels sharp */
+        }
+
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #d35400; }
+
+        .preset-buttons button { background-color: #27ae60; }
+        .preset-buttons button:hover { background-color: #229954; }
+
+        .performance-meter {
+            font-size: 0.9em;
+            background: var(--accent-light);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--accent-light); }
+        code { font-family: 'Courier New', Courier, monospace; background-color: var(--accent-light); padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulation: Traffic Flow and Jamitons</h1>
+        <p class="subtitle">Why traffic jams form spontaneously, based on the Nagel-Schreckenberg model.</p>
+        <div class="meta-bar">
+            Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 30 KB
+            <button id="theme-toggle" style="float:right;">Toggle Dark Mode</button>
+        </div>
+    </header>
+
+    <section class="section">
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Ever been stuck in a "phantom" traffic jam that seems to have no cause, like an accident or a lane closure? This simulation shows how such jams can form all by themselves. We model a circular road as a line of cells, each of which can hold one car. Each car follows a few simple, common-sense rules: try to speed up, don't hit the car in front, and occasionally, hesitate or brake randomly. By simulating hundreds of cars all following these rules, we can see how a single, random hesitation can trigger a chain reaction, creating a wave of stopped cars that travels backward—a "jamiton"—even as every car is trying to move forward.
+        </p>
+    </section>
+
+    <section class="section">
+        <h2>Beginner's Guide</h2>
+        <p>This simulation uses a type of simple computer model called a "cellular automaton." Here's how it works.</p>
+
+        <h3>1. The Road and Cars</h3>
+        <p>The top canvas shows a long, circular road that has been wrapped into several lanes to fit on the screen. Each colored rectangle is a car. The road itself is just a series of discrete spaces, or "cells." A car's color tells you its speed: green is fast, yellow is slowing down, and red is stopped.</p>
+
+        <h3>2. The Four Simple Rules of Driving</h3>
+        <p>At every tick of the simulation clock, every single car makes its decisions based on four simple rules, in order:</p>
+        <ol>
+            <li><strong>Rule 1: Accelerate.</strong> If you're not at the speed limit (<code>v_max</code>), press the gas. Increase your speed by 1.</li>
+            <li><strong>Rule 2: Avoid Collisions.</strong> Look ahead. Count the number of empty spaces (`d`) between you and the next car. If your current speed is greater than that distance, you're going to crash! Hit the brakes and slow down so your speed is exactly the number of empty spaces.</li>
+            <li><strong>Rule 3: Randomly Hesitate.</strong> With a small probability (<code>p_brake</code>), you might get distracted, be overly cautious, or just randomly tap the brakes. If you are moving, there's a chance your speed will decrease by 1. <strong>This is the most important rule for creating jams!</strong></li>
+            <li><strong>Rule 4: Move.</strong> Move forward by the number of cells equal to your final speed from the previous steps.</li>
+        </ol>
+        <p>The simulation applies these four rules to every car, then updates the road and repeats. That's it!</p>
+
+        <h3>3. How Jams Form</h3>
+        <p>At low car densities, everyone can mostly drive at full speed. But as you increase the density, the cars get closer together. Now, when one car randomly hesitates (Rule 3), it forces the car behind it to brake sharply to avoid a collision (Rule 2). This, in turn, forces the car behind *that* one to brake, and so on. A chain reaction occurs, creating a cluster of slow or stopped cars—a traffic jam.</p>
+
+        <h3>4. The Space-Time Diagram</h3>
+        <p>The bottom canvas is a scientific tool for seeing the "big picture."
+        <ul>
+            <li>The **horizontal axis** is the position on the road.</li>
+            <li>The **vertical axis** is time, with the present moment at the bottom, scrolling upwards.</li>
+        </ul>
+        Each car traces a path through time and space. When traffic is moving freely, you see clean, parallel diagonal lines. When a jam forms, it appears as a thick, dark band. Watch closely: you'll see these bands tend to move from right to left, meaning the jam itself is propagating **backward**, opposite to the direction of traffic!</p>
+
+        <h3>Analogy: People in a Hallway</h3>
+        <p>Imagine a line of people walking down a narrow hallway, told to stay in single file. Everyone wants to walk at a brisk pace. But you must keep a safe distance from the person in front. Now, imagine one person randomly stumbles for a second. The person behind them has to stop short to avoid a collision. The person behind *them* then has to stop, and so on down the line. A "jam" has formed. Even after the first person who stumbled starts walking again, the wave of "stopping" continues to travel backward down the hallway. This is a jamiton.</p>
+    </section>
+
+    <section class="section">
+        <h2>Parameters & Controls</h2>
+        <div class="simulation-layout">
+            <div class="main-content">
+                <div class="canvas-container">
+                    <h4>Traffic View</h4>
+                    <canvas id="traffic-canvas" width="800" height="200"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <h4>Space-Time Diagram</h4>
+                    <canvas id="spacetime-canvas" width="800" height="400"></canvas>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="button-group">
+                    <button id="play-pause-btn">Pause</button>
+                    <button id="step-btn">Step</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="density-slider">Car Density: <span id="density-value">0.15</span></label>
+                    <input type="range" id="density-slider" min="0.01" max="0.5" step="0.01" value="0.15">
+                </div>
+
+                <div class="control-group">
+                    <label for="vmax-slider">Max Velocity (v_max): <span id="vmax-value">5</span></label>
+                    <input type="range" id="vmax-slider" min="1" max="10" step="1" value="5">
+                </div>
+
+                <div class="control-group">
+                    <label for="pbrake-slider">Brake Probability (p_brake): <span id="pbrake-value">0.2</span></label>
+                    <input type="range" id="pbrake-slider" min="0" max="1" step="0.05" value="0.2">
+                </div>
+
+                <div class="control-group preset-buttons">
+                    <h3>Presets</h3>
+                    <div class="button-group">
+                        <button id="preset-free">Free Flow</button>
+                        <button id="preset-jams">Jam Waves</button>
+                        <button id="preset-gridlock">Gridlock</button>
+                    </div>
+                </div>
+
+                <div class="performance-meter">
+                    <div>Time Step: <span id="time-step-value">0</span></div>
+                    <div>Avg. Velocity: <span id="avg-velocity-value">0.00</span></div>
+                    <div>Flow (cars/step): <span id="flow-value">0.00</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Micro-Experiments</h2>
+        <ol>
+            <li><strong>The Onset of Jams:</strong> Apply the "Free Flow" preset (low density). Notice the high average velocity and smooth lines in the space-time diagram. Pause the simulation. Slowly increase the "Car Density" slider. At what density value do you first start to see red "stopped" cars and the dark, backward-propagating waves in the space-time diagram? This is the critical density.</li>
+            <li><strong>The Importance of Randomness:</strong> Set the density to a high value like 0.3. Now set "Brake Probability" to <strong>0</strong>. Click Reset. The cars should organize themselves into a "perfect" high-speed flow with no jams. Now, increase the probability to just 0.1. Watch how this tiny bit of randomness is enough to trigger system-wide traffic jams.</li>
+            <li><strong>Jam Wave Speed:</strong> In a jammed state, pause the simulation. In the space-time diagram, identify the top edge of a dark jam wave. Click "Step" 10 times. Observe how far to the left (backward) the wave has moved. This is the wave propagation speed. Now look at the cars themselves; they are all moving, however slowly, to the right (forward).</li>
+            <li><strong>Effect of Speed Limit:</strong> Set up a "Jam Waves" state. Note the average velocity. Now, increase `v_max` from 5 to 10. Does the average speed of traffic actually increase, or do the jams just become more severe? This mimics how raising the speed limit doesn't always reduce commute times if density is high.</li>
+        </ol>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Element Cache ---
+    const elements = {
+        trafficCanvas: document.getElementById('traffic-canvas'),
+        spacetimeCanvas: document.getElementById('spacetime-canvas'),
+        playPauseBtn: document.getElementById('play-pause-btn'),
+        stepBtn: document.getElementById('step-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        densitySlider: document.getElementById('density-slider'),
+        densityValue: document.getElementById('density-value'),
+        vmaxSlider: document.getElementById('vmax-slider'),
+        vmaxValue: document.getElementById('vmax-value'),
+        pbrakeSlider: document.getElementById('pbrake-slider'),
+        pbrakeValue: document.getElementById('pbrake-value'),
+        presetFree: document.getElementById('preset-free'),
+        presetJams: document.getElementById('preset-jams'),
+        presetGridlock: document.getElementById('preset-gridlock'),
+        timeStepValue: document.getElementById('time-step-value'),
+        avgVelocityValue: document.getElementById('avg-velocity-value'),
+        flowValue: document.getElementById('flow-value'),
+        themeToggle: document.getElementById('theme-toggle'),
+    };
+
+    const trafficCtx = elements.trafficCanvas.getContext('2d');
+    const spacetimeCtx = elements.spacetimeCanvas.getContext('2d');
+
+    // --- Simulation State ---
+    let simState = {
+        isRunning: true,
+        animationFrameId: null,
+        road: [],
+        cars: [],
+        timeStep: 0,
+        roadLength: 800,
+        numLanes: 10,
+        cellWidth: 0,
+        cellHeight: 0,
+    };
+
+    // --- Simulation Parameters ---
+    let params = {
+        density: 0.15,
+        v_max: 5,
+        p_brake: 0.2,
+    };
+
+    const velocityColors = ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#27ae60', '#16a085', '#1abc9c', '#3498db', '#2980b9', '#8e44ad', '#9b59b6'];
+
+    function initSimulation() {
+        simState.timeStep = 0;
+        simState.road = new Array(simState.roadLength).fill(-1);
+        simState.cars = [];
+
+        const numCars = Math.floor(params.density * simState.roadLength);
+        let placedCars = 0;
+        while (placedCars < numCars) {
+            const pos = Math.floor(Math.random() * simState.roadLength);
+            if (simState.road[pos] === -1) {
+                const car = { pos, vel: Math.floor(Math.random() * params.v_max) };
+                simState.cars.push(car);
+                simState.road[pos] = car;
+                placedCars++;
+            }
+        }
+
+        // Sort cars by position to process them in order
+        simState.cars.sort((a, b) => a.pos - b.pos);
+
+        // Setup canvas sizes
+        const trafficCanvasWidth = elements.trafficCanvas.clientWidth;
+        simState.cellWidth = trafficCanvasWidth / (simState.roadLength / simState.numLanes);
+        simState.cellHeight = elements.trafficCanvas.height / simState.numLanes;
+
+        // Clear spacetime diagram
+        spacetimeCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
+        spacetimeCtx.fillRect(0, 0, elements.spacetimeCanvas.width, elements.spacetimeCanvas.height);
+    }
+
+    function simulationStep() {
+        // --- Rules application ---
+        // 1. Acceleration & 2. Braking
+        for (let i = 0; i < simState.cars.length; i++) {
+            const car = simState.cars[i];
+            const nextCarIndex = (i + 1) % simState.cars.length;
+            const nextCar = simState.cars[nextCarIndex];
+
+            let distance = (nextCar.pos - car.pos - 1 + simState.roadLength) % simState.roadLength;
+
+            // Rule 1: Accelerate
+            car.vel = Math.min(car.vel + 1, params.v_max);
+            // Rule 2: Decelerate
+            car.vel = Math.min(car.vel, distance);
+        }
+
+        // 3. Randomization
+        for (const car of simState.cars) {
+            if (Math.random() < params.p_brake) {
+                car.vel = Math.max(car.vel - 1, 0);
+            }
+        }
+
+        // 4. Movement
+        simState.road.fill(-1);
+        let totalVelocity = 0;
+        for (const car of simState.cars) {
+            car.pos = (car.pos + car.vel + simState.roadLength) % simState.roadLength;
+            simState.road[car.pos] = car;
+            totalVelocity += car.vel;
+        }
+
+        simState.cars.sort((a, b) => a.pos - b.pos);
+        simState.timeStep++;
+
+        // Update stats
+        const avgVelocity = totalVelocity / simState.cars.length;
+        const flow = avgVelocity * params.density;
+        elements.timeStepValue.textContent = simState.timeStep;
+        elements.avgVelocityValue.textContent = avgVelocity.toFixed(2);
+        elements.flowValue.textContent = flow.toFixed(2);
+    }
+
+    function draw() {
+        // Draw Traffic
+        const laneLength = simState.roadLength / simState.numLanes;
+        trafficCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--control-bg');
+        trafficCtx.fillRect(0, 0, elements.trafficCanvas.width, elements.trafficCanvas.height);
+
+        for (let i = 0; i < simState.roadLength; i++) {
+            if (simState.road[i] !== -1) {
+                const car = simState.road[i];
+                const lane = Math.floor(i / laneLength);
+                const posInLane = i % laneLength;
+
+                const x = posInLane * simState.cellWidth;
+                const y = lane * simState.cellHeight;
+
+                trafficCtx.fillStyle = velocityColors[Math.min(car.vel, velocityColors.length - 1)];
+                trafficCtx.fillRect(x, y, simState.cellWidth - 1, simState.cellHeight - 1);
+            }
+        }
+
+        // Draw Spacetime Diagram
+        const stHeight = elements.spacetimeCanvas.height;
+        const stWidth = elements.spacetimeCanvas.width;
+        // Shift existing image up
+        spacetimeCtx.drawImage(elements.spacetimeCanvas, 0, 0, stWidth, stHeight - 1);
+
+        // Draw new line at the bottom
+        const carColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        const emptyColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
+
+        const imageData = spacetimeCtx.createImageData(stWidth, 1);
+        for (let i = 0; i < stWidth; i++) {
+            const roadIndex = Math.floor(i * simState.roadLength / stWidth);
+            const isCar = simState.road[roadIndex] !== -1;
+            const color = isCar ? carColor : emptyColor;
+            // A bit of a hack to set pixel color
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            imageData.data[i * 4 + 0] = r;
+            imageData.data[i * 4 + 1] = g;
+            imageData.data[i * 4 + 2] = b;
+            imageData.data[i * 4 + 3] = 255;
+        }
+        spacetimeCtx.putImageData(imageData, 0, stHeight - 1);
+    }
+
+    function gameLoop() {
+        if (!simState.isRunning) return;
+
+        simulationStep();
+        draw();
+
+        simState.animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function start() {
+        if (simState.isRunning) return;
+        simState.isRunning = true;
+        elements.playPauseBtn.textContent = 'Pause';
+        gameLoop();
+    }
+
+    function pause() {
+        if (!simState.isRunning) return;
+        simState.isRunning = false;
+        elements.playPauseBtn.textContent = 'Play';
+        cancelAnimationFrame(simState.animationFrameId);
+    }
+
+    function togglePlayPause() {
+        if (simState.isRunning) pause();
+        else start();
+    }
+
+    function doStep() {
+        pause();
+        simulationStep();
+        draw();
+    }
+
+    function reset() {
+        pause();
+        updateParamsFromUI();
+        initSimulation();
+        draw();
+        start();
+    }
+
+    function updateParamsFromUI() {
+        params.density = parseFloat(elements.densitySlider.value);
+        params.v_max = parseInt(elements.vmaxSlider.value);
+        params.p_brake = parseFloat(elements.pbrakeSlider.value);
+
+        elements.densityValue.textContent = params.density.toFixed(2);
+        elements.vmaxValue.textContent = params.v_max;
+        elements.pbrakeValue.textContent = params.p_brake.toFixed(2);
+    }
+
+    // --- Event Listeners ---
+    elements.playPauseBtn.addEventListener('click', togglePlayPause);
+    elements.stepBtn.addEventListener('click', doStep);
+    elements.resetBtn.addEventListener('click', reset);
+
+    elements.densitySlider.addEventListener('input', updateParamsFromUI);
+    elements.vmaxSlider.addEventListener('input', updateParamsFromUI);
+    elements.pbrakeSlider.addEventListener('input', updateParamsFromUI);
+
+    elements.densitySlider.addEventListener('change', reset);
+    elements.vmaxSlider.addEventListener('change', reset);
+    elements.pbrakeSlider.addEventListener('change', reset);
+
+    // Presets
+    const presets = {
+        free: { density: 0.1, v_max: 5, p_brake: 0.1 },
+        jams: { density: 0.2, v_max: 5, p_brake: 0.3 },
+        gridlock: { density: 0.35, v_max: 5, p_brake: 0.5 },
+    };
+
+    function applyPreset(p) {
+        elements.densitySlider.value = p.density;
+        elements.vmaxSlider.value = p.v_max;
+        elements.pbrakeSlider.value = p.p_brake;
+        reset();
+    }
+
+    elements.presetFree.addEventListener('click', () => applyPreset(presets.free));
+    elements.presetJams.addEventListener('click', () => applyPreset(presets.jams));
+    elements.presetGridlock.addEventListener('click', () => applyPreset(presets.gridlock));
+
+    elements.themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        // Redraw spacetime background on theme change
+        spacetimeCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-color');
+        spacetimeCtx.fillRect(0, 0, elements.spacetimeCanvas.width, elements.spacetimeCanvas.height);
+    });
+
+    // --- Initial Setup ---
+    updateParamsFromUI();
+    initSimulation();
+    draw();
+    start();
+});
+</script>
+
+</body>
+</html>
