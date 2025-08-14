@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativity: Geodesics on a Curved Surface</title>
+    <style>
+        /* Basic Theme & Variables */
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --primary-hover-color: #0056b3;
+            --secondary-bg-color: #ffffff;
+            --header-bg-color: #e9ecef;
+            --border-color: #dee2e6;
+            --code-bg-color: #e8eaed;
+            --link-color: #0056b3;
+            --text-muted-color: #6c757d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* High Contrast Theme */
+        body.high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #ffff00;
+            --primary-hover-color: #e6e600;
+            --secondary-bg-color: #1a1a1a;
+            --header-bg-color: #1a1a1a;
+            --border-color: #ffffff;
+            --code-bg-color: #333333;
+            --link-color: #ffff00;
+            --text-muted-color: #aaaaaa;
+        }
+
+        body.high-contrast button, body.high-contrast select {
+            color: #000000; /* Black text on yellow buttons for contrast */
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header, section, details {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--secondary-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        header {
+             background-color: var(--header-bg-color);
+             border: none;
+        }
+
+        main {
+            margin-top: 1rem;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 1rem;
+            color: var(--text-muted-color);
+        }
+
+        #metadata-bar {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted-color);
+        }
+
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            background-color: var(--code-bg-color);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--header-bg-color);
+        }
+
+        /* Simulation Area */
+        #canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        #main-canvas {
+            border: 1px solid var(--border-color);
+            background-color: #fff;
+            cursor: crosshair;
+        }
+
+        body.high-contrast #main-canvas {
+            background-color: #111; /* Dark background for canvas in high contrast */
+        }
+
+        /* Controls */
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background: var(--header-bg-color);
+            border-radius: 8px;
+        }
+
+        button, select {
+            padding: 10px 15px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover, select:hover {
+            background-color: var(--primary-hover-color);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            #controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* Developer Console */
+        #developer-console-container {
+            background-color: var(--header-bg-color);
+        }
+
+        #developer-console {
+            background-color: #fff;
+            color: #333;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            height: 150px;
+            overflow-y: scroll;
+            font-family: monospace;
+            font-size: 0.9em;
+            resize: vertical;
+        }
+        body.high-contrast #developer-console {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border-color: var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Relativity: Geodesics on a Curved Surface</h1>
+            <p class="subtitle">Visualizing the "straightest possible" lines on curved 2D spaces.</p>
+            <div id="metadata-bar">
+                <span>Est. runtime: N/A</span> |
+                <span>Recommended device: Desktop</span> |
+                <span>Approx. HTML size: <span id="html-size">~150</span> KB</span>
+            </div>
+        </header>
+
+        <div id="suggestion-box">
+            <!-- Suggestions will be added later -->
+        </div>
+
+        <main>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>
+                    A geodesic is the shortest possible path between two points on a curved surface, the equivalent of a "straight line" in a flat world. We intuitively know how to find the shortest path on a flat map, but on a sphere or a saddle-shaped surface, the path of shortest distance bends and curves in interesting ways. This simulation lets you explore these paths on different surfaces. In Albert Einstein's theory of General Relativity, planets, stars, and even light rays travel along geodesics not of a 2D surface, but of a curved 4D spacetime, which is why understanding them is fundamental to understanding our universe.
+                </p>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide: What is a "Straight" Line?</h2>
+                <p>
+                    Welcome! This guide will walk you through the concept of geodesics step-by-step. By the end, you'll have a strong intuition for one of the most important ideas in geometry and physics.
+                </p>
+
+                <h3>Step 1: The World You Know - Flat Space</h3>
+                <p>
+                    Imagine you're standing in an empty, flat parking lot. If you want to walk from one spot to another, what's the shortest path? A perfectly straight line, of course. You don't need a fancy GPS or complex math to know this. This is our baseline: in a flat, "Euclidean" space, the shortest path is a straight line.
+                </p>
+
+                <h3>Step 2: The World We Live On - A Curved Sphere</h3>
+                <p>
+                    But what if the surface isn't flat? We live on the Earth, which is (almost) a sphere. Let's say you want to fly a plane from New York to London. If you look at a flat map of the world (like the common Mercator projection), you might be tempted to draw a straight line between the two cities. However, that is <strong>not</strong> the shortest path!
+                </p>
+                <p>
+                    Because the Earth is curved, the shortest path is actually an arc that seems to bulge "upwards" on a flat map. This path is part of a **great circle**—a circle on the sphere whose center is also the center of the sphere. All lines of longitude are great circles, and the equator is a great circle. These are the "straightest possible" lines on a sphere. We call these paths **geodesics**.
+                </p>
+
+                <h3>Step 3: An Everyday Analogy - The Taut String</h3>
+                <p>
+                    Here’s a simple way to visualize this. Get a ball or an orange. Pick two points on it. Now, take a piece of string and stretch it as tight as you can between those two points, making sure the string stays on the surface of the ball. The path that the taut string traces is the geodesic! It's the shortest possible route an ant could take to walk from one point to the other. You can see that this path is curved in 3D space, but for the ant living on the 2D surface of the ball, it's the most direct route.
+                </p>
+
+                <h3>Step 4: Using the Simulator - Your First Geodesic</h3>
+                <p>
+                    Let's see this in action. The main window of this simulation shows a 3D view of a surface. By default, it's a sphere.
+                </p>
+                <ol>
+                    <li><strong>Explore the surface:</strong> Click and drag your mouse on the sphere to rotate it. Use your mouse wheel to zoom in and out. Get a feel for the 3D object.</li>
+                    <li><strong>Select two points:</strong> Move your mouse over the wireframe grid. You'll see a light blue circle highlighting the closest point (vertex) on the grid. Click to select your first point (it will turn red).</li>
+                    <li><strong>Select a second point:</strong> Click on another location on the sphere. This second point will turn green. You have now defined the start and end of your path.</li>
+                    <li><strong>Calculate the path:</strong> Click the <strong>"Calculate Geodesic"</strong> button. A thick blue line will appear, tracing the shortest path between your two points along the surface. This is the great circle route!</li>
+                </ol>
+
+                <h3>Step 5: The "Embedding Space" Illusion</h3>
+                <p>
+                    Now for a crucial concept. Check the box that says <strong>"Show Straight Line Path"</strong>. An orange, dashed line appears. This line goes *through the inside* of the sphere.
+                </p>
+                <p>
+                    This orange line is the shortest path in the 3D "embedding" space that the sphere lives in. But for our ant (or an airplane) that is constrained to travel *on the surface*, this path is impossible. The blue geodesic line is the shortest path that is physically possible while staying on the surface. This distinction is key to understanding curved spaces.
+                </p>
+
+                <h3>Step 6: A Different Kind of Curve - The Saddle</h3>
+                <p>
+                    Not all curves are like spheres. In the "Surface Type" dropdown, select <strong>"Saddle"</strong>. This shape has what's called "negative curvature." It curves up in one direction and down in another, like a Pringles chip or a horse's saddle.
+                </p>
+                <p>
+                    Try picking two points on this surface and calculating the geodesic. Notice how the path behaves differently. Instead of wrapping around a central point, geodesics on a saddle surface tend to curve away from the "hump." This is a hallmark of negatively curved spaces.
+                </p>
+
+                <h3>Step 7: A Visualization Analogy - The Locked Steering Wheel</h3>
+                <p>
+                    Imagine you have a tiny remote-controlled car, but its steering wheel is locked, so it can only ever drive "straight."
+                </p>
+                <ul>
+                    <li>If you drive this car on a flat parking lot, it travels in a straight line forever.</li>
+                    <li>If you place it on a sphere and give it a push, it will travel along a great circle, eventually returning to where it started. From its perspective, it went perfectly straight the whole time!</li>
+                    <li>If you place it on the saddle surface, its path will look very different. Depending on its starting direction, it might fly off in one direction or curve gently over the saddle in another.</li>
+                </ul>
+                <p>
+                    The path this car takes on any surface is the geodesic. It's the trajectory defined by always moving forward without turning "left" or "right" relative to the surface it's on.
+                </p>
+
+                <h3>Conclusion: Why Does This Matter?</h3>
+                <p>
+                    Geodesics are not just a mathematical curiosity. According to Einstein's General Relativity, gravity is not a force, but a manifestation of the curvature of spacetime. Massive objects like the Sun warp the fabric of spacetime around them. Planets like the Earth are not being "pulled" by the Sun; they are simply following a geodesic—the straightest possible path—through that curved spacetime. The "orbit" we see is the result of that motion. So, by playing with this simulation, you're exploring the very same geometric principles that govern the dance of planets and galaxies.
+                </p>
+            </section>
+
+            <section id="parameters-summary">
+                <h2>Parameters & Controls</h2>
+                <p>This simulation has a few simple controls to let you explore geodesics.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Control</th>
+                            <th>Type</th>
+                            <th>Options</th>
+                            <th>Default</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Surface Type</td>
+                            <td>Dropdown</td>
+                            <td>Sphere, Saddle</td>
+                            <td>Sphere</td>
+                            <td>Switches between a positively curved sphere and a negatively curved saddle surface.</td>
+                        </tr>
+                        <tr>
+                            <td>Calculate Geodesic</td>
+                            <td>Button</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td>Calculates and displays the shortest path (geodesic) between the two selected points.</td>
+                        </tr>
+                        <tr>
+                            <td>Reset</td>
+                            <td>Button</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td>Clears the selected points and any calculated geodesic path from the view.</td>
+                        </tr>
+                        <tr>
+                            <td>Show Straight Line</td>
+                            <td>Checkbox</td>
+                            <td>On/Off</td>
+                            <td>Off</td>
+                            <td>Toggles a dashed line showing the (impossible) path through the 3D embedding space.</td>
+                        </tr>
+                         <tr>
+                            <td>Surface Detail</td>
+                            <td>Constant</td>
+                            <td>20</td>
+                            <td>N/A</td>
+                            <td>The number of grid lines used to draw the surface. Hardcoded to <strong>20</strong> for performance.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <div id="canvas-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+                <div id="controls">
+                    <label for="surface-type">Surface Type:</label>
+                    <select id="surface-type" title="Select the curved surface type (Sphere or Saddle)" aria-label="Select surface type">
+                        <option value="sphere" selected>Sphere</option>
+                        <option value="saddle">Saddle</option>
+                    </select>
+                    <button id="calculate-geodesic" title="Calculate the geodesic path (Shortcut: C)" aria-label="Calculate geodesic path">Calculate Geodesic</button>
+                    <button id="reset-selection" title="Reset selection and path (Shortcut: R)" aria-label="Reset selection and path">Reset</button>
+                    <div class="control-group">
+                        <input type="checkbox" id="show-straight-line" name="show-straight-line" aria-label="Toggle straight line comparison path">
+                        <label for="show-straight-line" title="Show the direct straight line in 3D space for comparison">Show Straight Line Path</label>
+                    </div>
+                </div>
+            </section>
+
+            <section id="examples">
+                <h2>Try These Examples</h2>
+                <p>Click a button to load a preset scenario and see how the geodesic behaves.</p>
+                <div id="preset-controls" class="controls">
+                    <button id="preset-1">Sphere: A Trip Along the Equator</button>
+                    <button id="preset-2">Sphere: North Pole to Equator</button>
+                    <button id="preset-3">Saddle: Across the Valley</button>
+                </div>
+                <div id="preset-description">
+                    <p><em>Select a preset to see a description here.</em></p>
+                </div>
+            </section>
+
+            <section id="walkthroughs">
+                <h2>Worked Walkthroughs</h2>
+                <!-- Walkthroughs will be added later -->
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory: The Math of Straight Lines</h2>
+                <p>
+                    How does the simulation actually calculate the shortest path? It uses two different methods, one exact for the sphere and one numerical approximation for the saddle.
+                </p>
+
+                <h3>The Geodesic Equation</h3>
+                <p>
+                    In formal terms, a geodesic is a path whose "acceleration vector" is always perfectly perpendicular to the surface. This means that from the perspective of someone on the surface, the path is not accelerating to the left or right—it's going "straight." This condition gives rise to a set of differential equations called the geodesic equations. Solving them can be complex, so we use techniques suited to our specific shapes.
+                </p>
+
+                <h3>Method 1 (Sphere): Spherical Linear Interpolation (Slerp)</h3>
+                <p>
+                    For a sphere, the geodesic is an arc of a great circle. Luckily, there's a direct and elegant formula for this called Spherical Linear Interpolation, or "Slerp". It's used everywhere in computer graphics for smooth rotations.
+                </p>
+                <p>
+                    Given two points on the sphere, <code>p1</code> and <code>p2</code> (represented as vectors from the center), any intermediate point <code>P(t)</code> on the great circle arc between them is given by:
+                </p>
+                <code>P(t) = [sin((1-t) * &Omega;) / sin(&Omega;)] * p1 + [sin(t * &Omega;) / sin(&Omega;)] * p2</code>
+                <ul>
+                    <li><code>t</code> is the fraction of the way along the arc (from 0 to 1).</li>
+                    <li><code>&Omega;</code> (Omega) is the angle between the vectors <code>p1</code> and <code>p2</code>. We find it using the dot product: <code>&Omega; = acos(p1 &middot; p2)</code>.</li>
+                </ul>
+                <p>
+                    <strong>In Plain English:</strong> This formula is just a special kind of weighted average. Instead of a simple linear average, it weights <code>p1</code> and <code>p2</code> using sine functions based on the angle between them. This ensures the resulting path travels at a constant speed along the great circle arc, not a straight line through the sphere's interior. This is what the simulator's <code>calculateSphereGeodesic()</code> function implements.
+                </p>
+
+                <h3>Method 2 (Saddle): Numerical Relaxation</h3>
+                <p>
+                    For more general surfaces like the saddle, a direct formula is often impossible. Instead, we use a numerical approximation. This simulation uses a **relaxation method**, which works like stretching an elastic band over the surface.
+                </p>
+                <ol>
+                    <li><strong>Initialize:</strong> First, we create a "dumb" path by making a straight line of N points in 3D space between our start and end points. We then "snap" each of these points onto the saddle surface. This initial path is not the geodesic.</li>
+                    <li><strong>Iterate and Relax:</strong> We then loop many times (e.g., 100 iterations). In each loop, we go through every *internal* point (not the start and end). For a point <code>P<sub>i</sub></code>, we look at its neighbors, <code>P<sub>i-1</sub></code> and <code>P<sub>i+1</sub></code>.</li>
+                    <li><strong>Move and Project:</strong> We find the midpoint of the line segment connecting the neighbors. This new position is "straighter" than the old one. We then "project" this new position back onto the saddle surface.</li>
+                </ol>
+                <p>
+                    By repeatedly averaging each point with its neighbors and snapping it back to the surface, the entire path gradually "relaxes" and pulls itself taut, shortening its length until it settles into a close approximation of the true geodesic.
+                </p>
+            </section>
+
+            <section id="advanced-notes">
+                <h2>Advanced Notes & Extensions</h2>
+
+                <h3>Numerical Stability</h3>
+                <p>
+                    The relaxation method used for the saddle is simple and intuitive, but it's not the most robust. For highly curved or complex surfaces, it might converge slowly, "get stuck" in a local minimum (a path that's short, but not the *shortest*), or oscillate without settling down. More advanced techniques in computational geometry use energy minimization or solve the differential equations of motion directly.
+                </p>
+
+                <h3>Possible Extensions</h3>
+                <p>
+                    Want to take this simulation further? Here are some ideas:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Add a New Surface:</strong> You could add a torus (a donut shape). To do this, you would need to implement two new functions in the JavaScript code:
+                        <ol>
+                            <li>A <code>generateTorus()</code> function that creates the vertices and edges using the parametric equations for a torus.</li>
+                            <li>A <code>projectPointToTorus()</code> function. This is the tricky part! Unlike the saddle, there isn't a simple formula to find the closest point on a torus surface to an arbitrary point in 3D space, so this would require a more complex numerical search.</li>
+                        </ol>
+                    </li>
+                    <li>
+                        <strong>Implement a Different Solver:</strong> You could replace the relaxation solver with a more sophisticated one. A "shooting method," for example, involves "shooting" a path out from the starting point in various directions until you find one that hits the target end point.
+                    </li>
+                </ul>
+            </section>
+
+            <section id="analogies">
+                <h2>Analogies & Intuition</h2>
+                <p>Different ways to think about what a "straight line" on a curved surface really is.</p>
+
+                <h3>1. The Taut String (Physical Analogy)</h3>
+                <p>
+                    Imagine stretching a piece of elastic string between two points on a physical object, like a globe or a potato. The path the string takes when pulled taut is the geodesic. It physically minimizes its length to lower its tension, tracing out the shortest path.
+                </p>
+                <p>
+                    <strong>Limitations:</strong> This analogy works best for simple, convex shapes like a sphere. On a saddle, the string might pop off the surface into the embedding 3D space if not carefully guided. It also doesn't help understand paths that are locally straight but not globally shortest (like going the "long way around" a sphere).
+                </p>
+
+                <h3>2. The Headlight Beam (Visualization Analogy)</h3>
+                <p>
+                    Picture a tiny car or a train engine constrained to move on the surface. It has a powerful, perfectly straight headlight beam. The rule is that the car must always steer so that it follows its own headlight beam. The path it traces is a geodesic. It never "turns" relative to the path immediately ahead of it. On a sphere, this causes it to circle the globe. On a saddle, it might fly off to one side.
+                </p>
+                <p>
+                    <strong>Limitations:</strong> The concept of "not turning" relative to the surface can be hard to visualize, as the path is clearly turning from our 3D perspective. It's a conceptual tool to understand the local properties of the path.
+                </p>
+
+                <h3>3. The Chain of Springs (Computational Analogy)</h3>
+                <p>
+                    This analogy directly mirrors the relaxation algorithm used in the simulation. Imagine the path is a chain of beads, and each bead is connected to its two neighbors by a tiny spring. All the beads are constrained to lie on the surface. The springs will pull on the beads, trying to shorten the total length of the chain to minimize the system's potential energy. When the chain settles into a stable, low-energy state, its shape is the geodesic.
+                </p>
+                <p>
+                    <strong>Limitations:</strong> As with the relaxation algorithm itself, the chain could potentially get "stuck" in a configuration that isn't the true shortest path if the surface is very complex. It's a great model for how numerical approximations work.
+                </p>
+            </section>
+
+            <section id="faq">
+                <h2>FAQ & Troubleshooting</h2>
+                <dl>
+                    <dt>Why is the geodesic on a sphere a "great circle"?</dt>
+                    <dd>A great circle is the largest possible circle you can draw on a sphere. Its center is the same as the sphere's center. Any two points on a sphere (that aren't exactly opposite) define a unique great circle. This path has the least amount of curvature *from the perspective of the surface*, making it the straightest and shortest route.</dd>
+
+                    <dt>Is the geodesic always the SHORTEST path?</dt>
+                    <dd>Not necessarily! A geodesic is a path that is *locally* shortest, meaning any small deviation from it would be longer. But it's not always *globally* shortest. For example, the path from New York to London going the "long way" around the Earth is still a geodesic (it's on the same great circle), but it's obviously not the shortest route.</dd>
+
+                    <dt>What does this have to do with General Relativity again?</dt>
+                    <dd>Einstein's theory says that gravity isn't a force, but the result of spacetime being curved by mass and energy. Objects like planets and light rays simply follow their natural path—a geodesic—through this curved 4D spacetime. What we perceive as a curved "orbit" is actually the straightest possible line in that higher-dimensional curved space.</dd>
+
+                    <dt>Why can't I select a point on the surface?</dt>
+                    <dd>The selection tool "snaps" to the nearest intersection point (vertex) on the wireframe grid. Try to click on or very close to one of the grid lines. If you click in the middle of an empty square, it may not find a point to select.</dd>
+
+                    <dt>What does "negative curvature" mean?</dt>
+                    <dd>In simple terms, a surface with positive curvature (like a sphere) curves the same way in all directions, causing parallel lines to eventually meet. A surface with negative curvature (like a saddle) curves in opposite ways along different axes. This causes initially parallel geodesics to spread apart, or diverge.</dd>
+
+                    <dt>The "Share Preset" URL didn't copy to my clipboard.</dt>
+                    <dd>Some browsers restrict access to the clipboard for security. If the automatic copy fails, the full shareable URL will be printed in your browser's developer console. You can open the console (usually with F12 or Ctrl+Shift+I), find the URL, and copy it manually.</dd>
+                </dl>
+            </section>
+
+            <section id="performance-safety">
+                <h2>Performance & Safety</h2>
+                <div id="performance-meter">
+                    <!-- FPS and memory info will be displayed here -->
+                </div>
+                <div id="safety-warning" style="display:none; color: red;">
+                    <!-- Warning message for heavy computation -->
+                </div>
+            </section>
+
+            <section id="accessibility">
+                <h2>Accessibility</h2>
+                <button id="high-contrast-toggle">Toggle High Contrast</button>
+            </section>
+
+            <section id="export">
+                <h2>Export & Share</h2>
+                <div class="controls">
+                    <button id="export-png" title="Save the current view as a PNG image" aria-label="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" title="Save the current parameters to a JSON file" aria-label="Save current parameters to a JSON file">Export JSON</button>
+                    <button id="share-preset" title="Copy a shareable URL to your clipboard" aria-label="Copy a shareable URL to your clipboard">Share Preset</button>
+                </div>
+            </section>
+
+            <section id="quality-checks">
+                <div id="error-panel" style="display:none; color: red;">
+                    <!-- Self-check errors will be displayed here -->
+                </div>
+            </section>
+
+            <details id="developer-console-container">
+                <summary>Developer Console</summary>
+                <div id="developer-console">
+                    <!-- Runtime metrics and errors will be logged here -->
+                </div>
+            </details>
+
+        </main>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const App = {
+        // Properties
+        canvas: null,
+        ctx: null,
+        width: 0,
+        height: 0,
+
+        // 3D Engine state
+        camera: {
+            rotation: { x: 0.5, y: -0.5 },
+            zoom: 2.5,
+        },
+
+        scene: {
+            surfaceType: 'sphere',
+            vertices: [],
+            edges: [],
+            selectedPoints: [],
+            geodesicPath: [],
+        },
+
+        // User interaction state
+        mouse: {
+            isDown: false,
+            didDrag: false,
+            last: { x: 0, y: 0 },
+        },
+
+        hoveredPointIndex: null,
+
+        ui: {
+            showStraightLine: false,
+        },
+
+        // --- Core Methods ---
+        init() {
+            this.canvas = document.getElementById('main-canvas');
+            if (!this.canvas) {
+                console.error("Canvas element not found!");
+                return;
+            }
+            this.ctx = this.canvas.getContext('2d');
+            this.resizeCanvas();
+            window.addEventListener('resize', () => this.resizeCanvas());
+
+            this.addEventListeners();
+
+            this.log("3D engine initialized.");
+
+            this.setSurface(this.scene.surfaceType);
+
+            // Check for presets in URL
+            this.applyPresetFromURL();
+
+            // Start the render loop
+            this.renderLoop();
+        },
+
+        resizeCanvas() {
+            this.width = Math.min(window.innerWidth - 80, 800);
+            this.height = this.width * 0.75;
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+        },
+
+        addEventListeners() {
+            // Canvas listeners
+            this.canvas.addEventListener('mousedown', (e) => {
+                this.mouse.isDown = true;
+                this.mouse.didDrag = false;
+                this.mouse.last = { x: e.clientX, y: e.clientY };
+            });
+            this.canvas.addEventListener('mouseup', (e) => {
+                this.mouse.isDown = false;
+                if (!this.mouse.didDrag) {
+                    this.handleSelection(e);
+                }
+            });
+
+            this.canvas.addEventListener('mouseleave', () => {
+                this.mouse.isDown = false;
+                this.hoveredPointIndex = null;
+            });
+
+            this.canvas.addEventListener('mousemove', (e) => {
+                if (this.mouse.isDown) {
+                    this.mouse.didDrag = true;
+                    const dx = e.clientX - this.mouse.last.x;
+                    const dy = e.clientY - this.mouse.last.y;
+
+                    this.camera.rotation.y += dx * 0.005;
+                    this.camera.rotation.x += dy * 0.005;
+                    this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+
+                    this.mouse.last = { x: e.clientX, y: e.clientY };
+                } else {
+                    // Hover detection
+                    const rect = this.canvas.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    this.hoveredPointIndex = this.findClosestVertexToMouse(mouseX, mouseY);
+                }
+            });
+
+            // Zoom functionality
+            this.canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                this.camera.zoom -= e.deltaY * 0.005;
+                this.camera.zoom = Math.max(1.0, Math.min(10.0, this.camera.zoom));
+            });
+
+            // Control listeners
+            document.getElementById('surface-type').addEventListener('change', (e) => {
+                this.setSurface(e.target.value);
+            });
+            document.getElementById('calculate-geodesic').addEventListener('click', () => {
+                this.calculateGeodesic();
+            });
+            document.getElementById('reset-selection').addEventListener('click', () => {
+                this.reset();
+            });
+            document.getElementById('show-straight-line').addEventListener('change', (e) => {
+                this.ui.showStraightLine = e.target.checked;
+                this.log(`Show straight line: ${this.ui.showStraightLine}`);
+            });
+            document.getElementById('export-png').addEventListener('click', () => this.exportPNG());
+            document.getElementById('export-json').addEventListener('click', () => this.exportJSON());
+            document.getElementById('share-preset').addEventListener('click', () => this.sharePreset());
+
+            // Preset buttons
+            document.getElementById('preset-1').addEventListener('click', () => this.applyPreset('preset-1'));
+            document.getElementById('preset-2').addEventListener('click', () => this.applyPreset('preset-2'));
+            document.getElementById('preset-3').addEventListener('click', () => this.applyPreset('preset-3'));
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') {
+                    return; // Don't trigger shortcuts when typing in inputs
+                }
+                if (e.key.toLowerCase() === 'r') {
+                    this.reset();
+                }
+                if (e.key.toLowerCase() === 'c') {
+                    this.calculateGeodesic();
+                }
+            });
+        },
+
+        reset() {
+            this.scene.selectedPoints = [];
+            this.scene.geodesicPath = [];
+            this.log("Selection and path reset.");
+        },
+
+        handleSelection(e) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const selectedIndex = this.findClosestVertexToMouse(mouseX, mouseY);
+
+            if (selectedIndex !== null) {
+                const points = this.scene.selectedPoints;
+                // Avoid adding the same point twice
+                if (points.includes(selectedIndex)) return;
+
+                if (points.length < 2) {
+                    points.push(selectedIndex);
+                } else {
+                    points.shift(); // Remove the oldest point
+                    points.push(selectedIndex);
+                }
+                this.log(`Selected point index: ${selectedIndex}. Total selected: ${points.length}`);
+            }
+        },
+
+        findClosestVertexToMouse(mouseX, mouseY) {
+            let closestIndex = null;
+            let minDistanceSq = 30 * 30; // Max selection distance: 30px
+
+            // This relies on projectedVertices being up-to-date
+            if (!this.projectedVertices || this.projectedVertices.length === 0) {
+                return null;
+            }
+
+            this.projectedVertices.forEach((p, index) => {
+                // Only consider points facing the camera
+                if (p.d > -1) {
+                    const dx = p.x - mouseX;
+                    const dy = p.y - mouseY;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < minDistanceSq) {
+                        minDistanceSq = distSq;
+                        closestIndex = index;
+                    }
+                }
+            });
+
+            return closestIndex;
+        },
+
+        // --- Surface Generation ---
+        setSurface(type) {
+            this.reset();
+            this.scene.surfaceType = type;
+            this.log(`Generating surface: ${type}`);
+            let geometry;
+            if (type === 'sphere') {
+                geometry = this.generateSphere(1, 20);
+            } else if (type === 'saddle') {
+                geometry = this.generateSaddle(2, 20);
+            }
+            this.scene.vertices = geometry.vertices;
+            this.scene.edges = geometry.edges;
+        },
+
+        generateSphere(radius, detail) {
+            const vertices = [];
+            const edges = [];
+
+            // Generate vertices
+            for (let i = 0; i <= detail; i++) { // latitude
+                const phi = Math.PI * i / detail;
+                for (let j = 0; j <= detail; j++) { // longitude
+                    const theta = 2 * Math.PI * j / detail;
+                    const x = radius * Math.sin(phi) * Math.cos(theta);
+                    const y = radius * Math.cos(phi);
+                    const z = radius * Math.sin(phi) * Math.sin(theta);
+                    vertices.push([x, y, z]);
+                }
+            }
+
+            // Generate edges
+            const pointsPerRow = detail + 1;
+            for (let i = 0; i < detail; i++) {
+                for (let j = 0; j < detail; j++) {
+                    const p1 = i * pointsPerRow + j;
+                    const p2 = p1 + 1;
+                    const p3 = p1 + pointsPerRow;
+                    const p4 = p3 + 1;
+
+                    edges.push([p1, p2]);
+                    edges.push([p1, p3]);
+
+                    if (i === detail - 1) edges.push([p3, p4]);
+                    if (j === detail - 1) edges.push([p2, p4]);
+                }
+            }
+            return { vertices, edges };
+        },
+
+        generateSaddle(size, detail) {
+            const vertices = [];
+            const edges = [];
+            const step = size / detail;
+
+            // Generate vertices
+            for (let i = 0; i <= detail; i++) {
+                const v = -size / 2 + i * step;
+                for (let j = 0; j <= detail; j++) {
+                    const u = -size / 2 + j * step;
+                    vertices.push([u, v, (u*u - v*v) / size]);
+                }
+            }
+
+            // Generate edges
+            const pointsPerRow = detail + 1;
+            for (let i = 0; i < detail; i++) {
+                for (let j = 0; j < detail; j++) {
+                    const p1 = i * pointsPerRow + j;
+                    const p2 = p1 + 1;
+                    const p3 = p1 + pointsPerRow;
+
+                    edges.push([p1, p2]);
+                    edges.push([p1, p3]);
+                }
+            }
+            // Close the grid
+            for(let i = 0; i < detail; i++) {
+                edges.push([i * pointsPerRow + detail, (i + 1) * pointsPerRow + detail]);
+                edges.push([(detail * pointsPerRow) + i, (detail * pointsPerRow) + i + 1]);
+            }
+
+            return { vertices, edges };
+        },
+
+        // --- Geodesic Calculation ---
+        calculateGeodesic() {
+            if (this.scene.selectedPoints.length < 2) {
+                this.log("Please select 2 points to calculate a geodesic.");
+                alert("Please select 2 points to calculate a geodesic.");
+                return;
+            }
+
+            this.log(`Calculating geodesic for ${this.scene.surfaceType}...`);
+            let path = [];
+            if (this.scene.surfaceType === 'sphere') {
+                path = this.calculateSphereGeodesic();
+            } else if (this.scene.surfaceType === 'saddle') {
+                path = this.calculateSaddleGeodesic();
+            }
+            this.scene.geodesicPath = path;
+            this.log("Geodesic calculation complete.");
+        },
+
+        calculateSphereGeodesic() {
+            const p1_idx = this.scene.selectedPoints[0];
+            const p2_idx = this.scene.selectedPoints[1];
+            const p1 = this.scene.vertices[p1_idx];
+            const p2 = this.scene.vertices[p2_idx];
+
+            const angle = Math.acos(this.Vec3.dot(p1, p2));
+            const steps = 50;
+            const path = [];
+
+            if (Math.abs(angle) < 0.001) return [p1, p2];
+
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const sinAngle = Math.sin(angle);
+                const c1 = Math.sin((1 - t) * angle) / sinAngle;
+                const c2 = Math.sin(t * angle) / sinAngle;
+
+                const pt = this.Vec3.add(this.Vec3.scale(p1, c1), this.Vec3.scale(p2, c2));
+                path.push(this.Vec3.normalize(pt)); // Ensure points stay on the unit sphere
+            }
+            return path;
+        },
+
+        calculateSaddleGeodesic() {
+            const p1_idx = this.scene.selectedPoints[0];
+            const p2_idx = this.scene.selectedPoints[1];
+            const p1 = this.scene.vertices[p1_idx];
+            const p2 = this.scene.vertices[p2_idx];
+
+            const steps = 30; // Number of intermediate points
+            let path = [];
+
+            // Initialize path as a straight line in 3D space, then project to surface
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const interpPoint = this.Vec3.add(this.Vec3.scale(p1, 1 - t), this.Vec3.scale(p2, t));
+                path.push(this.projectPointToSaddle(interpPoint));
+            }
+
+            // Relaxation loop
+            const iterations = 100;
+            for (let i = 0; i < iterations; i++) {
+                for (let j = 1; j < path.length - 1; j++) {
+                    const midpoint = this.Vec3.scale(this.Vec3.add(path[j - 1], path[j + 1]), 0.5);
+                    path[j] = this.projectPointToSaddle(midpoint);
+                }
+            }
+            return path;
+        },
+
+        projectPointToSaddle(p) {
+            // For our saddle z = (x^2 - y^2)/size, this is simple
+            const size = 2; // Must match the size in generateSaddle
+            const x = p[0];
+            const y = p[1];
+            const z = (x*x - y*y) / size;
+            return [x, y, z];
+        },
+
+        // --- Presets and Examples ---
+        presets: {
+            'preset-1': {
+                name: "Sphere: A Trip Along the Equator",
+                surfaceType: 'sphere',
+                points: [225, 235], // Indices carefully chosen for a 20-detail sphere
+                camera: { rotation: { x: 0.2, y: -0.5 }, zoom: 2.5 },
+                description: "This shows the shortest path between two points on the equator. As expected, the geodesic follows the equator itself, which is a great circle."
+            },
+            'preset-2': {
+                name: "Sphere: North Pole to Equator",
+                surfaceType: 'sphere',
+                points: [0, 220],
+                camera: { rotation: { x: 0.8, y: -0.8 }, zoom: 2.5 },
+                description: "This path from the North Pole down to the equator follows a line of longitude, which is another example of a great circle path."
+            },
+            'preset-3': {
+                name: "Saddle: Across the Valley",
+                surfaceType: 'saddle',
+                points: [172, 278], // Indices for a 20-detail saddle
+                camera: { rotation: { x: 0.5, y: -0.5 }, zoom: 2.5 },
+                description: "This path connects two points on opposite sides of the saddle's 'valley'. Notice how the geodesic curves 'outward' to avoid the steepest parts of the surface."
+            }
+        },
+
+        applyPreset(presetName) {
+            const preset = this.presets[presetName];
+            if (!preset) return;
+
+            this.log(`Applying preset: ${preset.name}`);
+            document.getElementById('preset-description').innerHTML = `<p><strong>${preset.name}:</strong> ${preset.description}</p>`;
+
+            this.setSurface(preset.surfaceType);
+            document.getElementById('surface-type').value = preset.surfaceType;
+
+            this.scene.selectedPoints = preset.points;
+
+            this.camera.rotation = { ...preset.camera.rotation };
+            this.camera.zoom = preset.camera.zoom;
+
+            this.calculateGeodesic();
+        },
+
+        // --- UI and Export Handlers ---
+        exportPNG() {
+            const link = document.createElement('a');
+            link.download = 'geodesic-simulation.png';
+            link.href = this.canvas.toDataURL('image/png');
+            link.click();
+            this.log("Exported canvas to PNG.");
+        },
+
+        exportJSON() {
+            const state = {
+                surfaceType: this.scene.surfaceType,
+                selectedPoints: this.scene.selectedPoints,
+                camera: this.camera
+            };
+            const jsonString = JSON.stringify(state, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'geodesic-preset.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+            this.log("Exported state to JSON.");
+        },
+
+        sharePreset() {
+            const state = {
+                v: 1, // version
+                s: this.scene.surfaceType,
+                p: this.scene.selectedPoints,
+                c: { r: { x: this.camera.rotation.x.toFixed(3), y: this.camera.rotation.y.toFixed(3) }, z: this.camera.zoom.toFixed(2) }
+            };
+            const jsonString = JSON.stringify(state);
+            const base64String = btoa(jsonString);
+            const url = `${window.location.href.split('#')[0]}#preset=${base64String}`;
+
+            navigator.clipboard.writeText(url).then(() => {
+                this.log("Shareable URL copied to clipboard!");
+                alert("Shareable URL copied to clipboard!");
+            }, (err) => {
+                this.log("Failed to copy URL.", err);
+                alert("Failed to copy URL. It is available in the developer console.");
+                console.log(url);
+            });
+        },
+
+        applyPresetFromURL() {
+            if (window.location.hash.startsWith('#preset=')) {
+                try {
+                    const base64String = window.location.hash.substring(8);
+                    const jsonString = atob(base64String);
+                    const state = JSON.parse(jsonString);
+
+                    this.log("Applying preset from URL...");
+
+                    if (state.s) {
+                        this.setSurface(state.s);
+                        document.getElementById('surface-type').value = state.s;
+                    }
+                    if (state.p) {
+                        this.scene.selectedPoints = state.p;
+                    }
+                    if (state.c) {
+                        this.camera.rotation.x = parseFloat(state.c.r.x);
+                        this.camera.rotation.y = parseFloat(state.c.r.y);
+                        this.camera.zoom = parseFloat(state.c.z);
+                    }
+
+                    if (this.scene.selectedPoints.length === 2) {
+                        this.calculateGeodesic();
+                    }
+                } catch (e) {
+                    this.log("Failed to parse preset from URL.", e);
+                    alert("Could not load the preset from the URL. It might be invalid.");
+                }
+            }
+        },
+
+
+        // --- 3D Rendering Engine ---
+        Mat4: {
+            create() {
+                return new Float32Array(16);
+            },
+
+            perspective(fov, aspect, near, far) {
+                const f = 1.0 / Math.tan(fov / 2);
+                const nf = 1 / (near - far);
+                const out = this.create();
+                out[0] = f / aspect;
+                out[5] = f;
+                out[10] = (far + near) * nf;
+                out[11] = -1;
+                out[14] = 2 * far * near * nf;
+                return out;
+            },
+
+            multiply(a, b) {
+                const out = this.create();
+                // A simplified matrix multiplication for our specific case
+                // This is not a general purpose matrix multiplication
+                let a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+                let a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+                let a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+                let a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+                let b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+                out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+                out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+                out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+                out[3] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+                b0 = b[4]; b1 = b[5]; b2 = b[6]; b3 = b[7];
+                out[4] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+                out[5] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+                out[6] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+                out[7] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+                b0 = b[8]; b1 = b[9]; b2 = b[10]; b3 = b[11];
+                out[8] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+                out[9] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+                out[10] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+                out[11] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+
+                b0 = b[12]; b1 = b[13]; b2 = b[14]; b3 = b[15];
+                out[12] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
+                out[13] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
+                out[14] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
+                out[15] = b0*a03 + b1*a13 + b2*a23 + b3*a33;
+                return out;
+            },
+
+            translation(x, y, z) {
+                const out = this.identity();
+                out[12] = x; out[13] = y; out[14] = z;
+                return out;
+            },
+
+            rotationX(rad) {
+                const out = this.identity();
+                const s = Math.sin(rad), c = Math.cos(rad);
+                out[5] = c; out[6] = s; out[9] = -s; out[10] = c;
+                return out;
+            },
+
+            rotationY(rad) {
+                const out = this.identity();
+                const s = Math.sin(rad), c = Math.cos(rad);
+                out[0] = c; out[2] = -s; out[8] = s; out[10] = c;
+                return out;
+            },
+
+            identity() {
+                const out = this.create();
+                out[0] = 1; out[5] = 1; out[10] = 1; out[15] = 1;
+                return out;
+            },
+        },
+
+        Vec3: {
+            add: (a, b) => ([a[0] + b[0], a[1] + b[1], a[2] + b[2]]),
+            subtract: (a, b) => ([a[0] - b[0], a[1] - b[1], a[2] - b[2]]),
+            scale: (a, s) => ([a[0] * s, a[1] * s, a[2] * s]),
+            dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+            magnitude: (a) => Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]),
+            normalize: (a) => {
+                const mag = Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+                return mag > 0 ? [a[0] / mag, a[1] / mag, a[2] / mag] : [0, 0, 0];
+            },
+            transform(v, m) {
+                const x = v[0], y = v[1], z = v[2];
+                const w = m[3] * x + m[7] * y + m[11] * z + m[15] || 1.0;
+                const out = [
+                    (m[0] * x + m[4] * y + m[8] * z + m[12]) / w,
+                    (m[1] * x + m[5] * y + m[9] * z + m[13]) / w,
+                    (m[2] * x + m[6] * y + m[10] * z + m[14]) / w,
+                ];
+                return out;
+            }
+        },
+
+        project(v, transformMatrix) {
+            const projected = this.Vec3.transform(v, transformMatrix);
+            return {
+                x: (projected[0] * 0.5 + 0.5) * this.width,
+                y: (-projected[1] * 0.5 + 0.5) * this.height,
+                d: projected[2] // depth
+            };
+        },
+
+        draw() {
+            this.ctx.clearRect(0, 0, this.width, this.height);
+
+            const projectionMatrix = this.Mat4.perspective(Math.PI / 4, this.width / this.height, 0.1, 100);
+            let viewMatrix = this.Mat4.identity();
+            viewMatrix = this.Mat4.multiply(viewMatrix, this.Mat4.translation(0, 0, -this.camera.zoom));
+            viewMatrix = this.Mat4.multiply(viewMatrix, this.Mat4.rotationX(this.camera.rotation.x));
+            viewMatrix = this.Mat4.multiply(viewMatrix, this.Mat4.rotationY(this.camera.rotation.y));
+            const transformMatrix = this.Mat4.multiply(projectionMatrix, viewMatrix);
+
+            // Store projected vertices for picking
+            this.projectedVertices = this.scene.vertices.map(v => this.project(v, transformMatrix));
+
+            // Draw wireframe
+            this.ctx.strokeStyle = document.body.classList.contains('high-contrast') ? '#FFF' : '#888';
+            this.ctx.lineWidth = 0.5;
+            this.ctx.beginPath();
+            this.scene.edges.forEach(edge => {
+                const v1 = this.projectedVertices[edge[0]];
+                const v2 = this.projectedVertices[edge[1]];
+                if (v1 && v2 && v1.d > -1 && v2.d > -1) { // Basic frustum culling
+                    this.ctx.moveTo(v1.x, v1.y);
+                    this.ctx.lineTo(v2.x, v2.y);
+                }
+            });
+            this.ctx.stroke();
+
+            // Draw hovered point
+            if (this.hoveredPointIndex !== null && !this.scene.selectedPoints.includes(this.hoveredPointIndex)) {
+                const p = this.projectedVertices[this.hoveredPointIndex];
+                this.ctx.fillStyle = 'rgba(0, 150, 255, 0.7)';
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+
+            // Draw selected points
+            this.scene.selectedPoints.forEach((index, i) => {
+                const p = this.projectedVertices[index];
+                this.ctx.fillStyle = i === 0 ? 'rgba(255, 0, 0, 0.8)' : 'rgba(0, 255, 0, 0.8)';
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, 7, 0, 2 * Math.PI);
+                this.ctx.fill();
+            });
+
+            // Draw geodesic path
+            if (this.scene.geodesicPath.length > 1) {
+                this.ctx.strokeStyle = 'rgba(0, 100, 255, 0.8)';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                for (let i = 0; i < this.scene.geodesicPath.length; i++) {
+                    const p3d = this.scene.geodesicPath[i];
+                    const p2d = this.project(p3d, transformMatrix);
+                    if (i === 0) {
+                        this.ctx.moveTo(p2d.x, p2d.y);
+                    } else {
+                        this.ctx.lineTo(p2d.x, p2d.y);
+                    }
+                }
+                this.ctx.stroke();
+            }
+
+            // Draw straight line path for comparison
+            if (this.ui.showStraightLine && this.scene.selectedPoints.length === 2) {
+                this.ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)';
+                this.ctx.lineWidth = 1.5;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                const p1_3d = this.scene.vertices[this.scene.selectedPoints[0]];
+                const p2_3d = this.scene.vertices[this.scene.selectedPoints[1]];
+                const p1_2d = this.project(p1_3d, transformMatrix);
+                const p2_2d = this.project(p2_3d, transformMatrix);
+                this.ctx.moveTo(p1_2d.x, p1_2d.y);
+                this.ctx.lineTo(p2_2d.x, p2_2d.y);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]); // Reset line dash
+            }
+        },
+
+        renderLoop() {
+            this.draw();
+            requestAnimationFrame(() => this.renderLoop());
+        },
+
+        // --- Utility ---
+        log(message) {
+            const consoleDiv = document.getElementById('developer-console');
+            if (consoleDiv) {
+                const time = new Date().toLocaleTimeString();
+                consoleDiv.innerHTML += `[${time}] ${message}\n`;
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+            console.log(message);
+        }
+    };
+
+    App.init();
+    // Make it accessible for debugging
+    window.GeodesicApp = App;
+});
+    </script>
+</body>
+</html>
