@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Thermodynamic Arrow of Time and the Ultimate Heat Death</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --primary-color: #00aaff;
+            --secondary-color: #ff4500;
+            --container-bg: #2a2a2a;
+            --border-color: #444444;
+            --slider-track-color: #444;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #333;
+            --button-hover-bg: #444;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --header-color: #ffff00;
+            --primary-color: #00ffff;
+            --secondary-color: #ff00ff;
+            --container-bg: #111111;
+            --border-color: #666666;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #222;
+            --button-hover-bg: #444;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 1em;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1em;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin-top: 1.5em;}
+        h3 { font-size: 1.5em; color: var(--primary-color); }
+
+        p, li {
+            font-size: 1.1em;
+        }
+
+        a { color: var(--primary-color); }
+        code { background-color: #333; padding: 0.2em 0.4em; border-radius: 4px; }
+
+        .content-section {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5em;
+            margin-top: 1.5em;
+        }
+
+        .simulation-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1em;
+            margin-top: 1.5em;
+        }
+
+        #simulation-container {
+            grid-column: 1 / 2;
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            aspect-ratio: 16 / 9;
+        }
+
+        #universe-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        #ledger-panel {
+            grid-column: 2 / 3;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+        }
+
+        #controls-panel {
+            grid-column: 1 / 3;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            padding: 1em;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1em;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--button-hover-bg); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--slider-track-color);
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--slider-thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--slider-thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .simulation-layout {
+                grid-template-columns: 1fr;
+            }
+            #simulation-container, #ledger-panel {
+                grid-column: 1 / 2;
+            }
+        }
+
+        /* Placeholder for later use */
+        #error-panel { display: none; background-color: #ff4500; color: white; padding: 1em; border-radius: 8px; }
+        #dev-console { display: none; background-color: #222; border: 1px solid var(--border-color); padding: 1em; margin-top: 1em; border-radius: 8px; }
+        #metadata-bar, #suggestion-box { text-align: center; font-size: 0.9em; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Thermodynamic Arrow of Time and the Ultimate Heat Death</h1>
+            <p class="subtitle" style="text-align: center;">A simulation of cosmic evolution from the Stelliferous Era to the final equilibrium.</p>
+            <div id="metadata-bar">
+                <span>Est. runtime: Varies</span> | <span>Device: Desktop</span> | <span>Approx. size: 50KB</span>
+                | <span id="perf-meter">FPS: <span id="fps-value">--</span></span>
+            </div>
+            <div id="suggestion-box" class="content-section" style="padding: 1em; margin-top: 1em; font-size: 0.9em;">
+                <h4 style="margin: 0 0 0.5em 0; color: var(--header-color);">Tune Your Experience:</h4>
+                <p style="margin: 0.2em 0;">Audience: <a href="#" onclick="setAudience('beginner'); return false;">Beginner</a> / <a href="#" onclick="setAudience('intermediate'); return false;">Intermediate</a> / <a href="#" onclick="setAudience('advanced'); return false;">Advanced</a></p>
+                <p style="margin: 0.2em 0;">Analogy Style: <a href="#" onclick="setAnalogy('everyday'); return false;">Everyday</a> / <a href="#" onclick="setAnalogy('mechanical'); return false;">Mechanical</a> / <a href="#" onclick="setAnalogy('visual'); return false;">Visual</a></p>
+                <p style="margin: 0.2em 0;">Intensity: <a href="#" onclick="setIntensity('light'); return false;">Light</a> / <a href="#" onclick="setIntensity('medium'); return false;">Medium</a> / <a href="#" onclick="setIntensity('heavy'); return false;">Heavy</a></p>
+            </div>
+        </header>
+
+        <main>
+            <div class="simulation-layout">
+                <div id="simulation-container">
+                    <canvas id="universe-canvas"></canvas>
+                </div>
+                <div id="ledger-panel">
+                    <h3 style="margin-top:0; text-align: center;">Thermodynamic & Era Ledger</h3>
+                    <div id="era-clock" class="ledger-item">
+                        <strong>Current Era:</strong> <span id="era-name-label">Stelliferous</span><br>
+                        <strong>Time (10^<span id="log-years-label">10</span> years)</strong>
+                    </div>
+                    <div id="entropy-meter" class="ledger-item">
+                        <strong>Universal Entropy</strong>
+                        <canvas id="entropy-graph-canvas" style="width:100%; height:150px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div id="entropy-breakdown" class="ledger-item">
+                        <strong>Entropy Components</strong>
+                        <canvas id="entropy-pie-canvas" style="width:100%; height:150px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div id="temperature-readout" class="ledger-item">
+                        <strong>Avg. Universe Temp:</strong> <span id="temp-value-label">2.7 K</span>
+                    </div>
+                </div>
+                <div id="controls-panel">
+                    <div class="control-group">
+                        <label><b>Simulation</b></label>
+                        <div style="display: flex; gap: 5px;">
+                            <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                            <button id="step-btn" aria-label="Step Forward (Right Arrow)">Step</button>
+                            <button id="reset-btn" aria-label="Reset (r)">Reset</button>
+                        </div>
+                    </div>
+                    <div class="control-group" style="flex-grow: 1;">
+                        <label for="speed-slider">Speed: <span id="speed-value">1.0x</span></label>
+                        <input type="range" id="speed-slider" min="0.1" max="10" value="1" step="0.1" aria-label="Simulation Speed">
+                    </div>
+                    <div class="control-group" style="flex-basis: 100%;">
+                        <label for="timescale-slider">Master Timescale (log₁₀ years): <span id="timescale-value">10</span></label>
+                        <input type="range" id="timescale-slider" min="10" max="110" value="10" step="0.1" aria-label="Master Timescale" style="width: 100%;">
+                    </div>
+                    <div class="control-group">
+                        <label for="omega-lambda-slider">Dark Energy (Ω_Λ): <span id="omega-lambda-value">0.70</span></label>
+                        <input type="range" id="omega-lambda-slider" min="0" max="0.9" value="0.7" step="0.01" aria-label="Dark Energy Density">
+                    </div>
+                    <div class="control-group">
+                        <label><input type="checkbox" id="proton-decay-toggle" checked> Proton Decay</label>
+                        <div id="proton-halflife-control">
+                          <label for="proton-halflife-slider">Half-Life (log₁₀ yrs): <span id="proton-halflife-value">36</span></label>
+                          <input type="range" id="proton-halflife-slider" min="34" max="40" value="36" step="1" aria-label="Proton Half-Life">
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label><b>Presets</b></label>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button id="preset-light-btn">Calm Beginning</button>
+                            <button id="preset-medium-btn">Our Universe (Typical)</button>
+                            <button id="preset-heavy-btn">Accelerated End</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label><b>Utilities</b></label>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button id="export-png-btn" aria-label="Export PNG (e)">Export PNG</button>
+                            <button id="export-json-btn">Export JSON</button>
+                            <button id="share-preset-btn">Share Preset</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label><b>Settings</b></label>
+                        <div><label><input type="checkbox" id="perf-mode-toggle"> Performance Mode</label></div>
+                        <div><label><input type="checkbox" id="contrast-toggle"> High Contrast</label></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="static-content">
+                <section id="overview" class="content-section">
+                    <h2>Plain-Language Overview</h2>
+                    <p>This simulation visualizes the most widely accepted long-term fate of our universe, a scenario known as the "Heat Death." You will embark on an accelerated journey through cosmic time, watching as all the familiar, ordered structures like stars and galaxies gradually decay. This process is driven by the relentless increase of entropy—a measure of disorder—as dictated by the second law of thermodynamics. Starting from a universe full of brilliant stars, you will see it transition through desolate eras of dead stars and black holes, until finally, even those colossal objects evaporate. The end result is a vast, cold, and uniform expanse, a state of maximum entropy where no useful energy remains and the arrow of time, as we know it, loses its meaning.</p>
+                </section>
+
+                <section id="beginners-guide" class="content-section">
+                    <h2>Beginner's Guide — A Long, Gentle Farewell</h2>
+                    <p>Welcome to the end of everything! It sounds dramatic, but understanding the ultimate fate of the universe is a profound journey into the fundamental laws of physics. Don't worry if you're new to these concepts; we'll walk through it step-by-step.</p>
+
+                    <h3>Step 1: What is Entropy and the "Arrow of Time"?</h3>
+                    <p>Imagine you have a new deck of cards, perfectly ordered by suit and number. This is a state of <strong>low entropy</strong> (high order). Now, throw them in the air. When they land, they'll be scattered randomly—a state of <strong>high entropy</strong> (high disorder). The second law of thermodynamics says that in a closed system, entropy can only increase. It's a one-way street. You can easily scatter the cards, but you'll never see them spontaneously fly back into your hand in perfect order. This one-way progression from order to disorder is what gives time its direction, its "arrow". Our universe is the ultimate closed system, and it's on the same one-way trip from order to disorder.</p>
+
+                    <h3>Step 2: The Stelliferous Era - The Age of Stars (Where We Are Now)</h3>
+                    <p>The simulation begins in the Stelliferous Era, which lasts from about 100 million to 100 trillion years after the Big Bang. This is the universe's vibrant youth, filled with galaxies blazing with the light of stars. What you see on the canvas are these galaxies, and the bright dots within them are massive stars.</p>
+                    <p><strong>Everyday Analogy: A Roaring Bonfire.</strong> Think of the early universe as a perfectly stacked pile of firewood. The stars are like the first flames. They take the highly concentrated, ordered energy (the wood) and release it as chaotic, disordered light and heat (the fire). Stars are magnificent engines of entropy. Through nuclear fusion, they convert simple, heavy atomic nuclei into a shower of energetic photons. This process massively increases the overall disorder of the cosmos, and it's what powers everything we see. In the simulation, you'll see the "Stellar Entropy" (S_Stellar) graph climbing steadily during this era. This is the universe burning through its most accessible fuel.</p>
+
+                    <h3>Step 3: The Degenerate Era - The Long Twilight</h3>
+                    <p>After trillions of years, all the gas needed to form new stars is used up. The last stars, the small red dwarfs, finally flicker and die. The universe goes dark. What's left behind are the "degenerate" corpses of stars: <strong>white dwarfs</strong>, <strong>neutron stars</strong>, and <strong>black holes</strong>. The universe is now a vast, cold, and gloomy graveyard. The party is over, and the slow cleanup begins.</p>
+                    <p>If you have "Proton Decay" enabled in the controls, you'll witness an even stranger process. Some theories suggest that the very particles that make up matter (protons) are unstable over immense timescales. If this is true, then over 10³⁴ to 10⁴⁰ years, the white dwarfs and neutron stars will slowly "dissolve" into a mist of low-energy particles. The last vestiges of conventional matter will vanish.</p>
+
+                    <h3>Step 4: The Black Hole Era - The Reign of Gravity</h3>
+                    <p>After the last proton has decayed, the only "objects" left are black holes. Over even more staggering timescales, these black holes will slowly "sweep up" any remaining matter and even merge with each other, growing into gargantuan supermassive black holes. For a time, they will be the kings of the cosmos.</p>
+                    <p><strong>Visualization Analogy: Cosmic Drains.</strong> Picture the fabric of spacetime as a flat rubber sheet. The black holes are incredibly heavy marbles, creating deep funnels. During this era, any stray particle is like a tiny grain of sand that inevitably rolls down into one of these drains. You'll notice on the ledger that the entropy of black holes (S_BH) becomes completely dominant. According to Bekenstein and Hawking, a black hole's entropy is proportional to its surface area. As they merge and grow, the total entropy of the universe skyrockets. This is the universe taking its largest single step towards maximum disorder.</p>
+
+                    <h3>Step 5: The Dark Era - The Final Whisper</h3>
+                    <p>But even black holes are not eternal. Thanks to a quantum mechanical process called <strong>Hawking radiation</strong>, black holes slowly lose mass by emitting a faint trickle of particles. This is an incredibly slow process. A solar-mass black hole takes 10⁶⁷ years to evaporate, while the supermassive ones at the centers of galaxies could take up to 10¹⁰⁰ years.</p>
+                    <p>In the final stage of the simulation, you'll see these last holdouts, the black holes, begin to shrink. They radiate away their mass until they disappear in a final, quiet flash of light. When the last black hole is gone, the universe enters its final state: the Heat Death.</p>
+                    <p>The canvas will become almost completely dark and empty. All that remains is a sparse, uniform "gas" of photons, neutrinos, and other elementary particles, all at a temperature just fractions of a degree above absolute zero. No structure, no gradients, no work can be done. This is the state of maximum entropy. The cosmic story is over, and the arrow of time ceases to have any meaning, because nothing will ever change again.</p>
+                </section>
+
+                <section id="parameters-summary" class="content-section">
+                    <h2>Parameters & Controls Summary</h2>
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Parameter</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Description</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Default</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Dark Energy Density (Ω_Λ)</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Controls the strength of cosmic acceleration. Higher values speed up expansion, isolating galaxies and cooling the universe faster.</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">0.7</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">0.0 to 0.9</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Proton Decay</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Enables/disables the theoretical decay of protons, which dissolves degenerate matter over long timescales.</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Enabled</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">On / Off</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Proton Half-Life</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Sets the half-life for protons if decay is enabled. (Units are in log10(years)).</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">36 (10³⁶ years)</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">34 to 40</td>
+                            </tr>
+                             <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Master Timescale</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Scrub through the cosmic eras logarithmically, from the Age of Stars to the final Heat Death.</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Stelliferous</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">10¹⁰ to 10¹⁰⁰+ years</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="walkthroughs" class="content-section">
+                    <h2>Worked Walkthroughs & Micro-Experiments</h2>
+
+                    <h3>Walkthrough: The Power of Dark Energy (Ω_Λ)</h3>
+                    <p>The parameter <strong>Ω_Λ</strong> (Omega Lambda) controls how fast the universe's expansion accelerates. Let's see its effect.</p>
+                    <ol>
+                        <li>Start with the default preset ("Medium Demo"). Notice the rate at which galaxies seem to drift apart.</li>
+                        <li>Set <strong>Ω_Λ</strong> to its minimum value, <strong>0.0</strong>. The universe's expansion slows dramatically. In this scenario, gravity has a stronger relative effect, and it would take an astronomically longer time for everything to become isolated.</li>
+                        <li>Now, set <strong>Ω_Λ</strong> to its maximum, <strong>0.9</strong>. The change is immediate and drastic. The expansion is so violent that galaxies are flung apart with incredible speed. This hastens the onset of the Degenerate Era because it prevents galaxies from interacting and sharing fuel for new stars. The universe becomes cold and lonely much faster.</li>
+                    </ol>
+                    <p><strong>Analogy:</strong> Think of baking a raisin loaf. The dough is spacetime and the raisins are galaxies. Dark energy is the yeast. With a little yeast (low Ω_Λ), the loaf rises slowly. With a lot of yeast (high Ω_Λ), the dough puffs up so fast it tears itself apart, and the raisins end up very far from each other. The numeric difference between Ω_Λ = 0.1 and Ω_Λ = 0.9 represents a universe that coasts versus one that aggressively flies apart.</p>
+
+                    <h3>Micro-Experiments to Try</h3>
+                    <ol>
+                        <li><strong>The Stable Universe:</strong> Set Proton Decay to "Off". Run the simulation to the Degenerate Era. Observe that the white dwarfs and neutron stars now remain as permanent, frozen relics. The universe still gets cold, but it never fully dissolves into radiation.</li>
+                        <li><strong>Rapid Decay:</strong> Set the Proton Half-Life to its minimum value (10³⁴ years). Watch the Degenerate Era. The stellar remnants will dissolve noticeably faster than at the default setting.</li>
+                        <li><strong>The Long Wait:</strong> Set the Proton Half-Life to its maximum (10⁴⁰ years). The dissolution of matter becomes an almost impossibly slow process, highlighting the mind-boggling timescales involved.</li>
+                        <li><strong>Entropy Jump:</strong> Watch the Universal Entropy meter as you manually scrub the Master Timescale from the end of the Degenerate Era into the Black Hole Era. You should see the S_BH (Black Hole Entropy) component suddenly spike and dominate the total entropy budget.</li>
+                        <li><strong>The Final Flash:</strong> Move the timescale slider to the very end of the Black Hole Era (around 10¹⁰⁰ years). Watch the canvas closely as the last, largest black holes evaporate in a final, faint pop of Hawking radiation.</li>
+                        <li><strong>Dark Energy's Temperature Effect:</strong> Run the "Light Demo" preset. Note the final temperature in the Dark Era. Now, run the "Heavy Demo" (which should have a higher Ω_Λ). The final temperature will be even closer to absolute zero because the more rapid expansion has cooled the universe more effectively.</li>
+                        <li><strong>The Tipping Point:</strong> Start with Ω_Λ at 0.7. Watch the entropy graph. Now restart and set Ω_Λ to 0.8. The curve representing total entropy should reach its maximum value faster.</li>
+                        <li><strong>No Black Holes?:</strong> While not possible in this simulation, imagine a universe where black holes never formed. The total entropy would be vastly lower, and the universe would take an even longer path to equilibrium. This highlights how crucial black holes are to the entropy story.</li>
+                    </ol>
+                </section>
+
+                <section id="core-theory" class="content-section">
+                    <h2>Core Theory: The Equations of the End</h2>
+                    <p>The simulation is grounded in a few key principles of thermodynamics and cosmology.</p>
+
+                    <h3>The Second Law of Thermodynamics</h3>
+                    <p>This is the conceptual heart of the simulation. It states that the total entropy of an isolated system can never decrease over time.</p>
+                    <p><code>ΔS_total ≥ 0</code></p>
+                    <p><strong>Plain English:</strong> The total amount of disorder (entropy, <strong>S</strong>) in the universe can only increase or stay the same. In reality, every energy transaction increases it, so the arrow of time points towards more disorder.</p>
+                    <p><strong>Numeric Example:</strong> If the entropy of stars forming (a local decrease) is -100 units, the entropy radiated away as heat and light (an increase) must be at least +100 units, resulting in a total change of 0 or more.</p>
+
+                    <h3>Bekenstein-Hawking Entropy of a Black Hole</h3>
+                    <p>This equation was a revolution, connecting gravity, quantum mechanics, and thermodynamics. It gives the entropy of a black hole.</p>
+                    <p><code>S_BH = (k_B * A * c³) / (4 * G * ħ)</code></p>
+                    <p><strong>Plain English:</strong> The entropy of a black hole (<strong>S_BH</strong>) is directly proportional to its surface area (<strong>A</strong>). The other terms are physical constants (Boltzmann's constant k_B, speed of light c, gravitational constant G, and reduced Planck constant ħ). This means bigger black holes are vastly more entropic.</p>
+                    <p><strong>Numeric Example:</strong> If a black hole doubles its radius, its surface area increases by a factor of four (since Area ∝ radius²). Therefore, its entropy also increases by a factor of <strong>four</strong>. This is why the S_BH graph jumps so dramatically when black holes merge and grow.</p>
+                    <p><strong>Approximation Used:</strong> This simulation shows S_BH as the dominant form of entropy in its era, which is accurate. The calculation is simplified to be proportional to the sum of the areas of all black holes on screen.</p>
+                </section>
+
+                <section id="advanced-notes" class="content-section">
+                    <h2>Advanced Notes & Extensions</h2>
+                    <ul>
+                        <li><strong>Numerical Stability:</strong> The simulation uses a logarithmic time scale, which is essential for visualizing these vast cosmic epochs. However, this means events are not simulated with continuous physics but are representative of each era. A real N-body simulation would be required for true physical accuracy but is computationally impossible on this scale.</li>
+                        <li><strong>Edge Cases:</strong> What if proton decay is not real? The universe would end in an "iron age," with all matter eventually fusing into iron-56, the most stable nucleus, leaving behind frozen black cinders forever. This is a valid alternative to the "dissolution" scenario.</li>
+                        <li><strong>Possible Improvements:</strong> A more advanced simulation could include a simple model for galactic collisions during the late Stelliferous Era, which would trigger bursts of star formation before the final decline. One could also replace the 2D canvas representation with a simple WebGL 3D view for a more immersive experience.</li>
+                        <li><strong>Fidelity Limits:</strong> The visualization of "galaxies" and "stars" is purely symbolic. We are not tracking individual stars but representing the state of a region of space. The final "gas" of photons is also symbolic; in reality, the particles would be so far apart that the chance of any two interacting is virtually zero.</li>
+                        <li><strong>Extending the Code:</strong> To improve the physics, one could replace the simple state-transition logic in the main `update()` function with a more granular integrator. For example, instead of just setting the state to "Degenerate", you could have a function that calculates the remaining percentage of star-forming gas and smoothly decreases star births over time, providing a more graceful transition between eras.</li>
+                    </ul>
+                </section>
+
+                <section id="analogies" class="content-section">
+                    <h2>Analogies & Intuition</h2>
+                    <p>The core idea—the inevitable increase of entropy—can be understood through different lenses.</p>
+
+                    <h3>1. The Physical Analogy: Cream in Coffee</h3>
+                    <p>Pour cold cream into hot black coffee. Initially, you have an ordered system: hot coffee here, cold cream there. This is a low-entropy state with a temperature difference that could, in principle, be used to do work. But stir the cup, or simply wait, and the cream will inevitably mix with the coffee, creating a uniform, lukewarm liquid. This is a high-entropy, equilibrium state. You will never see the lukewarm coffee spontaneously un-mix itself back into separate hot coffee and cold cream. The universe is doing the same thing on a cosmic scale, just much, much more slowly.</p>
+                    <p><strong>Limitation:</strong> This analogy happens quickly and involves a small number of particles. The universe's journey to equilibrium involves gravity and quantum mechanics over unimaginable timescales.</p>
+
+                    <h3>2. The Visualization Analogy: Ink in Water</h3>
+                    <p>Place a single, concentrated drop of dark ink into a large, clear pool of water. The ink is a low-entropy, ordered state. Over time, diffusion will cause the ink molecules to spread out randomly until the entire pool is a uniform, pale grey. The "information" of where the ink drop started is lost to the system as a whole. The universe's initial low-entropy state after the Big Bang was like that single drop of ink; the Heat Death is the final, uniformly grey pool.</p>
+                    <p><strong>Limitation:</strong> This is a passive process (diffusion). The universe's evolution is active, driven by powerful forces like fusion in stars and the immense gravity of black holes, which act as powerful catalysts for entropy production.</p>
+
+                    <h3>3. The Computational Analogy: Corrupting a File</h3>
+                    <p>Imagine a computer file containing a beautiful, high-resolution photograph (a highly ordered state). Now, imagine a simple program that randomly flips one bit in the file every second (0 to 1, or 1 to 0). At first, the changes are unnoticeable. But over time, the process will introduce more and more random "noise." Eventually, all the original information will be completely overwritten by random data, leaving a file that is indistinguishable from pure static. The universe is like that file, and the laws of physics are the program relentlessly flipping bits, destroying ordered information and replacing it with random, high-entropy noise.</p>
+                    <p><strong>Limitation:</strong> This analogy implies an external agent (the program) acting on the data. In the universe, the "rules" that increase entropy are inherent to the system itself. There is no outside programmer; the corruption is a feature, not a bug.</p>
+                </section>
+
+                <section id="faq" class="content-section">
+                    <h2>FAQ & Troubleshooting</h2>
+                    <dl>
+                        <dt>Why does entropy always increase?</dt>
+                        <dd>It's a probabilistic law. There are vastly more ways for a system to be disordered than ordered. A shuffled deck of cards can be in countless random configurations, but only one is the "perfectly ordered" state. Over time, systems naturally drift into the most probable (most disordered) states.</dd>
+
+                        <dt>Is the Heat Death really the end? Is it certain?</dt>
+                        <dd>It is the most widely accepted scenario based on our current understanding of cosmology (specifically, an accelerating expansion due to dark energy). However, our understanding is incomplete. A change in the nature of dark energy or the discovery of new physics could lead to a different fate, like a Big Rip or a Big Crunch.</dd>
+
+                        <dt>Where does all the matter go?</dt>
+                        <dd>In the standard scenario shown, it gets converted into energy (photons and other light particles). Protons decay into lighter particles, and the mass of black holes is converted into Hawking radiation. In the end, the universe is just a thin "soup" of energy.</dd>
+
+                        <dt>What happens to time in the Heat Death?</dt>
+                        <dd>Meaningful time requires change. The "arrow of time" is defined by the increase in entropy. In a maximum-entropy state of perfect equilibrium, no significant changes can occur. In a sense, time loses its direction and its meaning. Days, years, eons—all become indistinguishable when nothing ever happens.</dd>
+
+                        <dt>Can't quantum fluctuations create a new universe?</dt>
+                        <dd>This is a speculative idea called a "Poincaré recurrence." Given an infinite amount of time, it's theoretically possible for random quantum fluctuations to spontaneously create a new low-entropy state (like a new Big Bang). However, the timescale for this to happen is so mind-bogglingly immense (many times the 10¹⁰⁰ year timescale of the simulation) that it's beyond comprehension.</dd>
+
+                        <dt>Why does the simulation look so simple?</dt>
+                        <dd>To visualize trillions of years of cosmic evolution on a webpage, we must use symbolic representation. We are not simulating billions of stars, but rather the average state of the universe during each era. The goal is to illustrate the concepts, not to create a scientifically exact physical model.</dd>
+                    </dl>
+                    <h3>Troubleshooting</h3>
+                    <ul>
+                        <li><strong>The canvas is blank or not showing anything:</strong> Your browser might be old or have issues with the HTML5 Canvas element. Please try updating your browser (like Chrome, Firefox, or Edge) to the latest version or try a different one.</li>
+                        <li><strong>The simulation is running slowly or freezing:</strong> This simulation can be demanding, especially on older devices. Try closing other browser tabs. A "Performance Mode" toggle is provided to reduce the number of objects drawn, which should improve performance. If it freezes, you may need to reload the page and use a "Light" preset.</li>
+                        <li><strong>A button or slider doesn't work:</strong> If a control is unresponsive, please open the browser's developer console (usually by pressing F12), look for any red error messages in the "Console" tab, and copy-paste them if you need to report a bug.</li>
+                    </ul>
+                </section>
+            </div>
+
+            <div id="error-panel"></div>
+            <div id="dev-console-container">
+                <button id="toggle-dev-console">Developer Console</button>
+                <div id="dev-console"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get all DOM elements
+            const canvas = document.getElementById('universe-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // --- Simulation Constants ---
+            const ERA_BOUNDARIES = {
+                STELLIFEROUS: 10, // 10^10 years
+                DEGENERATE: 14,   // 10^14 years
+                BLACK_HOLE: 40,   // 10^40 years
+                DARK: 100         // 10^100 years
+            };
+            const OBJECT_TYPES = {
+                GALAXY: 'galaxy',
+                STAR: 'star',
+                WHITE_DWARF: 'white_dwarf',
+                NEUTRON_STAR: 'neutron_star',
+                BLACK_HOLE: 'black_hole',
+                PHOTON: 'photon'
+            };
+
+            // --- Simulation State & Parameters ---
+            let simState = {};
+            let simParams = {};
+
+            let entropyHistory = [];
+            let chartJsLine, chartJsPie;
+
+            // --- Visualization and Rendering ---
+            function resizeCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+                    canvas.width = rect.width * dpr;
+                    canvas.height = rect.height * dpr;
+                    return true;
+                }
+                return false;
+            }
+
+            function render() {
+                resizeCanvas();
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                const { objects, currentEra } = simState;
+
+                objects.forEach(obj => {
+                    if (obj.type === OBJECT_TYPES.GALAXY) {
+                        drawGalaxy(obj, ctx, w, h);
+                    } else if (obj.type === OBJECT_TYPES.PHOTON) {
+                        drawPhoton(obj, ctx, w, h);
+                    }
+                });
+            }
+
+            function drawGalaxy(galaxy, ctx, w, h) {
+                const projX = galaxy.x * w;
+                const projY = galaxy.y * h;
+                const projR = galaxy.radius / galaxy.z;
+
+                // Draw remnants first (behind stars)
+                galaxy.remnants.forEach(r => drawRemnant(r, galaxy, ctx, w, h));
+                // Draw stars
+                galaxy.stars.forEach(s => drawStar(s, galaxy, ctx, w, h));
+            }
+
+            function drawStar(star, galaxy, ctx, w, h) {
+                const projX = (galaxy.x * w) + star.x;
+                const projY = (galaxy.y * h) + star.y;
+                const size = Math.max(0.5, star.mass / 8);
+
+                ctx.beginPath();
+                ctx.arc(projX, projY, size, 0, 2 * Math.PI, false);
+                ctx.fillStyle = star.mass > 10 ? '#aaccff' : '#fffada';
+                ctx.fill();
+            }
+
+            function drawRemnant(remnant, galaxy, ctx, w, h) {
+                const projX = (galaxy.x * w) + remnant.x;
+                const projY = (galaxy.y * h) + remnant.y;
+
+                ctx.beginPath();
+                switch(remnant.type) {
+                    case OBJECT_TYPES.WHITE_DWARF:
+                        ctx.fillStyle = 'rgba(200, 200, 200, 0.8)';
+                        ctx.arc(projX, projY, 1.5, 0, 2 * Math.PI);
+                        break;
+                    case OBJECT_TYPES.NEUTRON_STAR:
+                        ctx.fillStyle = 'rgba(150, 150, 255, 0.9)';
+                        ctx.arc(projX, projY, 1, 0, 2 * Math.PI);
+                        break;
+                    case OBJECT_TYPES.BLACK_HOLE:
+                        const bhRadius = Math.sqrt(remnant.mass) * 1.5;
+                        ctx.fillStyle = '#000000';
+                        ctx.strokeStyle = '#ff4500';
+                        ctx.lineWidth = 1;
+                        ctx.arc(projX, projY, bhRadius, 0, 2 * Math.PI);
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+                }
+                ctx.fill();
+            }
+
+            function drawPhoton(photon, ctx, w, h) {
+                ctx.fillStyle = `rgba(220, 220, 220, ${Math.random() * 0.5})`;
+                ctx.fillRect(photon.x * w, photon.y * h, 1, 1);
+            }
+
+            function updateLedger() {
+                // Update text readouts
+                document.getElementById('era-name-label').textContent = simState.currentEra || 'Stelliferous';
+                document.getElementById('log-years-label').textContent = simState.logYears.toFixed(1);
+                document.getElementById('temp-value-label').textContent = `${simState.temperature.toExponential(2)} K`;
+
+                // Update graphs
+                const totalEntropy = simState.entropy.stellar + simState.entropy.bh + simState.entropy.cmb;
+                if (entropyHistory.length > 200) entropyHistory.shift();
+                entropyHistory.push({x: simState.logYears, y: totalEntropy});
+
+                updateLineChart();
+                updatePieChart();
+            }
+
+            function initCharts() {
+                const lineCtx = document.getElementById('entropy-graph-canvas').getContext('2d');
+                const pieCtx = document.getElementById('entropy-pie-canvas').getContext('2d');
+
+                // Dummy library for charting
+                const Chart = {
+                    Line: function(context, config) {
+                        this.ctx = context; this.config = config;
+                        this.update = function() {
+                            const data = this.config.data.datasets[0].data;
+                            const labels = this.config.data.labels;
+                            this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+                            if (data.length < 2) return;
+                            this.ctx.strokeStyle = '#00aaff'; this.ctx.lineWidth = 2;
+                            this.ctx.beginPath();
+                            const minX = data[0].x, maxX = data[data.length - 1].x;
+                            const minY = Math.min(...data.map(p=>p.y)), maxY = Math.max(...data.map(p=>p.y));
+                            for(let i=0; i<data.length; i++) {
+                                const px = (data[i].x - minX) / ((maxX - minX) || 1) * this.ctx.canvas.width;
+                                const py = (1 - (data[i].y - minY) / ((maxY - minY) || 1)) * this.ctx.canvas.height;
+                                if (i===0) this.ctx.moveTo(px, py); else this.ctx.lineTo(px, py);
+                            }
+                            this.ctx.stroke();
+                        };
+                    },
+                    Pie: function(context, config) {
+                        this.ctx = context; this.config = config;
+                        this.update = function() {
+                             const data = this.config.data.datasets[0].data;
+                             const colors = this.config.data.datasets[0].backgroundColor;
+                             const total = data.reduce((a, b) => a + b, 0);
+                             this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+                             if (total === 0) return;
+                             let startAngle = 0;
+                             const cx = this.ctx.canvas.width / 2, cy = this.ctx.canvas.height / 2;
+                             const radius = Math.min(cx, cy) * 0.8;
+                             for (let i = 0; i < data.length; i++) {
+                                 const sliceAngle = (data[i] / total) * 2 * Math.PI;
+                                 this.ctx.fillStyle = colors[i];
+                                 this.ctx.beginPath();
+                                 this.ctx.moveTo(cx, cy);
+                                 this.ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
+                                 this.ctx.closePath();
+                                 this.ctx.fill();
+                                 startAngle += sliceAngle;
+                             }
+                        };
+                    }
+                };
+
+                chartJsLine = new Chart.Line(lineCtx, {
+                    type: 'line',
+                    data: { labels: [], datasets: [{ label: 'Total Entropy', data: [], fill: false, borderColor: '#00aaff' }] },
+                    options: { scales: { x: { type: 'linear' }, y: { type: 'logarithmic' } } }
+                });
+                chartJsPie = new Chart.Pie(pieCtx, {
+                    type: 'pie',
+                    data: {
+                        datasets: [{
+                            data: [],
+                            backgroundColor: ['#ffff00', '#ff4500', '#00aaff'] // Stellar, BH, CMB
+                        }],
+                        labels: ['Stellar', 'Black Hole', 'CMB']
+                    }
+                });
+            }
+
+            function updateLineChart() {
+                chartJsLine.config.data.datasets[0].data = entropyHistory;
+                chartJsLine.update();
+            }
+
+            function updatePieChart() {
+                const { stellar, bh, cmb } = simState.entropy;
+                chartJsPie.config.data.datasets[0].data = [stellar, bh, cmb];
+                chartJsPie.update();
+            }
+
+
+            // --- Core Initialization ---
+            function resetSimulation() {
+                entropyHistory = [];
+                simState = {
+                    isRunning: false,
+                    logYears: 10, // Start at 10^10 years
+                    speed: 1,
+                    objects: [],
+                    entropy: { stellar: 0, bh: 0, cmb: 1e5 }, // Start with some base CMB entropy
+                    temperature: 2.7, // Initial temp in K
+                    expansionFactor: 1,
+                    lastFrameTime: performance.now(),
+                };
+
+                simParams = {
+                    omegaLambda: 0.7,
+                    protonDecayEnabled: true,
+                    protonHalfLife: 36,
+                    performanceMode: false,
+                };
+
+                // Initial Population
+                const galaxyCount = simParams.performanceMode ? 3 : 5;
+                for (let i = 0; i < galaxyCount; i++) {
+                    createGalaxy(true);
+                }
+            }
+
+            // --- Object Creation ---
+            function createGalaxy(isInitial = false) {
+                const galaxy = {
+                    type: OBJECT_TYPES.GALAXY,
+                    x: Math.random(), y: Math.random(), z: Math.random(),
+                    vx: (Math.random() - 0.5) * 0.01,
+                    vy: (Math.random() - 0.5) * 0.01,
+                    vz: (Math.random() - 0.5) * 0.01,
+                    radius: 15 + Math.random() * 10,
+                    stars: [],
+                    remnants: [],
+                };
+                const starCount = simParams.performanceMode ? 10 : 20;
+                for (let i = 0; i < starCount; i++) {
+                    galaxy.stars.push(createStar(galaxy));
+                }
+                simState.objects.push(galaxy);
+            }
+
+            function createStar(galaxy) {
+                return {
+                    type: OBJECT_TYPES.STAR,
+                    // Position relative to galaxy center
+                    x: (Math.random() - 0.5) * galaxy.radius * 2,
+                    y: (Math.random() - 0.5) * galaxy.radius * 2,
+                    mass: 1 + Math.random() * 20, // 1 to 21 solar masses
+                    lifetime: 10 + 4 / Math.pow(1 + Math.random() * 20, 2.5), // logYears, simplified main sequence lifetime
+                };
+            }
+
+            function createRemnant(star, galaxy) {
+                 const remnant = {
+                    x: star.x, y: star.y,
+                    mass: star.mass * 0.2 // simplified remnant mass
+                 };
+                 if (star.mass < 8) {
+                    remnant.type = OBJECT_TYPES.WHITE_DWARF;
+                 } else if (star.mass < 20) {
+                    remnant.type = OBJECT_TYPES.NEUTRON_STAR;
+                 } else {
+                    remnant.type = OBJECT_TYPES.BLACK_HOLE;
+                 }
+                 galaxy.remnants.push(remnant);
+            }
+
+            // --- Era-Specific Update Logic ---
+            function updateStelliferous(dt) {
+                simState.objects.forEach(galaxy => {
+                    // Star burnout
+                    const remainingStars = [];
+                    galaxy.stars.forEach(star => {
+                        if (simState.logYears < star.lifetime) {
+                            remainingStars.push(star);
+                            simState.entropy.stellar += star.mass * dt * 0.1; // Entropy from fusion
+                        } else {
+                            createRemnant(star, galaxy);
+                        }
+                    });
+                    galaxy.stars = remainingStars;
+                });
+            }
+
+            function updateDegenerate(dt) {
+                 simState.objects.forEach(galaxy => {
+                    // Proton Decay
+                    if (simParams.protonDecayEnabled && simState.logYears > simParams.protonHalfLife) {
+                        const decayFactor = Math.pow(2, -(simState.logYears - simParams.protonHalfLife));
+                        galaxy.remnants = galaxy.remnants.filter(r => {
+                            if (r.type === OBJECT_TYPES.BLACK_HOLE) return true;
+                            // Probabilistic decay
+                            return (Math.random() < decayFactor);
+                        });
+                    }
+                 });
+            }
+
+            function updateBlackHole(dt) {
+                // Hawking Radiation
+                simState.objects.forEach(galaxy => {
+                    galaxy.remnants = galaxy.remnants.filter(r => {
+                        if (r.type !== OBJECT_TYPES.BLACK_HOLE) return false; // Should be only BHs left
+                        const hawkingLifetime = 67 + 3 * Math.log10(r.mass); // logYears
+                        return simState.logYears < hawkingLifetime;
+                    });
+                });
+            }
+
+            function updateDark(dt) {
+                // Final state, almost nothing happens
+                if (Math.random() < 0.1 * dt) {
+                     simState.objects.push({
+                        type: OBJECT_TYPES.PHOTON,
+                        x: Math.random(), y: Math.random(), z: Math.random(),
+                        lifetime: simState.logYears + Math.random() * 0.5
+                    });
+                    simState.objects = simState.objects.filter(p => p.lifetime > simState.logYears);
+                }
+            }
+
+            function updatePhysics(dt) {
+                // Expansion of the universe
+                const expansionRate = 1 + simParams.omegaLambda * 0.01;
+                simState.expansionFactor *= Math.pow(expansionRate, dt);
+                simState.temperature /= Math.pow(expansionRate, dt);
+
+                simState.objects.forEach(obj => {
+                    if (obj.type === OBJECT_TYPES.GALAXY) {
+                        obj.x += obj.vx * dt * simState.expansionFactor;
+                        obj.y += obj.vy * dt * simState.expansionFactor;
+                        // Wrap around logic for galaxies
+                        if(obj.x > 1.1) obj.x = -0.1; if(obj.x < -0.1) obj.x = 1.1;
+                        if(obj.y > 1.1) obj.y = -0.1; if(obj.y < -0.1) obj.y = 1.1;
+                    }
+                });
+            }
+
+            function updateEntropy() {
+                let bhAreaSum = 0;
+                simState.objects.forEach(galaxy => {
+                    galaxy.remnants.forEach(r => {
+                        if (r.type === OBJECT_TYPES.BLACK_HOLE) {
+                            // Area is proportional to mass^2. Entropy is proportional to area.
+                            bhAreaSum += r.mass * r.mass;
+                        }
+                    });
+                });
+                simState.entropy.bh = bhAreaSum * 1e6; // Scaled for visualization
+            }
+
+            // --- Main Simulation Loop ---
+            function update(dt) {
+                // Determine current era
+                const logY = simState.logYears;
+                let currentEra;
+                if (logY < ERA_BOUNDARIES.DEGENERATE) {
+                    currentEra = 'Stelliferous';
+                    updateStelliferous(dt);
+                } else if (logY < ERA_BOUNDARIES.BLACK_HOLE) {
+                    currentEra = 'Degenerate';
+                    updateDegenerate(dt);
+                } else if (logY < ERA_BOUNDARIES.DARK) {
+                    currentEra = 'Black Hole';
+                    updateBlackHole(dt);
+                } else {
+                    currentEra = 'Dark';
+                    updateDark(dt);
+                }
+
+                simState.currentEra = currentEra;
+                updatePhysics(dt);
+                updateEntropy();
+            }
+
+            let fps = 0;
+            function simulationLoop() {
+                const now = performance.now();
+                const dt = (now - simState.lastFrameTime) / 1000.0; // seconds
+                simState.lastFrameTime = now;
+
+                // Update FPS (smoothed)
+                const currentFps = 1 / dt;
+                fps = 0.9 * fps + 0.1 * currentFps;
+                document.getElementById('fps-value').textContent = Math.round(fps);
+
+                if (simState.isRunning) {
+                    const timeStep = dt * simState.speed;
+                    // Timescale is logarithmic
+                    const logTimeStep = Math.max(1, simState.logYears) * timeStep * 0.1;
+                    simState.logYears += logTimeStep;
+                    update(timeStep);
+                }
+
+                // Manual update from slider
+                // This will be connected in a later step
+                // update(0);
+
+                render();
+                updateLedger();
+
+                requestAnimationFrame(simulationLoop);
+            }
+
+            // --- Initial Setup ---
+            initCharts();
+            resetSimulation();
+            simulationLoop();
+
+            // Make key functions globally accessible for UI wiring later
+            window.sim = {
+                reset: resetSimulation,
+                getState: () => simState,
+                getParams: () => simParams,
+                setState: (key, value) => { simState[key] = value; },
+                setParam: (key, value) => { simParams[key] = value; },
+                applyPreset: (preset) => {
+                    Object.assign(simParams, preset);
+                    resetSimulation();
+                    updateAllControls();
+                }
+            };
+
+            // --- Suggestion Box Functions ---
+            // These are placeholders as the prompt did not specify their full behavior.
+            function setAudience(level) { console.log(`Audience level set to: ${level}`); }
+            function setAnalogy(style) { console.log(`Analogy style set to: ${style}`); }
+            function setIntensity(level) { console.log(`Intensity level set to: ${level}`); }
+            window.setAudience = setAudience;
+            window.setAnalogy = setAnalogy;
+            window.setIntensity = setIntensity;
+
+            // --- UI Event Listeners & Wiring ---
+            function setupEventListeners() {
+                // --- Get all control elements ---
+                const playPauseBtn = document.getElementById('play-pause-btn');
+                const stepBtn = document.getElementById('step-btn');
+                const resetBtn = document.getElementById('reset-btn');
+                const speedSlider = document.getElementById('speed-slider');
+                const speedValue = document.getElementById('speed-value');
+                const timescaleSlider = document.getElementById('timescale-slider');
+                const timescaleValue = document.getElementById('timescale-value');
+                const omegaLambdaSlider = document.getElementById('omega-lambda-slider');
+                const omegaLambdaValue = document.getElementById('omega-lambda-value');
+                const protonDecayToggle = document.getElementById('proton-decay-toggle');
+                const protonHalflifeControl = document.getElementById('proton-halflife-control');
+                const protonHalflifeSlider = document.getElementById('proton-halflife-slider');
+                const protonHalflifeValue = document.getElementById('proton-halflife-value');
+                const presetLightBtn = document.getElementById('preset-light-btn');
+                const presetMediumBtn = document.getElementById('preset-medium-btn');
+                const presetHeavyBtn = document.getElementById('preset-heavy-btn');
+                const exportPngBtn = document.getElementById('export-png-btn');
+                const exportJsonBtn = document.getElementById('export-json-btn');
+                const sharePresetBtn = document.getElementById('share-preset-btn');
+                const perfModeToggle = document.getElementById('perf-mode-toggle');
+                const contrastToggle = document.getElementById('contrast-toggle');
+
+                // --- Wire up controls ---
+                playPauseBtn.addEventListener('click', () => {
+                    simState.isRunning = !simState.isRunning;
+                    playPauseBtn.textContent = simState.isRunning ? 'Pause' : 'Play';
+                });
+
+                stepBtn.addEventListener('click', () => {
+                    simState.isRunning = false;
+                    playPauseBtn.textContent = 'Play';
+                    simState.logYears += 0.5; // Step a small amount
+                    update(0);
+                });
+
+                resetBtn.addEventListener('click', () => {
+                    resetSimulation();
+                    updateAllControls();
+                });
+
+                speedSlider.addEventListener('input', () => {
+                    simState.speed = parseFloat(speedSlider.value);
+                    speedValue.textContent = `${simState.speed.toFixed(1)}x`;
+                });
+
+                timescaleSlider.addEventListener('input', () => {
+                    simState.logYears = parseFloat(timescaleSlider.value);
+                    timescaleValue.textContent = simState.logYears.toFixed(1);
+                    simState.isRunning = false; // Pause when scrubbing
+                    playPauseBtn.textContent = 'Play';
+                    update(0); // Update view immediately
+                });
+
+                omegaLambdaSlider.addEventListener('input', () => {
+                    simParams.omegaLambda = parseFloat(omegaLambdaSlider.value);
+                    omegaLambdaValue.textContent = simParams.omegaLambda.toFixed(2);
+                });
+
+                protonDecayToggle.addEventListener('change', () => {
+                    simParams.protonDecayEnabled = protonDecayToggle.checked;
+                    protonHalflifeControl.style.display = simParams.protonDecayEnabled ? 'block' : 'none';
+                });
+
+                protonHalflifeSlider.addEventListener('input', () => {
+                    simParams.protonHalfLife = parseInt(protonHalflifeSlider.value);
+                    protonHalflifeValue.textContent = simParams.protonHalfLife;
+                });
+
+                perfModeToggle.addEventListener('change', () => {
+                    simParams.performanceMode = perfModeToggle.checked;
+                    resetSimulation();
+                });
+
+                contrastToggle.addEventListener('change', () => {
+                    document.body.classList.toggle('high-contrast', contrastToggle.checked);
+                });
+
+                // Presets
+                presetLightBtn.addEventListener('click', () => window.sim.applyPreset({ omegaLambda: 0.3 }));
+                presetMediumBtn.addEventListener('click', () => window.sim.applyPreset({ omegaLambda: 0.7, protonDecayEnabled: true, protonHalfLife: 36 }));
+                presetHeavyBtn.addEventListener('click', () => window.sim.applyPreset({ omegaLambda: 0.9 }));
+
+                // Utilities
+                exportPngBtn.addEventListener('click', () => {
+                    const link = document.createElement('a');
+                    link.download = 'heat-death-simulation.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+
+                exportJsonBtn.addEventListener('click', () => {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(simParams, null, 2));
+                    const link = document.createElement('a');
+                    link.href = dataStr;
+                    link.download = "simulation_params.json";
+                    link.click();
+                });
+
+                sharePresetBtn.addEventListener('click', () => {
+                    const url = new URL(window.location);
+                    url.hash = btoa(JSON.stringify(simParams));
+                    navigator.clipboard.writeText(url.href).then(() => alert('Shareable URL copied to clipboard!'));
+                });
+
+                // Keyboard shortcuts
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') { e.preventDefault(); playPauseBtn.click(); }
+                    if (e.code === 'ArrowRight') { e.preventDefault(); stepBtn.click(); }
+                    if (e.key === 'r') { e.preventDefault(); resetBtn.click(); }
+                    if (e.key === 'e') { e.preventDefault(); exportPngBtn.click(); }
+                });
+            }
+
+            function updateAllControls() {
+                // Syncs UI controls with the current simParams state.
+                document.getElementById('omega-lambda-slider').value = simParams.omegaLambda;
+                document.getElementById('omega-lambda-value').textContent = simParams.omegaLambda.toFixed(2);
+                document.getElementById('proton-decay-toggle').checked = simParams.protonDecayEnabled;
+                document.getElementById('proton-halflife-control').style.display = simParams.protonDecayEnabled ? 'block' : 'none';
+                document.getElementById('proton-halflife-slider').value = simParams.protonHalfLife;
+                document.getElementById('proton-halflife-value').textContent = simParams.protonHalfLife;
+                document.getElementById('perf-mode-toggle').checked = simParams.performanceMode;
+            }
+
+            function loadParamsFromURL() {
+                if (window.location.hash.length > 1) {
+                    try {
+                        const decodedString = atob(window.location.hash.substring(1));
+                        const params = JSON.parse(decodedString);
+                        window.sim.applyPreset(params);
+                    } catch (e) {
+                        console.error("Failed to load params from URL hash:", e);
+                    }
+                }
+            }
+
+            // --- Final Touches ---
+            function runSelfChecks() {
+                const requiredIds = ['universe-canvas', 'controls-panel', 'ledger-panel', 'play-pause-btn'];
+                const missing = requiredIds.filter(id => !document.getElementById(id));
+                if (missing.length > 0) {
+                    const errorPanel = document.getElementById('error-panel');
+                    errorPanel.style.display = 'block';
+                    errorPanel.textContent = `Error: Page failed to load correctly. Missing critical element(s): ${missing.join(', ')}. Please report this bug.`;
+                }
+            }
+
+            document.getElementById('toggle-dev-console').addEventListener('click', () => {
+                const consoleDiv = document.getElementById('dev-console');
+                consoleDiv.style.display = consoleDiv.style.display === 'block' ? 'none' : 'block';
+            });
+
+            // --- Initial Setup ---
+            try {
+                initCharts();
+                setupEventListeners();
+                resetSimulation();
+                updateAllControls();
+                loadParamsFromURL();
+                simulationLoop();
+                runSelfChecks();
+            } catch (e) {
+                const devConsole = document.getElementById('dev-console');
+                devConsole.style.display = 'block';
+                devConsole.textContent = `A critical error occurred: ${e.message}\n${e.stack}`;
+                console.error(e);
+            }
+        });
+    </script>
+</body>
+</html>
