@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mechanical Equilibrium: The Hanging Sign</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #333;
+            --primary-color: #0056b3;
+            --secondary-color: #ddd;
+            --header-bg: #fff;
+            --control-bg: #fff;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --success-color: #28a745;
+            --danger-color: #d9534f;
+            --warning-color: #ffc107;
+            --code-bg: #e9ecef;
+            --border-radius: 8px;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #4dabf7;
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --code-bg: #343a40;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 1rem; transition: background-color 0.3s, color 0.3s; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; background-color: var(--header-bg); border-radius: var(--border-radius); padding: 1rem;}
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 400; }
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: var(--border-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .equation { background-color: var(--code-bg); padding: 1rem; border-radius: 4px; margin: 1rem 0; font-family: 'Courier New', Courier, monospace; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid var(--secondary-color); padding: 0.75rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.6rem 1.2rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: background-color 0.2s; }
+        button:hover { background-color: #004494; }
+        .dark-mode button:hover { background-color: #82c9ff; }
+        .preset-buttons, .export-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        #simulation-controls { flex: 1; min-width: 320px; background-color: var(--control-bg); padding: 1.5rem; border-radius: var(--border-radius); align-self: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        #simulation-visuals { flex: 2; min-width: 400px; }
+        canvas { width: 100%; height: auto; background-color: #fff; border: 1px solid var(--secondary-color); border-radius: 4px; cursor: crosshair; }
+        .dark-mode canvas { background-color: #111; }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+        #readouts p { margin: 0.5rem 0; font-family: 'Courier New', Courier, monospace; }
+        #balance-indicator { text-align: center; padding: 0.5rem; border-radius: 4px; margin-top: 1rem; font-weight: bold; }
+        #error-panel, #quality-check-panel { display: none; background-color: var(--danger-color); color: white; padding: 1rem; border-radius: var(--border-radius); }
+        #dev-console { display: none; background-color: var(--code-bg); border: 1px solid var(--secondary-color); margin-top: 1rem; padding: 1rem; border-radius: var(--border-radius); max-height: 200px; overflow-y: auto; }
+        #dev-console-header { cursor: pointer; font-weight: bold; }
+        #metadata-bar { text-align: center; color: #888; font-size: 0.85rem; margin-top: 0.5rem; }
+        .dark-mode #metadata-bar { color: #aaa; }
+        .tooltip { position: relative; display: inline-block; cursor: help; }
+        .tooltip .tooltiptext { visibility: hidden; width: 200px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        @media (max-width: 768px) {
+            #simulation-container { flex-direction: column; }
+            main { padding: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="quality-check-panel"></div>
+    <header>
+        <h1>Mechanical Equilibrium: The Hanging Sign</h1>
+        <p>An interactive simulation to explore the principles of static equilibrium.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span> |
+            <span>Recommended Device: Desktop</span> |
+            <span id="html-size"></span>
+            <button id="theme-toggle" style="margin-left: 1rem; padding: 0.2rem 0.5rem;">🌙</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="error-panel"></div>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation demonstrates the principles of static equilibrium using a common example: a sign supported by two cables. For the sign to hang motionless, two conditions must be met: the net force on the sign must be zero, and the net torque (or rotational force) about any point must also be zero. This means the sign is not sliding up, down, or sideways, and it's not spinning. By dragging the four attachment points of the cables and changing the sign's mass, you can see how the tensions in the cables and the sign's angle adjust to maintain this perfect balance.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner’s Guide to Equilibrium</h2>
+            <p>Welcome! If you're new to physics, the term "static equilibrium" might sound complex, but it describes a very simple state: being perfectly still and balanced. This guide will walk you through the core concepts using everyday examples. At its heart, equilibrium is about balance.</p>
+
+            <h4>Step 1: Understanding Forces</h4>
+            <p>A force is simply a push or a pull. In our simulation, there are three main forces to consider:</p>
+            <ol>
+                <li><b>Gravity (Fg):</b> This is the constant downward pull from the Earth on the sign. We represent it with a <b>cyan arrow</b> pointing down from the sign's center. The heavier the sign, the stronger this force.</li>
+                <li><b>Tension 1 (T₁):</b> The pull from the left cable. We show this with a <b>magenta arrow</b>. Cables can only pull, never push.</li>
+                <li><b>Tension 2 (T₂):</b> The pull from the right cable, shown with a <b>yellow arrow</b>.</li>
+            </ol>
+
+            <h4>Step 2: The First Condition - Balancing Forces</h4>
+            <p>For the sign to not fly off into space or fall to the ground, all the forces must cancel each other out. This is the first condition of equilibrium: <strong>Net Force = 0</strong>.</p>
+            <p>Think of a game of tug-of-war. If two teams pull on a rope with equal force but in opposite directions, the flag in the middle doesn't move. The forces are balanced. Here, the upward pull from the two cables must exactly equal the downward pull of gravity. If you look at the force arrows, the vertical parts of the magenta and yellow arrows must add up to be the same length as the cyan arrow.</p>
+            <p>What about side-to-side forces? The leftward pull from one cable must also cancel the rightward pull from the other. This keeps the sign from drifting horizontally.</p>
+
+            <h4>Step 3: The Second Condition - Balancing Torques</h4>
+            <p>Just because forces are balanced doesn't mean an object won't spin. Imagine pushing on a door. If you push on the edge far from the hinges, it swings open easily. If you push near the hinges, it's much harder. The rotational force you apply is called <strong>torque</strong>.</p>
+            <p>The second condition of equilibrium is: <strong>Net Torque = 0</strong>. This means the sign can't be spinning.</p>
+            <p><b>Everyday Analogy: A See-Saw.</b> Imagine two people on a see-saw. A heavier person can balance a lighter person if the lighter person sits much further from the center pivot. The torque they create (their weight times their distance from the pivot) must be equal and opposite. In our simulation, the sign's "pivot" is its center of mass. Gravity pulls from this center, so it doesn't create any torque. However, the two cables pull from different spots on the sign. If one cable has more leverage (it's attached further from the center, or pulls at a more effective angle), it will create more torque. To stop it from spinning, the sign must tilt to an angle where the torques from both cables perfectly cancel each other out. You'll see this happen automatically when you move the attachment points.</p>
+
+            <h4>Step 4: Using the Simulation</h4>
+            <p>Now you're ready to experiment! The four white circles are draggable. The top two are the support points on the beam, and the bottom two are the attachment points on the sign itself. Try moving them around. Notice how the sign's angle and the tension values change. The `BALANCED` indicator will be green when a stable equilibrium is found. If the geometry is impossible (e.g., both cables pulling from one side), it will turn red.</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <p>The main parameters of this simulation can be adjusted using the controls. The primary control is a slider for mass, but the positions of the four attachment points are also critical parameters you control by dragging them.</p>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Control</th><th>Description</th><th>Effect</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Sign Mass (m)</td>
+                        <td>Slider</td>
+                        <td>The mass of the sign in kilograms (kg).</td>
+                        <td>Increases the force of gravity (Fg = m * 9.8). This generally increases the tension in both cables.</td>
+                    </tr>
+                    <tr>
+                        <td>Attachment Points (4)</td>
+                        <td>Draggable Circles</td>
+                        <td>The (x, y) coordinates where the cables connect to the support beam and the sign.</td>
+                        <td>Changes the geometry of the system, affecting both the force and torque balance, which alters the sign's angle and the cable tensions.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div class="slider-container">
+                    <label for="mass-slider">Sign Mass (kg): <span id="mass-readout">50</span></label>
+                    <input type="range" id="mass-slider" min="10" max="200" step="1" value="50" aria-label="Sign Mass">
+                </div>
+                <div id="readouts">
+                    <h4>Calculated Values</h4>
+                    <p>Sign Angle: <code id="angle-readout">0.0°</code></p>
+                    <p>Tension 1 (T₁): <code id="tension1-readout">N/A</code></p>
+                    <p>Tension 2 (T₂): <code id="tension2-readout">N/A</code></p>
+                </div>
+                <div id="balance-indicator">BALANCED</div>
+                <hr>
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button id="preset-symmetric" title="A standard, symmetrical setup.">Symmetric</button>
+                    <button id="preset-asymmetric" title="An offset setup causing a tilt.">Asymmetric</button>
+                    <button id="preset-tense" title="A setup with wide, shallow cables causing high tension.">High Tension</button>
+                </div>
+                <hr>
+                <h3>Actions</h3>
+                <div class="export-buttons">
+                    <button id="reset-btn" title="Reset to default (R)">Reset</button>
+                    <button id="export-png-btn" title="Save image of canvas (P)">Export PNG</button>
+                    <button id="export-json-btn" title="Save parameters (J)">Export JSON</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+            </div>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h4>Walkthrough: Changing Mass</h4>
+            <ol>
+                <li><strong>Start:</strong> Press the "Reset" button. The mass is <strong>50 kg</strong>. Note the tensions, e.g., T₁ and T₂ are both <strong>~246 N</strong>.</li>
+                <li><strong>Change:</strong> Move the mass slider up to <strong>100 kg</strong>.</li>
+                <li><strong>Observe:</strong> The sign's angle doesn't change because the setup is symmetric. However, the tensions have doubled to <strong>~491 N</strong> each. The downward force of gravity doubled, so the upward tension forces must also double to maintain balance.</li>
+            </ol>
+            <h4>Walkthrough: Creating Asymmetry</h4>
+             <ol>
+                <li><strong>Start:</strong> Press "Reset". The sign is level (0° angle).</li>
+                <li><strong>Change:</strong> Drag the right attachment point on the sign (the lower-right white circle) towards the center of the sign.</li>
+                <li><strong>Observe:</strong> The sign tilts! The left side goes down, and the right side goes up. The cable on the left now has less leverage (it's closer to the center of mass), so it must pull harder (higher tension) to counteract the torque from the right cable. The system finds a new equilibrium angle to balance the torques.</li>
+            </ol>
+
+            <h4>Micro-Experiments to Try</h4>
+            <ul>
+                <li><strong>The V-Shape:</strong> Move the two top support points very close together. What happens to the tensions? Why?</li>
+                <li><strong>The Horizontal Limit:</strong> Try to make the cables as horizontal as possible by moving the support points far apart and low down. Watch the tension values skyrocket. Why can't a real cable ever be perfectly horizontal if it's supporting a weight?</li>
+                <li><strong>One-Sided Hang:</strong> Move both support points to the left of the sign's center of mass. What happens? The `UNBALANCED` indicator should appear because it's impossible to balance the torques.</li>
+                <li><strong>Vertical Hang:</strong> Place both support points directly above the corresponding attachment points on the sign. The tensions should be equal and at their minimum possible value. Why?</li>
+            </ul>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory of Static Equilibrium</h2>
+            <p>For an object to be in static equilibrium, two vector equations must be satisfied simultaneously.</p>
+
+            <h4>1. Net Force is Zero (Translational Equilibrium)</h4>
+            <p>The vector sum of all external forces (<b>F</b>) acting on the object must be zero. This prevents the object's center of mass from accelerating.</p>
+            <div class="equation">Σ<b>F</b> = <b>T₁</b> + <b>T₂</b> + <b>F<sub>g</sub></b> = 0</div>
+            <p>This single vector equation is often broken into two simpler scalar equations for the x (horizontal) and y (vertical) components:</p>
+            <ul>
+                <li><code>ΣF<sub>x</sub> = T₁cos(θ₁) + T₂cos(θ₂) = 0</code> (Leftward forces equal rightward forces)</li>
+                <li><code>ΣF<sub>y</sub> = T₁sin(θ₁) + T₂sin(θ₂) - mg = 0</code> (Upward forces equal downward forces)</li>
+            </ul>
+            <p><b>Numeric Example:</b> In the default symmetric case, θ₁ = 153°, θ₂ = 27°, m = 50kg. The system solves for T₁ = T₂ = 246.3 N.
+            <br>ΣF<sub>y</sub> = 246.3 * sin(153°) + 246.3 * sin(27°) - 50 * 9.8 = 111.8 + 111.8 - 490 ≈ 0. (Rounding errors exist).
+            </p>
+
+            <h4>2. Net Torque is Zero (Rotational Equilibrium)</h4>
+            <p>The sum of all torques (<b>τ</b>) about any point must also be zero. This prevents the object from rotating. Torque is a rotational force, calculated as the force applied multiplied by the perpendicular distance from the pivot (lever arm). A convenient pivot to choose is the object's center of mass.</p>
+            <div class="equation">Σ<b>τ</b> = <b>r₁</b> × <b>T₁</b> + <b>r₂</b> × <b>T₂</b> = 0</div>
+            <p>Here, <b>r₁</b> and <b>r₂</b> are the position vectors from the center of mass to the attachment points of the cables. The '×' symbol is the cross product. In 2D, this gives a scalar value representing the torque's magnitude. If the torques don't sum to zero, the sign will rotate until it finds an angle where they do.</p>
+            <p><b>Limitation:</b> Our simulation finds the angle that minimizes the net torque. In some cases (like both cables pulling from one side), the torque can't be zeroed. The simulation will show `UNBALANCED` and settle at the angle of minimum (but non-zero) torque.</p>
+        </section>
+
+        <section id="faq">
+             <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why does tension get so high when cables are nearly horizontal?</dt>
+                <dd>A small vertical component of tension is needed to counteract gravity. If a cable is mostly horizontal, its total tension must be huge to provide even a small upward pull. A perfectly horizontal cable would require infinite tension to support any weight.</dd>
+                <dt>2. Why does the sign hang at an angle if I move an attachment point?</dt>
+                <dd>To balance torques. If one cable has more leverage (e.g., it's attached further from the sign's center), the sign must tilt. This changes the lever arms and force angles until the clockwise and counter-clockwise torques cancel out.</dd>
+                <dt>3. What does the `UNBALANCED` indicator mean?</dt>
+                <dd>It means no stable equilibrium angle exists for the current geometry. In reality, the sign would continuously spin or swing. This usually happens if both cables are pulling from the same side of the sign's center of mass.</dd>
+                <dt>4. What do the colored force vectors represent?</dt>
+                <dd><b>Cyan:</b> The force of gravity (weight), always pulling down from the center. <b>Magenta:</b> Tension in the left cable. <b>Yellow:</b> Tension in the right cable. The length of the arrow is proportional to the force's magnitude.</dd>
+                <dt>5. The simulation is slow or the canvas is blank.</dt>
+                <dd>This simulation is very lightweight and should run on any modern browser. If you have issues, try reloading the page. If problems persist, open the browser's developer console (F12), copy any errors from the 'Console' tab, and report them.</dd>
+                <dt>6. How is the equilibrium angle calculated?</dt>
+                <dd>The simulation doesn't solve the equations algebraically. Instead, it uses a numerical method: it rapidly tests a range of possible angles (-90° to +90°) and finds the one where the net torque is closest to zero. This is a simple but robust way to find the equilibrium state.</dd>
+            </dl>
+        </section>
+
+        <section>
+            <h2 id="dev-console-header">Developer Console ▼</h2>
+            <div id="dev-console">
+                <p>Last error: <span id="last-error">None</span></p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Self-Check ---
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const requiredIds = ['main-canvas', 'mass-slider', 'reset-btn', 'preset-symmetric', 'export-png-btn', 'export-json-btn'];
+        const missing = requiredIds.filter(id => !document.getElementById(id));
+        if (missing.length > 0) {
+            qualityCheckPanel.style.display = 'block';
+            qualityCheckPanel.innerHTML = `<strong>Quality Check Failed!</strong> Missing required elements: ${missing.join(', ')}. Please report this bug.`;
+        }
+
+        // --- Dev Console ---
+        const devConsole = document.getElementById('dev-console');
+        const devConsoleHeader = document.getElementById('dev-console-header');
+        const lastErrorSpan = document.getElementById('last-error');
+        devConsoleHeader.addEventListener('click', () => {
+            const isVisible = devConsole.style.display === 'block';
+            devConsole.style.display = isVisible ? 'none' : 'block';
+            devConsoleHeader.textContent = isVisible ? 'Developer Console ▼' : 'Developer Console ▲';
+        });
+        window.onerror = function(message, source, lineno, colno, error) {
+            lastErrorSpan.textContent = `${message} at ${source.split('/').pop()}:${lineno}`;
+            devConsole.style.display = 'block';
+             devConsoleHeader.textContent = 'Developer Console ▲';
+        };
+
+        // --- Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const massSlider = document.getElementById('mass-slider');
+        const massReadout = document.getElementById('mass-readout');
+        const angleReadout = document.getElementById('angle-readout');
+        const tension1El = document.getElementById('tension1-readout');
+        const tension2El = document.getElementById('tension2-readout');
+        const balanceEl = document.getElementById('balance-indicator');
+        const htmlSizeEl = document.getElementById('html-size');
+
+        // --- Vector Math Helpers ---
+        const V = {
+            add: (v1, v2) => ({ x: v1.x + v2.x, y: v1.y + v2.y }),
+            sub: (v1, v2) => ({ x: v1.x - v2.x, y: v1.y - v2.y }),
+            scale: (v, s) => ({ x: v.x * s, y: v.y * s }),
+            len: (v) => Math.sqrt(v.x * v.x + v.y * v.y),
+            normalize: (v) => { const l = V.len(v); return l > 0 ? V.scale(v, 1/l) : {x:0, y:0}; },
+            cross: (v1, v2) => v1.x * v2.y - v1.y * v2.x,
+            rotate: (v, angle) => ({
+                x: v.x * Math.cos(angle) - v.y * Math.sin(angle),
+                y: v.x * Math.sin(angle) + v.y * Math.cos(angle)
+            })
+        };
+
+        let state = {};
+
+        function applyState(newState) {
+            state = JSON.parse(JSON.stringify(newState)); // Deep copy
+            massSlider.value = state.sign.mass;
+            massReadout.textContent = state.sign.mass;
+            solveEquilibrium();
+            draw();
+        }
+
+        const presets = {
+            symmetric: {
+                g: 9.8, sign: { mass: 50, width: 200, height: 100, pos: {x: 300, y: 250}, angle: 0 },
+                attachments: [ { x: 150, y: 100 }, { x: 450, y: 100 }, { x: -80, y: 0 }, { x: 80, y: 0 } ],
+                tensions: { T1: 0, T2: 0 }, netTorque: 0, isDragging: null
+            },
+            asymmetric: {
+                g: 9.8, sign: { mass: 70, width: 200, height: 100, pos: {x: 300, y: 250}, angle: 0 },
+                attachments: [ { x: 100, y: 100 }, { x: 450, y: 100 }, { x: -80, y: 0 }, { x: 20, y: 0 } ],
+                tensions: { T1: 0, T2: 0 }, netTorque: 0, isDragging: null
+            },
+            tense: {
+                g: 9.8, sign: { mass: 40, width: 200, height: 100, pos: {x: 300, y: 250}, angle: 0 },
+                attachments: [ { x: 50, y: 200 }, { x: 550, y: 200 }, { x: -80, y: 0 }, { x: 80, y: 0 } ],
+                tensions: { T1: 0, T2: 0 }, netTorque: 0, isDragging: null
+            }
+        };
+
+        function solveEquilibrium() {
+            let minTorque = Infinity;
+            let bestAngle = state.sign.angle;
+            let foundSolution = false;
+
+            for (let angle = -Math.PI / 2; angle < Math.PI / 2; angle += 0.005) {
+                const Fg = { x: 0, y: state.sign.mass * state.g };
+                const r1_rel = V.rotate(state.attachments[2], angle);
+                const r2_rel = V.rotate(state.attachments[3], angle);
+                const p1_abs = V.add(state.sign.pos, r1_rel);
+                const p2_abs = V.add(state.sign.pos, r2_rel);
+                const u1 = V.normalize(V.sub(state.attachments[0], p1_abs));
+                const u2 = V.normalize(V.sub(state.attachments[1], p2_abs));
+
+                const det = V.cross(u1, u2);
+                if (Math.abs(det) < 1e-4) continue;
+
+                const T2 = (Fg.y * u1.x) / det;
+                const T1 = (Fg.y * u2.x) / (u1.x * u2.y - u1.y * u2.x);
+
+                if (T1 < 0 || T2 < 0) continue;
+
+                const T1_vec = V.scale(u1, T1);
+                const T2_vec = V.scale(u2, T2);
+                const netTorque = V.cross(r1_rel, T1_vec) + V.cross(r2_rel, T2_vec);
+
+                if (Math.abs(netTorque) < minTorque) {
+                    minTorque = Math.abs(netTorque);
+                    bestAngle = angle;
+                    state.tensions = { T1, T2 };
+                    state.netTorque = netTorque;
+                    foundSolution = true;
+                }
+            }
+            state.sign.angle = bestAngle;
+            if (!foundSolution) {
+                state.netTorque = Infinity;
+                state.tensions = {T1: 0, T2: 0};
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw support beam
+            ctx.strokeStyle = '#999'; ctx.lineWidth = 5;
+            ctx.beginPath(); ctx.moveTo(0, 100); ctx.lineTo(canvas.width, 100); ctx.stroke();
+            // Draw sign
+            ctx.save();
+            ctx.translate(state.sign.pos.x, state.sign.pos.y);
+            ctx.rotate(state.sign.angle);
+            ctx.fillStyle = '#a0522d'; ctx.fillRect(-state.sign.width / 2, -state.sign.height / 2, state.sign.width, state.sign.height);
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.strokeRect(-state.sign.width / 2, -state.sign.height / 2, state.sign.width, state.sign.height);
+            ctx.restore();
+            // --- Draw attachment points and cables ---
+            const r1_abs = V.add(state.sign.pos, V.rotate(state.attachments[2], state.sign.angle));
+            const r2_abs = V.add(state.sign.pos, V.rotate(state.attachments[3], state.sign.angle));
+            // Cables
+            ctx.strokeStyle = 'var(--primary-color)'; ctx.lineWidth = 2;
+            drawLine(state.attachments[0], r1_abs); drawLine(state.attachments[1], r2_abs);
+            // Attachment points
+            ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+            drawCircle(state.attachments[0]); drawCircle(state.attachments[1]);
+            drawCircle(r1_abs); drawCircle(r2_abs);
+            // --- Draw Force Vectors ---
+            const forceScale = 0.2;
+            drawVector(state.sign.pos, { x: 0, y: state.sign.mass * state.g }, 'cyan', forceScale, 'Fg');
+            if (state.netTorque !== Infinity) {
+                const u1 = V.normalize(V.sub(state.attachments[0], r1_abs));
+                drawVector(r1_abs, V.scale(u1, state.tensions.T1), 'magenta', forceScale, 'T₁');
+                const u2 = V.normalize(V.sub(state.attachments[1], r2_abs));
+                drawVector(r2_abs, V.scale(u2, state.tensions.T2), 'yellow', forceScale, 'T₂');
+            }
+            updateReadouts();
+        }
+
+        function updateReadouts() {
+            angleReadout.textContent = (state.sign.angle * 180 / Math.PI).toFixed(1) + '°';
+            if (state.netTorque === Infinity || state.tensions.T1 < 0 || state.tensions.T2 < 0) {
+                tension1El.textContent = 'N/A';
+                tension2El.textContent = 'N/A';
+                balanceEl.textContent = 'UNBALANCED';
+                balanceEl.style.backgroundColor = 'var(--danger-color)';
+            } else {
+                tension1El.textContent = state.tensions.T1.toFixed(1) + ' N';
+                tension2El.textContent = state.tensions.T2.toFixed(1) + ' N';
+                if (Math.abs(state.netTorque) < 1) { // Tolerance for balance
+                    balanceEl.textContent = 'BALANCED';
+                    balanceEl.style.backgroundColor = 'var(--success-color)';
+                } else {
+                    balanceEl.textContent = 'NEARLY BALANCED';
+                    balanceEl.style.backgroundColor = 'var(--warning-color)';
+                }
+            }
+        }
+
+        function addEventListeners() {
+            massSlider.addEventListener('input', e => {
+                state.sign.mass = parseFloat(e.target.value);
+                massReadout.textContent = state.sign.mass;
+                solveEquilibrium();
+                draw();
+            });
+            canvas.addEventListener('mousedown', e => {
+                const mousePos = { x: e.offsetX, y: e.offsetY };
+                const attachmentPointsAbs = [ state.attachments[0], state.attachments[1],
+                    V.add(state.sign.pos, V.rotate(state.attachments[2], state.sign.angle)),
+                    V.add(state.sign.pos, V.rotate(state.attachments[3], state.sign.angle)) ];
+                for (let i = 0; i < attachmentPointsAbs.length; i++) {
+                    if (V.len(V.sub(mousePos, attachmentPointsAbs[i])) < 10) { state.isDragging = i; return; }
+                }
+            });
+            canvas.addEventListener('mousemove', e => {
+                if (state.isDragging === null) return;
+                const mousePos = { x: e.offsetX, y: e.offsetY };
+                if (state.isDragging < 2) {
+                    state.attachments[state.isDragging] = mousePos;
+                } else {
+                    state.attachments[state.isDragging] = V.rotate(V.sub(mousePos, state.sign.pos), -state.sign.angle);
+                }
+                solveEquilibrium();
+                draw();
+            });
+            canvas.addEventListener('mouseup', () => { state.isDragging = null; });
+            canvas.addEventListener('mouseleave', () => { state.isDragging = null; });
+            document.getElementById('reset-btn').addEventListener('click', () => applyState(presets.symmetric));
+            document.getElementById('preset-symmetric').addEventListener('click', () => applyState(presets.symmetric));
+            document.getElementById('preset-asymmetric').addEventListener('click', () => applyState(presets.asymmetric));
+            document.getElementById('preset-tense').addEventListener('click', () => applyState(presets.tense));
+            document.getElementById('export-png-btn').addEventListener('click', exportPNG);
+            document.getElementById('export-json-btn').addEventListener('click', exportJSON);
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', (e) => {
+                if (document.activeElement.tagName === 'INPUT') return;
+                if (e.key === 'r' || e.key === 'R') { e.preventDefault(); applyState(presets.symmetric); }
+                if (e.key === 'p' || e.key === 'P') { e.preventDefault(); exportPNG(); }
+                if (e.key === 'j' || e.key === 'J') { e.preventDefault(); exportJSON(); }
+            });
+        }
+
+        function exportPNG() {
+            const link = document.createElement('a');
+            link.download = 'mechanical-equilibrium.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify({
+                sign: { mass: state.sign.mass },
+                attachments: state.attachments
+            }, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'equilibrium-settings.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const themeToggle = document.getElementById('theme-toggle');
+            if (document.body.classList.contains('dark-mode')) {
+                themeToggle.textContent = '☀️';
+            } else {
+                themeToggle.textContent = '🌙';
+            }
+            draw(); // Redraw with new theme colors
+        }
+
+        // --- Drawing Helpers ---
+        function drawLine(p1, p2) { ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+        function drawCircle(p) { ctx.beginPath(); ctx.arc(p.x, p.y, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); }
+        function drawVector(start, vec, color, scale, label) {
+            ctx.save();
+            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+            const end = V.add(start, V.scale(vec, scale));
+            ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke();
+            const angle = Math.atan2(vec.y, vec.x);
+            ctx.translate(end.x, end.y); ctx.rotate(angle);
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.closePath(); ctx.fill();
+            ctx.rotate(-angle); ctx.translate(10, -10);
+            ctx.font = '14px Arial'; ctx.fillText(label, 0, 0);
+            ctx.restore();
+        }
+
+        function init() {
+            // Set HTML size metadata
+            const sizeInBytes = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            htmlSizeEl.textContent = `Size: ${(sizeInBytes / 1024).toFixed(1)} KB`;
+
+            applyState(presets.symmetric); // Initial state
+            addEventListeners();
+            // No mainLoop needed as it's event-driven. Initial draw is in applyState.
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
