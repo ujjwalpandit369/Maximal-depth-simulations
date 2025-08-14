@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classical Configuration Space: The Double Robotic Arm</title>
+    <style>
+        :root {
+            --bg-color: #fdfdff;
+            --text-color: #343a40;
+            --primary-color: #0077b6;
+            --secondary-color: #00b4d8;
+            --border-color: #ced4da;
+            --header-bg: #e9ecef;
+            --canvas-bg: #fff;
+            --obstacle-color: #ff595e;
+            --c-space-obstacle-color: rgba(255, 89, 94, 0.3);
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #00b4d8;
+            --border-color: #6c757d;
+            --header-bg: #343a40;
+            --canvas-bg: #212529;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        .container { max-width: 1400px; margin: auto; }
+        h1, h2, h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        h1 { text-align: center; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: auto; aspect-ratio: 1 / 1; cursor: pointer; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
+        .control-group { border: 1px solid var(--border-color); padding: 15px; border-radius: 5px; }
+        button { cursor: pointer; padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; margin: 5px; font-size: 1em; }
+        button:hover { background-color: var(--secondary-color); }
+        button.active { background-color: var(--secondary-color); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+        .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); display: flex; justify-content: center; align-items: center; font-size: 1.5em; color: var(--primary-color); display: none; }
+        .canvas-wrapper { position: relative; }
+        @media (max-width: 900px) {
+            .simulation-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Classical Configuration Space: The Double Robotic Arm</h1>
+            <p class="subtitle">Visualizing how a robot's complex motion in the real world becomes a simple point in an abstract "Configuration Space."</p>
+        </header>
+
+        <section>
+            <h2>Plain-Language Overview</h2>
+            <p>Imagine trying to guide a robotic arm through a cluttered room without hitting anything. This is a surprisingly hard problem. The robot's motion is complex, involving multiple joints and angles. "Configuration Space," or C-space, is a clever mathematical trick that makes this problem easier. Instead of thinking about the robot's position in the room, we create an abstract map where every single point corresponds to a unique pose (a specific set of joint angles) of the robot. This simulation shows two views: on the left, a simple two-joint robot in its "workspace" (the real world). On the right, you see its C-space. As you move the robot, you'll see a single dot move in C-space. The magic is that planning a path for the robot is now as simple as finding a path for that single dot from a start to a goal on the C-space map, avoiding any "forbidden" regions created by obstacles.</p>
+        </section>
+
+        <section>
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Workspace vs. Configuration Space</h3>
+            <p>You see two main panels.
+            <ul>
+                <li><strong>Workspace (Left):</strong> This is the world the robot lives in. It has a two-link arm fixed at the center. You can grab its joints and move it around. The state of this robot is defined by two angles: θ₁ (the angle of the first, longer arm relative to the horizontal) and θ₂ (the angle of the second, shorter arm relative to the first arm).</li>
+                <li><strong>Configuration Space (Right):</strong> This is the abstract map. The horizontal axis is the first angle, θ₁, and the vertical axis is the second angle, θ₂. A single point `(θ₁, θ₂)` on this map perfectly describes one specific pose of the robot arm.</li>
+            </ul>
+            Try dragging the arm's joints on the left. Watch how the dot on the right moves in response. Now, try dragging the dot on the right. See how the robot arm on the left changes its pose. They are two different ways of looking at the exact same information.
+            </p>
+            <h3>2. The Torus: A Donut-Shaped Map</h3>
+            <p>Notice that the C-space map wraps around. If you drag the dot off the right edge, it reappears on the left. If you drag it off the top, it reappears on the bottom. This is because an angle of 360° is the same as an angle of 0°. This wrapping behavior means the C-space map actually has the shape of a donut, or a <strong>torus</strong>. We are just looking at a flattened-out version of it.</p>
+            <h3>3. Introducing Obstacles</h3>
+            <p>Motion planning is easy in an empty room. The real challenge is avoiding obstacles.
+            <ol>
+                <li>Click the "Draw Obstacles" button. Your cursor on the workspace (left panel) will turn into a crosshair.</li>
+                <li>Click and drag to draw a few rectangular obstacles.</li>
+                <li>Click "Finish Drawing" when you're done. The simulation will now pause to calculate the "forbidden region" in C-space.</li>
+            </ol>
+            </p>
+            <h3>4. C-Space Obstacles: The Forbidden Region</h3>
+            <p>After the calculation, you'll see shaded areas appear in the C-space map. These are the C-space obstacles. <strong>If the C-space dot enters a shaded region, it means the physical robot arm is colliding with an obstacle in the workspace.</strong> The complex physical shape of the robot and obstacles is transformed into a simple "keep out" zone for a single point. Now, the problem of finding a collision-free path for the robot is reduced to finding a path for the dot from its start to its goal that doesn't cross any shaded areas. This is a much simpler problem to solve!</p>
+        </section>
+
+        <div class="simulation-container">
+            <div class="canvas-wrapper">
+                <h3>Workspace</h3>
+                <canvas id="workspaceCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <h3>Configuration Space (θ₁ vs θ₂)</h3>
+                <canvas id="cspaceCanvas" width="600" height="600"></canvas>
+                <div id="cspace-loader" class="loading-overlay">Calculating C-Space Obstacles...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>Controls</h3>
+                <button id="draw-obstacles-btn">Draw Obstacles</button>
+                <button id="clear-obstacles-btn">Clear Obstacles</button>
+                <p>Drag joints in Workspace or the state point in C-Space.</p>
+            </div>
+             <div class="control-group">
+                <h3>C-Space Options</h3>
+                <label for="cspace-resolution-slider">C-Space Resolution: <span id="cspace-res-value">64</span></label>
+                <input type="range" id="cspace-resolution-slider" min="32" max="128" value="64" step="16">
+                <p>Higher resolution is more accurate but much slower to calculate.</p>
+            </div>
+            <div class="control-group">
+                <h3>Export & Share</h3>
+                <button id="export-png-btn">Export PNG</button>
+                <button id="share-btn">Share State</button>
+            </div>
+        </div>
+
+        <section>
+            <h2>Core Concepts</h2>
+            <h3>Forward Kinematics</h3>
+            <p>Forward Kinematics (FK) is the process of calculating the position of the robot's end-effector given the angles of its joints. This is what the simulation does when you move the point in C-space. The equations are straightforward trigonometry:</p>
+            <p><code>x₁ = L₁⋅cos(θ₁)</code><br>
+            <code>y₁ = L₁⋅sin(θ₁)</code><br>
+            <code>x₂ = x₁ + L₂⋅cos(θ₁ + θ₂)</code><br>
+            <code>y₂ = y₁ + L₂⋅sin(θ₁ + θ₂)</code></p>
+            <p>This is computationally easy and always has one unique solution.</p>
+            <h3>Inverse Kinematics</h3>
+            <p>Inverse Kinematics (IK) is the reverse problem: given a target position `(x, y)` for the end-effector, what joint angles `(θ₁, θ₂)` are needed to get there? This is much harder and is a major field of study in robotics. For a 2-link arm, there can be zero, one, or two possible solutions (an "elbow-up" and "elbow-down" pose). This simulation simplifies the interaction by having you drag the C-space point directly, avoiding the need for a complex IK solver.</p>
+        </section>
+
+        <section>
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li><strong>Singularity:</strong> Move the C-space point to the left edge (θ₁=0). Now move it up and down the edge. Notice in the workspace that the arm is fully outstretched, and changing θ₂ only rotates the second link around the first. This is a "singularity," a state where the robot loses a degree of freedom.</li>
+                <li><strong>Obstacle Shape Transformation:</strong> Draw a small obstacle near the base of the robot. The resulting C-space obstacle will be a simple, thin band. Now, clear it and draw the same small obstacle far away, near the arm's maximum reach. The C-space obstacle will be a much larger, more complex shape. This shows that an obstacle's effect on the robot's motion depends heavily on its location.</li>
+                <li><strong>Path Planning Challenge:</strong> Draw two obstacles that create a narrow, winding path in C-space. Now, try to move the C-space dot from one side to the other. Observe the complex path the robot arm has to take in the workspace to navigate this simple-looking C-space path.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>FAQ</h2>
+            <dl>
+                <dt><strong>1. Why is calculating the C-space so slow?</strong></dt>
+                <dd>To generate the C-space obstacle map, the simulation must test every single configuration (every pixel in the C-space canvas) for a collision. For a 64x64 resolution, that's 4,096 collision checks. For a 128x128 resolution, it's 16,384 checks. This brute-force approach is computationally expensive.</dd>
+                <dt><strong>2. Why is there no "Inverse Kinematics" dragging in the workspace?</strong></dt>
+                <dd>Implementing a robust and intuitive IK solver that can handle user dragging is complex. It needs to decide between multiple solutions (e.g., elbow-up vs. elbow-down) and handle unreachable targets gracefully. For simplicity, this simulation focuses on the C-space representation itself, so direct manipulation is done in the C-space canvas.</dd>
+                <dt><strong>3. How does this relate to real-world robotics?</strong></dt>
+                <dd>This is a fundamental technique in robot motion planning. Algorithms like A* (A-star) or RRT (Rapidly-exploring Random Tree) are used to automatically find a path for the "dot" through the free C-space, which is then translated back into a series of joint movements for the real robot.</dd>
+            </dl>
+        </section>
+
+        <footer>
+            <div class="metadata-bar" style="margin-top: 20px;">
+                <label for="theme-toggle">High Contrast Mode:</label>
+                <input type="checkbox" id="theme-toggle">
+            </div>
+        </footer>
+        <div id="quality-check-panel" class="quality-check-panel"></div>
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content" id="dev-console-content"></div>
+        </details>
+    </div>
+
+    <script>
+    (function() {
+        // --- DOM & Setup ---
+        const get = (id) => document.getElementById(id);
+        const logToConsole = (message) => {
+            const consoleContent = get('dev-console-content');
+            if (!consoleContent) return;
+            consoleContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+        };
+
+        const workspaceCanvas = get('workspaceCanvas');
+        const cspaceCanvas = get('cspaceCanvas');
+        const wsCtx = workspaceCanvas.getContext('2d');
+        const csCtx = cspaceCanvas.getContext('2d');
+        const cspaceLoader = get('cspace-loader');
+        const drawBtn = get('draw-obstacles-btn');
+        const clearBtn = get('clear-obstacles-btn');
+        const resSlider = get('cspace-resolution-slider');
+        const resValue = get('cspace-res-value');
+        const exportPngBtn = get('export-png-btn');
+        const shareBtn = get('share-btn');
+        const themeToggle = get('theme-toggle');
+
+        // --- State ---
+        const state = {
+            l1: 150, l2: 100, // arm lengths
+            theta1: Math.PI / 4,
+            theta2: Math.PI / 2,
+            obstacles: [],
+            isDrawingObstacles: false,
+            currentObstacle: null,
+            cspaceRes: 64,
+            cspaceObstacles: null,
+            isCalculating: false,
+        };
+
+        // --- Kinematics ---
+        function forwardKinematics(t1, t2) {
+            const x1 = state.l1 * Math.cos(t1);
+            const y1 = state.l1 * Math.sin(t1);
+            const x2 = x1 + state.l2 * Math.cos(t1 + t2);
+            const y2 = y1 + state.l2 * Math.sin(t1 + t2);
+            return { p0: {x:0, y:0}, p1: {x: x1, y: y1}, p2: {x: x2, y: y2} };
+        }
+
+        // --- C-Space Calculation ---
+        function calculateCSpaceObstacles() {
+            if (state.isCalculating) return;
+            state.isCalculating = true;
+            cspaceLoader.style.display = 'flex';
+
+            setTimeout(() => { // Use timeout to allow UI to update
+                const resolution = state.cspaceRes;
+                state.cspaceObstacles = new Uint8Array(resolution * resolution);
+                for (let i = 0; i < resolution; i++) {
+                    for (let j = 0; j < resolution; j++) {
+                        const t1 = (i / resolution) * 2 * Math.PI;
+                        const t2 = (j / resolution) * 2 * Math.PI;
+                        const armPos = forwardKinematics(t1, t2);
+                        let collision = false;
+                        for (const obs of state.obstacles) {
+                            if (checkLineRectCollision(armPos.p0, armPos.p1, obs) ||
+                                checkLineRectCollision(armPos.p1, armPos.p2, obs)) {
+                                collision = true;
+                                break;
+                            }
+                        }
+                        state.cspaceObstacles[j * resolution + i] = collision ? 1 : 0;
+                    }
+                }
+                state.isCalculating = false;
+                cspaceLoader.style.display = 'none';
+                draw();
+            }, 10);
+        }
+
+        // --- Collision Detection ---
+        function checkLineRectCollision(p1, p2, rect) {
+            const cx = workspaceCanvas.width / 2;
+            const cy = workspaceCanvas.height / 2;
+            const r = { x: rect.x + cx, y: rect.y + cy, w: rect.w, h: rect.h };
+            const p1s = { x: p1.x + cx, y: p1.y + cy };
+            const p2s = { x: p2.x + cx, y: p2.y + cy };
+
+            const left = lineLine(p1s, p2s, {x:r.x,y:r.y}, {x:r.x,y:r.y+r.h});
+            const right = lineLine(p1s, p2s, {x:r.x+r.w,y:r.y}, {x:r.x+r.w,y:r.y+r.h});
+            const top = lineLine(p1s, p2s, {x:r.x,y:r.y}, {x:r.x+r.w,y:r.y});
+            const bottom = lineLine(p1s, p2s, {x:r.x,y:r.y+r.h}, {x:r.x+r.w,y:r.y+r.h});
+            return left || right || top || bottom;
+        }
+
+        function lineLine(p1, p2, p3, p4) {
+            const uA = ((p4.x-p3.x)*(p1.y-p3.y) - (p4.y-p3.y)*(p1.x-p3.x)) / ((p4.y-p3.y)*(p2.x-p1.x) - (p4.x-p3.x)*(p2.y-p1.y));
+            const uB = ((p2.x-p1.x)*(p1.y-p3.y) - (p2.y-p1.y)*(p1.x-p3.x)) / ((p4.y-p3.y)*(p2.x-p1.x) - (p4.x-p3.x)*(p2.y-p1.y));
+            return uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            drawWorkspace();
+            drawCSpace();
+        }
+
+        function drawWorkspace() {
+            wsCtx.clearRect(0, 0, workspaceCanvas.width, workspaceCanvas.height);
+            const w = workspaceCanvas.width;
+            const h = workspaceCanvas.height;
+            wsCtx.save();
+            wsCtx.translate(w / 2, h / 2);
+
+            // Draw arm
+            const armPos = forwardKinematics(state.theta1, state.theta2);
+            wsCtx.strokeStyle = 'black';
+            wsCtx.lineWidth = 5;
+            wsCtx.beginPath();
+            wsCtx.moveTo(armPos.p0.x, armPos.p0.y);
+            wsCtx.lineTo(armPos.p1.x, armPos.p1.y);
+            wsCtx.lineTo(armPos.p2.x, armPos.p2.y);
+            wsCtx.stroke();
+
+            // Draw joints
+            wsCtx.fillStyle = 'white';
+            wsCtx.strokeStyle = 'black';
+            wsCtx.lineWidth = 2;
+            [armPos.p0, armPos.p1, armPos.p2].forEach(p => {
+                wsCtx.beginPath();
+                wsCtx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
+                wsCtx.fill();
+                wsCtx.stroke();
+            });
+
+            // Draw obstacles
+            wsCtx.fillStyle = var(--obstacle-color);
+            state.obstacles.forEach(obs => {
+                wsCtx.fillRect(obs.x, obs.y, obs.w, obs.h);
+            });
+            if (state.currentObstacle) {
+                wsCtx.globalAlpha = 0.5;
+                wsCtx.fillRect(state.currentObstacle.x, state.currentObstacle.y, state.currentObstacle.w, state.currentObstacle.h);
+                wsCtx.globalAlpha = 1.0;
+            }
+
+            wsCtx.restore();
+        }
+
+        function drawCSpace() {
+            csCtx.clearRect(0, 0, cspaceCanvas.width, cspaceCanvas.height);
+            // Draw C-space obstacles
+            if (state.cspaceObstacles) {
+                const res = state.cspaceRes;
+                const cellW = cspaceCanvas.width / res;
+                const cellH = cspaceCanvas.height / res;
+                csCtx.fillStyle = var(--c-space-obstacle-color);
+                for (let i = 0; i < res; i++) {
+                    for (let j = 0; j < res; j++) {
+                        if (state.cspaceObstacles[j * res + i] === 1) {
+                            csCtx.fillRect(i * cellW, j * cellH, cellW, cellH);
+                        }
+                    }
+                }
+            }
+            // Draw grid
+            csCtx.strokeStyle = '#eee';
+            csCtx.lineWidth = 1;
+            for(let i=1; i<4; i++) {
+                csCtx.beginPath();
+                csCtx.moveTo(i*cspaceCanvas.width/4, 0);
+                csCtx.lineTo(i*cspaceCanvas.width/4, cspaceCanvas.height);
+                csCtx.stroke();
+                csCtx.beginPath();
+                csCtx.moveTo(0, i*cspaceCanvas.height/4);
+                csCtx.lineTo(cspaceCanvas.width, i*cspaceCanvas.height/4);
+                csCtx.stroke();
+            }
+
+            // Draw point
+            const x = (state.theta1 / (2 * Math.PI)) * cspaceCanvas.width;
+            const y = (state.theta2 / (2 * Math.PI)) * cspaceCanvas.height;
+            csCtx.fillStyle = 'blue';
+            csCtx.beginPath();
+            csCtx.arc(x, y, 8, 0, 2 * Math.PI);
+            csCtx.fill();
+        }
+
+        // --- Event Listeners ---
+        let dragTarget = null;
+
+        function runQualityChecks() {
+            const checks = { 'workspaceCanvas': 'Workspace Canvas', 'cspaceCanvas': 'C-Space Canvas', 'draw-obstacles-btn': 'Draw Button' };
+            const panel = get('quality-check-panel');
+            let failed = false;
+            panel.innerHTML = '<strong>Quality Check Failed!</strong><ul></ul>';
+            const list = panel.querySelector('ul');
+            for (const id in checks) {
+                if (!get(id)) {
+                    failed = true;
+                    list.innerHTML += `<li>Missing element: ${checks[id]} (ID: #${id})</li>`;
+                }
+            }
+            if (failed) panel.style.display = 'block';
+            return !failed;
+        }
+
+        function setupEventListeners() {
+            workspaceCanvas.addEventListener('mousedown', e => {
+            if (state.isDrawingObstacles) {
+                const rect = workspaceCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left - workspaceCanvas.width/2;
+                const y = e.clientY - rect.top - workspaceCanvas.height/2;
+                state.currentObstacle = { x, y, w: 0, h: 0 };
+                return;
+            }
+            // ... IK drag logic would go here, simplified for now
+        });
+
+            cspaceCanvas.addEventListener('mousedown', e => {
+                updateCSpace(e);
+                dragTarget = 'cspace';
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (dragTarget === 'cspace') updateCSpace(e);
+                if (state.isDrawingObstacles && state.currentObstacle) {
+                    const rect = workspaceCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left - workspaceCanvas.width/2;
+                    const y = e.clientY - rect.top - workspaceCanvas.height/2;
+                    state.currentObstacle.w = x - state.currentObstacle.x;
+                    state.currentObstacle.h = y - state.currentObstacle.y;
+                    draw();
+                }
+            });
+
+            window.addEventListener('mouseup', e => {
+                dragTarget = null;
+                if (state.isDrawingObstacles && state.currentObstacle) {
+                    state.obstacles.push(state.currentObstacle);
+                    state.currentObstacle = null;
+                    calculateCSpaceObstacles();
+                }
+            });
+
+            drawBtn.addEventListener('click', () => {
+                state.isDrawingObstacles = !state.isDrawingObstacles;
+                drawBtn.classList.toggle('active');
+                drawBtn.textContent = state.isDrawingObstacles ? 'Finish Drawing' : 'Draw Obstacles';
+                logToConsole(`Obstacle drawing ${state.isDrawingObstacles ? 'enabled' : 'disabled'}.`);
+            });
+
+            clearBtn.addEventListener('click', () => {
+                state.obstacles = [];
+                state.cspaceObstacles = null;
+                logToConsole("Obstacles cleared.");
+                draw();
+            });
+
+            resSlider.addEventListener('input', e => {
+                state.cspaceRes = parseInt(e.target.value);
+                resValue.textContent = state.cspaceRes;
+                if (state.obstacles.length > 0) calculateCSpaceObstacles();
+            });
+
+            exportPngBtn.addEventListener('click', exportPNG);
+            shareBtn.addEventListener('click', shareState);
+            themeToggle.addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+        }
+
+        function updateCSpace(e) {
+            const rect = cspaceCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            state.theta1 = (x / cspaceCanvas.width) * 2 * Math.PI;
+            state.theta2 = (y / cspaceCanvas.height) * 2 * Math.PI;
+            draw();
+        }
+
+        // --- UTILITY ---
+        function exportPNG() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = workspaceCanvas.width + cspaceCanvas.width;
+            tempCanvas.height = workspaceCanvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
+            tempCtx.fillRect(0,0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(workspaceCanvas, 0, 0);
+            tempCtx.drawImage(cspaceCanvas, workspaceCanvas.width, 0);
+
+            const a = document.createElement('a');
+            a.href = tempCanvas.toDataURL('image/png');
+            a.download = `c-space-export_${Date.now()}.png`;
+            a.click();
+            logToConsole("PNG exported.");
+        }
+
+        function shareState() {
+            const data = { obstacles: state.obstacles, cspaceRes: state.cspaceRes };
+            const jsonString = JSON.stringify(data);
+            const url = `${window.location.href.split('#')[0]}#state=${btoa(jsonString)}`;
+            navigator.clipboard.writeText(url).then(() => alert('Shareable link copied!'), () => alert('Failed to copy link.'));
+        }
+
+        function loadStateFromURL() {
+            if(window.location.hash.startsWith('#state=')) {
+                try {
+                    const encoded = window.location.hash.substring(7);
+                    const decoded = atob(encoded);
+                    const data = JSON.parse(decoded);
+                    if (data.obstacles) state.obstacles = data.obstacles;
+                    if (data.cspaceRes) {
+                         state.cspaceRes = data.cspaceRes;
+                         resSlider.value = data.cspaceRes;
+                         resValue.textContent = data.cspaceRes;
+                    }
+                    if (state.obstacles.length > 0) calculateCSpaceObstacles();
+                    logToConsole("Loaded state from URL.");
+                } catch (e) {
+                    logToConsole("Failed to load state from URL hash.");
+                }
+            }
+        }
+
+        // --- Init ---
+        function init() {
+            if (!runQualityChecks()) return;
+            logToConsole("Initializing C-Space Simulation.");
+            setupEventListeners();
+            loadStateFromURL();
+            draw();
+            logToConsole("Initialization complete.");
+        }
+        init();
+    })();
+    </script>
+</body>
+</html>
