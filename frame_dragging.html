@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame-Dragging: The Lense-Thirring Effect</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #4a69bd;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #000;
+            --code-bg: #e9ecef;
+            --accent-color: #f0932b;
+            --grid-color: rgba(255, 255, 255, 0.2);
+            --gyro-color: #e84393;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #6a89cc;
+            --secondary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #000;
+            --code-bg: #343a40;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: auto; padding: 1rem; }
+        h1, h2, h3 { border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        .simulation-container { border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; text-align: center; }
+        canvas { background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; max-width: 600px; margin: auto; display: block; }
+        .controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: stretch; width: 100%; padding: 1rem 0; }
+        .controls button { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; border-radius: 5px; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 5px; flex-grow: 1; }
+        .info-box { padding: 1rem; background: var(--code-bg); border-radius: 5px; text-align: center; }
+        .info-box h4 { margin: 0 0 0.5rem 0; }
+        .info-box .value { font-size: 1.5rem; font-weight: bold; font-family: monospace; color: var(--accent-color); }
+        code { background-color: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 3px; }
+        .warning { background-color: #fff3cd; color: #856404; padding: 1rem; border: 1px solid #ffeeba; border-radius: 5px; margin: 1rem 0; }
+        .dev-console { margin-top: 2rem; border: 1px solid var(--border-color); }
+        .dev-console summary { padding: 0.5rem; font-weight: bold; cursor: pointer; background-color: var(--code-bg); }
+        #dev-log { padding: 1rem; height: 150px; overflow-y: scroll; background-color: var(--bg-color); color: var(--text-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Frame-Dragging: The Lense-Thirring Effect</h1>
+        <p>An animation of spacetime being "dragged" by a rotating massive object.</p>
+
+        <div class="simulation-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="controls">
+                <button id="play-pause-btn">Pause</button>
+                <button id="reset-btn">Reset</button>
+                <div class="control-group">
+                    <label for="mass-slider">Object Mass: <span id="mass-value">1.0</span> Mₙ</label>
+                    <input type="range" id="mass-slider" min="0.5" max="2.5" value="1.0" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="ang-vel-slider">Angular Velocity: <span id="ang-vel-value">0.5</span></label>
+                    <input type="range" id="ang-vel-slider" min="0" max="1" value="0.5" step="0.05">
+                </div>
+            </div>
+            <div class="info-box">
+                <h4>Gyroscope Precession Angle</h4>
+                <div class="value" id="precession-angle-value">0.0°</div>
+            </div>
+        </div>
+        <div class="warning">
+            <strong>Exaggeration Note:</strong> The visual "swirl" of spacetime and the rate of precession are enormously exaggerated in this simulation for educational purposes. The real effect is incredibly tiny.
+        </div>
+
+        <h2>Beginner's Guide</h2>
+        <h3>1. A Spinning Top in Space</h3>
+        <p>The simulation shows a top-down view of a very dense, heavy object spinning rapidly, like a neutron star (the purple object in the center). The grid around it represents the fabric of spacetime. A <strong>gyroscope</strong> (the pink object) is placed in orbit around the star. A gyroscope is essentially a spinning top; once you set its spin axis pointing in a direction, it will keep pointing in that same direction forever... unless something twists it.</p>
+
+        <h3>2. Spacetime is Sticky</h3>
+        <p>According to Newton's theory of gravity, the spinning of the central star should have no effect on the orbiting gyroscope. But Einstein's General Relativity predicts something stranger. A rotating mass doesn't just curve spacetime, it "drags" it around, like a spinning bowling ball in a tub of thick honey would drag the honey around with it. You can see this effect in the simulation as the "swirl" in the spacetime grid.</p>
+
+        <h3>3. Watching the Precession</h3>
+        <p>Press <strong>Play</strong> and watch the gyroscope orbit the star. The red line indicates the direction of the gyroscope's spin axis. In a simple universe, this red line would always point in the same direction (e.g., always "up"). But because of frame-dragging, the twisted spacetime exerts a tiny torque on the gyroscope. This causes its spin axis to slowly rotate, or <strong>precess</strong>. The "Gyroscope Precession Angle" display shows you how much the axis has rotated from its starting position. Over many orbits, you will see the red arrow make a full circle.</p>
+
+        <h3>4. The Controls</h3>
+        <ul>
+            <li><strong>Object Mass:</strong> Controls the mass of the central star (in units of neutron star masses). A heavier object curves spacetime more, leading to a stronger frame-dragging effect and faster precession.</li>
+            <li><strong>Angular Velocity:</strong> Controls how fast the central star is spinning. A faster spin drags spacetime more vigorously, also leading to faster precession. Try setting it to zero—the precession stops!</li>
+        </ul>
+
+        <h2>Core Theory</h2>
+        <p>The Lense-Thirring effect describes the precession of a gyroscope near a large rotating mass. The angular velocity of this precession (`Ω_p`) is given by an approximation from General Relativity:</p>
+
+        <code>Ω_p = (2GJ) / (c²r³)</code>
+        <ul>
+            <li><strong>Plain English:</strong> The rate of precession (`Ω_p`) depends on the angular momentum (`J`) of the central body and is extremely sensitive to the orbital radius (`r`).</li>
+            <li><strong>Breaking it down:</strong>
+                <ul>
+                    <li>`G` is the gravitational constant.</li>
+                    <li>`J` is the angular momentum of the spinning star. It's proportional to its mass and its angular velocity (`J ∝ M * ω`). This is why increasing mass or spin speed in the simulation increases the effect.</li>
+                    <li>`c²` is the speed of light squared. This is a huge number in the denominator, which tells us the effect is usually incredibly small.</li>
+                    <li>`r³` is the cube of the orbital radius. This `1/r³` dependence means the effect drops off very rapidly with distance. A gyroscope twice as far away would precess eight times slower.</li>
+                </ul>
+            </li>
+            <li><strong>In the Simulation:</strong> To make the effect visible, we use a much larger, artificial value for `G/c²` and a fast time scale. The total angle of precession is calculated each frame as `Δθ = Ω_p * Δt` and added to the gyroscope's spin axis angle.</li>
+        </ul>
+
+        <h2>Analogies & Intuition</h2>
+        <h3>Analogy: A Vortex in Water</h3>
+        <p>Imagine a tiny toy boat with a weather vane on it, floating in a basin of water. If you just place a heavy ball in the center of the water, the water level will curve, and the boat will orbit it. The weather vane will always point North. Now, spin the heavy ball. It will create a vortex, a whirlpool that drags the water around with it. As the toy boat orbits, the swirling water will exert a gentle, persistent force on the weather vane, causing it to slowly rotate and follow the vortex. The spinning mass is the ball, the gyroscope is the weather vane, and the frame-dragging effect is the vortex in the water.</p>
+        <p><strong>Limitation:</strong> The water is a physical medium, and its drag is a frictional force. Frame-dragging is not a force in the classical sense; it is a feature of the geometry of spacetime itself. The gyroscope is not experiencing friction, it is simply following the straightest possible path in a twisted coordinate system.</p>
+
+        <h2>FAQ & Troubleshooting</h2>
+        <dl>
+            <dt><strong>1. Has frame-dragging been experimentally verified?</strong></dt>
+            <dd>Yes. The most famous confirmation came from the Gravity Probe B satellite, launched in 2004. It carried four ultra-precise gyroscopes into polar orbit around Earth. After a year of collecting data and several years of analysis, NASA announced in 2011 that the gyroscopes' axes had precessed by the exact tiny amount predicted by General Relativity. The effect is real.</dd>
+            <dt><strong>2. Why is the effect so small in reality?</strong></dt>
+            <dd>The formula for the precession rate has `c²` (the speed of light squared) in the denominator. This is an astronomically large number (about 9 x 10¹⁶), which makes the overall result incredibly small unless the mass `M` and angular velocity `ω` are enormous and the radius `r` is very small. Only extreme objects like neutron stars and black holes produce a significant effect.</dd>
+        </dl>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <pre id="dev-log"></pre>
+        </details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Get Elements & Quality Check ---
+    const getEl = id => document.getElementById(id);
+    const canvas = getEl('simulation-canvas');
+    const playPauseBtn = getEl('play-pause-btn');
+    const resetBtn = getEl('reset-btn');
+    const massSlider = getEl('mass-slider');
+    const massValue = getEl('mass-value');
+    const angVelSlider = getEl('ang-vel-slider');
+    const angVelValue = getEl('ang-vel-value');
+    const precessionAngleValue = getEl('precession-angle-value');
+    const devLog = getEl('dev-log');
+    const themeToggle = document.querySelector('.container button'); // A bit fragile
+
+    if (![canvas, playPauseBtn, resetBtn, massSlider, angVelSlider, devLog, themeToggle].every(el => el)) {
+        console.error("A required element is missing.");
+        return;
+    }
+    const ctx = canvas.getContext('2d');
+
+    // --- State & Constants ---
+    let isPlaying = true;
+    let animFrameId;
+    let time = 0;
+
+    let centralMass = 1.0; // In units of Neutron Star mass (M_n ~ 1.4 M_sun)
+    let angularVelocity = 0.5; // Normalized, 0 to 1
+
+    let gyro = {
+        orbitRadius: 0.35, // fraction of canvas width/2
+        orbitAngle: 0,
+        orbitSpeed: 0.5, // radians per second
+        spinAngle: 0 // This is what precesses
+    };
+
+    const G_C2_SCALED = 1e-4; // Massively scaled G/c^2 to make effect visible
+
+    // --- Logging ---
+    const log = msg => {
+        devLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+        devLog.scrollTop = devLog.scrollHeight;
+    };
+    log("Simulation initialized.");
+
+    // --- Simulation Logic ---
+    function reset() {
+        log("Resetting simulation.");
+        time = 0;
+        gyro.orbitAngle = 0;
+        gyro.spinAngle = 0;
+        massSlider.value = 1.0;
+        angVelSlider.value = 0.5;
+        centralMass = 1.0;
+        angularVelocity = 0.5;
+        updateUI();
+    }
+
+    function update(dt) {
+        if (!isPlaying) return;
+        time += dt;
+
+        // Update gyroscope orbit
+        gyro.orbitAngle += gyro.orbitSpeed * dt;
+
+        // Calculate precession rate (Lense-Thirring)
+        // Omega_p is proportional to (Mass * AngVel) / r^3
+        const J_scaled = centralMass * angularVelocity; // J is angular momentum
+        const r_scaled = gyro.orbitRadius;
+        const precession_rate = (2 * G_C2_SCALED * J_scaled) / Math.pow(r_scaled, 3);
+
+        // Update spin angle
+        gyro.spinAngle += precession_rate * dt;
+
+        updateUI();
+    }
+
+    function updateUI() {
+        massValue.textContent = `${centralMass.toFixed(1)} Mₙ`;
+        angVelValue.textContent = angularVelocity.toFixed(2);
+        precessionAngleValue.textContent = `${(gyro.spinAngle * 180 / Math.PI).toFixed(1)}°`;
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const center = { x: w / 2, y: h / 2 };
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw swirling grid
+        drawSwirlGrid(ctx, center, w/2, angularVelocity);
+
+        // Draw central object
+        const starRadius = 15 + centralMass * 5;
+        ctx.fillStyle = getCssVar('--primary-color');
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, starRadius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, starRadius * (0.5 + 0.5 * Math.sin(time * angularVelocity * 10)), 0, 2 * Math.PI);
+        ctx.stroke();
+
+        // Draw gyroscope
+        const gyroOrbitRadiusPixels = gyro.orbitRadius * (w / 2);
+        const gyroPos = {
+            x: center.x + gyroOrbitRadiusPixels * Math.cos(gyro.orbitAngle),
+            y: center.y + gyroOrbitRadiusPixels * Math.sin(gyro.orbitAngle)
+        };
+
+        ctx.fillStyle = getCssVar('--gyro-color');
+        ctx.beginPath();
+        ctx.arc(gyroPos.x, gyroPos.y, 10, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw gyroscope spin axis
+        const spinVectorLength = 30;
+        const spinAxisEnd = {
+            x: gyroPos.x + spinVectorLength * Math.cos(gyro.spinAngle),
+            y: gyroPos.y + spinVectorLength * Math.sin(gyro.spinAngle)
+        };
+        ctx.strokeStyle = getCssVar('--accent-color');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(gyroPos.x, gyroPos.y);
+        ctx.lineTo(spinAxisEnd.x, spinAxisEnd.y);
+        ctx.stroke();
+    }
+
+    function drawSwirlGrid(ctx, center, maxRadius, swirlFactor) {
+        ctx.strokeStyle = getCssVar('--grid-color');
+        ctx.lineWidth = 1;
+
+        // Draw swirling concentric circles
+        for (let r = maxRadius / 10; r <= maxRadius; r += maxRadius / 10) {
+            ctx.beginPath();
+            for (let angle = 0; angle <= 2 * Math.PI; angle += 0.1) {
+                const swirlAngle = swirlFactor * 20 / r;
+                const x = center.x + r * Math.cos(angle + swirlAngle);
+                const y = center.y + r * Math.sin(angle + swirlAngle);
+                if (angle === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        // Draw swirling radial lines
+        for (let angle = 0; angle < 2 * Math.PI; angle += Math.PI / 8) {
+            ctx.beginPath();
+            for (let r = 0; r <= maxRadius; r += 5) {
+                const swirlAngle = swirlFactor * 20 / (r + 1); // r+1 to avoid division by zero
+                const x = center.x + r * Math.cos(angle + swirlAngle);
+                const y = center.y + r * Math.sin(angle + swirlAngle);
+                if (r === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+    }
+
+    // --- Animation Loop ---
+    let lastTime = 0;
+    function loop(timestamp) {
+        const dt = ((timestamp - lastTime) / 1000) || 0;
+        lastTime = timestamp;
+
+        update(dt);
+        draw();
+
+        animFrameId = requestAnimationFrame(loop);
+    }
+
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+            log(isPlaying ? "Resumed" : "Paused");
+        });
+        resetBtn.addEventListener('click', reset);
+
+        massSlider.addEventListener('input', () => {
+            centralMass = parseFloat(massSlider.value);
+        });
+        angVelSlider.addEventListener('input', () => {
+            angularVelocity = parseFloat(angVelSlider.value);
+        });
+
+        document.body.querySelector('.container button').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            log("Theme toggled.");
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            log("Canvas resized.");
+        });
+    }
+
+    // --- Initialization ---
+    function init() {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        setupEventListeners();
+        reset();
+        requestAnimationFrame(loop);
+    }
+
+    function getCssVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Black Hole Inspiral</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #333;
+            --primary-color: #8e44ad;
+            --secondary-color: #7f8c8d;
+            --border-color: #dcdcdc;
+            --canvas-bg: #000;
+            --code-bg: #e8e8e8;
+            --accent-color: #f39c12;
+            --wave-color: rgba(142, 68, 173, 0.3);
+            --graph-line-color: #f39c12;
+        }
+        .dark-mode {
+            --bg-color: #1a1a2e;
+            --text-color: #e0e0e0;
+            --primary-color: #9b59b6;
+            --secondary-color: #bdc3c7;
+            --border-color: #3a3a5a;
+            --canvas-bg: #0d0d1a;
+            --code-bg: #2a2a4a;
+            --wave-color: rgba(155, 89, 182, 0.3);
+            --graph-line-color: #f1c40f;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: auto; padding: 1rem; }
+        h1, h2, h3 { border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .simulation-area { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .simulation-container, .graph-container { border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; text-align: center; }
+        canvas { background-color: var(--canvas-bg); width: 100%; aspect-ratio: 16 / 9; }
+        #orbital-canvas { aspect-ratio: 1 / 1; }
+        .controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: center; width: 100%; padding: 1rem; background-color: var(--bg-color); border-radius: 8px; margin-top: 1rem; }
+        .controls button { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; border-radius: 5px; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; }
+        .control-group label { font-size: 0.9rem; }
+        .param-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .param-table th, .param-table td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        .param-table th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 3px; }
+        .dev-console { margin-top: 2rem; border: 1px solid var(--border-color); }
+        .dev-console summary { padding: 0.5rem; font-weight: bold; cursor: pointer; background-color: var(--code-bg); }
+        #dev-log { padding: 1rem; height: 150px; overflow-y: scroll; background-color: var(--bg-color); color: var(--text-color); }
+        .warning { background-color: #f8d7da; color: #721c24; padding: 1rem; border: 1px solid #f5c6cb; border-radius: 5px; margin: 1rem 0; }
+        @media (min-width: 768px) { .simulation-area { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Binary Black Hole Inspiral</h1>
+        <p>An animation of two orbiting black holes losing energy to gravitational waves, causing them to spiral inwards and merge.</p>
+        <div class="metadata-bar">
+            <span>Recommended device: Desktop</span>
+            <button id="theme-toggle" style="cursor:pointer; border: 1px solid var(--secondary-color); border-radius: 5px; padding: 0.2rem 0.5rem;">Toggle Dark Mode</button>
+        </div>
+
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Imagine two massive bowling balls spinning around each other on a cosmic trampoline. As they orbit, they create ripples in the fabric of the trampoline—these are gravitational waves. The energy used to make these ripples is stolen from the energy of the orbit itself. With less orbital energy, the bowling balls spiral closer and closer together, spinning faster and faster. This process, called an "inspiral," ends in a violent collision and merger. This simulation shows this cosmic dance, and the "chirp" graph below it shows the exact gravitational wave signal that observatories like LIGO detect from hundreds of millions of light-years away.
+        </p>
+
+        <div class="simulation-area">
+            <div class="simulation-container">
+                <h3>Orbital View</h3>
+                <canvas id="orbital-canvas"></canvas>
+            </div>
+            <div class="graph-container">
+                <h3>Gravitational Waveform ("Chirp")</h3>
+                <canvas id="graph-canvas"></canvas>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="play-pause-btn">Pause</button>
+            <button id="reset-btn">Reset</button>
+            <div class="control-group">
+                <label for="m1-slider">Mass 1 (M☉): <span id="m1-value">10</span></label>
+                <input type="range" id="m1-slider" min="5" max="50" value="10" step="1">
+            </div>
+            <div class="control-group">
+                <label for="m2-slider">Mass 2 (M☉): <span id="m2-value">10</span></label>
+                <input type="range" id="m2-slider" min="5" max="50" value="10" step="1">
+            </div>
+            <div class="control-group">
+                <label for="sep-slider">Initial Separation: <span id="sep-value">100</span> km</label>
+                <input type="range" id="sep-slider" min="50" max="200" value="100" step="5">
+            </div>
+        </div>
+        <div class="warning">
+            <strong>Note:</strong> This simulation uses a simplified Post-Newtonian model. The final merger and ringdown phases are highly complex and not accurately depicted. The physics breaks down at very small separations.
+        </div>
+
+        <h2>Beginner's Guide</h2>
+        <h3>1. The Cosmic Dance Floor</h3>
+        <p>The top-left box ("Orbital View") shows a top-down view of two black holes. Their size is proportional to their mass. When you press <strong>Play</strong>, they will begin to orbit their common center of mass. You will also see faint purple ripples moving outwards—these are the gravitational waves carrying energy away from the system.</p>
+
+        <h3>2. The Inevitable Inspiral</h3>
+        <p>Because the system is constantly losing energy to these waves, the orbit cannot stay stable. You will notice the two black holes slowly get closer together. As their separation decreases, they orbit faster and faster, and the gravitational waves they emit become stronger and more frequent. This is the inspiral.</p>
+
+        <h3>3. Listening to Spacetime: The "Chirp"</h3>
+        <p>The top-right box ("Gravitational Waveform") shows the signal that a distant detector would receive. Time flows from left to right. The vertical axis is the 'strain' or amplitude of the wave. Notice how the signal starts as a low, gentle wave. As the black holes get closer and faster in the orbital view, the waveform becomes taller (higher amplitude) and more compressed (higher frequency). This characteristic signal, rising in pitch and volume, is famously called a "chirp." It's the sound of spacetime ringing from this cataclysmic event.</p>
+
+        <h3>4. Be the Universe-Maker: The Controls</h3>
+        <p>You can change the initial conditions of the system:</p>
+        <ul>
+            <li><strong>Mass 1 / Mass 2:</strong> These sliders control the mass of each black hole, in units of solar masses (M☉, the mass of our Sun). Try making one much more massive than the other to see how the center of mass shifts. More massive black holes will decay and merge much faster.</li>
+            <li><strong>Initial Separation:</strong> This sets how far apart they start. A smaller initial separation will lead to a much quicker merger.</li>
+        </ul>
+        <p>Press <strong>Reset</strong> after changing the sliders to start a new simulation with your chosen parameters.</p>
+
+        <h2>Core Theory</h2>
+        <p>The simulation is based on Post-Newtonian approximations, which combine Newtonian gravity with corrections from General Relativity.</p>
+
+        <h3>Equation: Power Radiated by Gravitational Waves</h3>
+        <code>P = - (32/5) * (G⁴/c⁵) * (m₁m₂)²(m₁+m₂) / r⁵</code>
+        <ul>
+            <li><strong>Plain English:</strong> This formula calculates the power (P), or energy per second, that is radiated away as gravitational waves. It depends very strongly on the masses (m₁, m₂) and the separation (r).</li>
+            <li><strong>Key Dependencies:</strong> Notice the `1/r⁵` term. This means that as the separation `r` gets smaller, the power radiated increases enormously. This is why the inspiral accelerates so dramatically at the end. The power is also extremely sensitive to the masses.</li>
+        </ul>
+
+        <h3>Equation: Orbital Energy & Decay</h3>
+        <code>E_orbit = - G m₁m₂ / (2r)</code>
+        <ul>
+            <li><strong>Plain English:</strong> This is the total energy (kinetic + potential) of a simple circular orbit. The simulation works by calculating the power `P` lost in a small time step `Δt`, finding the energy lost `ΔE = P * Δt`, and subtracting this from the orbital energy. A lower orbital energy corresponds to a smaller radius `r`.</li>
+            <li><strong>The Feedback Loop:</strong> A smaller `r` leads to a much larger power loss `P` (from the first equation), which in turn leads to an even faster decrease in `r`. This creates a runaway process that leads to the merger.</li>
+        </ul>
+
+        <h2>FAQ & Troubleshooting</h2>
+        <dl>
+            <dt><strong>1. Why do the black holes stop before they touch?</strong></dt>
+            <dd>The equations used in this simulation are approximations that work well when the black holes are reasonably far apart. As they get very close (within a few times their own radii), the full, incredibly complex equations of General Relativity are needed. The simulation pauses when the separation becomes too small for the model to be reliable.</dd>
+            <dt><strong>2. Is the "chirp" sound real?</strong></dt>
+            <dd>The gravitational waves themselves are not sound waves. However, their frequencies (typically from 20 Hz to a few kHz in the final moments) are in the range of human hearing. Scientists often convert the gravitational wave signal into a sound wave to create an audible representation of the event, which sounds like a chirp.</dd>
+        </dl>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <pre id="dev-log"></pre>
+        </details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Get Elements & Quality Check ---
+    const getEl = id => document.getElementById(id);
+    const orbitalCanvas = getEl('orbital-canvas');
+    const graphCanvas = getEl('graph-canvas');
+    const playPauseBtn = getEl('play-pause-btn');
+    const resetBtn = getEl('reset-btn');
+    const m1Slider = getEl('m1-slider');
+    const m1Value = getEl('m1-value');
+    const m2Slider = getEl('m2-slider');
+    const m2Value = getEl('m2-value');
+    const sepSlider = getEl('sep-slider');
+    const sepValue = getEl('sep-value');
+    const themeToggle = getEl('theme-toggle');
+    const devLog = getEl('dev-log');
+
+    if (![orbitalCanvas, graphCanvas, playPauseBtn, resetBtn, m1Slider, m2Slider, sepSlider, themeToggle, devLog].every(el => el)) {
+        console.error("A required element is missing from the DOM.");
+        return;
+    }
+    const oCtx = orbitalCanvas.getContext('2d');
+    const gCtx = graphCanvas.getContext('2d');
+
+    // --- State & Constants ---
+    let isPlaying = true;
+    let animFrameId;
+    let bh1, bh2, r, omega; // masses, separation, angular velocity
+    let waveform = [];
+    const G = 6.674e-11;
+    const C = 2.998e8;
+    const M_SUN = 1.989e30;
+    const SCHWARZSCHILD_RADIUS_PER_SOLAR_MASS = 2950; // meters
+    const TIME_SCALE = 1e-3; // Greatly speeds up simulation time
+    const MAX_WAVEFORM_POINTS = 500;
+
+    // --- Logging ---
+    const log = msg => {
+        devLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+        devLog.scrollTop = devLog.scrollHeight;
+    };
+    log("Simulation initialized.");
+
+    // --- Simulation Logic ---
+    function resetSimulation() {
+        log("Resetting simulation.");
+        const m1_solar = parseFloat(m1Slider.value);
+        const m2_solar = parseFloat(m2Slider.value);
+        const r_km = parseFloat(sepSlider.value);
+
+        bh1 = { m: m1_solar * M_SUN, x: 0, y: 0, angle: Math.PI, r: 0 };
+        bh2 = { m: m2_solar * M_SUN, x: 0, y: 0, angle: 0, r: 0 };
+
+        r = r_km * 1000; // convert to meters
+        const M_total = bh1.m + bh2.m;
+
+        // Position relative to center of mass
+        bh1.r = r * (bh2.m / M_total);
+        bh2.r = r * (bh1.m / M_total);
+
+        // Kepler's 3rd law for initial angular velocity
+        omega = Math.sqrt(G * M_total / (r*r*r));
+
+        waveform = [];
+        if (!isPlaying) {
+            playPauseBtn.click();
+        }
+        update(0); // initial update
+        draw();
+    }
+
+    function update(dt) {
+        if (!isPlaying || r <= (getSchwarzschildRadius(bh1.m) + getSchwarzschildRadius(bh2.m)) * 1.5) {
+            if(isPlaying) playPauseBtn.click();
+            return;
+        }
+
+        const effective_dt = dt * TIME_SCALE;
+
+        // Update angles
+        bh1.angle += omega * effective_dt;
+        bh2.angle += omega * effective_dt;
+
+        // Calculate power radiated by GWs (Post-Newtonian approx.)
+        const P_num = 32/5 * Math.pow(G, 4) / Math.pow(C, 5);
+        const P_mass = Math.pow(bh1.m * bh2.m, 2) * (bh1.m + bh2.m);
+        const power_radiated = P_num * P_mass / Math.pow(r, 5);
+
+        // Update orbital energy and separation
+        const E_orbit = -G * bh1.m * bh2.m / (2 * r);
+        const E_new = E_orbit - power_radiated * effective_dt;
+        r = -G * bh1.m * bh2.m / (2 * E_new);
+
+        // Update omega based on new separation
+        const M_total = bh1.m + bh2.m;
+        omega = Math.sqrt(G * M_total / (r*r*r));
+
+        // Update positions relative to center of mass
+        bh1.r = r * (bh2.m / M_total);
+        bh2.r = r * (bh1.m / M_total);
+
+        // Update waveform data
+        const gw_freq = omega / Math.PI; // GW freq is 2x orbital freq
+        const M_chirp = Math.pow(bh1.m * bh2.m, 3/5) / Math.pow(M_total, 1/5);
+        // Strain h is proportional to M_chirp^(5/3) * f^(2/3) / r
+        // We use a simplified amplitude for visualization
+        const amplitude = 1e19 * M_chirp / r;
+        waveform.push(amplitude * Math.sin(waveform.length * 0.1 * gw_freq * 1e-4));
+        if (waveform.length > MAX_WAVEFORM_POINTS) {
+            waveform.shift();
+        }
+    }
+
+    function getSchwarzschildRadius(mass) {
+        return 2 * G * mass / (C * C);
+    }
+
+    // --- Drawing ---
+    function draw() {
+        drawOrbit();
+        drawGraph();
+    }
+
+    function drawOrbit() {
+        const w = orbitalCanvas.width;
+        const h = orbitalCanvas.height;
+        oCtx.clearRect(0, 0, w, h);
+
+        const scale = w / (parseFloat(sepSlider.value) * 1000 * 2.5);
+
+        // Update xy coords from polar
+        bh1.x = w/2 + bh1.r * Math.cos(bh1.angle) * scale;
+        bh1.y = h/2 + bh1.r * Math.sin(bh1.angle) * scale;
+        bh2.x = w/2 + bh2.r * Math.cos(bh2.angle) * scale;
+        bh2.y = h/2 + bh2.r * Math.sin(bh2.angle) * scale;
+
+        // Draw black holes
+        const r1_pixel = Math.max(3, getSchwarzschildRadius(bh1.m) * scale);
+        const r2_pixel = Math.max(3, getSchwarzschildRadius(bh2.m) * scale);
+
+        oCtx.fillStyle = 'white';
+        oCtx.beginPath();
+        oCtx.arc(bh1.x, bh1.y, r1_pixel, 0, 2 * Math.PI);
+        oCtx.fill();
+
+        oCtx.fillStyle = 'white';
+        oCtx.beginPath();
+        oCtx.arc(bh2.x, bh2.y, r2_pixel, 0, 2 * Math.PI);
+        oCtx.fill();
+    }
+
+    function drawGraph() {
+        const w = graphCanvas.width;
+        const h = graphCanvas.height;
+        gCtx.clearRect(0, 0, w, h);
+
+        gCtx.strokeStyle = getCssVar('--graph-line-color');
+        gCtx.lineWidth = 1.5;
+        gCtx.beginPath();
+
+        const max_amp = waveform.reduce((max, v) => Math.max(max, Math.abs(v)), 0.001);
+
+        for (let i = 0; i < waveform.length; i++) {
+            const x = i * (w / MAX_WAVEFORM_POINTS);
+            const y = h/2 - (waveform[i] / max_amp) * (h/2 * 0.9);
+            if (i === 0) gCtx.moveTo(x, y);
+            else gCtx.lineTo(x, y);
+        }
+        gCtx.stroke();
+    }
+
+    // --- Animation Loop ---
+    let lastTime = 0;
+    function loop(timestamp) {
+        const dt = (timestamp - lastTime) || 0;
+        lastTime = timestamp;
+
+        update(dt);
+        draw();
+
+        animFrameId = requestAnimationFrame(loop);
+    }
+
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        playPauseBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+            log(isPlaying ? "Simulation resumed" : "Simulation paused");
+        });
+        resetBtn.addEventListener('click', resetSimulation);
+
+        const updateSliderValue = (slider, valueEl, unit) => {
+            valueEl.textContent = slider.value + (unit || "");
+        };
+
+        m1Slider.addEventListener('input', () => updateSliderValue(m1Slider, m1Value, " M☉"));
+        m2Slider.addEventListener('input', () => updateSliderValue(m2Slider, m2Value, " M☉"));
+        sepSlider.addEventListener('input', () => updateSliderValue(sepSlider, sepValue, " km"));
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            log("Theme toggled.");
+        });
+
+        window.addEventListener('resize', () => {
+            orbitalCanvas.width = orbitalCanvas.clientWidth;
+            orbitalCanvas.height = orbitalCanvas.clientHeight;
+            graphCanvas.width = graphCanvas.clientWidth;
+            graphCanvas.height = graphCanvas.clientHeight;
+            log("Canvas resized.");
+        });
+    }
+
+    // --- Initialization ---
+    function init() {
+        orbitalCanvas.width = orbitalCanvas.clientWidth;
+        orbitalCanvas.height = orbitalCanvas.clientHeight;
+        graphCanvas.width = graphCanvas.clientWidth;
+        graphCanvas.height = graphCanvas.clientHeight;
+
+        setupEventListeners();
+        resetSimulation();
+        requestAnimationFrame(loop);
+    }
+
+    function getCssVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Redshift & Blueshift</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #2c3e50;
+            --primary-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-color: #dce4ec;
+            --canvas-bg: #000;
+            --code-bg: #eaf1f8;
+            --accent-color-red: #e74c3c;
+            --accent-color-blue: #3498db;
+            --planet-color: #27ae60;
+            --satellite-color: #95a5a6;
+        }
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #3498db;
+            --secondary-color: #95a5a6;
+            --border-color: #34495e;
+            --canvas-bg: #000;
+            --code-bg: #34495e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: auto; padding: 1rem; }
+        h1, h2, h3 { border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        .simulation-container { border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; }
+        canvas { background-color: var(--canvas-bg); width: 100%; aspect-ratio: 9 / 16; max-height: 70vh; }
+        .controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: stretch; width: 100%; padding: 1rem 0; }
+        .controls button { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; border-radius: 5px; flex-grow: 1; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 5px; }
+        .frequency-meters { display: flex; justify-content: space-around; padding: 1rem; background: var(--code-bg); border-radius: 5px; }
+        .meter { text-align: center; }
+        .meter h4 { margin: 0 0 0.5rem 0; }
+        .meter .value { font-size: 1.2rem; font-weight: bold; font-family: monospace; }
+        #redshift-value { color: var(--accent-color-red); }
+        #blueshift-value { color: var(--accent-color-blue); }
+        .param-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .param-table th, .param-table td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        code { background-color: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 3px; }
+        .dev-console { margin-top: 2rem; border: 1px solid var(--border-color); }
+        .dev-console summary { padding: 0.5rem; font-weight: bold; cursor: pointer; background-color: var(--code-bg); }
+        #dev-log { padding: 1rem; height: 150px; overflow-y: scroll; background-color: var(--bg-color); color: var(--text-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gravitational Redshift & Blueshift</h1>
+        <p>A simulation showing how light changes frequency as it travels through a gravitational field.</p>
+
+        <div class="simulation-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="frequency-meters">
+                <div class="meter">
+                    <h4>Source Frequency</h4>
+                    <div class="value" id="source-freq-value">1.000000 f₀</div>
+                </div>
+                <div class="meter">
+                    <h4>Destination Frequency (Redshift)</h4>
+                    <div class="value" id="redshift-value">-.--</div>
+                </div>
+                <div class="meter">
+                    <h4>Destination Frequency (Blueshift)</h4>
+                    <div class="value" id="blueshift-value">-.--</div>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="mass-slider">Planet Mass: <span id="mass-value">1.0</span> Mₑ</label>
+                    <input type="range" id="mass-slider" min="0.1" max="10" value="1" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="height-slider">Satellite Height: <span id="height-value">50</span>%</label>
+                    <input type="range" id="height-slider" min="10" max="80" value="50" step="1">
+                </div>
+                <button id="fire-up-btn">Fire Photon Up (Redshift)</button>
+                <button id="fire-down-btn">Fire Photon Down (Blueshift)</button>
+            </div>
+        </div>
+
+        <h2>Beginner's Guide</h2>
+        <h3>1. What Are We Looking At?</h3>
+        <p>The black box shows a large green <strong>planet</strong> at the bottom and a gray <strong>satellite</strong> in orbit above it. The planet has a strong gravitational field. This simulation lets you send a particle of light—a <strong>photon</strong>—between them.</p>
+
+        <h3>2. Climbing Out of a Gravity Well (Redshift)</h3>
+        <p>Press the <strong>"Fire Photon Up"</strong> button. A photon (visualized as a wave packet) will launch from the planet's surface towards the satellite. Watch it closely. As it travels upwards, it has to "work" against the planet's gravity. This causes the photon to lose energy. For light, losing energy means its wavelength gets longer and its frequency gets lower. You can see this visually: the waves inside the packet spread out, and its color shifts towards red. This phenomenon is called <strong>gravitational redshift</strong>.</p>
+        <p>When the photon arrives, look at the "Frequency Meters". The "Destination Frequency (Redshift)" meter will show a value slightly less than 1.0, confirming the energy loss.</p>
+
+        <h3>3. Falling Into a Gravity Well (Blueshift)</h3>
+        <p>Now press the <strong>"Fire Photon Down"</strong> button. A photon launches from the satellite and falls towards the planet. As it falls, it gains energy from the gravitational field, much like a falling apple speeds up. For light, gaining energy means its wavelength gets shorter and its frequency gets higher. You'll see the waves inside the packet bunch up, and its color shifts towards blue. This is <strong>gravitational blueshift</strong>.</p>
+        <p>The "Destination Frequency (Blueshift)" meter will now show a value slightly greater than 1.0, confirming the energy gain.</p>
+
+        <h3>4. Changing the Parameters</h3>
+        <ul>
+            <li><strong>Planet Mass:</strong> Increase the planet's mass. A stronger gravitational field will cause a much more dramatic redshift and blueshift. The effect is directly proportional to the mass.</li>
+            <li><strong>Satellite Height:</strong> Change the height of the satellite. The larger the distance the photon travels against (or with) gravity, the larger the total energy change will be.</li>
+        </ul>
+
+        <h2>Core Theory</h2>
+        <p>The change in a photon's frequency is a direct consequence of gravitational time dilation. Clocks run slower in stronger gravitational fields. The formula for the ratio of the received frequency (f_rec) to the emitted frequency (f_em) is:</p>
+
+        <code>f_rec / f_em = &radic;(1 - 2GM/r_em c²) / &radic;(1 - 2GM/r_rec c²)</code>
+        <ul>
+            <li><strong>Plain English:</strong> The frequency ratio depends on the gravitational potential (which involves Mass `M` and radius `r`) at the point of emission (`r_em`) and reception (`r_rec`).</li>
+            <li><strong>When does redshift occur?</strong> When light climbs out of a gravity well, the receiver is at a larger radius (`r_rec > r_em`). This makes the numerator smaller than the denominator, so `f_rec < f_em`. The frequency decreases.</li>
+            <li><strong>When does blueshift occur?</strong> When light falls into a gravity well, the receiver is at a smaller radius (`r_rec < r_em`). This makes the numerator larger than the denominator, so `f_rec > f_em`. The frequency increases.</li>
+            <li><strong>Numeric Example:</strong> For Earth (M ≈ 6x10²⁴ kg, r ≈ 6.4x10⁶ m) and a satellite at r_rec = 2*r_em. The term `2GM/rc²` is very small. The ratio is approximately 1 - 5.4x10⁻¹⁰. The frequency change is tiny but measurable! The simulation greatly exaggerates the effect for visibility.</li>
+        </ul>
+
+        <h2>Analogies & Intuition</h2>
+        <h3>Analogy: The Ball on an Escalator</h3>
+        <p>Imagine a person on an escalator throwing a ball up to someone on the floor above. To the person throwing, the ball has a certain upward speed. But because the escalator is moving down relative to the building, an observer on the upper floor sees the ball arrive with less upward speed than it was thrown with. The escalator "saps" some of the ball's energy.</p>
+        <p>Gravitational redshift is similar. Spacetime itself is "flowing" into the massive planet. A photon climbing out is like a swimmer trying to swim upstream against a current; it loses energy and arrives "tired" (redshifted). A photon falling in is like a swimmer going with the current; it gains energy and arrives "energized" (blueshifted).</p>
+        <p><strong>Limitation:</strong> This analogy uses classical intuition of motion and energy. For light, the speed `c` is always constant. The energy change is manifested entirely as a change in frequency/wavelength, not speed.</p>
+
+        <h2>FAQ & Troubleshooting</h2>
+        <dl>
+            <dt><strong>1. Has gravitational redshift been experimentally verified?</strong></dt>
+            <dd>Yes, definitively. The famous Pound-Rebka experiment in 1960 at Harvard University measured the tiny redshift of gamma rays traveling up a 22.5-meter tower, and their results matched the predictions of General Relativity with stunning accuracy (within 1%).</dd>
+            <dt><strong>2. Do GPS satellites need to account for this?</strong></dt>
+            <dd>Absolutely. GPS satellites are in a weaker gravitational field than we are on Earth's surface, so their onboard atomic clocks run slightly faster. This gravitational time dilation (which causes the redshift/blueshift effect) must be precisely corrected for. If it weren't, GPS navigation would accumulate errors of about 10 kilometers every single day!</dd>
+        </dl>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <pre id="dev-log"></pre>
+        </details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Get Elements & Quality Check ---
+    const getEl = id => document.getElementById(id);
+    const canvas = getEl('simulation-canvas');
+    const massSlider = getEl('mass-slider');
+    const massValue = getEl('mass-value');
+    const heightSlider = getEl('height-slider');
+    const heightValue = getEl('height-value');
+    const fireUpBtn = getEl('fire-up-btn');
+    const fireDownBtn = getEl('fire-down-btn');
+    const sourceFreqValue = getEl('source-freq-value');
+    const redshiftValue = getEl('redshift-value');
+    const blueshiftValue = getEl('blueshift-value');
+    const devLog = getEl('dev-log');
+
+    if (![canvas, massSlider, heightSlider, fireUpBtn, fireDownBtn, devLog].every(el => el)) {
+        console.error("A required element is missing from the DOM.");
+        return;
+    }
+    const ctx = canvas.getContext('2d');
+
+    // --- State & Constants ---
+    let animFrameId;
+    let photon = null; // {y, dir, initialWavelength}
+    let planetMass = 1; // in Earth masses
+    let satelliteHeight = 0.5; // fraction of canvas height
+
+    const G = 6.674e-11;
+    const C = 2.998e8;
+    const M_EARTH = 5.972e24; // kg
+    const R_EARTH = 6.371e6; // meters
+    const PHOTON_SPEED = 200; // pixels per second
+
+    // --- Logging ---
+    const log = msg => {
+        devLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+        devLog.scrollTop = devLog.scrollHeight;
+    };
+    log("Simulation initialized.");
+
+    // --- Simulation Logic ---
+    function firePhoton(direction) {
+        if (photon) return; // Only one photon at a time
+        log(`Firing photon with direction: ${direction}`);
+        const w = canvas.width;
+        const h = canvas.height;
+        const planetRadius = w / 4;
+
+        redshiftValue.textContent = '-.--';
+        blueshiftValue.textContent = '-.--';
+
+        photon = {
+            x: w / 2,
+            y: direction === 'up' ? h - planetRadius - 10 : h * (1 - satelliteHeight),
+            dir: direction,
+            initialWavelength: 20, // base visual wavelength
+            packetWidth: 60
+        };
+    }
+
+    function calculateFrequencyRatio(r_em, r_rec, M_kg) {
+        // Use full GR formula
+        const term_em = 1 - (2 * G * M_kg) / (r_em * C * C);
+        const term_rec = 1 - (2 * G * M_kg) / (r_rec * C * C);
+        if (term_em <= 0 || term_rec <= 0) return 1; // Avoid sqrt of negative (inside event horizon)
+        return Math.sqrt(term_em) / Math.sqrt(term_rec);
+    }
+
+    function update(dt) {
+        if (!photon) return;
+
+        photon.y += (photon.dir === 'up' ? -1 : 1) * PHOTON_SPEED * dt;
+
+        const h = canvas.height;
+        const planetRadius = canvas.width / 4;
+        const r_planet_surface = R_EARTH;
+        const r_satellite = R_EARTH + (h - h * (1 - satelliteHeight)) * (R_EARTH / planetRadius); // scale height
+
+        const r_em = photon.dir === 'up' ? r_planet_surface : r_satellite;
+        const r_rec = photon.dir === 'up' ? r_satellite : r_planet_surface;
+
+        const M_kg = planetMass * M_EARTH;
+
+        // Check for arrival
+        if ((photon.dir === 'up' && photon.y <= h * (1 - satelliteHeight)) ||
+            (photon.dir === 'down' && photon.y >= h - planetRadius - 10)) {
+
+            const ratio = calculateFrequencyRatio(r_em, r_rec, M_kg);
+            log(`Photon arrived. Frequency ratio: ${ratio.toFixed(6)}`);
+
+            if (photon.dir === 'up') {
+                redshiftValue.textContent = `${ratio.toFixed(6)} f₀`;
+            } else {
+                blueshiftValue.textContent = `${ratio.toFixed(6)} f₀`;
+            }
+            photon = null; // Photon arrived
+        }
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw planet
+        const planetRadius = w / 4;
+        ctx.fillStyle = getCssVar('--planet-color');
+        ctx.beginPath();
+        ctx.arc(w / 2, h, planetRadius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw satellite
+        const satY = h * (1 - satelliteHeight);
+        ctx.fillStyle = getCssVar('--satellite-color');
+        ctx.fillRect(w/2 - 30, satY - 10, 60, 20);
+        ctx.fillRect(w/2 - 5, satY - 20, 10, 40);
+
+        // Draw photon
+        if (photon) {
+            const M_kg = planetMass * M_EARTH;
+            const r_planet_surface = R_EARTH;
+            const r_photon_current = R_EARTH + (h - photon.y) * (R_EARTH / planetRadius);
+
+            const r_em = photon.dir === 'up' ? r_planet_surface : R_EARTH + (h - h * (1 - satelliteHeight)) * (R_EARTH / planetRadius);
+
+            const ratio = calculateFrequencyRatio(r_em, r_photon_current, M_kg);
+            const currentWavelength = photon.initialWavelength / ratio;
+
+            // map wavelength to color
+            const blue = [52, 152, 219];
+            const red = [231, 76, 60];
+            const t = Math.min(1, Math.max(0, (currentWavelength - 15) / 15)); // normalize between 15 and 30
+            const color_r = (1 - t) * blue[0] + t * red[0];
+            const color_g = (1 - t) * blue[1] + t * red[1];
+            const color_b = (1 - t) * blue[2] + t * red[2];
+            ctx.strokeStyle = `rgb(${color_r}, ${color_g}, ${color_b})`;
+            ctx.lineWidth = 2;
+
+            // Draw wave packet
+            ctx.beginPath();
+            const packetHalfWidth = photon.packetWidth / 2;
+            for (let i = -packetHalfWidth; i <= packetHalfWidth; i++) {
+                const x_offset = i;
+                const envelope = Math.cos((i / packetHalfWidth) * Math.PI / 2);
+                const wave = Math.sin(i / currentWavelength * 2 * Math.PI);
+                const x = photon.x + x_offset;
+                const y = photon.y + wave * 10 * envelope;
+                if (i === -packetHalfWidth) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+    }
+
+    // --- Animation Loop ---
+    let lastTime = 0;
+    function loop(timestamp) {
+        const dt = ((timestamp - lastTime) / 1000) || 0; // delta time in seconds
+        lastTime = timestamp;
+
+        update(dt);
+        draw();
+
+        animFrameId = requestAnimationFrame(loop);
+    }
+
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        fireUpBtn.addEventListener('click', () => firePhoton('up'));
+        fireDownBtn.addEventListener('click', () => firePhoton('down'));
+
+        massSlider.addEventListener('input', () => {
+            planetMass = parseFloat(massSlider.value);
+            massValue.textContent = `${planetMass.toFixed(1)} Mₑ`;
+        });
+        heightSlider.addEventListener('input', () => {
+            satelliteHeight = parseFloat(heightSlider.value) / 100;
+            heightValue.textContent = `${(satelliteHeight*100).toFixed(0)}%`;
+        });
+        getEl('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            log("Theme toggled.");
+        });
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            log("Canvas resized.");
+        });
+    }
+
+    // --- Initialization ---
+    function init() {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        setupEventListeners();
+        massSlider.dispatchEvent(new Event('input'));
+        heightSlider.dispatchEvent(new Event('input'));
+        requestAnimationFrame(loop);
+    }
+
+    function getCssVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    init();
+});
+</script>
+</body>
+</html>

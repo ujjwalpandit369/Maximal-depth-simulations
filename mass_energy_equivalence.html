@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mass-Energy Equivalence: E=mc²</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --code-bg: #e9e9e9;
+            --accent-color-1: #dc3545; /* Electron */
+            --accent-color-2: #28a745; /* Positron */
+            --accent-color-3: #ffc107; /* Photon */
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #0d6efd;
+            --secondary-color: #adb5bd;
+            --border-color: #444;
+            --canvas-bg: #000;
+            --code-bg: #2b2b2b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 1rem;
+        }
+        h1, h2, h3 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; }
+        h3 { font-size: 1.4rem; border-bottom-style: dashed; }
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 2 / 1;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1rem;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+        .controls button, .controls .slider-container {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+            border: 1px solid var(--secondary-color);
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .controls button:hover { background-color: #0056b3; }
+        .controls button#annihilate-btn { background-color: var(--accent-color-1); }
+        .controls button#annihilate-btn:hover { background-color: #a71d2a; }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: transparent;
+            border: none;
+            padding: 0;
+        }
+        .energy-balance-sheet {
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        .energy-balance-sheet h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .energy-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
+        .energy-row.total {
+            font-weight: bold;
+            border-top: 2px solid var(--border-color);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+        }
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .param-table th, .param-table td {
+            border: 1px solid var(--border-color);
+            padding: 0.8rem;
+            text-align: left;
+        }
+        .param-table th { background-color: var(--code-bg); }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: "Courier New", Courier, monospace;
+        }
+        .dev-console {
+            margin-top: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .dev-console summary {
+            padding: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: var(--code-bg);
+        }
+        #dev-log {
+            padding: 1rem;
+            height: 150px;
+            overflow-y: scroll;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9rem;
+        }
+        #error-panel {
+            display: none;
+            background-color: #ffdddd;
+            border: 1px solid #ff0000;
+            color: #d8000c;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 5px;
+        }
+        .dark-mode-toggle {
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 5px;
+            border: 1px solid var(--secondary-color);
+        }
+        @media (max-width: 768px) {
+            body { padding: 0.5rem; }
+            .container { padding: 0.5rem; }
+            h1 { font-size: 1.8rem; }
+            h2 { font-size: 1.5rem; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="error-panel">
+            <strong>Initialization Error!</strong> Some required components of the simulation are missing. Please check the browser console for details and consider reporting this bug.
+        </div>
+
+        <h1>Mass-Energy Equivalence: E=mc²</h1>
+        <p>A simulation of particle-antiparticle annihilation, demonstrating Albert Einstein's famous formula.</p>
+
+        <div class="metadata-bar">
+            <span>Estimated runtime: Continuous</span>
+            <span>Recommended device: Desktop/Mobile</span>
+            <span>Approx. HTML size: 25 KB</span>
+            <button class="dark-mode-toggle" id="theme-toggle">Toggle Dark Mode</button>
+        </div>
+
+        <div style="margin-top:1rem; padding:0.5rem; border:1px solid var(--border-color); border-radius:5px;">
+            <strong>Quick Tune:</strong>
+            <button class="preset-btn" data-preset="beginner">Audience: Beginner</button>
+            <button class="preset-btn" data-preset="intermediate">Audience: Intermediate</button>
+            <button class="preset-btn" data-preset="advanced">Audience: Advanced</button>
+        </div>
+
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Imagine you have two special coins. One is made of "matter," like everything we see around us. The other is made of "antimatter," a mirror image of the first coin. If you bring these two coins together, they don't just clink; they vanish in a brilliant flash of light. Their entire substance is converted into pure energy. This is the heart of Einstein's E=mc² formula: mass is a tremendously concentrated form of energy. This simulation shows this process for an electron (a matter particle) and a positron (its antimatter twin), which annihilate to produce high-energy light particles called photons.
+        </p>
+
+        <h2>Interactive Simulation</h2>
+        <div class="simulation-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="controls">
+                <button id="annihilate-btn" aria-label="Start Annihilation">Annihilate!</button>
+                <button id="play-pause-btn" aria-label="Play or Pause Simulation (Space)">Play</button>
+                <button id="reset-btn" aria-label="Reset Simulation (r)">Reset</button>
+                <div class="slider-container">
+                    <label for="speed-slider">Speed:</label>
+                    <input type="range" id="speed-slider" min="0.1" max="5" value="1" step="0.1">
+                    <span id="speed-value">1.0x</span>
+                </div>
+                <button id="export-png-btn" aria-label="Export as PNG (e)">Export PNG</button>
+                <button id="export-json-btn" aria-label="Export Parameters as JSON">Export JSON</button>
+            </div>
+            <div class="energy-balance-sheet">
+                <h3>Energy Balance Sheet</h3>
+                <div class="energy-row">
+                    <span>Initial (Mass Energy):</span>
+                    <span id="initial-mass-energy">0.00</span>
+                </div>
+                <div class="energy-row">
+                    <span>Initial (Kinetic Energy):</span>
+                    <span id="initial-kinetic-energy">0.00</span>
+                </div>
+                <div class="energy-row total">
+                    <span>Total Initial Energy:</span>
+                    <span id="total-initial-energy">0.00</span>
+                </div>
+                <hr>
+                <div class="energy-row">
+                    <span>Final (Photon Energy):</span>
+                    <span id="final-photon-energy">0.00</span>
+                </div>
+                <div class="energy-row total">
+                    <span>Total Final Energy:</span>
+                    <span id="total-final-energy">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <h2>Beginner's Guide</h2>
+        <p>Welcome! This guide will walk you through the simulation step-by-step.</p>
+
+        <h3>1. What Are We Looking At?</h3>
+        <p>The black box above is our mini-universe. Inside, you'll see two tiny particles:</p>
+        <ul>
+            <li>An <strong>electron</strong> (red, labeled 'e⁻'), a fundamental particle of matter.</li>
+            <li>A <strong>positron</strong> (green, labeled 'e⁺'), the electron's antimatter counterpart. It has the same mass but an opposite charge.</li>
+        </ul>
+        <p>When you press "Play", they will start moving towards each other. Nothing happens yet, they just drift.</p>
+
+        <h3>2. The Main Event: Annihilation</h3>
+        <p>Now, press the big red <strong>"Annihilate!"</strong> button. The two particles will collide in the center. At the moment of collision, they will disappear in a flash. In their place, two new particles will appear:</p>
+        <ul>
+            <li>Two <strong>photons</strong> (yellow, labeled 'γ'), which are particles of light (in this case, high-energy gamma rays).</li>
+        </ul>
+        <p>Notice that the photons fly away in exactly opposite directions. This is required by the law of conservation of momentum. If the electron and positron started with roughly zero total momentum, the final state must also have zero total momentum. Two photons traveling in opposite directions achieve this perfectly.</p>
+
+        <h3>3. The Magic Formula: E=mc²</h3>
+        <p>Look at the "Energy Balance Sheet" below the simulation. Before annihilation, all the energy is in the "Initial" state. Most of it is <strong>Mass Energy</strong>. This is the energy locked up inside the particles just by virtue of having mass. The formula E=mc² tells us exactly how much energy that is.</p>
+        <ul>
+            <li><strong>E</strong> is Energy.</li>
+            <li><strong>m</strong> is mass.</li>
+            <li><strong>c</strong> is the speed of light, a huge number (about 300,000,000 meters per second).</li>
+        </ul>
+        <p>Because 'c' is squared (c²), a tiny amount of mass 'm' can be converted into a gigantic amount of energy 'E'.</p>
+        <p>After annihilation, the mass is gone. The "Initial Energy" drops to zero. All of that energy has been converted into "Final Photon Energy". If you look at the "Total" rows, you'll see that the <strong>Total Initial Energy</strong> is exactly equal to the <strong>Total Final Energy</strong>. Energy is conserved; it just changed its form from mass to light.</p>
+
+        <h3>4. Analogy: Two merging droplets</h3>
+        <p>Imagine two tiny, perfectly balanced droplets of water on a super-hydrophobic surface. One is normal water, one is "anti-water". They hover, barely moving. When they touch, they don't merge into a bigger droplet. Instead, they instantly evaporate in a puff of steam. The substance of the water (its "mass") is gone, converted entirely into the energy of the hot steam. The steam expands outwards in all directions. In our simulation, the photons are like the steam, carrying away the energy that was once locked up as the mass of the electron and positron.</p>
+
+        <h2>Parameters & Controls Summary</h2>
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th>Control</th>
+                    <th>Keyboard Shortcut</th>
+                    <th>Description & Worked Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Annihilate!</strong></td>
+                    <td>(none)</td>
+                    <td>Initiates the annihilation sequence. The particles will move to the center, collide, and produce photons. This is the main trigger for the E=mc² demonstration.</td>
+                </tr>
+                <tr>
+                    <td><strong>Play/Pause</strong></td>
+                    <td><code>Space</code></td>
+                    <td>Starts or stops the animation. Useful for examining the state of the system at a specific moment.</td>
+                </tr>
+                <tr>
+                    <td><strong>Reset</strong></td>
+                    <td><code>r</code></td>
+                    <td>Resets the simulation to its initial state, with the electron and positron at their starting positions.</td>
+                </tr>
+                <tr>
+                    <td><strong>Speed</strong></td>
+                    <td>(none)</td>
+                    <td>Controls the playback speed of the animation, from 0.1x to 5.0x. It does not change the physics, only how fast we see it.</td>
+                </tr>
+                <tr>
+                    <td><strong>Export PNG</strong></td>
+                    <td><code>e</code></td>
+                    <td>Saves a snapshot of the current simulation canvas as a PNG image file.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Core Theory</h2>
+        <p>The physics behind this simulation is one of the cornerstones of modern physics.</p>
+
+        <h3>Equation: Mass-Energy Equivalence</h3>
+        <code>E = mc²</code>
+        <ul>
+            <li><strong>Plain English:</strong> Energy (E) equals mass (m) times the speed of light (c) squared. This means mass and energy are two sides of the same coin; they can be converted into one another.</li>
+            <li><strong>Numeric Example:</strong> Let's calculate the energy released from annihilating one electron (mass m ≈ 9.11 x 10⁻³¹ kg).
+                <ul>
+                    <li><code>m = 9.11 x 10⁻³¹ kg</code></li>
+                    <li><code>c = 2.998 x 10⁸ m/s</code></li>
+                    <li><code>E = (9.11 x 10⁻³¹) * (2.998 x 10⁸)²</code></li>
+                    <li><code>E ≈ (9.11 x 10⁻³¹) * (8.988 x 10¹⁶)</code></li>
+                    <li><code>E ≈ 8.19 x 10⁻¹⁴ Joules</code></li>
+                </ul>
+            Since an electron and a positron annihilate, the total energy released is double this value, approximately <strong>1.64 x 10⁻¹³ Joules</strong>. This is the energy carried away by the two photons.
+            </li>
+        </ul>
+
+        <h2>Analogies & Intuition</h2>
+        <h3>1. Financial Analogy: Withdrawing from a "Mass Bank"</h3>
+        <p>Think of mass as a special savings account where physical substance is the currency. The exchange rate to everyday energy (like heat or motion) is enormous, determined by c². Annihilation is like closing this account. You hand over all your physical substance (the electron and positron), and the bank gives you its full value in pure energy (photons). You can't get the substance back, but you now have a massive amount of energy to spend.
+        <br><strong>Limitation:</strong> This analogy treats mass as something that is "exchanged" for energy. In reality, mass *is* energy in a different form. The conversion is more like melting ice into water than exchanging dollars for yen.
+        </p>
+
+        <h3>2. Visualization Analogy: A Collapsing Tension Field</h3>
+        <p>Imagine the electron and positron are tiny, opposite knots in the fabric of space. The knots themselves create a tension in the fabric, and this tension is what we perceive as mass. When the two opposite knots meet, they untie each other, releasing the stored tension as a violent ripple in the fabric. The ripple spreads outwards—this is the wave of photon energy.
+        <br><strong>Limitation:</strong> This is a highly abstract picture. Spacetime isn't a literal fabric, and particles aren't literal knots. However, it helps visualize mass as a property *of* space rather than just a simple point-like object.
+        </p>
+
+        <h2>FAQ & Troubleshooting</h2>
+        <dl>
+            <dt><strong>1. Why two photons? Why not one?</strong></dt>
+            <dd>To conserve momentum. If the electron and positron start nearly at rest, the total momentum is zero. A single photon would have momentum, violating the conservation law. Two photons flying in opposite directions can have their momentums cancel out, resulting in zero total momentum.</dd>
+
+            <dt><strong>2. Does this happen in the real world?</strong></dt>
+            <dd>Yes! Positron Emission Tomography (PET) scans, used in medicine, rely on this exact process. A radioactive tracer that emits positrons is introduced into the body. When a positron meets an electron in tissue, they annihilate, producing two gamma-ray photons that are detected by the scanner.</dd>
+
+            <dt><strong>3. Is the initial kinetic energy (motion energy) also converted?</strong></dt>
+            <dd>Yes. The total energy of the resulting photons is the sum of the mass energy (2mc²) AND the initial kinetic energy of the particles. Our simulation simplifies this by starting the particles with very low speed, so the kinetic energy is negligible compared to the immense mass energy.</dd>
+
+            <dt><strong>4. Why don't we see antimatter all around us?</strong></dt>
+            <dd>That is one of the biggest unsolved mysteries in physics! The Big Bang should have produced equal amounts of matter and antimatter. For some reason, the universe we see today is made almost entirely of matter. Scientists are actively researching why this asymmetry exists.</dd>
+
+            <dt><strong>5. The simulation is running slow. What can I do?</strong></dt>
+            <dd>This simulation is not computationally intensive. If it's slow, it might be an issue with your browser or other running tabs. Try closing other tabs or restarting the browser. There are no quality settings to reduce in this particular simulation.</dd>
+
+            <dt><strong>6. The canvas is blank or not working.</strong></dt>
+            <dd>Please ensure you are using a modern web browser (like Chrome, Firefox, Safari, or Edge). If the problem persists, open the developer console (usually F12), copy any errors from the "Console" and the "Dev Log" below, and report the issue.</dd>
+        </dl>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <pre id="dev-log"></pre>
+        </details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Quality & Element Checks ---
+    const required_ids = [
+        'simulation-canvas', 'annihilate-btn', 'play-pause-btn', 'reset-btn',
+        'speed-slider', 'speed-value', 'export-png-btn', 'export-json-btn',
+        'initial-mass-energy', 'initial-kinetic-energy', 'total-initial-energy',
+        'final-photon-energy', 'total-final-energy', 'dev-log', 'error-panel',
+        'theme-toggle'
+    ];
+    let all_elements_present = true;
+    required_ids.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.error(`Initialization failed: Missing element #${id}`);
+            all_elements_present = false;
+        }
+    });
+
+    if (!all_elements_present) {
+        document.getElementById('error-panel').style.display = 'block';
+        return;
+    }
+
+    // --- Dev Log & Error Handling ---
+    const devLog = document.getElementById('dev-log');
+    const log = (message) => {
+        devLog.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+        devLog.scrollTop = devLog.scrollHeight;
+    };
+    window.onerror = function(message, source, lineno, colno, error) {
+        log(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+        return true;
+    };
+    log('Initializing simulation...');
+
+    // --- Canvas & Context ---
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- Constants & State ---
+    const M_E = 9.109e-31; // kg
+    const C = 2.998e8; // m/s
+    const MASS_ENERGY_J = M_E * C * C; // Energy of one electron in Joules
+    const MASS_ENERGY_MeV = 0.511; // In Mega-electron-Volts, a common unit
+
+    let simState = 'idle'; // idle, moving, annihilating, final
+    let isPlaying = false;
+    let speed = 1.0;
+    let animFrameId;
+
+    let electron, positron, photons;
+
+    // --- UI Elements ---
+    const annihilateBtn = document.getElementById('annihilate-btn');
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = document.getElementById('speed-value');
+    const exportPngBtn = document.getElementById('export-png-btn');
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+    const presetBtns = document.querySelectorAll('.preset-btn');
+
+    const initialMassEnergyEl = document.getElementById('initial-mass-energy');
+    const initialKineticEnergyEl = document.getElementById('initial-kinetic-energy');
+    const totalInitialEnergyEl = document.getElementById('total-initial-energy');
+    const finalPhotonEnergyEl = document.getElementById('final-photon-energy');
+    const totalFinalEnergyEl = document.getElementById('total-final-energy');
+
+    // --- Simulation Setup ---
+    function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        log(`Canvas resized to ${canvas.width}x${canvas.height}`);
+        reset();
+    }
+
+    function reset() {
+        log('Resetting simulation.');
+        cancelAnimationFrame(animFrameId);
+        simState = 'idle';
+        isPlaying = false;
+        playPauseBtn.textContent = 'Play';
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const particle_vy = 0.5;
+
+        electron = { x: w * 0.25, y: h / 2, vx: 0, vy: -particle_vy, r: 8, color: 'var(--accent-color-1)', label: 'e⁻' };
+        positron = { x: w * 0.75, y: h / 2, vx: 0, vy: particle_vy, r: 8, color: 'var(--accent-color-2)', label: 'e⁺' };
+        photons = [];
+
+        updateEnergySheet();
+        draw();
+    }
+
+    // --- Core Logic ---
+    function update(dt) {
+        if (!isPlaying) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+
+        if (simState === 'moving') {
+            electron.x += electron.vx * dt;
+            electron.y += electron.vy * dt;
+            positron.x += positron.vx * dt;
+            positron.y += positron.vy * dt;
+
+            // Check for collision
+            const dx = electron.x - positron.x;
+            const dy = electron.y - positron.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < electron.r + positron.r) {
+                log('Collision detected. Annihilating.');
+                simState = 'annihilating';
+                // Place particles at exact midpoint
+                const midX = (electron.x + positron.x) / 2;
+                const midY = (electron.y + positron.y) / 2;
+                electron.x = positron.x = midX;
+                electron.y = positron.y = midY;
+
+                // Create photons
+                const photonSpeed = 5 * speed;
+                photons.push({ x: midX, y: midY, vx: photonSpeed, vy: 0, r: 6, color: 'var(--accent-color-3)', label: 'γ'});
+                photons.push({ x: midX, y: midY, vx: -photonSpeed, vy: 0, r: 6, color: 'var(--accent-color-3)', label: 'γ'});
+
+                setTimeout(() => {
+                    if (simState === 'annihilating') {
+                        log('Annihilation complete. Photons propagating.');
+                        simState = 'final';
+                        updateEnergySheet();
+                    }
+                }, 500 / speed);
+            }
+        } else if (simState === 'final') {
+            photons.forEach(p => {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+            });
+        }
+    }
+
+    function draw() {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        if (simState === 'idle' || simState === 'moving') {
+            // Draw electron
+            ctx.fillStyle = getCssVar(electron.color);
+            ctx.beginPath();
+            ctx.arc(electron.x, electron.y, electron.r, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.fillText(electron.label, electron.x, electron.y);
+
+            // Draw positron
+            ctx.fillStyle = getCssVar(positron.color);
+            ctx.beginPath();
+            ctx.arc(positron.x, positron.y, positron.r, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.fillText(positron.label, positron.x, positron.y);
+        } else if (simState === 'annihilating') {
+             // Draw flash
+            const grad = ctx.createRadialGradient(electron.x, electron.y, 0, electron.x, electron.y, 50);
+            grad.addColorStop(0, 'rgba(255, 255, 0, 1)');
+            grad.addColorStop(1, 'rgba(255, 255, 0, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        if (simState === 'final' || simState === 'annihilating') {
+            // Draw photons
+            photons.forEach(p => {
+                ctx.fillStyle = getCssVar(p.color);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = 'black';
+                ctx.fillText(p.label, p.x, p.y);
+            });
+        }
+    }
+
+    function updateEnergySheet() {
+        const initialKE = 0.01; // Small arbitrary kinetic energy for demo
+        const initialMassE = 2 * MASS_ENERGY_MeV;
+        const totalInitial = initialMassE + initialKE;
+
+        if (simState === 'final') {
+            initialMassEnergyEl.textContent = '0.00 MeV';
+            initialKineticEnergyEl.textContent = '0.00 MeV';
+            totalInitialEnergyEl.textContent = '0.00 MeV';
+            finalPhotonEnergyEl.textContent = `${totalInitial.toFixed(2)} MeV`;
+            totalFinalEnergyEl.textContent = `${totalInitial.toFixed(2)} MeV`;
+        } else { // idle, moving, annihilating
+            initialMassEnergyEl.textContent = `${initialMassE.toFixed(2)} MeV`;
+            initialKineticEnergyEl.textContent = `${initialKE.toFixed(2)} MeV`;
+            totalInitialEnergyEl.textContent = `${totalInitial.toFixed(2)} MeV`;
+            finalPhotonEnergyEl.textContent = '0.00 MeV';
+            totalFinalEnergyEl.textContent = '0.00 MeV';
+        }
+    }
+
+    let lastTime = 0;
+    function gameLoop(timestamp) {
+        const dt = (timestamp - lastTime) * 0.1 * speed;
+        lastTime = timestamp;
+
+        if (isPlaying) {
+            update(dt > 20 ? 20 : dt); // Cap dt to prevent huge jumps
+        }
+        draw();
+        animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // --- Event Listeners ---
+    annihilateBtn.addEventListener('click', () => {
+        if (simState === 'idle') {
+            log('Annihilation sequence started.');
+            reset();
+            simState = 'moving';
+            electron.vx = 2 * speed;
+            positron.vx = -2 * speed;
+            electron.vy = 0;
+            positron.vy = 0;
+            if (!isPlaying) {
+                isPlaying = true;
+                playPauseBtn.textContent = 'Pause';
+            }
+        }
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+        log(isPlaying ? 'Simulation played.' : 'Simulation paused.');
+    });
+
+    resetBtn.addEventListener('click', reset);
+
+    speedSlider.addEventListener('input', (e) => {
+        speed = parseFloat(e.target.value);
+        speedValue.textContent = `${speed.toFixed(1)}x`;
+    });
+
+    exportPngBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = 'mass_energy_equivalence.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        log('Exported canvas as PNG.');
+    });
+
+    exportJsonBtn.addEventListener('click', () => {
+        const params = {
+            simulation: "Mass-Energy Equivalence",
+            speed: speed,
+            timestamp: new Date().toISOString()
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(params, null, 2));
+        const link = document.createElement('a');
+        link.href = dataStr;
+        link.download = "e-mc2_params.json";
+        link.click();
+        log('Exported parameters as JSON.');
+    });
+
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        log(`Theme changed to ${document.body.classList.contains('dark-mode') ? 'dark' : 'light'}.`);
+        draw(); // Redraw with new theme colors
+    });
+
+    presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const level = btn.dataset.preset;
+            log(`Audience level set to: ${level}`);
+            // In a more complex sim, this would change parameters. Here, it's just a log.
+            // Example: if (level === 'advanced') { showMoreInfo(); }
+        });
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            playPauseBtn.click();
+        } else if (e.code === 'KeyR') {
+            e.preventDefault();
+            resetBtn.click();
+        } else if (e.code === 'KeyE') {
+            e.preventDefault();
+            exportPngBtn.click();
+        }
+    });
+
+    function getCssVar(varName) {
+        return getComputedStyle(document.body).getPropertyValue(varName.replace(/var\((--[a-zA-Z0-9_-]+)\)/, '$1')).trim();
+    }
+
+    // --- Initial Start ---
+    resizeCanvas();
+    lastTime = performance.now();
+    gameLoop(lastTime);
+    log('Simulation initialized successfully.');
+});
+</script>
+</body>
+</html>

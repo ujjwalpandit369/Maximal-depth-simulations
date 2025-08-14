@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Wave Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f9;
+            --text-color: #333;
+            --primary-color: #3498db;
+            --secondary-color: #95a5a6;
+            --border-color: #e0e0e0;
+            --canvas-bg: #000;
+            --code-bg: #ecf0f1;
+            --accent-color: #e74c3c;
+            --grid-color: #444;
+            --particle-color: #fff;
+        }
+        .dark-mode {
+            --bg-color: #1c2833;
+            --text-color: #ecf0f1;
+            --primary-color: #2980b9;
+            --secondary-color: #7f8c8d;
+            --border-color: #34495e;
+            --canvas-bg: #000;
+            --code-bg: #2c3e50;
+            --grid-color: #555;
+            --particle-color: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container { max-width: 900px; margin: auto; padding: 1rem; }
+        h1, h2, h3 { border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .simulation-container { display: flex; flex-direction: column; gap: 1rem; align-items: center; border: 1px solid var(--border-color); padding: 1rem; border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; max-width: 600px; aspect-ratio: 1 / 1; }
+        .controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; align-items: center; width: 100%; padding: 1rem; }
+        .controls button, .control-group { background-color: var(--primary-color); color: white; border: none; padding: 0.6rem 1rem; font-size: 1rem; cursor: pointer; border-radius: 5px; transition: background-color 0.2s; }
+        .controls button:hover { background-color: #2980b9; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; background-color: transparent; border: 1px solid var(--border-color); }
+        .control-group label { font-size: 0.9rem; text-align: center; }
+        .polarization-btns button.active { background-color: var(--accent-color); font-weight: bold; }
+        .param-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .param-table th, .param-table td { border: 1px solid var(--border-color); padding: 0.8rem; text-align: left; }
+        .param-table th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 0.2rem 0.4rem; border-radius: 3px; font-family: "Courier New", Courier, monospace; }
+        .dev-console { margin-top: 2rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        .dev-console summary { padding: 0.5rem; font-weight: bold; cursor: pointer; background-color: var(--code-bg); }
+        #dev-log { padding: 1rem; height: 150px; overflow-y: scroll; background-color: var(--bg-color); color: var(--text-color); font-family: "Courier New", Courier, monospace; font-size: 0.9rem; }
+        #error-panel { display: none; background-color: #ffdddd; border: 1px solid #ff0000; color: #d8000c; padding: 1rem; margin-top: 1rem; border-radius: 5px; }
+        .dark-mode-toggle { cursor: pointer; padding: 0.5rem; border-radius: 5px; border: 1px solid var(--secondary-color); }
+        @media (max-width: 768px) {
+            body { padding: 0.5rem; }
+            .container { padding: 0.5rem; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="error-panel"></div>
+
+        <h1>Gravitational Wave Visualizer</h1>
+        <p>An animation showing how ripples in spacetime stretch and squeeze a grid of particles.</p>
+
+        <div class="metadata-bar">
+            <span>Estimated runtime: Continuous</span>
+            <span>Recommended device: Desktop</span>
+            <span>Approx. HTML size: 25 KB</span>
+            <button class="dark-mode-toggle" id="theme-toggle">Toggle Dark Mode</button>
+        </div>
+
+        <h2>Plain-Language Overview</h2>
+        <p>
+            Imagine spacetime is a giant, invisible trampoline. A gravitational wave is a ripple spreading across this trampoline, created by cosmic events like two black holes colliding. These ripples don't move things *on* the trampoline; they stretch and squeeze the fabric of the trampoline itself. This simulation shows a grid of free-floating particles in space. As a gravitational wave passes through (coming out of the screen), you can see how the distances between the particles change, revealing the invisible distortion of spacetime.
+        </p>
+
+        <h2>Interactive Simulation</h2>
+        <div class="simulation-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="controls">
+                <button id="play-pause-btn" aria-label="Play or Pause Simulation (Space)">Pause</button>
+                <button id="reset-btn" aria-label="Reset Simulation (r)">Reset</button>
+                <div class="control-group polarization-btns">
+                    <label>Polarization</label>
+                    <div>
+                        <button id="plus-btn" class="active" aria-label="Switch to Plus Polarization">+</button>
+                        <button id="cross-btn" aria-label="Switch to Cross Polarization">×</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="amplitude-slider">Wave Amplitude (h): <span id="amplitude-value">0.10</span></label>
+                    <input type="range" id="amplitude-slider" min="0" max="0.3" value="0.1" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="frequency-slider">Wave Frequency (f): <span id="frequency-value">1.0</span> Hz</label>
+                    <input type="range" id="frequency-slider" min="0.1" max="5" value="1" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <h2>Beginner's Guide</h2>
+        <h3>1. The Grid and the Circle</h3>
+        <p>The simulation shows a grid of white dots, representing particles at rest in empty space. The faint gray lines just help you see the grid structure. The most important part is the bright white circle of particles in the center. This circle will be our primary detector for spacetime distortions.</p>
+
+        <h3>2. Making Waves: Play and Controls</h3>
+        <p>The simulation starts paused. Press <strong>Play</strong> to start the gravitational wave. You'll immediately see the particles start to move. They aren't flying around; rather, the space *between* them is being rhythmically stretched and squeezed.</p>
+        <ul>
+            <li><strong>Amplitude Slider:</strong> This controls the 'strength' of the wave. A higher amplitude (h) creates a more extreme stretching and squeezing effect. Turn it up to see a dramatic distortion.</li>
+            <li><strong>Frequency Slider:</strong> This controls how many wave crests pass by per second. A higher frequency makes the particles oscillate faster.</li>
+        </ul>
+
+        <h3>3. Plus (+) vs. Cross (×) Polarization</h3>
+        <p>Gravitational waves have different "orientations," called polarizations. You can switch between the two main types using the polarization buttons.</p>
+        <ul>
+            <li><strong>Plus Polarization (+):</strong> When you select this, the circle of particles is squeezed vertically while being stretched horizontally. Then, a moment later, it's squeezed horizontally while being stretched vertically. The grid lines form a pulsating '+' shape.</li>
+            <li><strong>Cross Polarization (×):</strong> Now select this one. The distortion is rotated by 45 degrees. The circle is squeezed and stretched along the diagonals. The grid lines form a pulsating '×' shape.</li>
+        </ul>
+        <p>Real gravitational waves are a mix of both polarizations, but looking at them one at a time makes it easier to understand their distinct effects.</p>
+
+        <h2>Parameters & Controls Summary</h2>
+        <table class="param-table">
+            <thead><tr><th>Parameter</th><th>Units</th><th>Default</th><th>Range</th><th>Description & Worked Example</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>Amplitude (h)</strong></td>
+                    <td>Dimensionless Strain</td>
+                    <td>0.10</td>
+                    <td>0 - 0.3</td>
+                    <td>Strength of the wave. A value of h=0.1 means space is stretched/squeezed by 10%. <strong>Real waves are trillions of times weaker!</strong> Example: If h=0.1, a particle at x=100 is displaced by `Δx = 0.1 * 100 = 10` units at the wave's peak.</td>
+                </tr>
+                <tr>
+                    <td><strong>Frequency (f)</strong></td>
+                    <td>Hertz (Hz)</td>
+                    <td>1.0</td>
+                    <td>0.1 - 5.0</td>
+                    <td>Number of wave cycles per second. The angular frequency `ω = 2πf` is used in the equations. Example: If f=2.0 Hz, `ω = 2 * π * 2.0 ≈ 12.57` radians/sec.</td>
+                </tr>
+                <tr>
+                    <td><strong>Polarization</strong></td>
+                    <td>Mode</td>
+                    <td>Plus (+)</td>
+                    <td>+, ×</td>
+                    <td>The orientation of the wave's distortion. '+' polarization squeezes/stretches along the x/y axes, while '×' does so along the diagonals.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Core Theory</h2>
+        <p>For a gravitational wave traveling along the z-axis (out of the screen), the displacement `(Δx, Δy)` of a particle at an original position `(x, y)` at time `t` is given by:</p>
+
+        <h3>Equation: Plus Polarization</h3>
+        <code>Δx(t) = h * x * cos(ωt)</code><br>
+        <code>Δy(t) = -h * y * cos(ωt)</code>
+        <ul>
+            <li><strong>Plain English:</strong> The horizontal displacement `Δx` is proportional to the original horizontal position `x`. The vertical displacement `Δy` is proportional to the original vertical position `y`, but in the opposite direction. Both oscillate in time.</li>
+            <li><strong>Numeric Example:</strong> Let h=0.1, f=1Hz (so ω≈6.28), and consider a particle at (x=50, y=30) at time t=0 (cos(0)=1).
+                <ul>
+                    <li><code>Δx = 0.1 * 50 * 1 = 5</code></li>
+                    <li><code>Δy = -0.1 * 30 * 1 = -3</code></li>
+                    <li>The particle moves from (50, 30) to (55, 27).</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>Equation: Cross Polarization</h3>
+        <code>Δx(t) = h * y * cos(ωt)</code><br>
+        <code>Δy(t) = h * x * cos(ωt)</code>
+        <ul>
+            <li><strong>Plain English:</strong> The horizontal displacement `Δx` is now proportional to the original *vertical* position `y`. The vertical displacement `Δy` is proportional to the original *horizontal* position `x`. This creates a shearing, diagonal distortion.</li>
+            <li><strong>Numeric Example:</strong> Same parameters as before.
+                <ul>
+                    <li><code>Δx = 0.1 * 30 * 1 = 3</code></li>
+                    <li><code>Δy = 0.1 * 50 * 1 = 5</code></li>
+                    <li>The particle moves from (50, 30) to (53, 35).</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2>Analogies & Intuition</h2>
+        <h3>1. Everyday Analogy: A Rippling Funhouse Mirror</h3>
+        <p>Imagine looking at your reflection in a funhouse mirror, but the mirror is made of jelly and someone just poked it. The reflection of your face would rhythmically stretch wide and short, then tall and skinny. The gravitational wave acts like this rippling mirror, but it's distorting the actual geometry of space, not just the path of light. The particles in our grid are like freckles on your face, following the distortion of the surface they are on.
+        <br><strong>Limitation:</strong> A mirror distorts a 2D image. A gravitational wave distorts 3D space itself. Also, the mirror is a physical object, whereas spacetime is the "stage" upon which everything happens.
+        </p>
+
+        <h3>2. Visualization Analogy: A Flowing Vector Field</h3>
+        <p>Imagine that at every point in space, there's a tiny arrow (a vector) telling particles how to move. For a plus-polarized wave, all the arrows on the top half point inwards, while arrows on the bottom half point inwards. Arrows on the left point outwards, and on the right point outwards. This flow field then reverses. The particles are just "going with the flow," and the combined motion creates the characteristic plus-shaped distortion. For a cross-polarized wave, the flow field is rotated 45 degrees.
+        <br><strong>Limitation:</strong> This helps visualize the forces, but it's important to remember there is no "force" in the traditional sense. Particles are following straight lines (geodesics) in a curved spacetime. The "motion" is the curvature of spacetime itself.
+        </p>
+
+        <h2>FAQ & Troubleshooting</h2>
+        <dl>
+            <dt><strong>1. Are the particles actually moving?</strong></dt>
+            <dd>This is a deep question! The particles are "free-floating" and not pushed by any force. They are following the straightest possible paths in a dynamic, curved spacetime. From their own perspective, they are at rest. It's the distance between them that changes. To an outside observer, they appear to move.</dd>
+
+            <dt><strong>2. Is the amplitude `h=0.1` realistic?</strong></dt>
+            <dd>Not at all! The first gravitational waves detected by LIGO had a peak strain `h` of about 10⁻²¹, which is like changing the distance to the nearest star by less than the width of a human hair. The amplitude in the simulation is exaggerated by a factor of about a trillion trillion to make it visible.</dd>
+
+            <dt><strong>3. Where do gravitational waves come from?</strong></dt>
+            <dd>They are produced by accelerating masses, but only the most extreme cosmic events produce waves we can detect. The most common sources are binary systems of two massive objects orbiting each other, like two black holes, two neutron stars, or one of each.</dd>
+        </dl>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <pre id="dev-log"></pre>
+        </details>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Quality & Element Checks ---
+    const required_ids = [
+        'simulation-canvas', 'play-pause-btn', 'reset-btn', 'plus-btn', 'cross-btn',
+        'amplitude-slider', 'amplitude-value', 'frequency-slider', 'frequency-value',
+        'dev-log', 'error-panel', 'theme-toggle'
+    ];
+    let all_elements_present = true;
+    const errorPanel = document.getElementById('error-panel');
+    required_ids.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.error(`Initialization failed: Missing element #${id}`);
+            all_elements_present = false;
+        }
+    });
+
+    if (!all_elements_present) {
+        errorPanel.style.display = 'block';
+        errorPanel.textContent = 'Initialization Error! Some required components are missing. Check the browser console.';
+        return;
+    }
+
+    // --- Dev Log & Error Handling ---
+    const devLog = document.getElementById('dev-log');
+    const log = (message) => {
+        devLog.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+        devLog.scrollTop = devLog.scrollHeight;
+    };
+    window.onerror = (message, source, lineno, colno, error) => {
+        log(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+    };
+    log('Initializing simulation...');
+
+    // --- Canvas & Context ---
+    const canvas = document.getElementById('simulation-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- State ---
+    let isPlaying = true;
+    let time = 0;
+    let animFrameId;
+    let polarization = 'plus'; // 'plus' or 'cross'
+    let amplitude = 0.1;
+    let frequency = 1.0;
+    let particles = [];
+    const GRID_SIZE = 15;
+    const CIRCLE_PARTICLES = 40;
+    const CIRCLE_RADIUS_FRAC = 0.3;
+
+    // --- UI Elements ---
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const plusBtn = document.getElementById('plus-btn');
+    const crossBtn = document.getElementById('cross-btn');
+    const amplitudeSlider = document.getElementById('amplitude-slider');
+    const amplitudeValue = document.getElementById('amplitude-value');
+    const frequencySlider = document.getElementById('frequency-slider');
+    const frequencyValue = document.getElementById('frequency-value');
+    const themeToggle = document.getElementById('theme-toggle');
+
+    // --- Simulation Setup ---
+    function setupParticles() {
+        particles = [];
+        const w = canvas.width;
+        const h = canvas.height;
+        const spacing = w / (GRID_SIZE + 1);
+
+        // Grid particles
+        for (let i = 1; i <= GRID_SIZE; i++) {
+            for (let j = 1; j <= GRID_SIZE; j++) {
+                particles.push({
+                    x0: i * spacing,
+                    y0: j * spacing,
+                    isGrid: true
+                });
+            }
+        }
+
+        // Circle particles
+        const circleRadius = w * CIRCLE_RADIUS_FRAC;
+        for (let i = 0; i < CIRCLE_PARTICLES; i++) {
+            const angle = (i / CIRCLE_PARTICLES) * 2 * Math.PI;
+            particles.push({
+                x0: w / 2 + circleRadius * Math.cos(angle),
+                y0: h / 2 + circleRadius * Math.sin(angle),
+                isGrid: false
+            });
+        }
+        log(`Created ${particles.length} particles.`);
+    }
+
+    function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        setupParticles();
+        log(`Canvas resized to ${canvas.width}x${canvas.height}`);
+    }
+
+    function reset() {
+        log('Resetting simulation.');
+        time = 0;
+        amplitudeSlider.value = 0.1;
+        amplitude = 0.1;
+        amplitudeValue.textContent = '0.10';
+        frequencySlider.value = 1.0;
+        frequency = 1.0;
+        frequencyValue.textContent = '1.0';
+        plusBtn.click();
+    }
+
+    // --- Core Logic & Drawing ---
+    function draw() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const particleColor = getCssVar('--particle-color');
+        const gridColor = getCssVar('--grid-color');
+        ctx.clearRect(0, 0, w, h);
+
+        const omega = 2 * Math.PI * frequency;
+        const h_t = amplitude * Math.cos(omega * time);
+
+        // Store current positions
+        const currentPositions = particles.map(p => {
+            const x_center = p.x0 - w / 2;
+            const y_center = p.y0 - h / 2;
+            let dx = 0;
+            let dy = 0;
+
+            if (polarization === 'plus') {
+                dx = h_t * x_center;
+                dy = -h_t * y_center;
+            } else { // cross
+                dx = h_t * y_center;
+                dy = h_t * x_center;
+            }
+            return { x: p.x0 + dx, y: p.y0 + dy, isGrid: p.isGrid };
+        });
+
+        // Draw grid lines
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        const gridPositions = currentPositions.filter(p => p.isGrid);
+        for(let i = 0; i < GRID_SIZE; i++) {
+            for(let j = 0; j < GRID_SIZE; j++) {
+                const index = i * GRID_SIZE + j;
+                if (j < GRID_SIZE - 1) { // connect to particle on the right
+                    const rightIndex = i * GRID_SIZE + (j + 1);
+                    ctx.moveTo(gridPositions[index].x, gridPositions[index].y);
+                    ctx.lineTo(gridPositions[rightIndex].x, gridPositions[rightIndex].y);
+                }
+                if (i < GRID_SIZE - 1) { // connect to particle below
+                    const downIndex = (i + 1) * GRID_SIZE + j;
+                    ctx.moveTo(gridPositions[index].x, gridPositions[index].y);
+                    ctx.lineTo(gridPositions[downIndex].x, gridPositions[downIndex].y);
+                }
+            }
+        }
+        ctx.stroke();
+
+        // Draw circle lines
+        ctx.strokeStyle = particleColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const circlePositions = currentPositions.filter(p => !p.isGrid);
+        circlePositions.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+        // Draw particles on top
+        ctx.fillStyle = particleColor;
+        currentPositions.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.isGrid ? 1.5 : 2.5, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+    }
+
+    let lastTime = 0;
+    function gameLoop(timestamp) {
+        const deltaTime = (timestamp - lastTime) / 1000; // seconds
+        lastTime = timestamp;
+
+        if (isPlaying) {
+            time += deltaTime;
+            draw();
+        }
+        animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // --- Event Listeners ---
+    playPauseBtn.addEventListener('click', () => {
+        isPlaying = !isPlaying;
+        playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+        log(isPlaying ? 'Simulation played.' : 'Simulation paused.');
+    });
+
+    resetBtn.addEventListener('click', reset);
+
+    plusBtn.addEventListener('click', () => {
+        polarization = 'plus';
+        plusBtn.classList.add('active');
+        crossBtn.classList.remove('active');
+        log('Polarization set to Plus (+)');
+    });
+
+    crossBtn.addEventListener('click', () => {
+        polarization = 'cross';
+        crossBtn.classList.add('active');
+        plusBtn.classList.remove('active');
+        log('Polarization set to Cross (×)');
+    });
+
+    amplitudeSlider.addEventListener('input', (e) => {
+        amplitude = parseFloat(e.target.value);
+        amplitudeValue.textContent = amplitude.toFixed(2);
+    });
+
+    frequencySlider.addEventListener('input', (e) => {
+        frequency = parseFloat(e.target.value);
+        frequencyValue.textContent = frequency.toFixed(1);
+    });
+
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        log(`Theme changed to ${document.body.classList.contains('dark-mode') ? 'dark' : 'light'}.`);
+        if(!isPlaying) draw();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') { e.preventDefault(); playPauseBtn.click(); }
+        else if (e.code === 'KeyR') { e.preventDefault(); resetBtn.click(); }
+    });
+
+    function getCssVar(varName) {
+        return getComputedStyle(document.body).getPropertyValue(varName.substring(4, varName.length - 1)).trim();
+    }
+
+    // --- Initial Start ---
+    resizeCanvas();
+    reset();
+    lastTime = performance.now();
+    gameLoop(lastTime);
+    log('Simulation initialized successfully.');
+});
+</script>
+</body>
+</html>
