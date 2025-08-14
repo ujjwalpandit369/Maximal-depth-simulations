@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cloud Chamber: Visualizing Particle Tracks</title>
+    <style>
+        :root {
+            --bg-color: #171717;
+            --text-color: #e5e5e5;
+            --primary-color: #fafafa;
+            --primary-hover: #e5e5e5;
+            --secondary-color: #a3a3a3;
+            --border-color: #404040;
+            --code-bg: #262626;
+            --controls-bg: #262626;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 0 1rem;
+        }
+
+        h1, h2, h3 {
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        h1 { font-size: 2.5rem; text-align: center; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 2.5rem;}
+
+        .simulation-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            max-width: 100%;
+            background: linear-gradient(to bottom, #0a0a0a, #000000);
+        }
+
+        .controls {
+            width: 350px;
+            flex-shrink: 0;
+            background-color: var(--controls-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group h4 { margin-top: 0; margin-bottom: 0.5rem; color: var(--primary-color); }
+        .control-group button, .control-group label {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            text-align: center;
+            background-color: var(--border-color);
+            border: 1px solid #555;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .control-group button.active {
+            background-color: var(--primary-color);
+            color: #111;
+            font-weight: bold;
+            border-color: var(--primary-color);
+        }
+
+        @media (max-width: 1100px) {
+            .simulation-area { flex-direction: column; }
+            .controls { width: 100%; max-width: 600px; margin: 0 auto; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Cloud Chamber</h1>
+            <p class="subtitle">A virtual particle detector that makes the invisible visible.</p>
+        </header>
+
+        <main>
+            <section id="simulation-container">
+                <h2>Interactive Simulation</h2>
+                <div class="simulation-area">
+                    <div id="canvas-container">
+                        <canvas id="main-canvas" width="800" height="600" aria-label="Animation of particle tracks in a cloud chamber"></canvas>
+                    </div>
+                    <div class="controls">
+                        <h3>Controls</h3>
+                        <div class="control-group">
+                            <h4>Radioactive Source</h4>
+                            <button id="source-alpha" class="source-btn active">Alpha (α) Source</button>
+                            <button id="source-beta" class="source-btn">Beta (β) Source</button>
+                            <button id="source-gamma" class="source-btn">Gamma (γ) Source</button>
+                        </div>
+                         <div class="control-group">
+                            <h4>External Field</h4>
+                            <button id="field-toggle">Magnetic Field: OFF</button>
+                        </div>
+                        <button id="reset-btn" aria-label="Clear Tracks">Clear Tracks</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide to Seeing Particles</h2>
+
+                <h3>1. How Can We See a Single Particle?</h3>
+                <p>Subatomic particles like electrons and alpha particles are far too small to see directly. A cloud chamber is a clever device that makes their *paths* visible. It was one of the first particle detectors and was crucial for many early discoveries in nuclear and particle physics.</p>
+
+                <h3>2. An Everyday Analogy: Airplane Contrails</h3>
+                <p>Imagine a high-flying airplane. You can't see the plane itself, but you can easily see the long white contrail it leaves behind. The plane disturbs the air, and water vapor condenses to form a visible cloud. A cloud chamber works on a similar principle. The chamber is filled with a supersaturated vapor (like very cold alcohol vapor). When a charged particle zips through, it rips electrons off the vapor molecules, creating a trail of ions. The vapor instantly condenses on these ions, forming a miniature cloud—a visible track where the particle has just passed.</p>
+
+                <h3>3. Different Particles, Different Tracks</h3>
+                <p>Different particles leave distinct tracks, allowing physicists to identify them:</p>
+                <ul>
+                    <li><strong>Alpha (α) Particles:</strong> These are heavy and have a large positive charge (+2). They create dense ionization, resulting in <strong>thick, straight, and short</strong> tracks.</li>
+                    <li><strong>Beta (β) Particles:</strong> These are just high-speed electrons. They are very light and have a negative charge (-1). They create less ionization and are easily deflected, resulting in <strong>thin, scattered, and long</strong> tracks.</li>
+                    <li><strong>Gamma (γ) Rays:</strong> These are high-energy photons. They have no charge and don't leave a track themselves. However, they can occasionally interact with an atom, knocking out an electron (Compton scattering) or creating an electron-positron pair. You will see these secondary electron tracks appearing randomly in the chamber.</li>
+                </ul>
+
+                <h3>4. The Effect of a Magnetic Field</h3>
+                <p>When a magnetic field is applied, it exerts a force on moving charged particles (the Lorentz force). This force is always perpendicular to the particle's direction of motion, causing its path to curve.
+                <ul>
+                    <li>Positively charged particles (like alpha particles) curve in one direction.</li>
+                    <li>Negatively charged particles (like beta particles) curve in the opposite direction.</li>
+                </ul>
+                Toggle the magnetic field in the simulation and observe how the tracks bend. This is a primary method physicists use to determine a particle's charge.
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const config = {
+            sourceType: 'alpha', // 'alpha', 'beta', 'gamma'
+            magneticField: false,
+        };
+
+        const state = {
+            particles: [],
+            tracks: [],
+        };
+
+        const dom = {
+            canvas: document.getElementById('main-canvas'),
+            sourceAlphaBtn: document.getElementById('source-alpha'),
+            sourceBetaBtn: document.getElementById('source-beta'),
+            sourceGammaBtn: document.getElementById('source-gamma'),
+            fieldToggleBtn: document.getElementById('field-toggle'),
+            resetBtn: document.getElementById('reset-btn'),
+        };
+
+        let ctx, lastTime = 0;
+
+        function init() {
+            ctx = dom.canvas.getContext('2d');
+            setupEventListeners();
+            requestAnimationFrame(animate);
+        }
+
+        function setupEventListeners() {
+            dom.sourceAlphaBtn.addEventListener('click', () => setSource('alpha'));
+            dom.sourceBetaBtn.addEventListener('click', () => setSource('beta'));
+            dom.sourceGammaBtn.addEventListener('click', () => setSource('gamma'));
+
+            dom.fieldToggleBtn.addEventListener('click', () => {
+                config.magneticField = !config.magneticField;
+                dom.fieldToggleBtn.textContent = `Magnetic Field: ${config.magneticField ? 'ON' : 'OFF'}`;
+                dom.fieldToggleBtn.classList.toggle('active', config.magneticField);
+            });
+
+            dom.resetBtn.addEventListener('click', () => {
+                state.particles = [];
+                state.tracks = [];
+            });
+        }
+
+        function setSource(type) {
+            config.sourceType = type;
+            document.querySelectorAll('.source-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`source-${type}`).classList.add('active');
+        }
+
+        function emitParticle() {
+            const w = dom.canvas.width;
+            const h = dom.canvas.height;
+            const origin = { x: w / 2, y: h - 20 };
+            const angle = Math.random() * Math.PI + Math.PI; // Upwards hemisphere
+
+            let p = {};
+            if (config.sourceType === 'alpha') {
+                const speed = Math.random() * 2 + 2;
+                p = { type: 'alpha', x: origin.x, y: origin.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, charge: 2, mass: 4, life: 100 };
+            } else if (config.sourceType === 'beta') {
+                const speed = Math.random() * 4 + 6;
+                 p = { type: 'beta', x: origin.x, y: origin.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, charge: -1, mass: 1, life: 200 };
+            } else if (config.sourceType === 'gamma' && Math.random() < 0.1) {
+                // Gammas themselves are invisible, but they can create secondary particles
+                const speed = Math.random() * 4 + 6;
+                const secondaryAngle = Math.random() * 2 * Math.PI;
+                p = { type: 'beta', x: Math.random()*w, y: Math.random()*h, vx: Math.cos(secondaryAngle) * speed, vy: Math.sin(secondaryAngle) * speed, charge: -1, mass: 1, life: 200 };
+            }
+
+            if(p.type) state.particles.push(p);
+        }
+
+        function update(delta) {
+            // Emit new particles
+            if (Math.random() < 0.5) {
+                emitParticle();
+            }
+
+            // Update existing particles
+            state.particles.forEach((p, i) => {
+                p.life--;
+                if (p.life <= 0) {
+                    state.particles.splice(i, 1);
+                    return;
+                }
+
+                if (config.magneticField) {
+                    const B = 0.1;
+                    const forceX = p.charge * p.vy * B;
+                    const forceY = -p.charge * p.vx * B;
+
+                    p.vx += (forceX / p.mass) * delta * 20;
+                    p.vy += (forceY / p.mass) * delta * 20;
+                }
+
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Add to track
+                state.tracks.push({ x: p.x, y: p.y, life: 200, type: p.type });
+            });
+
+            // Update tracks
+            state.tracks.forEach((t, i) => {
+                t.life--;
+                if (t.life <= 0) {
+                    state.tracks.splice(i, 1);
+                }
+            });
+        }
+
+        function draw() {
+            const w = dom.canvas.width;
+            const h = dom.canvas.height;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Fading effect
+            ctx.fillRect(0, 0, w, h);
+
+            state.tracks.forEach(t => {
+                if (t.type === 'alpha') {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${t.life / 200 * 0.8})`;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, 1.5, 0, 2 * Math.PI);
+                    ctx.fill();
+                } else { // beta
+                    ctx.fillStyle = `rgba(200, 220, 255, ${t.life / 200})`;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, 0.8, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+            const delta = lastTime > 0 ? (timestamp - lastTime) / 1000 : 1/60;
+            lastTime = timestamp;
+
+            update(delta);
+            draw();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    })();
+    </script>
+</body>
+</html>
