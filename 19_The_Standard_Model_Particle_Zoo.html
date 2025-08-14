@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Explorable: The Standard Model Particle Zoo</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #4c6ef5;
+            --border-color: #dee2e6;
+            --code-bg: #e9ecef;
+            --error-color: #d6336c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+            --quark-color: #be4bdb;
+            --lepton-color: #40c057;
+            --gauge-boson-color: #f76707;
+            --scalar-boson-color: #fab005;
+        }
+
+        .dark-theme {
+            --bg-color: #1f2124;
+            --text-color: #e9ecef;
+            --primary-color: #748ffc;
+            --border-color: #495057;
+            --code-bg: #343a40;
+
+            --quark-color: #d076e2;
+            --lepton-color: #69db7c;
+            --gauge-boson-color: #ff8e4f;
+            --scalar-boson-color: #ffc94d;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h1 { font-size: 2.5rem; text-align: center; }
+        code { background-color: var(--code-bg); padding: 3px 6px; border-radius: 4px; }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1rem; transition: background-color 0.2s; }
+        button:hover { opacity: 0.9; }
+        button.secondary { background-color: #868e96; }
+
+        .metadata-bar { text-align: center; font-size: 0.9rem; color: #868e96; margin-bottom: 20px; }
+        .error-panel { display: none; background-color: var(--error-color); color: white; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        #dev-console { background-color: var(--code-bg); border: 1px solid var(--border-color); padding: 15px; margin-top: 20px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-size: 0.9em; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1rem; margin-top: 10px; border-radius: 5px; color: var(--text-color); }
+        .collapsible:after { content: '\\002B'; font-weight: bold; float: right; }
+        .active:after { content: "\\2212"; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; }
+
+        /* Interactive Zoo Styles */
+        #particle-zoo-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            padding: 20px;
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .particle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            border-radius: 8px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        .particle:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+        .particle.selected { transform: scale(1.1); box-shadow: 0 0 20px 5px var(--primary-color); z-index: 10; }
+        .particle.hidden { opacity: 0.2; pointer-events: none; }
+
+        .quark { background-color: var(--quark-color); }
+        .lepton { background-color: var(--lepton-color); }
+        .gauge-boson { background-color: var(--gauge-boson-color); }
+        .scalar-boson { background-color: var(--scalar-boson-color); grid-column: 4 / span 2; }
+
+        /* Manual Grid placement for the standard model layout */
+        [data-id='u'] { grid-area: 1 / 1; }
+        [data-id='c'] { grid-area: 1 / 2; }
+        [data-id='t'] { grid-area: 1 / 3; }
+        [data-id='d'] { grid-area: 2 / 1; }
+        [data-id='s'] { grid-area: 2 / 2; }
+        [data-id='b'] { grid-area: 2 / 3; }
+
+        [data-id='e'] { grid-area: 1 / 4; }
+        [data-id='mu'] { grid-area: 1 / 5; }
+        [data-id='tau'] { grid-area: 1 / 6; }
+        [data-id='nue'] { grid-area: 2 / 4; }
+        [data-id='numu'] { grid-area: 2 / 5; }
+        [data-id='nutau'] { grid-area: 2 / 6; }
+
+        [data-id='g'] { grid-area: 3 / 1; }
+        [data-id='gamma'] { grid-area: 3 / 2; }
+        [data-id='Z'] { grid-area: 3 / 3; }
+        [data-id='W'] { grid-area: 3 / 4; }
+        [data-id='H'] { grid-area: 3 / 5 / span 1 / span 2; }
+
+
+        #info-panel {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-height: 150px;
+            background-color: var(--bg-color);
+        }
+
+        #info-panel h3 { margin-top: 0; }
+
+        .filter-controls {
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Standard Model Particle Zoo</h1>
+            <p class="subtitle" style="text-align:center;">An interactive guide to the fundamental building blocks of the universe.</p>
+            <div class="metadata-bar">
+                <span>Type: Interactive Chart</span> |
+                <span>Recommended Device: Desktop/Tablet</span> |
+                <span>Approx. Size: 120 KB</span>
+            </div>
+        </header>
+
+        <section>
+            <h2>Overview</h2>
+            <p>The Standard Model of Particle Physics is our current best theory to describe the most basic building blocks of the universe. It explains what the world is made of and what holds it together. It describes the fundamental particles and the forces through which they interact. This interactive "zoo" lets you explore this cast of characters, see their properties, and understand how they fit together to create the world you see around you.</p>
+        </section>
+
+        <section>
+            <h2>The Particle Zoo</h2>
+            <div class="filter-controls">
+                <span>Filter by:</span>
+                <button data-filter="all" class="active">All</button>
+                <button data-filter="Quark">Quarks</button>
+                <button data-filter="Lepton">Leptons</button>
+                <button data-filter="Boson">Bosons</button>
+            </div>
+            <div id="particle-zoo-container">
+                <!-- Particles will be dynamically inserted here -->
+            </div>
+            <div id="info-panel">
+                <p>Click on a particle to learn more about it.</p>
+            </div>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide: The Universe's LEGO Set</h2>
+            <p>At its heart, the Standard Model of Particle Physics is like the ultimate instruction manual for a LEGO set. It tells us about the handful of fundamental "bricks" that build everything in the universe, and the "rules" for how those bricks stick together. Let's break it down.</p>
+
+            <h3>The Two Types of Bricks: Fermions</h3>
+            <p>All the "stuff" you can touch and see—from stars and planets to you—is made from a class of particles called <strong>Fermions</strong>. Think of these as the actual LEGO bricks. They are the particles of matter. But it turns out there are only two types of these matter bricks needed to build atoms:</p>
+
+            <ol>
+                <li><strong>Quarks:</strong> These are sociable particles that are never found alone. They are always huddled together in groups to form bigger particles. For example, a <strong>proton</strong> is made of two "Up" quarks and one "Down" quark. A <strong>neutron</strong> is made of one "Up" quark and two "Down" quarks. That's it! Every atomic nucleus in the universe is just a specific combination of Up and Down quarks.</li>
+                <li><strong>Leptons:</strong> These are more independent particles. The most famous lepton is the <strong>electron</strong>, the tiny particle that orbits the nucleus in an atom and is responsible for electricity. Another lepton is the <strong>neutrino</strong>, a ghostly particle that barely interacts with anything at all.</li>
+            </ol>
+
+            <p>So, to build an atom of hydrogen, you just need two Up quarks, one Down quark (to make the proton), and one electron. Everything you've ever interacted with is built from just these three types of fermion bricks!</p>
+
+            <h3>The "Generations" Mystery</h3>
+            <p>Here's where it gets a bit strange. Nature, for reasons we don't fully understand, decided to make two heavier copies of these matter bricks. These are called the second and third "generations."</p>
+            <ul>
+                <li>The <strong>second generation</strong> has the Charm and Strange quarks, and the Muon (a heavy electron) and its Muon Neutrino.</li>
+                <li>The <strong>third generation</strong> has the Top and Bottom quarks, and the Tau (an even heavier electron) and its Tau Neutrino.</li>
+            </ul>
+            <p>These heavier particles are highly unstable. They existed in the very early, high-energy universe but now can only be made in powerful particle accelerators. They decay almost instantly into the lighter, stable first-generation particles that we're made of. So why do they exist? It's one of the biggest unanswered questions in physics.</p>
+
+            <h3>The Rules of the Game: Bosons</h3>
+            <p>If fermions are the bricks, <strong>Bosons</strong> are the "rules" or the "glue." They are not matter particles; they are the carriers of the fundamental forces. When two particles interact, they do so by exchanging a boson.</p>
+            <ul>
+                <li><strong>The Strong Nuclear Force</strong>, carried by the <strong>Gluon</strong>, is what "glues" quarks together inside protons and neutrons. It's incredibly powerful but only works over tiny distances.</li>
+                <li><strong>The Electromagnetic Force</strong>, carried by the <strong>Photon</strong>, is responsible for light, electricity, and magnetism. It's what keeps electrons bound to atoms.</li>
+                <li><strong>The Weak Nuclear Force</strong>, carried by the <strong>W and Z Bosons</strong>, is responsible for radioactive decay. It's what allows a neutron to turn into a proton, for example.</li>
+            </ul>
+
+            <h3>The Special One: The Higgs Boson</h3>
+            <p>There's one final particle that's a bit different: the <strong>Higgs Boson</strong>. It's not a matter brick and it's not a force carrier in the same way. The Higgs Boson is an excitation of the Higgs Field, an energy field that permeates all of space. It's the interaction with this field that gives fundamental particles like quarks and electrons their mass. Particles that interact strongly with the Higgs field are very heavy (like the Top quark), while those that interact weakly are light (like the electron). The photon doesn't interact with it at all, which is why it's massless.</p>
+            <p>And that's the zoo! Just 12 matter particles (fermions) organized in 3 generations, and 5 force/special particles (bosons) that define the rules. Every known interaction in the universe (except gravity) can be described using these 17 characters.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: A World of Fields</h2>
+            <p>The Standard Model is a <strong>Quantum Field Theory (QFT)</strong>. In QFT, the most fundamental things in the universe are not particles, but fields—fluid-like substances that permeate all of space-time. Each fundamental particle is simply a localized vibration or excitation of its corresponding field.</p>
+            <ul>
+                <li>There is an "electron field." A ripple in this field is what we call an electron.</li>
+                <li>There is an "up quark field." A ripple in this field is an up quark.</li>
+                <li>There is an "electromagnetic field." A ripple in this field is a photon.</li>
+            </ul>
+            <p>Interactions between particles are seen as interactions between their fields. This framework elegantly combines quantum mechanics and special relativity and is the language in which all modern particle physics is written.</p>
+
+            <h3>The Higgs Mechanism</h3>
+            <p>The Higgs field is a special scalar field that has a non-zero value everywhere in space, even in a vacuum. Most fundamental particles get their mass from their interaction with this field. A particle moving through the Higgs field is like a person trying to move through a crowd. Some people (particles) interact a lot with the crowd and find it hard to move (they have high mass). Others barely interact at all and move easily (they have low or zero mass).</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes: What's Missing?</h2>
+            <p>The Standard Model is incredibly successful, but it is not a complete theory of everything. Its limitations are what drive modern physics research.</p>
+            <ul>
+                <li><strong>Gravity:</strong> The Standard Model does not include gravity. The force of gravity is described by Einstein's General Relativity, which is a classical theory. A quantum theory of gravity, and a corresponding "graviton" particle, have been proposed but not yet confirmed.</li>
+                <li><strong>Dark Matter & Dark Energy:</strong> Astronomical observations show that the matter described by the Standard Model only makes up about 5% of the energy density of the universe. The remaining 95% is composed of mysterious "dark matter" and "dark energy," which are not explained by the Standard Model.</li>
+                <li><strong>Neutrino Mass:</strong> In the original Standard Model, neutrinos were predicted to be massless. The discovery of neutrino oscillation (neutrinos changing "flavor") proves that they must have a small but non-zero mass. The mechanism for this is not yet understood and is a crack in the model's original formulation.</li>
+                <li><strong>The Hierarchy Problem:</strong> Why is the Higgs boson so much lighter than the scale at which gravity is expected to become a quantum force? This vast difference in scales is seen as a major theoretical puzzle. Extensions like Supersymmetry (SUSY) have been proposed to solve this.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ</h2>
+            <dl>
+                <dt>1. What's the difference between a Hadron and a Lepton?</dt>
+                <dd>A Lepton (like an electron) is a truly fundamental particle. A Hadron (like a proton or neutron) is a *composite* particle made of quarks held together by the strong force.</dd>
+
+                <dt>2. Why can't we see a single quark by itself?</dt>
+                <dd>This is due to a property of the strong force called "color confinement." The force between quarks behaves like a rubber band: the farther you try to pull them apart, the stronger the force gets. If you put enough energy into the system to snap the "band," that energy instantly transforms (via E=mc²) into a new quark-antiquark pair, so you end up with two separate hadrons instead of one free quark.</dd>
+
+                <dt>3. Are particles really little spinning balls?</dt>
+                <dd>"Spin" is a quantum mechanical property that is analogous, but not identical, to classical angular momentum. It's an intrinsic, quantized amount of angular momentum that a particle has, whether it's "spinning" or not. It's best thought of as a fundamental property like charge or mass.</dd>
+
+                <dt>4. Where do antiparticles fit in?</dt>
+                <dd>For every matter particle (fermion), there is a corresponding antiparticle with the same mass but opposite charge and other quantum numbers. For example, the electron's antiparticle is the positron. When a particle and its antiparticle meet, they annihilate into energy (photons).</dd>
+
+                <dt>5. Is the Standard Model "finished"?</dt>
+                <dd>No. While it's the most tested and successful theory in science, we know it's incomplete. As mentioned in the Advanced Notes, it doesn't account for gravity, dark matter, or dark energy, which together make up 95% of the universe.</dd>
+            </dl>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Exploration Guide & Micro-Experiments</h2>
+            <p>Use the filters and click on particles to answer these questions and build your intuition.</p>
+            <ol>
+                <li><strong>Building a Proton:</strong> Click on the "Up" quark, then the "Down" quark. A proton is made of two Up quarks and one Down quark. Add up their charges: (+2/3) + (+2/3) + (-1/3) = +1. This is the charge of a proton!</li>
+                <li><strong>Force Carriers:</strong> Click the "Bosons" filter. Notice how all the force-carriers appear. Now, read the description for the Gluon, Photon, and W/Z Bosons to see which force each one is responsible for.</li>
+                <li><strong>The Three Generations of Matter:</strong> Filter by "Quarks", then "Leptons". For each group, notice how the particles are arranged in columns. These are the three "generations" of matter, with each generation being heavier than the last. Compare the mass of the Electron, Muon, and Tau.</li>
+                <li><strong>Who Feels the Strong Force?:</strong> Click through different particles and check their "Interacts via" property. You will find that only Quarks and Gluons feel the Strong Force. This is why this force only acts inside protons and neutrons and does not affect electrons.</li>
+                <li><strong>The Odd One Out:</strong> Click on the Higgs Boson. Notice its spin is 0, unlike all the other particles. This makes it unique—it's a "scalar" particle, while the others are "fermions" (spin 1/2) or "vector bosons" (spin 1).</li>
+            </ol>
+        </section>
+
+        <div id="error-panel" class="error-panel"><strong>Initialization Error:</strong> <span id="error-message"></span></div>
+        <button class="collapsible">Developer Console</button>
+        <div class="content"><div id="dev-console"><p>Runtime logs will appear here.</p></div></div>
+    </div>
+
+    <script>
+        // --- The Core Data Structure for the Standard Model ---
+        const particleData = [
+            // Quarks
+            { id: 'u', name: 'Up Quark', symbol: 'u', category: 'Quark', generation: 1, mass: '2.2 MeV/c²', charge: '+2/3', spin: '1/2', interactions: ['Strong', 'Weak', 'EM', 'Gravity'], description: 'A fundamental constituent of matter. Protons and neutrons are made of up and down quarks. It is the lightest of all quarks.' },
+            { id: 'd', name: 'Down Quark', symbol: 'd', category: 'Quark', generation: 1, mass: '4.7 MeV/c²', charge: '-1/3', spin: '1/2', interactions: ['Strong', 'Weak', 'EM', 'Gravity'], description: 'A fundamental constituent of matter. A neutron contains two down quarks and one up quark.' },
+            { id: 'c', name: 'Charm Quark', symbol: 'c', category: 'Quark', generation: 2, mass: '1.27 GeV/c²', charge: '+2/3', spin: '1/2', interactions: ['Strong', 'Weak', 'EM', 'Gravity'], description: 'The third most massive of all quarks. It was discovered in 1974, leading to a series of breakthroughs known as the "November Revolution".' },
+            { id: 's', name: 'Strange Quark', symbol: 's', category: 'Quark', generation: 2, mass: '95 MeV/c²', charge: '-1/3', spin: '1/2', interactions: ['Strong', 'Weak', 'EM', 'Gravity'], description: 'A third type of quark, named because particles containing it (kaons and hyperons) had unexpectedly long lifetimes.' },
+            { id: 't', name: 'Top Quark', symbol: 't', category: 'Quark', generation: 3, mass: '173 GeV/c²', charge: '+2/3', spin: '1/2', interactions: ['Strong', 'Weak', 'EM', 'Gravity'], description: 'By far the most massive elementary particle discovered. Its mass is similar to that of an entire gold atom. It decays so quickly it does not have time to form hadrons.' },
+            { id: 'b', name: 'Bottom Quark', symbol: 'b', category: 'Quark', generation: 3, mass: '4.18 GeV/c²', charge: '-1/3', spin: '1/2', interactions: ['Strong', 'Weak', 'EM', 'Gravity'], description: 'The second most massive quark, discovered at Fermilab in 1977. Its discovery hinted at the existence of its partner, the top quark.' },
+            // Leptons
+            { id: 'e', name: 'Electron', symbol: 'e⁻', category: 'Lepton', generation: 1, mass: '0.511 MeV/c²', charge: '-1', spin: '1/2', interactions: ['Weak', 'EM', 'Gravity'], description: 'The familiar particle that orbits the nucleus of atoms and is responsible for electricity and chemistry. It is a stable particle.' },
+            { id: 'nue', name: 'Electron Neutrino', symbol: 'νₑ', category: 'Lepton', generation: 1, mass: '< 1 eV/c²', charge: '0', spin: '1/2', interactions: ['Weak', 'Gravity'], description: 'An almost massless particle that interacts very rarely with other matter. Trillions pass through you every second, mostly from the Sun.' },
+            { id: 'mu', name: 'Muon', symbol: 'μ⁻', category: 'Lepton', generation: 2, mass: '105.7 MeV/c²', charge: '-1', spin: '1/2', interactions: ['Weak', 'EM', 'Gravity'], description: 'Essentially a much heavier (about 200 times) version of the electron. It is unstable and decays in about 2.2 microseconds.' },
+            { id: 'numu', name: 'Muon Neutrino', symbol: 'ν_μ', category: 'Lepton', generation: 2, mass: '< 0.17 MeV/c²', charge: '0', spin: '1/2', interactions: ['Weak', 'Gravity'], description: 'A type of neutrino that is produced along with muons in certain particle decays. It can oscillate into other neutrino types.' },
+            { id: 'tau', name: 'Tau', symbol: 'τ⁻', category: 'Lepton', generation: 3, mass: '1.777 GeV/c²', charge: '-1', spin: '1/2', interactions: ['Weak', 'EM', 'Gravity'], description: 'An even heavier, more unstable version of the electron. It is about 3,500 times more massive than an electron and decays very quickly.' },
+            { id: 'nutau', name: 'Tau Neutrino', symbol: 'ν_τ', category: 'Lepton', generation: 3, mass: '< 18.2 MeV/c²', charge: '0', spin: '1/2', interactions: ['Weak', 'Gravity'], description: 'The third type of neutrino, associated with the tau lepton. Its existence was inferred long before it was directly observed in 2000.' },
+            // Bosons
+            { id: 'g', name: 'Gluon', symbol: 'g', category: 'Boson', generation: 'N/A', mass: '0', charge: '0', spin: '1', interactions: ['Strong'], description: 'The force-carrier of the Strong Nuclear Force, which binds quarks together inside protons and neutrons. Gluons also interact with each other.' },
+            { id: 'gamma', name: 'Photon', symbol: 'γ', category: 'Boson', generation: 'N/A', mass: '0', charge: '0', spin: '1', interactions: ['EM'], description: 'The force-carrier of the electromagnetic force. It is the quantum of light and all other forms of electromagnetic radiation.' },
+            { id: 'Z', name: 'Z Boson', symbol: 'Z', category: 'Boson', generation: 'N/A', mass: '91.2 GeV/c²', charge: '0', spin: '1', interactions: ['Weak'], description: 'One of the carriers of the Weak Nuclear Force. It is responsible for the "neutral current" interactions, a key prediction of the unified electroweak theory.' },
+            { id: 'W', name: 'W Boson', symbol: 'W±', category: 'Boson', generation: 'N/A', mass: '80.4 GeV/c²', charge: '±1', spin: '1', interactions: ['Weak'], description: 'A carrier of the Weak Nuclear Force. Unlike other force carriers, it has an electric charge. It is involved in processes like beta decay.' },
+            { id: 'H', name: 'Higgs Boson', symbol: 'H', category: 'Boson', generation: 'N/A', mass: '125.1 GeV/c²', charge: '0', spin: '0', interactions: ['Weak', 'Gravity'], description: 'The quantum excitation of the Higgs field, which gives mass to fundamental particles like quarks and the W/Z bosons. It is the only fundamental particle with spin 0.' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const zooContainer = document.getElementById('particle-zoo-container');
+
+            function populateZoo() {
+                if (!zooContainer) {
+                    console.error("Zoo container not found!");
+                    return;
+                }
+
+                particleData.forEach(p => {
+                    const particleEl = document.createElement('div');
+                    particleEl.classList.add('particle');
+
+                    let categoryClass = '';
+                    if (p.category === 'Quark') categoryClass = 'quark';
+                    else if (p.category === 'Lepton') categoryClass = 'lepton';
+                    else if (p.name === 'Higgs Boson') categoryClass = 'scalar-boson';
+                    else if (p.category === 'Boson') categoryClass = 'gauge-boson';
+
+                    particleEl.classList.add(categoryClass);
+                    particleEl.dataset.id = p.id;
+                    particleEl.setAttribute('role', 'button');
+                    particleEl.setAttribute('tabindex', '0');
+                    particleEl.setAttribute('aria-label', p.name);
+
+                    particleEl.innerHTML = p.symbol;
+                    zooContainer.appendChild(particleEl);
+                });
+            }
+
+            populateZoo();
+
+            const infoPanel = document.getElementById('info-panel');
+            const filterControls = document.querySelector('.filter-controls');
+            const devConsole = document.getElementById('dev-console');
+
+            function log(message) {
+                const p = document.createElement('p');
+                p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                devConsole.insertBefore(p, devConsole.firstChild);
+            }
+
+            // --- Click to Display Logic ---
+            zooContainer.addEventListener('click', (e) => {
+                const particleEl = e.target.closest('.particle');
+                if (!particleEl) return;
+
+                const particleId = particleEl.dataset.id;
+                const particle = particleData.find(p => p.id === particleId);
+
+                if (!particle) return;
+
+                // Update selection visual
+                document.querySelectorAll('.particle.selected').forEach(p => p.classList.remove('selected'));
+                particleEl.classList.add('selected');
+
+                // Populate info panel
+                infoPanel.innerHTML = `
+                    <h3>${particle.name} (${particle.symbol})</h3>
+                    <p><strong>Category:</strong> ${particle.category}</p>
+                    <p><strong>Generation:</strong> ${particle.generation}</p>
+                    <p><strong>Mass:</strong> ${particle.mass}</p>
+                    <p><strong>Charge:</strong> ${particle.charge}</p>
+                    <p><strong>Spin:</strong> ${particle.spin}</p>
+                    <p><strong>Interacts via:</strong> ${particle.interactions.join(', ')}</p>
+                    <hr>
+                    <p>${particle.description}</p>
+                `;
+            });
+
+            // --- Filtering Logic ---
+            filterControls.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') return;
+
+                const filter = e.target.dataset.filter;
+
+                // Update active button visual
+                filterControls.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // Filter particles
+                document.querySelectorAll('.particle').forEach(pEl => {
+                    const pId = pEl.dataset.id;
+                    const particle = particleData.find(p => p.id === pId);
+                    let show = false;
+
+                    if (filter === 'all') {
+                        show = true;
+                    } else if (filter === 'Boson') {
+                        show = (particle.category === 'Boson');
+                    } else {
+                        show = (particle.category === filter);
+                    }
+
+                    pEl.classList.toggle('hidden', !show);
+                });
+            });
+
+            // Basic collapsible functionality for dev console
+            const coll = document.querySelector(".collapsible");
+            coll.addEventListener("click", function() {
+                this.classList.toggle("active");
+                const content = this.nextElementSibling;
+                if (content.style.maxHeight){ content.style.maxHeight = null; }
+                else { content.style.maxHeight = content.scrollHeight + "px"; }
+            });
+
+            function runSelfChecks() {
+                const errorPanel = document.getElementById('error-panel');
+                const errorMessage = document.getElementById('error-message');
+                let errors = [];
+
+                if (!particleData || particleData.length !== 17) {
+                    errors.push(`Particle data is missing or incomplete. Expected 17 particles, found ${particleData?.length || 0}.`);
+                }
+                if (!zooContainer) errors.push("The main '#particle-zoo-container' element was not found in the HTML.");
+                if (!infoPanel) errors.push("The '#info-panel' element was not found in the HTML.");
+
+                if (errors.length > 0) {
+                    errorPanel.style.display = 'block';
+                    errorMessage.innerHTML = errors.join('<br>');
+                    log(`FATAL: Self-check failed: ${errors.join(', ')}`);
+                    return false;
+                }
+                log("Self-checks passed successfully.");
+                return true;
+            }
+
+            runSelfChecks();
+        });
+    </script>
+</body>
+</html>
