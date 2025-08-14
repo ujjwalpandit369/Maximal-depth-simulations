@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brownian Motion</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #8B4513; /* A brown color for the particle */
+            --secondary-color: #007bff; /* Blue for the fluid */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #1c1c1c;
+            --text-color: #e0e0e0;
+            --primary-color: #cd853f; /* Lighter brown */
+            --secondary-color: #58a6ff;
+            --border-color: #444;
+            --canvas-bg: #000;
+            --code-bg: #333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 150px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Brownian Motion</h1>
+            <p class="subtitle">The random dance that proved the existence of atoms.</p>
+            <p class="meta-bar">
+                Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>If you look at a tiny particle, like a grain of pollen, suspended in water under a microscope, you'll see it jiggling and moving around in a completely random, erratic path. This is Brownian motion. For decades, its cause was a mystery. This simulation shows the explanation proposed by Albert Einstein in 1905: the large particle you can see is constantly being bombarded by billions of much smaller, invisible water molecules. At any moment, purely by chance, more molecules might hit it from one side than the other, giving it a tiny push. The sum of all these random pushes causes the jerky "random walk" that was one of the first and most direct pieces of evidence for the existence of atoms and molecules.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — A Gentle Introduction</h2>
+
+            <h3>Step 1: The Mystery of the Jiggling Pollen</h3>
+            <p>In 1827, Scottish botanist Robert Brown was looking at pollen grains suspended in water through his microscope. He noticed something strange: the pollen grains were in a constant, agitated state of motion. They zipped back and forth, turned, and jiggled without any apparent cause. He first thought they might be alive, but he saw the same motion with particles of dust and soot. He couldn't explain it. This puzzling phenomenon became known as Brownian motion.</p>
+
+            <h3>Step 2: A Radical Idea - The Atomic Hypothesis</h3>
+            <p>For most of the 19th century, the existence of atoms was a controversial hypothesis. Many scientists thought of them as a useful fiction for chemistry, not real physical objects. But some physicists started to believe that the properties of gases and fluids could be explained if they were made of countless tiny, fast-moving particles. This was called the kinetic theory of heat.</p>
+
+            <h3>Step 3: Einstein's Explanation</h3>
+            <p>In 1905, his "miracle year," Albert Einstein published a paper that provided a complete physical explanation for Brownian motion. He reasoned that if the water were truly made of tiny, discrete molecules as the kinetic theory suggested, then the large pollen grain would be in a constant state of collision with them.
+            <ul>
+                <li>The water molecules are moving incredibly fast and in all directions.</li>
+                <li>At any given instant, the number of molecules hitting the grain on the left side is probably not *exactly* equal to the number hitting it on the right.</li>
+                <li>This tiny imbalance results in a net force, pushing the grain a tiny amount in one direction.</li>
+                <li>A fraction of a second later, the imbalance is different, and the grain gets pushed in another random direction.</li>
+            </ul>
+            The path you see is the result of adding up all these tiny, random pushes over time. It's a "random walk."</p>
+
+            <h3>Step 4: The Analogy - A Beach Ball in a Crowd</h3>
+            <p>Imagine a giant, lightweight beach ball being tossed around on top of a dense, energetic crowd at a concert. Each person in the crowd is like a water molecule. They are all moving around, bumping into each other and the ball.
+            <ul>
+                <li>From a distance, the crowd looks uniform.</li>
+                <li>But if you focus on the ball, you'll see it lurching around. This isn't because the crowd is intentionally pushing it in any one direction.</li>
+                <li>It's because at any moment, a few more people on the left might happen to shove it than people on the right. Then a moment later, a few more might push from the back.</li>
+            </ul>
+            The beach ball's jerky, unpredictable dance is a perfect large-scale analogy for the Brownian motion of a microscopic particle.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+                <div id="sim-info" style="text-align: center; margin-top: 10px;">Status: Idle</div>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="play-pause-btn" aria-label="Play/Pause">Run</button>
+                    <button id="reset-btn" aria-label="Reset">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label for="temp-slider">Temperature: <span id="temp-value">5</span></label>
+                    <input type="range" id="temp-slider" min="1" max="10" step="0.5" value="5">
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Particle Mass: <span id="mass-value">200</span></label>
+                    <input type="range" id="mass-slider" min="50" max="1000" step="50" value="200">
+                </div>
+                <div class="control-group">
+                    <label for="visc-slider">Fluid Viscosity: <span id="visc-value">0.1</span></label>
+                    <input type="range" id="visc-slider" min="0" max="0.5" step="0.01" value="0.1">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — The Random Walk (Click to expand)</button>
+        <div class="content">
+            <h3>Mean Squared Displacement (MSD)</h3>
+            <p>The key statistical signature of Brownian motion is the "mean squared displacement," or MSD. This measures the average of the squared distance the particle has traveled from its starting point. For normal, ballistic motion (like a thrown ball), distance is proportional to time (`d ∝ t`). But for a random walk, the squared distance is proportional to time:</p>
+            <p><code>⟨d²⟩ = 2nDt</code></p>
+            <p>Where:
+            <ul>
+                <li><code>⟨d²⟩</code> is the mean squared displacement.</li>
+                <li><code>n</code> is the number of dimensions (2 in our simulation).</li>
+                <li><code>D</code> is the Diffusion coefficient.</li>
+                <li><code>t</code> is time.</li>
+            </ul>
+            <strong>Plain English:</strong> This means the particle doesn't get very far, very fast. Its exploration of the space is inefficient. To travel twice as far, it needs to wait four times as long. The plot of the particle's x-position versus time shows this characteristic random structure.</p>
+            <h3>The Einstein Relation</h3>
+            <p>Einstein connected the macroscopic properties of the fluid to the microscopic random walk through the Diffusion coefficient, D:</p>
+            <p><code>D = k_B * T / (6 * π * η * r)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>k_B</code> is the Boltzmann constant, a fundamental constant of nature.</li>
+                <li><code>T</code> is the absolute temperature of the fluid.</li>
+                <li><code>η</code> (eta) is the viscosity of the fluid.</li>
+                <li><code>r</code> is the radius of the large particle.</li>
+            </ul>
+            <strong>Plain English:</strong> This equation beautifully links the microscopic world to the macroscopic. It shows that the particle jiggles more (higher D) if the fluid is hotter (higher T) or less viscous (lower η). By measuring D, T, η, and r, the French physicist Jean Perrin was able to calculate a value for `k_B` and from it, Avogadro's number, providing definitive proof of the atomic theory.
+            </p>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>The Langevin Equation</h3>
+            <p>A more sophisticated way to model Brownian motion is with the Langevin equation. It's essentially Newton's second law (`F=ma`) with two extra terms added to describe the particle's interaction with the fluid:</p>
+            <p><code>m * a = F_drag + F_random(t)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>m * a</code> is the particle's mass times acceleration.</li>
+                <li><code>F_drag = -γ * v</code> is a frictional drag force, proportional to the particle's velocity `v` and the fluid's viscosity `γ`. This is the "dampening" effect.</li>
+                <li><code>F_random(t)</code> is a rapidly fluctuating random force representing the bombardment by fluid molecules. This is the "kicking" effect.</li>
+            </ul>
+            The drag and the random force are not independent; they are two sides of the same coin. The same molecular collisions that cause the random kicks also cause the friction. This is encapsulated in the "fluctuation-dissipation theorem," which states that `γ` is directly related to the statistical properties of `F_random(t)`.
+            </p>
+            <h3>Applications</h3>
+            <p>The mathematics of Brownian motion and random walks are fundamental to many fields beyond physics. They are used to model stock price fluctuations in finance (geometric Brownian motion), the diffusion of pollutants in the environment, the random movement of proteins and other molecules within living cells, and much more.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx, plotCanvas, plotCtx;
+    let isRunning = false;
+    let animationFrameId;
+
+    let config = {
+        temp: 5,
+        mass: 200,
+        visc: 0.1,
+        numSmall: 100,
+    };
+
+    let largeParticle;
+    let smallParticles = [];
+    let plotHistory = [];
+
+    function resetSimulation() {
+        isRunning = false;
+        document.getElementById('play-pause-btn').textContent = 'Run';
+        document.getElementById('sim-info').textContent = 'Status: Idle. Press Run to begin.';
+
+        const { width, height } = canvas;
+        largeParticle = {
+            x: width / 2, y: height / 2,
+            vx: 0, vy: 0,
+            r: 20,
+            mass: config.mass,
+            path: []
+        };
+        largeParticle.path.push({x: largeParticle.x, y: largeParticle.y});
+
+        smallParticles = [];
+        const speed = Math.sqrt(config.temp);
+        for (let i = 0; i < config.numSmall; i++) {
+            const angle = Math.random() * 2 * Math.PI;
+            smallParticles.push({
+                x: Math.random() * width, y: Math.random() * height,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                r: 2,
+                mass: 1
+            });
+        }
+
+        plotHistory = [{t: 0, x: largeParticle.x}];
+        draw();
+        drawPlot();
+    }
+
+    function simulationStep() {
+        const { width, height } = canvas;
+
+        // Move small particles
+        const speed = Math.sqrt(config.temp);
+        smallParticles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0 || p.x > width) p.vx *= -1;
+            if (p.y < 0 || p.y > height) p.vy *= -1;
+
+            // Collide with large particle
+            const dx = p.x - largeParticle.x;
+            const dy = p.y - largeParticle.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist < largeParticle.r + p.r) {
+                // Simplified collision physics
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                // Reflect small particle
+                const dot = p.vx * nx + p.vy * ny;
+                p.vx -= 2 * dot * nx;
+                p.vy -= 2 * dot * ny;
+
+                // Impart momentum to large particle
+                const momentum_transfer_x = 2 * p.mass * dot * nx;
+                const momentum_transfer_y = 2 * p.mass * dot * ny;
+
+                largeParticle.vx += momentum_transfer_x / largeParticle.mass;
+                largeParticle.vy += momentum_transfer_y / largeParticle.mass;
+            }
+        });
+
+        // Apply viscosity (drag) to large particle
+        largeParticle.vx *= (1 - config.visc);
+        largeParticle.vy *= (1 - config.visc);
+
+        // Move large particle
+        largeParticle.x += largeParticle.vx;
+        largeParticle.y += largeParticle.vy;
+
+        // Wall bounce for large particle
+        if (largeParticle.x < largeParticle.r || largeParticle.x > width - largeParticle.r) {
+            largeParticle.vx *= -1;
+            largeParticle.x = Math.max(largeParticle.r, Math.min(width - largeParticle.r, largeParticle.x));
+        }
+        if (largeParticle.y < largeParticle.r || largeParticle.y > height - largeParticle.r) {
+            largeParticle.vy *= -1;
+            largeParticle.y = Math.max(largeParticle.r, Math.min(height - largeParticle.r, largeParticle.y));
+        }
+
+        // Record path
+        if (largeParticle.path.length > 500) largeParticle.path.shift();
+        largeParticle.path.push({x: largeParticle.x, y: largeParticle.y});
+
+        if (plotHistory.length > 500) plotHistory.shift();
+        plotHistory.push({t: plotHistory[plotHistory.length-1].t + 1, x: largeParticle.x});
+    }
+
+    function gameLoop() {
+        if (!isRunning) return;
+        simulationStep();
+        draw();
+        drawPlot();
+        document.getElementById('sim-info').textContent = 'Status: Running...';
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw small particles
+        const smallColor = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.fillStyle = smallColor + '80'; // semi-transparent
+        smallParticles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+
+        // Draw large particle path
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '80';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if(largeParticle.path.length > 0) {
+            ctx.moveTo(largeParticle.path[0].x, largeParticle.path[0].y);
+            largeParticle.path.forEach(p => ctx.lineTo(p.x, p.y));
+        }
+        ctx.stroke();
+
+        // Draw large particle
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.beginPath();
+        ctx.arc(largeParticle.x, largeParticle.y, largeParticle.r, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        if (plotHistory.length < 2) return;
+
+        const first_t = plotHistory[0].t;
+        const last_t = plotHistory[plotHistory.length-1].t;
+        const t_range = last_t - first_t;
+
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        plotHistory.forEach((p, i) => {
+            const x = ((p.t - first_t) / t_range) * width;
+            const y = p.x / canvas.width * height; // Scale x-pos to plot y-pos
+            if (i === 0) plotCtx.moveTo(x, y);
+            else plotCtx.lineTo(x, y);
+        });
+        plotCtx.stroke();
+
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.font = '12px Arial';
+        plotCtx.fillText('Time ->', width - 40, height - 5);
+        plotCtx.fillText('X-Position', 5, 15);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            isRunning = !isRunning;
+            if (isRunning) {
+                document.getElementById('play-pause-btn').textContent = 'Pause';
+                gameLoop();
+            } else {
+                document.getElementById('play-pause-btn').textContent = 'Run';
+            }
+        });
+        document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+
+        document.getElementById('temp-slider').addEventListener('input', e => {
+            config.temp = parseFloat(e.target.value);
+            document.getElementById('temp-value').textContent = config.temp.toFixed(1);
+            // Update small particle speeds
+            const newSpeed = Math.sqrt(config.temp);
+            smallParticles.forEach(p => {
+                const currentSpeed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+                if (currentSpeed > 0) {
+                    p.vx = (p.vx / currentSpeed) * newSpeed;
+                    p.vy = (p.vy / currentSpeed) * newSpeed;
+                }
+            });
+        });
+        document.getElementById('mass-slider').addEventListener('input', e => {
+            config.mass = parseInt(e.target.value, 10);
+            document.getElementById('mass-value').textContent = config.mass;
+            if(largeParticle) largeParticle.mass = config.mass;
+        });
+        document.getElementById('visc-slider').addEventListener('input', e => {
+            config.visc = parseFloat(e.target.value);
+            document.getElementById('visc-value').textContent = config.visc.toFixed(2);
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+        drawPlot();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+
+        resetSimulation();
+    };
+    </script>
+</body>
+</html>

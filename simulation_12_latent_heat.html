@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latent Heat and Phase Change</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff; /* Blue for water/ice */
+            --secondary-color: #dc3545; /* Red for heat */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #58a6ff;
+            --secondary-color: #ff7b72;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #mainCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 4 / 3; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 250px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Latent Heat and Phase Change</h1>
+            <p class="subtitle">Visualizing the "hidden" energy required to melt ice and boil water.</p>
+            <p class="meta-bar">
+                Estimated Runtime: 1-5 minutes | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>If you put a pot of ice on a stove and turn on the heat, you might expect its temperature to rise steadily until it's all steam. But that's not what happens. The temperature gets stuck at 0°C (32°F) while the ice is melting, and gets stuck again at 100°C (212°F) while the water is boiling. Why? This simulation explores the concept of "latent heat"—the significant amount of energy that must be absorbed by a substance to change its phase (e.g., from solid to liquid) without changing its temperature at all. You'll see how adding heat can either raise a substance's temperature or change its phase, but not both at the same time.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — A Step-by-Step Heating Curve</h2>
+
+            <h3>Phase 1: Heating the Ice</h3>
+            <p>We start with a block of ice below its freezing point. As we add heat from the hot plate, the water molecules in the ice crystal lattice vibrate more and more vigorously. This increased vibration is what we measure as a rise in temperature. The graph shows a steady increase in temperature for the heat we've added.</p>
+
+            <h3>Phase 2: The Melting Plateau (Latent Heat of Fusion)</h3>
+            <p>When the ice reaches 0°C, a remarkable thing happens. Even though we are still adding heat, the temperature stops rising. The graph shows a flat plateau. Where is the energy going? It's being used to break the strong hydrogen bonds that hold the water molecules in their rigid ice structure. This energy is called the <strong>latent heat of fusion</strong>. "Latent" means hidden, because it doesn't show up on a thermometer. The beaker shows a mix of ice and water, and the microscopic view shows some molecules breaking free from the lattice. The temperature will not budge from 0°C until every last bit of ice has melted.</p>
+
+            <h3>Phase 3: Heating the Water</h3>
+            <p>Once all the ice has turned into liquid water, the added heat once again causes the temperature to rise. The now-free water molecules move around faster and faster, which we measure as an increase in temperature. The graph shows the temperature climbing again.</p>
+
+            <h3>Phase 4: The Boiling Plateau (Latent Heat of Vaporization)</h3>
+            <p>At 100°C, we hit another plateau. The temperature again stops rising. This time, the added heat energy is used to overcome the weaker forces that keep the water molecules together as a liquid, allowing them to escape into the air as a gas (steam). This energy is the <strong>latent heat of vaporization</strong>. In the microscopic view, you can see molecules flying off from the surface. The temperature will remain locked at 100°C until all the water has boiled away.</p>
+
+            <h3>Phase 5: Heating the Steam</h3>
+            <p>After all the water has become steam, any further heat added will increase the temperature of the steam, making the gas molecules move even faster.</p>
+
+            <h3>Analogy: The Deconstruction Crew</h3>
+            <p>Imagine a neatly stacked, frozen block of bricks representing ice.
+            <ol>
+                <li><strong>Heating Ice:</strong> You shake the entire block. The more you shake, the more it vibrates (temperature rises).</li>
+                <li><strong>Melting:</strong> A deconstruction crew arrives. They use their energy (latent heat) to pry the bricks apart from each other and turn the neat stack into a jumbled pile (liquid). While the crew is working, all their energy goes into demolition, not shaking. The overall vibration level (temperature) stays constant until the block is fully disassembled.</li>
+                <li><strong>Heating Water:</strong> With the bricks in a pile, you start shaking the whole pile. The vibrations increase again (temperature rises).</li>
+                <li><strong>Boiling:</strong> A new crew arrives with forklifts. Their job is to take each individual brick and launch it into the air (gas). All their energy (latent heat) goes into lifting and launching, not shaking the pile. The vibration level of the pile stays constant until the last brick is gone.</li>
+            </ol>
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+                <div id="sim-info" style="text-align: center; margin-top: 10px;">Status: Idle</div>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="play-pause-btn" aria-label="Play/Pause">Run</button>
+                    <button id="reset-btn" aria-label="Reset">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label for="mass-slider">Mass of Water (g): <span id="mass-value">10</span></label>
+                    <input type="range" id="mass-slider" min="1" max="50" step="1" value="10">
+                </div>
+                <div class="control-group">
+                    <label for="heating-rate-slider">Heating Rate (W): <span id="heating-rate-value">100</span></label>
+                    <input type="range" id="heating-rate-slider" min="10" max="500" step="10" value="100">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — The Math of Phase Change (Click to expand)</button>
+        <div class="content">
+            <h3>Specific Heat Capacity</h3>
+            <p>When there is no phase change, the heat added (Q) is related to the temperature change (ΔT) by the specific heat capacity (c) and the mass (m) of the substance.</p>
+            <p><code>Q = m * c * ΔT</code></p>
+            <p>The specific heat capacity is the amount of energy required to raise 1 gram of a substance by 1 degree Celsius. It's different for ice, water, and steam.
+            <ul>
+                <li>c (ice) ≈ 2.09 J/g°C</li>
+                <li>c (water) ≈ 4.18 J/g°C</li>
+                <li>c (steam) ≈ 2.01 J/g°C</li>
+            </ul>
+            <strong>Example:</strong> To heat 10g of ice from -20°C to 0°C (a ΔT of 20°C), you need:
+            <br><code>Q = 10g * 2.09 J/g°C * 20°C = <strong>418 J</strong></code>
+            </p>
+
+            <h3>Latent Heat</h3>
+            <p>During a phase change, the heat added (Q) does not change the temperature. Instead, it's used to change the phase, and is related to the mass (m) and the specific latent heat (L).</p>
+            <p><code>Q = m * L</code></p>
+            <p>The specific latent heat is the amount of energy required to change the phase of 1 gram of a substance at a constant temperature.
+            <ul>
+                <li>L (fusion) for water = 334 J/g</li>
+                <li>L (vaporization) for water = 2260 J/g</li>
+            </ul>
+            <strong>Example:</strong> To melt 10g of ice at 0°C, you need:
+            <br><code>Q = 10g * 334 J/g = <strong>3340 J</strong></code>
+            <br>Notice this is much more energy than was needed to heat the ice by 20°C! This is why the melting plateau is long. The boiling plateau is even longer because the latent heat of vaporization is so large.
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let mainCanvas, mainCtx, plotCanvas, plotCtx;
+    let isRunning = false;
+    let animationFrameId;
+
+    let config = {
+        mass: 10, // grams
+        heatingRate: 100, // Joules per second (Watts)
+    };
+
+    let simState = {
+        totalHeat: 0, // Joules
+        temperature: -20, // Celsius
+        phase: 'solid', // solid, melting, liquid, boiling, gas
+        phaseFraction: 1, // 1 = 100% of the initial phase
+    };
+    let plotHistory = [];
+
+    // Constants for Water
+    const C_ICE = 2.09; // J/g°C
+    const C_WATER = 4.18; // J/g°C
+    const C_STEAM = 2.01; // J/g°C
+    const L_FUSION = 334; // J/g
+    const L_VAPORIZATION = 2260; // J/g
+
+    function resetSimulation() {
+        isRunning = false;
+        document.getElementById('play-pause-btn').textContent = 'Run';
+        document.getElementById('sim-info').textContent = 'Status: Idle. Press Run to begin.';
+
+        simState = {
+            totalHeat: 0,
+            temperature: -20,
+            phase: 'solid',
+            phaseFraction: 1,
+        };
+
+        plotHistory = [{h: 0, T: simState.temperature}];
+        draw();
+        drawPlot();
+    }
+
+    function simulationStep(dt) {
+        simState.totalHeat += config.heatingRate * dt;
+
+        const m = config.mass;
+        const heatForSolid = m * C_ICE * 20; // Heat to get from -20 to 0
+        const heatForMelting = m * L_FUSION;
+        const heatForLiquid = m * C_WATER * 100; // Heat to get from 0 to 100
+        const heatForBoiling = m * L_VAPORIZATION;
+
+        const meltStartHeat = heatForSolid;
+        const liquidStartHeat = meltStartHeat + heatForMelting;
+        const boilStartHeat = liquidStartHeat + heatForLiquid;
+        const gasStartHeat = boilStartHeat + heatForBoiling;
+
+        let H = simState.totalHeat;
+
+        if (H < meltStartHeat) {
+            simState.phase = 'solid';
+            simState.temperature = -20 + (H / heatForSolid) * 20;
+            simState.phaseFraction = 1;
+        } else if (H < liquidStartHeat) {
+            simState.phase = 'melting';
+            simState.temperature = 0;
+            simState.phaseFraction = 1 - (H - meltStartHeat) / heatForMelting; // Fraction that is still solid
+        } else if (H < boilStartHeat) {
+            simState.phase = 'liquid';
+            simState.temperature = ((H - liquidStartHeat) / heatForLiquid) * 100;
+            simState.phaseFraction = 1;
+        } else if (H < gasStartHeat) {
+            simState.phase = 'boiling';
+            simState.temperature = 100;
+            simState.phaseFraction = 1 - (H - boilStartHeat) / heatForBoiling; // Fraction that is still liquid
+        } else {
+            simState.phase = 'gas';
+            simState.temperature = 100 + (H - gasStartHeat) / (m * C_STEAM);
+            simState.phaseFraction = 0;
+        }
+
+        plotHistory.push({h: H, T: simState.temperature});
+        if (plotHistory.length > 1000) plotHistory.shift();
+    }
+
+    function gameLoop() {
+        if (!isRunning) return;
+        simulationStep(0.1); // Timestep of 0.1s
+        draw();
+        drawPlot();
+
+        const statusText = `Phase: ${simState.phase} | Temp: ${simState.temperature.toFixed(1)}°C | Heat Added: ${(simState.totalHeat / 1000).toFixed(1)} kJ`;
+        document.getElementById('sim-info').textContent = statusText;
+
+        if (simState.temperature > 150) {
+            isRunning = false;
+            document.getElementById('play-pause-btn').textContent = 'Run';
+            document.getElementById('sim-info').textContent += ' (Finished)';
+        }
+
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!mainCtx) return;
+        const { width, height } = mainCanvas;
+        mainCtx.clearRect(0, 0, width, height);
+
+        // Draw beaker
+        const beakerW = width * 0.6;
+        const beakerH = height * 0.8;
+        const beakerX = (width - beakerW) / 2;
+        const beakerY = height - beakerH - 20;
+        mainCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        mainCtx.lineWidth = 3;
+        mainCtx.beginPath();
+        mainCtx.moveTo(beakerX, beakerY);
+        mainCtx.lineTo(beakerX, beakerY + beakerH);
+        mainCtx.lineTo(beakerX + beakerW, beakerY + beakerH);
+        mainCtx.lineTo(beakerX + beakerW, beakerY);
+        mainCtx.stroke();
+
+        // Draw substance
+        const substanceY = beakerY + beakerH * 0.4;
+        const substanceH = beakerH * 0.5;
+
+        if (simState.phase === 'solid') {
+            mainCtx.fillStyle = '#add8e6';
+            mainCtx.fillRect(beakerX + 5, substanceY, beakerW - 10, substanceH);
+        } else if (simState.phase === 'melting') {
+            const waterH = substanceH * (1 - simState.phaseFraction);
+            mainCtx.fillStyle = '#007bff';
+            mainCtx.fillRect(beakerX + 5, substanceY + substanceH - waterH, beakerW - 10, waterH);
+            mainCtx.fillStyle = '#add8e6';
+            mainCtx.fillRect(beakerX + 5, substanceY, beakerW - 10, substanceH - waterH);
+        } else if (simState.phase === 'liquid' || simState.phase === 'boiling') {
+            const waterH = substanceH * simState.phaseFraction;
+            mainCtx.fillStyle = '#007bff';
+            mainCtx.fillRect(beakerX + 5, substanceY + substanceH - waterH, beakerW - 10, waterH);
+        }
+
+        // Draw hot plate
+        mainCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        mainCtx.fillRect(beakerX - 20, beakerY + beakerH + 3, beakerW + 40, 15);
+
+        // Draw thermometer
+        // ...
+
+        // Draw microscopic view
+        const microX = width * 0.8;
+        const microY = height * 0.25;
+        const microR = Math.min(width, height) * 0.15;
+        mainCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        mainCtx.beginPath();
+        mainCtx.arc(microX, microY, microR, 0, 2*Math.PI);
+        mainCtx.stroke();
+
+        // Draw particles
+        mainCtx.fillStyle = '#3498db';
+        for (let i=0; i<10; i++) {
+            let px, py;
+            const angle = Math.random() * 2 * Math.PI;
+            const r = Math.random() * microR * 0.8;
+            if (simState.phase === 'solid' || (simState.phase === 'melting' && Math.random() < simState.phaseFraction)) {
+                px = microX + (i % 4 - 1.5) * 20 + (Math.random()-0.5)*2;
+                py = microY + (Math.floor(i/4)-1) * 20 + (Math.random()-0.5)*2;
+            } else if (simState.phase === 'gas') {
+                 px = microX + (Math.random() - 0.5) * microR * 1.8;
+                 py = microY + (Math.random() - 0.5) * microR * 1.8;
+            } else {
+                 px = microX + Math.cos(angle) * r;
+                 py = microY + Math.sin(angle) * r;
+            }
+            mainCtx.beginPath();
+            mainCtx.arc(px, py, 4, 0, 2 * Math.PI);
+            mainCtx.fill();
+        }
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        if (plotHistory.length < 2) return;
+
+        const m = config.mass;
+        const maxHeat = m * C_ICE * 20 + m * L_FUSION + m * C_WATER * 100 + m * L_VAPORIZATION + m * C_STEAM * 50;
+        const maxTemp = 150;
+        const minTemp = -20;
+
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        plotHistory.forEach((p, i) => {
+            const x = (p.h / maxHeat) * width;
+            const y = height - ((p.T - minTemp) / (maxTemp - minTemp)) * height;
+            if (i === 0) plotCtx.moveTo(x, y);
+            else plotCtx.lineTo(x, y);
+        });
+        plotCtx.stroke();
+
+        // Draw axis labels and lines
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.font = '12px Arial';
+        plotCtx.textAlign = 'center';
+        plotCtx.fillText('Heat Added (kJ) ->', width / 2, height - 5);
+        plotCtx.textAlign = 'left';
+        plotCtx.fillText('Temp (°C)', 5, 15);
+
+        // Draw temp lines
+        [-20, 0, 100, 150].forEach(temp => {
+            const y = height - ((temp - minTemp) / (maxTemp - minTemp)) * height;
+            plotCtx.fillText(temp, 5, y+4);
+            plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+            plotCtx.lineWidth = 0.5;
+            plotCtx.beginPath();
+            plotCtx.moveTo(25, y);
+            plotCtx.lineTo(width, y);
+            plotCtx.stroke();
+        });
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            if (simState.temperature > 150) resetSimulation();
+            isRunning = !isRunning;
+            if (isRunning) {
+                document.getElementById('play-pause-btn').textContent = 'Pause';
+                gameLoop();
+            } else {
+                document.getElementById('play-pause-btn').textContent = 'Run';
+            }
+        });
+        document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+
+        document.getElementById('mass-slider').addEventListener('input', e => {
+            config.mass = parseInt(e.target.value, 10);
+            document.getElementById('mass-value').textContent = config.mass;
+            if (!isRunning) resetSimulation();
+        });
+        document.getElementById('heating-rate-slider').addEventListener('input', e => {
+            config.heatingRate = parseInt(e.target.value, 10);
+            document.getElementById('heating-rate-value').textContent = config.heatingRate;
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+        drawPlot();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        mainCanvas = document.getElementById('mainCanvas');
+        mainCtx = mainCanvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+
+        resetSimulation();
+    };
+    </script>
+</body>
+</html>
