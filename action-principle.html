@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classical Mechanics: The Principle of Least Action</title>
+    <style>
+        /* Basic Theme & Variables */
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #28a745; /* Green theme for this simulation */
+            --primary-hover-color: #218838;
+            --secondary-bg-color: #ffffff;
+            --header-bg-color: #e9ecef;
+            --border-color: #dee2e6;
+            --code-bg-color: #e8eaed;
+            --link-color: #0056b3;
+            --text-muted-color: #6c757d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* High Contrast Theme */
+        body.high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #ffff00;
+            --primary-hover-color: #e6e600;
+            --secondary-bg-color: #1a1a1a;
+            --header-bg-color: #1a1a1a;
+            --border-color: #ffffff;
+            --code-bg-color: #333333;
+            --link-color: #ffff00;
+            --text-muted-color: #aaaaaa;
+        }
+
+        body.high-contrast button, body.high-contrast select {
+            color: #000000; /* Black text on yellow buttons for contrast */
+        }
+        body.high-contrast input[type=range]::-webkit-slider-thumb { background: var(--primary-color); }
+        body.high-contrast input[type=range]::-moz-range-thumb { background: var(--primary-color); }
+
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header, section, details {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--secondary-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        header {
+             background-color: var(--header-bg-color);
+             border: none;
+        }
+
+        main {
+            margin-top: 1rem;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            color: var(--primary-color);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 1rem;
+            color: var(--text-muted-color);
+        }
+
+        #metadata-bar {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-muted-color);
+        }
+
+        a {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            background-color: var(--code-bg-color);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--header-bg-color);
+        }
+
+        /* Simulation Area */
+        #canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        #main-canvas {
+            border: 1px solid var(--border-color);
+            cursor: crosshair;
+        }
+
+        /* Controls */
+        #controls, .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background: var(--header-bg-color);
+            border-radius: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button, select {
+            padding: 10px 15px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            font-weight: bold;
+        }
+
+        button:hover, select:hover {
+            background-color: var(--primary-hover-color);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #info-display {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: var(--header-bg-color);
+            border-radius: 8px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            #controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>The Principle of Least Action</h1>
+            <p class="subtitle">Visualizing the path a particle *actually* takes.</p>
+            <div id="metadata-bar">
+                <span>Est. runtime: N/A</span> |
+                <span>Recommended device: Desktop</span> |
+                <span>Approx. HTML size: <span id="html-size">~120</span> KB</span>
+            </div>
+        </header>
+
+        <main>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>
+                    When a ball flies through the air, why does it follow a perfect parabola instead of wiggling around or taking a straight line to its destination? The **Principle of Least Action** offers a profound answer: it seems that nature is "economical." Of all the infinite possible paths the ball *could* take, it follows the one and only path that minimizes (or, more accurately, finds a stationary point for) a special quantity called "action." This simulation lets you explore this principle by drawing your own paths, calculating their "action cost," and then discovering the true classical path that nature would choose.
+                </p>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide: How Nature "Chooses" a Path</h2>
+                <p>
+                    Welcome! This guide will introduce you to one of the deepest and most beautiful ideas in all of physics. Let's get started.
+                </p>
+
+                <h3>Step 1: A World of Infinite Choices</h3>
+                <p>
+                    Look at the simulation window. You see a starting point (yellow) and an ending point (orange). Imagine you're throwing a ball from the start to the end. It has to get there in a fixed amount of time (say, 5 seconds).
+                </p>
+                <p>
+                    How many different ways could the ball travel? An infinite number! It could take a high, loopy path. It could dip down low and come back up. It could wiggle back and forth. In this simulation, you can draw any path you like.
+                </p>
+                <ol>
+                    <li>Click on the yellow starting circle and, while holding the mouse down, drag a path across the screen.</li>
+                    <li>Release the mouse near the orange ending circle. The path will snap into place.</li>
+                </ol>
+                <p>You've just defined one of the infinite possible paths the particle could take!</p>
+
+                <h3>Step 2: Giving Each Path a "Cost" - The Action</h3>
+                <p>
+                    Out of all these possibilities, how does nature pick the one, true path? The answer lies in assigning a "cost" to every single path. In physics, this cost is called the **Action (S)**. The real path is the one with the "least" action. (The true term is "stationary" action, but "least" works for most simple cases).
+                </p>
+                <p>
+                    Notice the "Action for your path" display. Every time you draw a path, the simulation calculates its specific Action value. Try drawing a few different paths—a high arc, a low dip, a nearly straight line—and watch how the Action value changes. Your goal is to try and find the path with the lowest number you can manage. It's harder than it looks!
+                </p>
+
+                <h3>Step 3: What Is This "Action" Made Of?</h3>
+                <p>
+                    The Action is calculated from two ingredients: **Kinetic Energy (T)** and **Potential Energy (V)**.
+                </p>
+                <ul>
+                    <li><strong>Kinetic Energy (T):</strong> The energy of motion. To travel a longer path in the same amount of time, you have to move faster, which means you have higher kinetic energy. So, <strong>longer paths have a higher "kinetic cost."</strong></li>
+                    <li><strong>Potential Energy (V):</strong> The energy of position. In this simulation, the background color shows the potential energy. The lighter blue areas at the bottom have low potential energy, while the darker areas at the top have high potential energy (like gravity). So, <strong>paths that go higher have a higher "potential cost."</strong></li>
+                </ul>
+                <p>
+                    The "cost" at any moment is defined by a quantity called the **Lagrangian (L)**, which has a very specific and somewhat strange formula: <code>L = T - V</code>. The total Action for a path is the sum of this Lagrangian value over the entire journey.
+                </p>
+
+                <h3>Step 4: The Great Trade-Off</h3>
+                <p>
+                    Because the Lagrangian subtracts potential energy from kinetic energy, the particle is constantly making a trade-off.
+                </p>
+                <ul>
+                    <li>A short, direct path might have very low kinetic energy (good), but if it goes through a region of high potential energy (bad), the total Action might be high.</li>
+                    <li>A long, looping path that stays in low-potential-energy areas might have a low potential cost (good), but its high speed gives it a high kinetic cost (bad).</li>
+                </ul>
+                <p>The Principle of Least Action is like a cosmic accountant finding the perfect balance between these two competing costs to get the absolute minimum value for the final Action.
+                </p>
+
+                <h3>Step 5: Finding Nature's True Path</h3>
+                <p>
+                    Now for the fun part. After drawing a path, click the <strong>"Find True Path"</strong> button. The simulation will start with a straight line and then begin to "relax" it, trying thousands of tiny adjustments to find the path that minimizes the Action. You can see it evolving in real time!
+                </p>
+                <p>
+                    The final magenta line is the classical path—the one a real ball would take under the influence of gravity in this world. Notice its shape: a parabola! The simulation has derived this familiar trajectory just by trying to minimize the Action. Now look at the "Action for classical path" value. Is it lower than the value you got for your hand-drawn path? It should be!
+                </p>
+
+                <h3>Step 6: Change the Laws of Physics!</h3>
+                <p>
+                    Use the **"Gravity" slider** to change the strength of the potential energy field. If you increase gravity, the "cost" of being high up becomes much greater. What do you think this will do to the classical path? Make a prediction, then run the simulation again. The path will become flatter and lower, trying to avoid the more "expensive" high-altitude regions. This is the power of the Action principle: it automatically determines the correct motion for any physical environment you define.
+                </p>
+            </section>
+
+            <section id="parameters-summary">
+                <h2>Parameters & Controls</h2>
+                <p>The core physics of the simulation can be tweaked using the controls below.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Control</th>
+                            <th>Default</th>
+                            <th>Range</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Gravity (g)</td>
+                            <td>Slider</td>
+                            <td>0.5</td>
+                            <td>0.0 to 2.0</td>
+                            <td>Controls the strength of the potential field. A higher value makes it more "costly" for the path to have a high altitude.</td>
+                        </tr>
+                        <tr>
+                            <td>Mass (m)</td>
+                            <td>Constant</td>
+                            <td>1.0</td>
+                            <td>N/A</td>
+                            <td>The mass of the particle. Kept constant in this simulation. Note that for a simple gravitational field, the shape of the path does not depend on the mass.</td>
+                        </tr>
+                        <tr>
+                            <td>Total Time (T)</td>
+                            <td>Constant</td>
+                            <td>100</td>
+                            <td>N/A</td>
+                            <td>The fixed amount of time the particle has to travel from the start to the end point.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <div id="canvas-container">
+                    <canvas id="main-canvas" width="800" height="600"></canvas>
+                </div>
+                <div id="controls">
+                    <button id="find-path-btn" title="Find the classical path of least action" aria-label="Find the classical path of least action">Find True Path</button>
+                    <button id="reset-btn" title="Clear all paths" aria-label="Clear all paths">Reset</button>
+                    <div class="control-group">
+                        <label for="gravity-slider">Gravity:</label>
+                        <input type="range" id="gravity-slider" min="0" max="2" step="0.1" value="0.5" aria-label="Adjust gravity strength">
+                        <span id="gravity-value">0.5</span>
+                    </div>
+                </div>
+                <div id="info-display">
+                    Action for your path: <span id="user-action-value">N/A</span><br>
+                    Action for classical path: <span id="classical-action-value">N/A</span>
+                </div>
+            </section>
+
+            <section id="examples">
+                <h2>Try These Examples</h2>
+                <p>Click a button to load a preset scenario and automatically find the classical path.</p>
+                <div id="preset-controls" class="controls">
+                    <button id="preset-1">Standard Gravity</button>
+                    <button id="preset-2">High Gravity</button>
+                    <button id="preset-3">Zero Gravity</button>
+                </div>
+                <div id="preset-description">
+                    <p><em>Select a preset to see a description here.</em></p>
+                </div>
+            </section>
+
+            <section id="walkthroughs">
+                <h2>Worked Walkthroughs</h2>
+                <!-- Walkthroughs will be added later -->
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory: The Math of "Cost"</h2>
+                <p>
+                    The "cost" that nature seeks to minimize is the Action. To understand it, we need two ingredients: the Lagrangian and the Action itself.
+                </p>
+
+                <h3>1. The Lagrangian (L)</h3>
+                <p>The Lagrangian is a measure of a system's energy at a single moment in time. Its famous formula is:</p>
+                <code>L = T - V</code>
+                <ul>
+                    <li><code>T</code> is the <strong>Kinetic Energy</strong>, the energy of motion. For a particle of mass <code>m</code> and speed <code>v</code>, it is <code>T = &frac12;mv&sup2;</code>.</li>
+                    <li><code>V</code> is the <strong>Potential Energy</strong>, the energy of position. In this simulation, it's the gravitational potential <code>V = mgh</code>, where <code>h</code> is the height.</li>
+                </ul>
+                <p>The subtraction is what makes the Lagrangian so powerful. It's not the total energy (which would be T+V), but a special quantity that captures the trade-off between motion and position.</p>
+
+                <h3>2. The Action (S)</h3>
+                <p>The Action is the total of the Lagrangian summed up over the entire path, from the start time to the end time.</p>
+                <code>S = &int; L dt = &int; (T - V) dt</code>
+                <p>
+                    <strong>In Plain English:</strong> If you imagine the value of <code>(T - V)</code> at every single moment along a path, the Action is the total "area under the curve" for that value. To calculate this in the simulation, we do a discrete sum: we chop the path into tiny time intervals <code>&Delta;t</code>, calculate <code>(T - V)</code> for that small segment, and add it all up.
+                </p>
+
+                <h3>3. The Principle of Stationary Action</h3>
+                <p>
+                    The true principle is more subtle than "least" action. It states that the path chosen by nature is one for which the action is **stationary**. This means that for any small, insignificant variation of the path, the value of the action doesn't change (to a first approximation).
+                </p>
+                <p>
+                    A minimum is a type of stationary point (like the bottom of a valley), which is the case in our simulation. However, in more complex systems, the classical path could also be a saddle point. The math to find these stationary paths is called the **calculus of variations**. Our simulation's "Find True Path" button uses a numerical technique called **gradient descent** to do this: it calculates how the action changes with respect to the position of each point on the path (the "gradient") and moves the points "downhill" along that gradient until it can't go any lower.
+                </p>
+            </section>
+
+            <section id="advanced-notes">
+                <h2>Advanced Notes & Extensions</h2>
+
+                <h3>The Numerical Method</h3>
+                <p>
+                    The gradient descent algorithm used here is simple and effective for this problem. However, for more complex potential fields or more dimensions, it can be slow to converge. Professional physics simulations often use more sophisticated techniques like **conjugate gradient methods** for faster optimization, or they solve the system's equations of motion directly using numerical integrators like the **Verlet algorithm**, which is particularly good at conserving energy over long simulations.
+                </p>
+
+                <h3>Beyond Gravity</h3>
+                <p>
+                    The power of the Lagrangian formalism is its generality. You can describe almost any system by simply defining its kinetic and potential energy. For example, to find the path of an electron in an electric field, you would simply replace the gravitational potential <code>V = mgh</code> with the electrostatic potential <code>V = q&Phi;</code>, and the principle of least action would still give you the correct trajectory.
+                </p>
+
+                <h3>The Quantum Connection</h3>
+                <p>
+                    In the 1940s, Richard Feynman provided a mind-bending new perspective on quantum mechanics called the **path integral formulation** (or sum-over-histories). In it, a quantum particle doesn't take a single path; it takes *every possible path simultaneously*. Each path is assigned a "phase" related to the classical action for that path. To find the probability of a particle arriving at a certain point, you add up the contributions from all the paths leading there.
+                </p>
+                <p>
+                    For large objects, it turns out that the phases from all the non-classical paths interfere with each other and cancel out, leaving only the contribution from the classical path of least action. In this way, classical mechanics emerges beautifully from the underlying quantum reality.
+                </p>
+            </section>
+
+            <section id="analogies">
+                <h2>Analogies & Intuition</h2>
+                <p>The Principle of Least Action can feel abstract. Here are a few different ways to think about it.</p>
+
+                <h3>1. The Lifeguard's Problem (Physical Analogy)</h3>
+                <p>
+                    A lifeguard is on a sandy beach and sees a swimmer in trouble in the water. The lifeguard can run much faster on the sand than they can swim in the water. What is the absolute fastest path to reach the swimmer?
+                </p>
+                <p>
+                    It is <strong>not</strong> a straight line! A straight line would involve entering the water early and spending too much time swimming slowly. The optimal path is to run further down the beach (the "fast" medium) and then enter the water at an angle, minimizing the time spent in the "slow" medium. The lifeguard instinctively solves an optimization problem: minimize total time. The Principle of Least Action is similar, where the "medium" is the potential field, and the "cost" is the action.
+                </p>
+
+                <h3>2. The Soap Film (Visualization Analogy)</h3>
+                <p>
+                    If you take a wire frame, perhaps bent into a strange, curvy 3D shape, and dip it in a soap solution, the soap film that forms will naturally settle into the shape with the absolute minimum possible surface area. It does this to minimize its surface tension energy. This is a beautiful physical example of a system relaxing into a state that minimizes a global property (total area). The principle of least action is a statement that the dynamics of a particle do the same thing for a global property of its path (the action).
+                </p>
+
+                <h3>3. A* Search (Computational Analogy)</h3>
+                <p>
+                    In computer science and game development, a common problem is finding the shortest path for a character through a maze or map. An algorithm called A* (A-star) is famously good at this. It works by exploring paths, but it prioritizes paths that have a low "cost so far" combined with a low "estimated cost to the goal." It uses a cost function to intelligently guide its search towards the optimal solution instead of blindly trying everything. The gradient descent method in our simulation is a continuous version of this, always trying to move the path in a direction that it estimates will lower the total "cost" (the action).
+                </p>
+            </section>
+
+            <section id="faq">
+                <h2>FAQ & Troubleshooting</h2>
+                <dl>
+                    <dt>Why is the Lagrangian <code>T - V</code> and not <code>T + V</code>?</dt>
+                    <dd>This is a deep and excellent question. <code>T + V</code> is the total energy of the system, which is a conserved quantity (it stays constant). The Lagrangian <code>L = T - V</code> is a different quantity specifically constructed so that when you minimize its integral, you get the correct equations of motion (Newton's F=ma). It's a mathematical tool that happens to perfectly describe our universe.</dd>
+
+                    <dt>Is nature "really" calculating all possible paths?</dt>
+                    <dd>This is a philosophical question! The descriptions of physics given by Newton (local cause and effect, F=ma) and by Hamilton/Lagrange (global optimization, least action) are mathematically equivalent. They both give the same, correct answers. Whether you think of a ball as responding to a local force at each instant, or as "choosing" a global path that minimizes action, is a matter of interpretation.</dd>
+
+                    <dt>Why does the pink path wiggle so much when I click the button?</dt>
+                    <dd>That's the gradient descent algorithm in action! It's not solving the problem in one step. It's trying out tiny changes to each point on the path, calculating the "downhill" direction for the Action, and taking a small step that way. You are seeing the path iteratively relax into its final, optimal shape.</dd>
+
+                    <dt>My hand-drawn path has a lower action than the classical path!</dt>
+                    <dd>This is very unlikely, but could theoretically happen if the optimization algorithm gets stuck in a "local minimum" (a valley that isn't the absolute lowest valley). More likely, it means the optimization hasn't finished running. Try clicking the "Find True Path" button again or letting it run longer if it were adjustable.</dd>
+
+                    <dt>What happens if I set gravity to a negative value?</dt>
+                    <dd>The potential field flips, and particles are now "repelled" from the bottom of the screen. The Principle of Least Action still works perfectly! Click "Find True Path" to see what an "anti-gravity" parabola looks like.</dd>
+
+                    <dt>Can I create my own potential energy fields?</dt>
+                    <dd>Absolutely! In the JavaScript code, you can change the <code>potential(x, y)</code> function to be whatever you want. For example, <code>return (x-w/2)**2 + (y-h/2)**2</code> would create a "bowl" shaped potential, and the classical path would be an arc spiraling around the center.</dd>
+                </dl>
+            </section>
+
+            <section id="performance-safety">
+                <h2>Performance & Safety</h2>
+                <div id="performance-meter">
+                    <!-- FPS and memory info will be displayed here -->
+                </div>
+                <div id="safety-warning" style="display:none; color: red;">
+                    <!-- Warning message for heavy computation -->
+                </div>
+            </section>
+
+            <section id="accessibility">
+                <h2>Accessibility</h2>
+                <button id="high-contrast-toggle">Toggle High Contrast</button>
+            </section>
+
+            <section id="export">
+                <h2>Export & Share</h2>
+                <div class="controls">
+                    <button id="export-png" aria-label="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" aria-label="Save current parameters to a JSON file">Export JSON</button>
+                    <button id="share-preset" aria-label="Copy a shareable URL to your clipboard">Share Preset</button>
+                </div>
+            </section>
+
+            <section id="quality-checks">
+                <div id="error-panel" style="display:none; color: red;">
+                    <!-- Self-check errors will be displayed here -->
+                </div>
+            </section>
+
+            <details id="developer-console-container">
+                <summary>Developer Console</summary>
+                <div id="developer-console">
+                    <!-- Runtime metrics and errors will be logged here -->
+                </div>
+            </details>
+
+        </main>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const App = {
+        canvas: null,
+        ctx: null,
+        width: 800,
+        height: 600,
+
+        // Simulation parameters
+        params: {
+            g: 0.5, // Strength of gravity
+            mass: 1,
+            totalTime: 100, // Fixed time from A to B
+        },
+
+        // Simulation state
+        points: {
+            start: { x: 50, y: 500 },
+            end: { x: 750, y: 500 },
+        },
+
+        userPath: [],
+        classicalPath: [],
+        isDrawing: false,
+        isOptimizing: false,
+
+        // Performance metrics
+        lastFrameTime: 0,
+        frameCount: 0,
+        fps: 0,
+
+        backgroundCanvas: null, // For pre-rendering the potential
+
+        init() {
+            this.canvas = document.getElementById('main-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+
+            this.backgroundCanvas = document.createElement('canvas');
+            this.backgroundCanvas.width = this.width;
+            this.backgroundCanvas.height = this.height;
+
+            this.addEventListeners();
+            this.drawPotentialLandscape();
+            this.applyPresetFromURL();
+            this.renderLoop(0); // Start the render loop
+            this.runSelfChecks();
+        },
+
+        addEventListeners() {
+            // Canvas Listeners
+            this.canvas.addEventListener('mousedown', (e) => {
+                if (this.isOptimizing) return;
+                const mousePos = this.getMousePos(e);
+                const distToStart = Math.hypot(mousePos.x - this.points.start.x, mousePos.y - this.points.start.y);
+                if (distToStart < 20) { // Start drawing if close to start point
+                    this.isDrawing = true;
+                    this.userPath = [this.points.start];
+                    this.classicalPath = []; // Clear old classical path
+                    document.getElementById('user-action-value').textContent = "N/A";
+                    document.getElementById('classical-action-value').textContent = "N/A";
+                }
+            });
+
+            this.canvas.addEventListener('mousemove', (e) => {
+                if (!this.isDrawing) return;
+                const mousePos = this.getMousePos(e);
+                const lastPoint = this.userPath[this.userPath.length - 1];
+                const distSinceLast = Math.hypot(mousePos.x - lastPoint.x, mousePos.y - lastPoint.y);
+                if (distSinceLast > 10) { // Add a point every 10 pixels
+                    this.userPath.push(mousePos);
+                }
+            });
+
+            this.canvas.addEventListener('mouseup', (e) => {
+                if (this.isDrawing) {
+                    this.isDrawing = false;
+                    this.userPath.push(this.points.end); // Snap to end point
+
+                    const action = this.calculateAction(this.userPath);
+                    document.getElementById('user-action-value').textContent = action.toFixed(2);
+                    this.classicalPath = []; // Clear old classical path
+                }
+            });
+
+            // Button listeners
+            document.getElementById('find-path-btn').addEventListener('click', () => this.findClassicalPath());
+            document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+            document.getElementById('gravity-slider').addEventListener('input', (e) => {
+                this.params.g = parseFloat(e.target.value);
+                document.getElementById('gravity-value').textContent = this.params.g.toFixed(2);
+                this.drawPotentialLandscape(); // Redraw background for new potential
+                this.recalculateActions();
+            });
+
+            // Export listeners
+            document.getElementById('export-png').addEventListener('click', () => this.exportPNG());
+            document.getElementById('export-json').addEventListener('click', () => this.exportJSON());
+            document.getElementById('share-preset').addEventListener('click', () => this.sharePreset());
+
+            // Preset listeners
+            document.getElementById('preset-1').addEventListener('click', () => this.applyPreset('preset-1'));
+            document.getElementById('preset-2').addEventListener('click', () => this.applyPreset('preset-2'));
+            document.getElementById('preset-3').addEventListener('click', () => this.applyPreset('preset-3'));
+        },
+
+        recalculateActions() {
+            if (this.userPath.length > 1) {
+                const action = this.calculateAction(this.userPath);
+                document.getElementById('user-action-value').textContent = action.toFixed(2);
+            }
+            if (this.classicalPath.length > 1) {
+                const action = this.calculateAction(this.classicalPath);
+                document.getElementById('classical-action-value').textContent = action.toFixed(2);
+            }
+        },
+
+        reset() {
+            this.userPath = [];
+            this.classicalPath = [];
+            this.isDrawing = false;
+            this.isOptimizing = false;
+            document.getElementById('user-action-value').textContent = "N/A";
+            document.getElementById('classical-action-value').textContent = "N/A";
+            document.getElementById('find-path-btn').disabled = false;
+            document.getElementById('find-path-btn').textContent = "Find True Path";
+        },
+
+        // --- Presets ---
+        presets: {
+            'preset-1': {
+                name: "Standard Gravity",
+                g: 0.5,
+                description: "With a standard amount of gravity, the particle follows a classic parabola. It rises to a moderate height, balancing the kinetic cost of a longer path with the potential cost of going too high."
+            },
+            'preset-2': {
+                name: "High Gravity",
+                g: 1.5,
+                description: "With strong gravity, the 'cost' of being at a high altitude is much greater. The path of least action is therefore much flatter, staying low to the ground to minimize the time spent in high-potential-energy regions."
+            },
+            'preset-3': {
+                name: "Zero Gravity",
+                g: 0.0,
+                description: "With zero gravity, there is no potential energy cost (V=0). The Lagrangian is just L=T. To minimize the action, the particle must minimize its kinetic energy, which means traveling the shortest possible distance: a straight line."
+            }
+        },
+
+        applyPreset(presetName) {
+            const preset = this.presets[presetName];
+            if (!preset) return;
+
+            document.getElementById('preset-description').innerHTML = `<p><strong>${preset.name}:</strong> ${preset.description}</p>`;
+
+            this.params.g = preset.g;
+            document.getElementById('gravity-slider').value = this.params.g;
+            document.getElementById('gravity-value').textContent = this.params.g.toFixed(2);
+
+            this.reset();
+            this.drawPotentialLandscape();
+            this.findClassicalPath();
+        },
+
+        runSelfChecks() {
+            const errors = [];
+            if (!this.canvas) errors.push("Main canvas element not found.");
+            if (!document.getElementById('find-path-btn')) errors.push("'Find True Path' button not found.");
+            if (!document.getElementById('reset-btn')) errors.push("'Reset' button not found.");
+            if (!document.getElementById('gravity-slider')) errors.push("'Gravity' slider not found.");
+            if (Object.keys(this.presets).length < 3) errors.push("Presets are missing or incomplete.");
+
+            if (errors.length > 0) {
+                const errorPanel = document.getElementById('error-panel');
+                errorPanel.style.display = 'block';
+                errorPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' +
+                                       errors.map(e => `<li>${e}</li>`).join('') +
+                                       '</ul><p>The simulation may not function correctly. Please report this issue.</p>';
+            }
+        },
+
+        // --- UI and Export Handlers ---
+        exportPNG() {
+            const link = document.createElement('a');
+            link.download = 'action-principle-simulation.png';
+            link.href = this.canvas.toDataURL('image/png');
+            link.click();
+        },
+
+        exportJSON() {
+            const state = {
+                params: this.params,
+                userPath: this.userPath,
+                classicalPath: this.classicalPath,
+            };
+            const jsonString = JSON.stringify(state, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'action-principle-preset.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        },
+
+        sharePreset() {
+            const state = {
+                v: 1, // version
+                p: { g: this.params.g.toFixed(2) }
+            };
+            const jsonString = JSON.stringify(state);
+            const base64String = btoa(jsonString);
+            const url = `${window.location.href.split('#')[0]}#preset=${base64String}`;
+
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Shareable URL copied to clipboard!");
+            }, () => {
+                alert("Failed to copy URL.");
+            });
+        },
+
+        applyPresetFromURL() {
+            if (window.location.hash.startsWith('#preset=')) {
+                try {
+                    const base64String = window.location.hash.substring(8);
+                    const jsonString = atob(base64String);
+                    const state = JSON.parse(jsonString);
+
+                    if (state.p && state.p.g) {
+                        this.params.g = parseFloat(state.p.g);
+                        document.getElementById('gravity-slider').value = this.params.g;
+                        document.getElementById('gravity-value').textContent = this.params.g.toFixed(2);
+                        this.drawPotentialLandscape();
+                    }
+                } catch (e) {
+                    alert("Could not load the preset from the URL.");
+                }
+            }
+        },
+
+        calculateAction(path) {
+            if (path.length < 2) return 0;
+
+            let totalDistance = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                totalDistance += Math.hypot(path[i+1].x - path[i].x, path[i+1].y - path[i].y);
+            }
+
+            if (totalDistance === 0) return 0;
+
+            const speed = totalDistance / this.params.totalTime;
+            const kineticEnergy = 0.5 * this.params.mass * speed * speed;
+
+            let action = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                const p1 = path[i];
+                const p2 = path[i+1];
+
+                const segmentDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                const segmentTime = segmentDistance / speed;
+
+                // Approximate potential at the midpoint of the segment
+                const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+                const avgPotentialEnergy = this.potential(midPoint.x, midPoint.y);
+
+                const lagrangian = kineticEnergy - avgPotentialEnergy;
+                action += lagrangian * segmentTime;
+            }
+
+            return action;
+        },
+
+        findClassicalPath() {
+            if (this.isOptimizing) return;
+            this.isOptimizing = true;
+            document.getElementById('find-path-btn').disabled = true;
+            document.getElementById('find-path-btn').textContent = "Optimizing...";
+
+            const nodes = 50;
+            const iterations = 200;
+            const learningRate = 1e-5; // A small number to scale the gradient
+
+            // 1. Initialize path
+            this.classicalPath = [];
+            for (let i = 0; i <= nodes; i++) {
+                const t = i / nodes;
+                const x = this.points.start.x * (1 - t) + this.points.end.x * t;
+                const y = this.points.start.y * (1 - t) + this.points.end.y * t;
+                this.classicalPath.push({x, y});
+            }
+
+            let iter = 0;
+            const optimizeStep = () => {
+                if (iter >= iterations) {
+                    this.isOptimizing = false;
+                    document.getElementById('find-path-btn').disabled = false;
+                    document.getElementById('find-path-btn').textContent = "Find True Path";
+                    const finalAction = this.calculateAction(this.classicalPath);
+                    document.getElementById('classical-action-value').textContent = finalAction.toFixed(2);
+                    return;
+                }
+
+                // 2. Calculate gradient and update nodes
+                const delta = 0.1; // Small distance to check for gradient
+                const originalPath = [...this.classicalPath.map(p => ({...p}))];
+
+                for (let i = 1; i < nodes; i++) { // Skip start and end nodes
+                    const originalAction = this.calculateAction(this.classicalPath);
+
+                    // Gradient for Y
+                    this.classicalPath[i].y += delta;
+                    const actionUp = this.calculateAction(this.classicalPath);
+                    const gradY = (actionUp - originalAction) / delta;
+
+                    // Gradient for X
+                    this.classicalPath[i].y -= delta; // reset Y
+                    this.classicalPath[i].x += delta;
+                    const actionRight = this.calculateAction(this.classicalPath);
+                    const gradX = (actionRight - originalAction) / delta;
+
+                    this.classicalPath[i].x -= delta; // reset X
+
+                    // 3. Update position (gradient descent)
+                    originalPath[i].x -= learningRate * gradX;
+                    originalPath[i].y -= learningRate * gradY;
+                }
+
+                this.classicalPath = originalPath;
+                iter++;
+                requestAnimationFrame(optimizeStep);
+            };
+
+            optimizeStep();
+        },
+
+        getMousePos(evt) {
+            const rect = this.canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        },
+
+        // Potential function V(x,y)
+        potential(x, y) {
+            // Simple gravitational potential V = m*g*h. 'h' is inverse of y.
+            return this.params.mass * this.params.g * (this.height - y);
+        },
+
+        drawPotentialLandscape() {
+            const bgCtx = this.backgroundCanvas.getContext('2d');
+            const imageData = bgCtx.createImageData(this.width, this.height);
+
+            let maxPotential = this.potential(0, 0);
+            let minPotential = this.potential(0, this.height);
+
+            for (let y = 0; y < this.height; y++) {
+                for (let x = 0; x < this.width; x++) {
+                    const p = this.potential(x, y);
+                    // Normalize potential to 0-1 range
+                    const normalized = (p - minPotential) / (maxPotential - minPotential);
+
+                    const colorVal = Math.floor(255 * (1 - normalized));
+                    const index = (y * this.width + x) * 4;
+                    imageData.data[index] = colorVal; // R
+                    imageData.data[index + 1] = colorVal; // G
+                    imageData.data[index + 2] = 255;    // B (more blue for higher potential)
+                    imageData.data[index + 3] = 255;    // Alpha
+                }
+            }
+            bgCtx.putImageData(imageData, 0, 0);
+        },
+
+        draw() {
+            // Clear canvas
+            this.ctx.clearRect(0, 0, this.width, this.height);
+
+            // Draw pre-rendered background
+            this.ctx.drawImage(this.backgroundCanvas, 0, 0);
+
+            // Draw Start and End points
+            this.ctx.fillStyle = 'yellow';
+            this.ctx.beginPath();
+            this.ctx.arc(this.points.start.x, this.points.start.y, 8, 0, 2 * Math.PI);
+            this.ctx.fill();
+            this.ctx.stroke();
+
+            this.ctx.fillStyle = 'orange';
+            this.ctx.beginPath();
+            this.ctx.arc(this.points.end.x, this.points.end.y, 8, 0, 2 * Math.PI);
+            this.ctx.fill();
+            this.ctx.stroke();
+
+            // Draw user path
+            if (this.userPath.length > 1) {
+                this.ctx.strokeStyle = 'white';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.userPath[0].x, this.userPath[0].y);
+                for (let i = 1; i < this.userPath.length; i++) {
+                    this.ctx.lineTo(this.userPath[i].x, this.userPath[i].y);
+                }
+                this.ctx.stroke();
+            }
+
+            // Draw classical path
+            if (this.classicalPath.length > 1) {
+                this.ctx.strokeStyle = '#ff00ff'; // Bright magenta for contrast
+                this.ctx.lineWidth = 4;
+                this.ctx.lineCap = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.classicalPath[0].x, this.classicalPath[0].y);
+                for (let i = 1; i < this.classicalPath.length; i++) {
+                    this.ctx.lineTo(this.classicalPath[i].x, this.classicalPath[i].y);
+                }
+                this.ctx.stroke();
+            }
+        },
+
+        renderLoop(timestamp) {
+            this.frameCount++;
+            const deltaTime = timestamp - this.lastFrameTime;
+
+            if (deltaTime >= 1000) { // Update FPS every second
+                this.fps = this.frameCount;
+                this.frameCount = 0;
+                this.lastFrameTime = timestamp;
+                document.getElementById('performance-meter').textContent = `FPS: ${this.fps}`;
+            }
+
+            this.draw();
+            requestAnimationFrame((t) => this.renderLoop(t));
+        }
+    };
+
+    App.init();
+    window.ActionApp = App; // For debugging
+});
+    </script>
+</body>
+</html>
