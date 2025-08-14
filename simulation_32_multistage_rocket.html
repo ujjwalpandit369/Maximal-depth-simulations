@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-stage Rocket Propulsion</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #6c757d; /* Grey for rocket body */
+            --secondary-color: #ffc107; /* Yellow/Orange for flame */
+            --border-color: #dee2e6;
+            --canvas-bg: #000;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --secondary-color: #ffca28;
+            --border-color: #495057;
+            --canvas-bg: #000;
+            --code-bg: #343a40;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 16 / 9; }
+        .button-bar { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; height: 50px; }
+        .button-bar button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+        .readout p { margin: 5px 0; font-family: monospace; font-size: 1.1em;}
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Multi-stage Rocket Propulsion</h1>
+            <p class="subtitle">Why dropping dead weight is the key to reaching space.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 160 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Getting to orbit is incredibly difficult because of the "tyranny of the rocket equation": to go faster, you need more fuel, but more fuel makes the rocket heavier, which means you need even more fuel to lift the fuel! The solution, used by virtually all real-world launch vehicles, is staging. A multi-stage rocket is essentially a series of smaller rockets stacked on top of each other. After each stage burns its fuel, the heavy, empty structure is jettisoned, making the remaining rocket much lighter. This simulation demonstrates how this process allows a rocket to achieve a much higher final velocity than would be possible with a single stage.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Hiker's Analogy</h2>
+
+            <h3>Step 1: How a Rocket Works</h3>
+            <p>A rocket works by throwing mass (hot exhaust gas) out of its back at very high speed. Thanks to Newton's Third Law and the conservation of momentum, this backward throw of mass results in a forward push on the rocket. The change in velocity a rocket can achieve is called its "delta-v" (Δv).</p>
+
+            <h3>Step 2: The Problem with a Single Stage</h3>
+            <p>The amount of Δv a rocket can get depends on its engine's "exhaust velocity" and, crucially, its "mass ratio"—the ratio of its starting mass (full of fuel) to its final mass (empty). To get a high Δv, you need a high mass ratio, which means most of your rocket's starting mass must be fuel. This quickly becomes impractical. You end up with a rocket that is 99% fuel, trying to accelerate the last bit of fuel, which is very inefficient.</p>
+
+            <h3>Step 3: The Staging Solution</h3>
+            <p>Instead of one giant fuel tank, we build the rocket in stages.
+            <ol>
+                <li><strong>Stage 1 Burn:</strong> The first, largest stage fires, lifting the entire rocket. When its fuel is gone, its job is done.</li>
+                <li><strong>Jettison:</strong> The now-empty first stage—a heavy combination of tanks and engines—is detached and thrown away.</li>
+                <li><strong>Stage 2 Burn:</strong> The second stage ignites its own, smaller engine. Critically, it is now only pushing the very small mass of the second stage and the payload.</li>
+            </ol>
+            </p>
+
+            <h3>Step 4: The Benefit</h3>
+            <p>Because the second stage is pushing a much lighter rocket, it achieves a much greater Δv for the fuel it burns than it would have if it still had to carry the first stage's dead weight. The total Δv of the rocket is the sum of the Δv from each stage. This "divide and conquer" strategy is the only practical way to reach the high velocities needed for space travel.</p>
+
+            <h3>Analogy: The Hiker Dropping Their Pack</h3>
+            <p>Imagine a hiker setting out to climb a very tall mountain.
+            <ul>
+                <li>For the first half of the climb, they carry a huge, heavy backpack with a tent, food, and supplies. They move slowly because of the weight.</li>
+                <li>Halfway up, they reach a pre-set base camp. They have used all the supplies from their main pack. Now, the pack is just heavy, useless dead weight.</li>
+                <li>The hiker drops the big pack at the base camp and continues the final ascent with only a small, light daypack.</li>
+            </ul>
+            Because they are so much lighter, they can climb the second half of the mountain much more quickly and easily. Jettisoning a rocket stage is exactly like the hiker dropping their useless pack.
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="ignite1-btn">Ignite Stage 1</button>
+                    <button id="jettison-btn" disabled>Jettison & Ignite 2</button>
+                </div>
+                 <div class="button-bar">
+                    <button id="reset-btn" style="grid-column: 1 / -1;">Reset</button>
+                </div>
+                <hr>
+                <div class="readout">
+                    <h4>Rocket Status</h4>
+                    <p>Velocity: <span id="v-value">0</span> m/s</p>
+                    <p>Total Mass: <span id="mass-value">--</span> kg</p>
+                    <p>Fuel (S1): <span id="fuel1-value">--</span> kg</p>
+                    <p>Fuel (S2): <span id="fuel2-value">--</span> kg</p>
+                </div>
+                 <hr>
+                <h3>Configuration</h3>
+                <div class="control-group">
+                    <label>Payload Mass: <span id="payload-m-value">1000</span> kg</label>
+                    <input type="range" id="payload-m-slider" min="100" max="5000" step="100" value="1000">
+                </div>
+                <div class="control-group">
+                    <label>Stage 1 Mass (dry): <span id="s1-m-value">5000</span> kg</label>
+                    <input type="range" id="s1-m-slider" min="1000" max="10000" step="500" value="5000">
+                </div>
+                 <div class="control-group">
+                    <label>Stage 1 Fuel: <span id="s1-f-value">50000</span> kg</label>
+                    <input type="range" id="s1-f-slider" min="10000" max="100000" step="1000" value="50000">
+                </div>
+                 <div class="control-group">
+                    <label>Stage 2 Mass (dry): <span id="s2-m-value">1000</span> kg</label>
+                    <input type="range" id="s2-m-slider" min="500" max="5000" step="100" value="1000">
+                </div>
+                 <div class="control-group">
+                    <label>Stage 2 Fuel: <span id="s2-f-value">10000</span> kg</label>
+                    <input type="range" id="s2-f-slider" min="1000" max="20000" step="500" value="10000">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — The Tsiolkovsky Rocket Equation (Click to expand)</button>
+        <div class="content">
+            <p>The change in velocity (delta-v or `Δv`) that a rocket stage can achieve is given by the Tsiolkovsky rocket equation, derived from conservation of momentum.</p>
+            <p><code>Δv = v_ex * ln(m₀ / m_f)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>v_ex</code> is the exhaust velocity of the engine (a measure of its efficiency, assumed to be 4500 m/s in this simulation).</li>
+                <li><code>ln</code> is the natural logarithm.</li>
+                <li><code>m₀</code> is the initial total mass of the rocket (structure + fuel + everything on top).</li>
+                <li><code>m_f</code> is the final mass of the rocket after that stage's fuel is burned (structure + everything on top).</li>
+            </ul>
+            The term `m₀ / m_f` is called the <strong>mass ratio</strong>, and it is the most critical factor in rocket performance.
+            </p>
+            <h3>Staging Example</h3>
+            <p>Using the default values from the simulation:
+            <ul>
+                <li>Payload=1000, S2_dry=1000, S2_fuel=10000</li>
+                <li>S1_dry=5000, S1_fuel=50000</li>
+            </ul>
+            <strong>Stage 1 Burn:</strong>
+            <br><code>m₀ = (1000+1000+10000) + (5000+50000) = 12000 + 55000 = 67000 kg</code>
+            <br><code>m_f = m₀ - S1_fuel = 67000 - 50000 = 17000 kg</code>
+            <br><code>Δv₁ = 4500 * ln(67000 / 17000) ≈ 4500 * ln(3.94) ≈ 4500 * 1.37 = <strong>6165 m/s</strong></code>
+            <br><br>
+            <strong>Stage 2 Burn (after jettisoning Stage 1):</strong>
+            <br>The 5000 kg dry mass of Stage 1 is dropped.
+            <br><code>m₀ = (1000+1000+10000) = 12000 kg</code>
+            <br><code>m_f = m₀ - S2_fuel = 12000 - 10000 = 2000 kg</code>
+            <br><code>Δv₂ = 4500 * ln(12000 / 2000) = 4500 * ln(6) ≈ 4500 * 1.79 = <strong>8055 m/s</strong></code>
+            <br><br>
+            <strong>Total Δv = 6165 + 8055 = 14220 m/s</strong>. A single stage rocket with the same total mass and fuel would achieve a much lower final velocity.
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let animationFrameId;
+
+    let config = {};
+    let rocket = {};
+    let jettisoned = [];
+    const V_EX = 4500; // m/s
+
+    function updateConfig() {
+        config = {
+            payload_m: parseInt(document.getElementById('payload-m-slider').value, 10),
+            s1_m: parseInt(document.getElementById('s1-m-slider').value, 10),
+            s1_f: parseInt(document.getElementById('s1-f-slider').value, 10),
+            s2_m: parseInt(document.getElementById('s2-m-slider').value, 10),
+            s2_f: parseInt(document.getElementById('s2-f-slider').value, 10),
+        };
+        document.getElementById('payload-m-value').textContent = config.payload_m;
+        document.getElementById('s1-m-value').textContent = config.s1_m;
+        document.getElementById('s1-f-value').textContent = config.s1_f;
+        document.getElementById('s2-m-value').textContent = config.s2_m;
+        document.getElementById('s2-f-value').textContent = config.s2_f;
+        reset();
+    }
+
+    function reset() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+
+        rocket = {
+            x: 100, y: canvas.height/2, v: 0,
+            s1_fuel: config.s1_f, s2_fuel: config.s2_f,
+            s1_attached: true, s2_attached: true,
+            s1_burning: false, s2_burning: false,
+        };
+        jettisoned = [];
+        updateMass();
+        updateReadouts();
+        draw();
+        document.getElementById('ignite1-btn').disabled = false;
+        document.getElementById('jettison-btn').disabled = true;
+    }
+
+    function updateMass() {
+        let totalMass = config.payload_m;
+        if (rocket.s2_attached) totalMass += config.s2_m + rocket.s2_fuel;
+        if (rocket.s1_attached) totalMass += config.s1_m + rocket.s1_fuel;
+        rocket.mass = totalMass;
+    }
+
+    function ignite1() {
+        if (rocket.s1_burning) return;
+        rocket.s1_burning = true;
+        document.getElementById('ignite1-btn').disabled = true;
+        gameLoop();
+    }
+
+    function jettison() {
+        if (!rocket.s1_attached || rocket.s2_burning) return;
+        rocket.s1_attached = false;
+        rocket.s2_burning = true;
+        jettisoned.push({x: rocket.x - 50, y: rocket.y, v: rocket.v});
+        updateMass();
+        document.getElementById('jettison-btn').disabled = true;
+    }
+
+    function simulationStep(dt) {
+        let thrust = 0;
+        let mass_flow_rate = 0;
+
+        if (rocket.s1_burning) {
+            mass_flow_rate = config.s1_f / 10; // Burn all fuel in 10 seconds
+            if (rocket.s1_fuel > 0) {
+                const fuel_burnt = mass_flow_rate * dt;
+                rocket.s1_fuel = Math.max(0, rocket.s1_fuel - fuel_burnt);
+                thrust = mass_flow_rate * V_EX;
+            } else {
+                rocket.s1_burning = false;
+                document.getElementById('jettison-btn').disabled = false;
+            }
+        } else if (rocket.s2_burning) {
+             mass_flow_rate = config.s2_f / 5; // Burn all fuel in 5 seconds
+            if (rocket.s2_fuel > 0) {
+                const fuel_burnt = mass_flow_rate * dt;
+                rocket.s2_fuel = Math.max(0, rocket.s2_fuel - fuel_burnt);
+                thrust = mass_flow_rate * V_EX;
+            } else {
+                rocket.s2_burning = false;
+            }
+        }
+
+        updateMass();
+        if (rocket.mass > 0) {
+            const a = thrust / rocket.mass;
+            rocket.v += a * dt;
+        }
+        rocket.x += rocket.v * dt * 0.01; // Scale for display
+
+        jettisoned.forEach(j => {
+            j.x += j.v * dt * 0.01;
+        });
+    }
+
+    function gameLoop() {
+        simulationStep(1/60);
+        updateReadouts();
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw stars
+        ctx.fillStyle = 'white';
+        for(let i=0; i<100; i++) {
+            const x = (Math.random() * width * 2 - rocket.x * 0.1) % width;
+            const y = Math.random() * height;
+            ctx.fillRect(x, y, 1, 1);
+        }
+
+        // Draw jettisoned stages
+        jettisoned.forEach(j => drawStage(j.x, j.y, 100, 30, '#555', rocket.s1_burning));
+
+        // Draw rocket
+        let currentX = rocket.x;
+        if (rocket.s2_attached) {
+            drawStage(currentX, rocket.y, 60, 20, getComputedStyle(document.documentElement).getPropertyValue('--primary-color'), rocket.s2_burning);
+            currentX -= 65;
+        }
+        if (rocket.s1_attached) {
+            drawStage(currentX, rocket.y, 100, 30, getComputedStyle(document.documentElement).getPropertyValue('--primary-color'), rocket.s1_burning);
+        }
+    }
+
+    function drawStage(x, y, w, h, color, burning) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y - h/2);
+        ctx.lineTo(x-w, y-h/2);
+        ctx.lineTo(x-w-10, y);
+        ctx.lineTo(x-w, y+h/2);
+        ctx.lineTo(x, y+h/2);
+        ctx.closePath();
+        ctx.fill();
+
+        if (burning) {
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+            for(let i=0; i<20; i++) {
+                ctx.beginPath();
+                const r = Math.random() * h * 0.4;
+                ctx.arc(x - w - Math.random()*80, y + (Math.random()-0.5)*h, r, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+
+    function updateReadouts() {
+        document.getElementById('v-value').textContent = rocket.v.toFixed(0);
+        document.getElementById('mass-value').textContent = rocket.mass.toFixed(0);
+        document.getElementById('fuel1-value').textContent = rocket.s1_fuel.toFixed(0);
+        document.getElementById('fuel2-value').textContent = rocket.s2_fuel.toFixed(0);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('ignite1-btn').addEventListener('click', ignite1);
+        document.getElementById('jettison-btn').addEventListener('click', jettison);
+        document.getElementById('reset-btn').addEventListener('click', updateConfig); // re-read sliders on reset
+
+        const sliders = ['payload-m', 's1-m', 's1-f', 's2-m', 's2-f'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', updateConfig);
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        updateConfig();
+    };
+    </script>
+</body>
+</html>

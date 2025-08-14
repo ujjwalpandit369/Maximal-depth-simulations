@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Velocity with Air Drag</title>
+    <style>
+        :root {
+            --bg-color: #f0f7ff;
+            --text-color: #212529;
+            --primary-color: #6c757d; /* Grey for the object */
+            --gravity-color: #dc3545; /* Red for gravity */
+            --drag-color: #007bff; /* Blue for air drag */
+            --border-color: #dee2e6;
+            --canvas-bg: #f0f7ff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #1a2a3a;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --gravity-color: #ff7b72;
+            --drag-color: #58a6ff;
+            --border-color: #495057;
+            --canvas-bg: #0d1b2a;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 9 / 16; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 150px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; height: 50px; }
+        .button-bar button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Terminal Velocity with Air Drag</h1>
+            <p class="subtitle">Why falling objects don't accelerate forever.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>If you drop an object from a great height, it doesn't speed up forever. It eventually reaches a maximum speed, called its terminal velocity. This happens because of air resistance. As an object falls, the downward force of gravity is constant, but the upward force of air drag increases with speed. Terminal velocity is the point where the drag force grows large enough to perfectly balance the force of gravity. At this point, the net force on the object is zero, so it stops accelerating and falls at a constant speed. This simulation visualizes this balance of forces in action.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Balance of Forces</h2>
+
+            <h3>Step 1: Freefall in a Vacuum</h3>
+            <p>First, imagine dropping a bowling ball on the Moon, where there is no air. The only force acting on it is gravity, which is constant. According to Newton's Second Law (`F=ma`), a constant force means a constant acceleration. The ball's speed would increase steadily for as long as it falls.</p>
+
+            <h3>Step 2: Enter Air Drag</h3>
+            <p>Now, drop the same ball on Earth. As it falls, it has to push through the air. The air pushes back with a force called **air drag** (or air resistance). This drag force always acts in the opposite direction of the object's motion, so it points upward. You can see the two competing forces in the simulation: a constant <span style="color:var(--gravity-color); font-weight:bold;">red arrow</span> for gravity, and a growing <span style="color:var(--drag-color); font-weight:bold;">blue arrow</span> for drag.</p>
+
+            <h3>Step 3: The Key Idea - Drag Depends on Speed</h3>
+            <p>Unlike gravity, the drag force is not constant. It depends on several factors, but most importantly, it increases dramatically as the object's speed increases. The faster you go, the harder the air pushes back on you.</p>
+
+            <h3>Step 4: Reaching Terminal Velocity</h3>
+            <p>This leads to a clear sequence of events for any falling object:
+            <ol>
+                <li><strong>t = 0:</strong> The moment you drop the object, its speed is zero, so the drag force is zero. The only force is gravity, and it accelerates downwards at its maximum rate (`g` ≈ 9.8 m/s²).</li>
+                <li><strong>Speeding Up:</strong> As the object's speed increases, the upward drag force begins to grow. This upward force counteracts some of the downward force of gravity, so the *net* downward force gets smaller. A smaller net force means a smaller acceleration. The object is still speeding up, but not as quickly as before.</li>
+                <li><strong>The Balance Point:</strong> Eventually, the object is moving so fast that the upward drag force becomes exactly equal in strength to the downward force of gravity. The two forces are now perfectly balanced. The net force on the object is zero.</li>
+                <li><strong>Terminal Velocity:</strong> According to Newton's laws, if the net force is zero, the acceleration is zero. The object stops accelerating and continues to fall at this constant, maximum speed. This is its **terminal velocity**. You can see this on the "Velocity vs. Time" graph as the point where the curve becomes flat.</li>
+            </ol>
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="drop-btn">Drop</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label>Object Mass (m): <span id="mass-value">80</span> kg</label>
+                    <input type="range" id="mass-slider" min="10" max="200" step="5" value="80">
+                </div>
+                <div class="control-group">
+                    <label>Cross-Sectional Area (A): <span id="area-value">0.7</span> m²</label>
+                    <input type="range" id="area-slider" min="0.1" max="2.0" step="0.1" value="0.7">
+                </div>
+                <div class="control-group">
+                    <label>Drag Coefficient (C): <span id="drag-c-value">1.0</span></label>
+                    <input type="range" id="drag-c-slider" min="0.4" max="1.4" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>Air Density (ρ): <span id="rho-value">1.225</span> kg/m³</label>
+                    <input type="range" id="rho-slider" min="0.5" max="1.5" step="0.025" value="1.225">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Forces in Play</h3>
+            <p>The net force `F_net` on the falling object is the sum of the downward force of gravity `F_g` and the upward force of air drag `F_d`.</p>
+            <p><code>F_net = F_g - F_d</code></p>
+            <p>The force of gravity is constant: <code>F_g = m * g</code></p>
+            <p>For objects moving at high speeds (like a skydiver), the drag force is proportional to the square of the velocity `v`:</p>
+            <p><code>F_d = (1/2) * ρ * v² * C * A</code></p>
+            <p>Where `ρ` is the air density, `C` is the drag coefficient (a shape-dependent factor), and `A` is the cross-sectional area of the object.</p>
+
+            <h3>Calculating Terminal Velocity (`v_t`)</h3>
+            <p>Terminal velocity is reached when the net force is zero, meaning the drag force has grown to equal the force of gravity.</p>
+            <p><code>F_g = F_d</code></p>
+            <p><code>m * g = (1/2) * ρ * v_t² * C * A</code></p>
+            <p>We can rearrange this equation to solve for the terminal velocity, `v_t`:</p>
+            <p><code>v_t = sqrt( (2 * m * g) / (ρ * C * A) )</code></p>
+            <p>This equation shows us how the object's properties determine its terminal velocity. A heavier object (larger `m`) or a more streamlined object (smaller `C` or `A`) will have a higher terminal velocity.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx, plotCanvas, plotCtx;
+    let animationFrameId;
+
+    let config = { m: 80, A: 0.7, C: 1.0, rho: 1.225 };
+    let g = 9.81;
+
+    let obj = {};
+    let plotHistory = [];
+    let simTime = 0;
+    let isRunning = false;
+
+    function reset() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+        isRunning = false;
+
+        obj = { y: 50, vy: 0 };
+        plotHistory = [{t: 0, v: 0}];
+        simTime = 0;
+
+        document.getElementById('drop-btn').disabled = false;
+        draw();
+    }
+
+    function drop() {
+        if (isRunning) return;
+        reset();
+        isRunning = true;
+        document.getElementById('drop-btn').disabled = true;
+        gameLoop();
+    }
+
+    function simulationStep(dt) {
+        if (!isRunning) return;
+
+        const Fg = config.m * g;
+        const Fd = 0.5 * config.rho * (obj.vy**2) * config.C * config.A;
+        const Fnet = Fg - Fd;
+
+        const a = Fnet / config.m;
+        obj.vy += a * dt;
+        obj.y += obj.vy * dt;
+
+        simTime += dt;
+        plotHistory.push({t: simTime, v: obj.vy});
+
+        if (obj.y > canvas.height + 50) {
+            isRunning = false;
+        }
+    }
+
+    function gameLoop() {
+        if (!isRunning) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            return;
+        }
+        simulationStep(1/60);
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        drawMain();
+        drawPlot();
+    }
+
+    function drawMain() {
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw object
+        const objX = width / 2;
+        const objSize = 20;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.beginPath();
+        ctx.arc(objX, obj.y, objSize, 0, 2*Math.PI);
+        ctx.fill();
+
+        // Draw force vectors
+        const Fg = config.m * g;
+        const Fd = 0.5 * config.rho * (obj.vy**2) * config.C * config.A;
+        const forceScale = 0.5;
+
+        // Gravity vector
+        drawVector(objX, obj.y, 0, Fg * forceScale, getComputedStyle(document.documentElement).getPropertyValue('--gravity-color'), "Fg");
+        // Drag vector
+        if (Fd > 0) {
+            drawVector(objX, obj.y, 0, -Fd * forceScale, getComputedStyle(document.documentElement).getPropertyValue('--drag-color'), "Fd");
+        }
+    }
+
+    function drawVector(x, y, vx, vy, color, label) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + vx, y + vy);
+        ctx.stroke();
+
+        const angle = Math.atan2(vy, vx);
+        ctx.save();
+        ctx.translate(x + vx, y + vy);
+        ctx.rotate(angle);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-10, 5);
+        ctx.lineTo(-10, -5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = color;
+        ctx.font = '14px Arial';
+        ctx.fillText(label, x + vx + 15, y + vy);
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        const vt = Math.sqrt((2 * config.m * g) / (config.rho * config.C * config.A));
+        const max_v = vt * 1.1;
+        const max_t = plotHistory[plotHistory.length-1].t * 1.1 || 10;
+
+        // Draw terminal velocity line
+        const y_vt = height - (vt / max_v) * height;
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        plotCtx.lineWidth = 1;
+        plotCtx.setLineDash([5, 5]);
+        plotCtx.beginPath();
+        plotCtx.moveTo(0, y_vt);
+        plotCtx.lineTo(width, y_vt);
+        plotCtx.stroke();
+        plotCtx.setLineDash([]);
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.fillText(`v_t = ${vt.toFixed(1)} m/s`, 10, y_vt - 5);
+
+        // Draw velocity curve
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--drag-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        plotHistory.forEach((p, i) => {
+            const x = (p.t / max_t) * width;
+            const y = height - (p.v / max_v) * height;
+            if (i === 0) plotCtx.moveTo(x, y);
+            else plotCtx.lineTo(x, y);
+        });
+        plotCtx.stroke();
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('drop-btn').addEventListener('click', drop);
+        document.getElementById('reset-btn').addEventListener('click', reset);
+
+        const sliders = ['mass', 'area', 'drag-c', 'rho'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', e => {
+                const keyMap = {'mass':'m', 'area':'A', 'drag-c':'C', 'rho':'rho'};
+                config[keyMap[id]] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = e.target.value;
+                if (!isRunning) reset();
+            });
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+        setupControls();
+        reset();
+    };
+    </script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Torsional Pendulum</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #6c757d; /* Grey for metal */
+            --secondary-color: #17a2b8; /* Cyan for motion/plots */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --secondary-color: #20c997;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; cursor: grab; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 150px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Torsional Pendulum</h1>
+            <p class="subtitle">A demonstration of angular simple harmonic motion.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>A torsional pendulum is the rotational cousin of a standard mass on a spring. It consists of a disk or other object suspended by a thin wire. When the disk is twisted and released, the wire exerts a restoring "torque" that causes the disk to oscillate back and forth. Because this restoring torque is proportional to the angle of twist, the resulting motion is a very pure and predictable "angular simple harmonic motion." This simulation lets you explore this motion and see how its period depends on the properties of the disk and the wire.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Twisting Disk</h2>
+
+            <h3>Step 1: The Setup</h3>
+            <p>Our system is simple: a heavy disk is suspended from its center by a metal wire attached to a fixed support. In its resting state, the wire is untwisted.</p>
+
+            <h3>Step 2: Twist and Release</h3>
+            <p>In the simulation, you can click and drag the edge of the disk to twist it by a certain angle. When you do this, you are storing potential energy in the twisted wire, much like stretching a spring. When you release the mouse, the simulation begins, and the pendulum is free to oscillate.</p>
+
+            <h3>Step 3: The Restoring Torque</h3>
+            <p>The twisted wire does not want to be twisted. It exerts a restoring torque (`τ`) that tries to bring the disk back to its equilibrium (untwisted) position. The key property of this torque is that it is directly proportional to the angle (`θ`) you twisted it by. This is the rotational version of Hooke's Law for springs (`F = -kx`):</p>
+            <p><code>τ = -κθ</code></p>
+            <p>Here, `κ` (kappa) is the "torsional constant," which measures the stiffness of the wire. A stiffer wire has a larger `κ`.</p>
+
+            <h3>Step 4: Angular Simple Harmonic Motion</h3>
+            <p>Because the restoring torque is directly proportional to the angular displacement, the resulting oscillatory motion is very pure and predictable. It's called **angular simple harmonic motion**. The disk will twist back and forth, and its angular position over time can be described by a simple cosine or sine wave. You can see this wave being traced out on the graph below the main animation. The time it takes to complete one full back-and-forth oscillation is called the **period (T)**.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <p>Click and drag the disk to set an initial angle, then release to run.</p>
+                <hr>
+                <div class="control-group">
+                    <label for="inertia-slider">Moment of Inertia (I): <span id="inertia-value">0.5</span></label>
+                    <input type="range" id="inertia-slider" min="0.1" max="2.0" step="0.1" value="0.5">
+                </div>
+                <div class="control-group">
+                    <label for="kappa-slider">Torsional Constant (κ): <span id="kappa-value">0.2</span></label>
+                    <input type="range" id="kappa-slider" min="0.05" max="1.0" step="0.05" value="0.2">
+                </div>
+                <div class="control-group">
+                    <label for="damping-slider">Damping: <span id="damping-value">0.01</span></label>
+                    <input type="range" id="damping-slider" min="0" max="0.1" step="0.005" value="0.01">
+                </div>
+                <div class="readout" style="text-align:center;">
+                    <h4>Calculated Period (T)</h4>
+                    <p><span id="period-value">--</span> s</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Equation of Motion</h3>
+            <p>The motion of the pendulum is governed by Newton's Second Law for Rotation, `τ_net = Iα`. The net torque is the sum of the restoring torque from the wire and any frictional damping torque. The damping torque is typically modeled as being proportional to the angular velocity, `ω`.</p>
+            <p><code>τ_net = -κθ - bω</code></p>
+            <p>Where `b` is the damping coefficient. Since angular acceleration `α` is the second time derivative of the angle `θ`, the full equation of motion is:</p>
+            <p><code>I * (d²θ/dt²) + b * (dθ/dt) + κθ = 0</code></p>
+            <p>This is the classic equation for a damped harmonic oscillator, but with rotational variables.</p>
+            <h3>Period of Oscillation</h3>
+            <p>In the absence of damping (`b=0`), the solution to this equation is a perfect sine wave. The period `T` of this oscillation (the time for one full cycle) can be found directly from the equation's coefficients:</p>
+            <p><code>T = 2π * sqrt(I / κ)</code></p>
+            <p>A key feature of simple harmonic motion is that the period depends only on the physical properties of the system (`I` and `κ`), not on the amplitude of the oscillation. A larger initial twist will not change the time it takes to swing back and forth. (Note: when damping is significant, it slightly increases the period, but this is a minor effect in most cases).</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx, plotCanvas, plotCtx;
+    let animationFrameId;
+
+    let config = { I: 0.5, kappa: 0.2, damping: 0.01 };
+
+    let pendulum = { theta: 0, omega: 0 };
+    let plotHistory = [];
+    let simTime = 0;
+
+    let isDragging = false;
+    let isRunning = false;
+
+    function reset() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+        isRunning = false;
+
+        pendulum = { theta: Math.PI / 2, omega: 0 };
+        plotHistory = [];
+        simTime = 0;
+
+        updateReadouts();
+        draw();
+    }
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+        reset();
+
+        canvas.addEventListener('mousedown', e => {
+            if (isRunning) return;
+            isDragging = true;
+            canvas.style.cursor = 'grabbing';
+        });
+        canvas.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                isRunning = true;
+                canvas.style.cursor = 'grab';
+                gameLoop();
+            }
+        });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const dx = mouseX - canvas.width / 2;
+                const dy = mouseY - canvas.height / 2;
+                pendulum.theta = Math.atan2(dy, dx) - Math.PI/2;
+                draw();
+            }
+        });
+    }
+
+    function simulationStep(dt) {
+        // I * alpha = -kappa * theta - b * omega
+        const tau = -config.kappa * pendulum.theta - config.damping * pendulum.omega;
+        const alpha = tau / config.I;
+
+        pendulum.omega += alpha * dt;
+        pendulum.theta += pendulum.omega * dt;
+        simTime += dt;
+
+        if (plotHistory.length > 400) plotHistory.shift();
+        plotHistory.push({t: simTime, theta: pendulum.theta});
+    }
+
+    function gameLoop() {
+        if (!isRunning) return;
+        simulationStep(1/60);
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        drawMain();
+        drawPlot();
+    }
+
+    function drawMain() {
+        const { width, height } = canvas;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw wire
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, 0);
+        ctx.lineTo(cx, cy);
+        ctx.stroke();
+
+        // Draw disk with perspective
+        const radius = width * 0.4;
+        const perspective = 0.3; // How much it's tilted
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '80';
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, radius, radius * perspective, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw reference line
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + radius * Math.cos(pendulum.theta), cy + radius * perspective * Math.sin(pendulum.theta));
+        ctx.stroke();
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        // Draw zero line
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        plotCtx.lineWidth = 1;
+        plotCtx.beginPath();
+        plotCtx.moveTo(0, height/2);
+        plotCtx.lineTo(width, height/2);
+        plotCtx.stroke();
+
+        if (plotHistory.length < 2) return;
+
+        const max_t = plotHistory[plotHistory.length-1].t;
+        const t_range = Math.max(10, max_t);
+        const max_theta = Math.PI;
+
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        plotHistory.forEach((p, i) => {
+            const x = (p.t / t_range) * width;
+            const y = height / 2 - (p.theta / max_theta) * (height/2);
+            if (i === 0) plotCtx.moveTo(x, y);
+            else plotCtx.lineTo(x, y);
+        });
+        plotCtx.stroke();
+    }
+
+    function updateReadouts() {
+        const period = 2 * Math.PI * Math.sqrt(config.I / config.kappa);
+        document.getElementById('period-value').textContent = period.toFixed(2);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        const sliders = ['inertia', 'kappa', 'damping'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', e => {
+                const key = id === 'inertia' ? 'I' : id;
+                config[key] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = e.target.value;
+                updateReadouts();
+                if (!isRunning) draw();
+            });
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>
