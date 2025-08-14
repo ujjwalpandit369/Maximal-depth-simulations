@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Heston Model for Stochastic Volatility</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #28a745; /* Green for finance */
+            --secondary-color: #6c757d;
+            --accent-color: #dc3545; /* Red for volatility */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #f1f3f5;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --primary-color: #3fb950;
+            --secondary-color: #8b949e;
+            --accent-color: #f85149;
+            --border-color: #30363d;
+            --canvas-bg: #161b22;
+            --control-bg: #21262d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 2.5fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .plots-column { display: grid; grid-template-rows: 2fr 1fr; gap: 15px; }
+        .canvas-wrapper { position: relative; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        canvas { display: block; width: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code, .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        code { background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #30363d; color: #c9d1d9; }
+        .feller-warning { padding: 10px; background-color: #fff3cd; color: #856404; border-radius: 5px; display: none; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>The Heston Model for Stochastic Volatility</h1>
+            <p class="subtitle">A simulation of realistic stock price movements where volatility itself is random.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    Simple financial models often assume that a stock's "volatility"—how wildly its price swings—is a constant number. But in reality, markets go through turbulent, high-volatility periods and calm, low-volatility periods. The Heston model captures this beautifully by treating volatility not as a fixed number, but as a random variable that changes over time according to its own equation. This simulation runs the Heston model to generate a stock price path and its corresponding volatility path. You can clearly see the hallmark of realistic markets: <strong>volatility clustering</strong>, where chaotic price swings are clumped together, followed by periods of relative stability, providing a much richer and more accurate picture of financial market dynamics.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="run-btn">Run New Simulation</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="kappa-slider">Mean-Reversion Speed (<span class="mono">κ</span>): <output id="kappa-output">2.0</output></label>
+                        <input type="range" id="kappa-slider" min="0.1" max="10" step="0.1" value="2.0" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="theta-slider">Long-Term Variance (<span class="mono">θ</span>): <output id="theta-output">0.04</output></label>
+                        <input type="range" id="theta-slider" min="0.01" max="0.2" step="0.005" value="0.04" style="width:100%;">
+                    </div>
+                    <div class="control-group">
+                        <label for="xi-slider">Vol of Vol (<span class="mono">ξ</span>): <output id="xi-output">0.3</output></label>
+                        <input type="range" id="xi-slider" min="0.05" max="1" step="0.01" value="0.3" style="width:100%;">
+                    </div>
+                    <div class="control-group">
+                        <label for="rho-slider">Correlation (<span class="mono">ρ</span>): <output id="rho-output">-0.7</output></label>
+                        <input type="range" id="rho-slider" min="-0.9" max="0.9" step="0.05" value="-0.7" style="width:100%;">
+                    </div>
+                    <div class="feller-warning" id="feller-warning">Warning: Feller condition (2κθ > ξ²) not met. Variance may hit zero.</div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="plots-column">
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Simulated Stock Price Path S(t)</div>
+                        <canvas id="price-canvas" width="750" height="300"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Simulated Volatility Path √v(t)</div>
+                        <canvas id="vol-canvas" width="750" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — Why Volatility Isn't Constant</h2>
+
+                <h4>Step 1: What is Volatility?</h4>
+                <p>In finance, volatility is a measure of risk. It tells you how much the price of an asset, like a stock, is likely to fluctuate.
+                    <ul>
+                        <li><strong>High Volatility:</strong> The price can change dramatically and quickly. The graph of the price looks like a jagged, steep mountain range.</li>
+                        <li><strong>Low Volatility:</strong> The price changes are smaller and more gradual. The graph looks like gentle, rolling hills.</li>
+                    </ul>
+                </p>
+
+                <h4>Step 2: A Too-Simple Model</h4>
+                <p>The most basic model of a stock price (called Geometric Brownian Motion) assumes volatility is a single, constant number. This would be like assuming the weather is "partly cloudy" every single day of the year. It's not realistic. Real markets have stormy days and calm days.</p>
+
+                <h4>Step 3: The Heston Model's Big Idea</h4>
+                <p>The Heston model recognizes that volatility itself changes over time. It says there are two interconnected random processes at play:
+                    <ol>
+                        <li>The random movement of the <strong>stock price</strong>.</li>
+                        <li>The random movement of the <strong>volatility</strong>.</li>
+                    </ol>
+                    Look at the two plots in the simulation. The top plot is the stock price. The bottom plot is its volatility. Notice how they are linked: when the bottom line (volatility) is high, the top line (price) becomes much more jagged and wild. When the volatility is low, the price path becomes much smoother.
+                </p>
+
+                <h4>Step 4: Volatility Clustering</h4>
+                <p>The most important feature of the Heston model is that it produces <strong>volatility clustering</strong>. This is a fancy term for something we see in real life: "trouble comes in bunches." If the market is volatile today, it's likely to be volatile tomorrow. If it's calm today, it's likely to be calm tomorrow.
+                <br>
+                The model achieves this through "mean reversion." It assumes that volatility has a long-term average level it likes to be at. If it randomly shoots up high, it will get pulled back down towards the average over time, but not instantly. This creates "clusters" or regimes of high and low volatility, which is exactly what we see in the simulation and in real markets.
+                </p>
+
+                <p><strong>Everyday Analogy: A Car on a Bumpy Road.</strong> Imagine the stock price is the path of a car. In the simple model, the road is perfectly smooth, and the driver is just randomly wiggling the steering wheel. In the Heston model, the road itself has changing surface quality. For a few miles, it might be a rough, gravel road (high volatility), causing the car to bounce around wildly. Then, it might transition to a stretch of smooth, new asphalt (low volatility), where the car's path becomes much calmer, even with the same driver. The Heston model simulates both the car's path and the changing road surface it's driving on.
+                </p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Stochastic Equations</h2>
+                <p>The Heston model is defined by a system of two coupled Stochastic Differential Equations (SDEs). Don't worry, we'll break them down.</p>
+
+                <h4>1. The Stock Price Equation</h4>
+                <p><code class="mono">dS_t = μS_t dt + √v_t S_t dW_t¹</code></p>
+                <p><strong>Plain English Translation:</strong>
+                    <ul>
+                        <li><code>dS_t</code>: The tiny change in the stock price `S` over a tiny time step `dt`.</li>
+                        <li><code>μS_t dt</code>: The "drift" part. This is the expected return of the stock, like a steady wind pushing it. `μ` (mu) is the expected rate of return.</li>
+                        <li><code>√v_t S_t dW_t¹</code>: The "random" part. This is where the fluctuation comes from. The size of the random jump depends on the current volatility `√v_t` and a random shock `dW_t¹`.</li>
+                    </ul>
+                The key here is that the volatility term, <code>√v_t</code>, is not a constant. It's a variable that comes from the second equation.
+                </p>
+
+                <h4>2. The Variance (Volatility²) Equation</h4>
+                <p><code class="mono">dv_t = κ(θ - v_t)dt + ξ√v_t dW_t²</code></p>
+                <p><strong>Plain English Translation:</strong>
+                    <ul>
+                        <li><code>dv_t</code>: The tiny change in the variance `v` (which is volatility squared).</li>
+                        <li><code>κ(θ - v_t)dt</code>: The "mean-reversion" part. This is the heart of the model. `θ` (theta) is the long-term average variance. `κ` (kappa) is the speed at which `v_t` is pulled back towards `θ`. If current variance `v_t` is higher than the average `θ`, this term is negative, pulling it down. If `v_t` is lower than `θ`, it's positive, pulling it up.</li>
+                        <li><code>ξ√v_t dW_t²</code>: The random part for variance. `ξ` (xi, often called the "vol of vol") determines how much the variance itself fluctuates. `dW_t²` is another random shock.</li>
+                    </ul>
+                </p>
+
+                <h4>3. Correlation</h4>
+                <p>The two random shocks, `dW_t¹` and `dW_t²`, are not independent. They are correlated by a parameter `ρ` (rho). In markets, `ρ` is typically negative (~-0.7). This means that a large downward shock to the price (`dW_t¹` is negative) is often accompanied by an upward shock to volatility (`dW_t²` is positive). This is called the "leverage effect."</p>
+
+                <h4>Numerical Simulation (Euler-Maruyama)</h4>
+                <p>To run this in a simulation, we step forward in small time increments `Δt`:</p>
+                <p><code>S_new = S_old + μS_oldΔt + √v_old S_old √Δt Z₁</code></p>
+                <p><code>v_new = v_old + κ(θ - v_old)Δt + ξ√v_old √Δt Z₂</code></p>
+                <p>Where `Z₁` and `Z₂` are correlated random numbers drawn from a standard normal distribution. This simple update rule, applied thousands of times, generates the paths you see in the plots.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class HestonSim {
+    constructor() {
+        this.priceCanvas = document.getElementById('price-canvas');
+        this.priceCtx = this.priceCanvas.getContext('2d');
+        this.volCanvas = document.getElementById('vol-canvas');
+        this.volCtx = this.volCanvas.getContext('2d');
+
+        this.params = {
+            kappa: 2.0, theta: 0.04, xi: 0.3, rho: -0.7, // Heston params
+            s0: 100, v0: 0.04, mu: 0.05, // Initial conditions
+            T: 1.0, // 1 year
+            steps: 252, // Number of trading days in a year
+        };
+
+        this.paths = { price: [], vol: [] };
+
+        this.initControls();
+        this.runSimulation();
+    }
+
+    initControls() {
+        document.getElementById('run-btn').addEventListener('click', () => this.runSimulation());
+
+        const sliders = ['kappa', 'theta', 'xi', 'rho'];
+        sliders.forEach(p => {
+            const slider = document.getElementById(`${p}-slider`);
+            slider.addEventListener('input', e => {
+                this.params[p] = parseFloat(e.target.value);
+                document.getElementById(`${p}-output`).textContent = this.params[p].toFixed(2);
+                this.checkFeller();
+            });
+            slider.addEventListener('change', () => this.runSimulation());
+        });
+        this.checkFeller();
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+             this.draw();
+        });
+    }
+
+    checkFeller() {
+        const { kappa, theta, xi } = this.params;
+        const fellerMet = 2 * kappa * theta > xi * xi;
+        document.getElementById('feller-warning').style.display = fellerMet ? 'none' : 'block';
+    }
+
+    // Box-Muller transform to get standard normal random numbers
+    getNormal() {
+        let u = 0, v = 0;
+        while(u === 0) u = Math.random();
+        while(v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    runSimulation() {
+        const { kappa, theta, xi, rho, s0, v0, mu, T, steps } = this.params;
+        const dt = T / steps;
+
+        this.paths.price = [s0];
+        this.paths.vol = [Math.sqrt(v0)];
+
+        let s_t = s0;
+        let v_t = v0;
+
+        for (let i = 0; i < steps; i++) {
+            const z1 = this.getNormal();
+            const z2 = this.getNormal();
+
+            const dw1 = Math.sqrt(dt) * z1;
+            const dw2 = Math.sqrt(dt) * (rho * z1 + Math.sqrt(1 - rho*rho) * z2);
+
+            // Discretization scheme
+            s_t += mu * s_t * dt + Math.sqrt(v_t) * s_t * dw1;
+            v_t += kappa * (theta - v_t) * dt + xi * Math.sqrt(v_t) * dw2;
+
+            // Ensure variance doesn't go negative (reflection scheme)
+            v_t = Math.max(v_t, 0);
+
+            this.paths.price.push(s_t);
+            this.paths.vol.push(Math.sqrt(v_t));
+        }
+
+        this.draw();
+    }
+
+    draw() {
+        this.drawPath(this.priceCtx, this.paths.price, getComputedStyle(document.body).getPropertyValue('--primary-color').trim());
+        this.drawPath(this.volCtx, this.paths.vol, getComputedStyle(document.body).getPropertyValue('--accent-color').trim());
+    }
+
+    drawPath(ctx, data, color) {
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        const bgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+
+        const min = Math.min(...data);
+        const max = Math.max(...data);
+        const range = max - min;
+
+        // Draw axes
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.strokeStyle = textColor;
+        ctx.fillStyle = textColor;
+        ctx.lineWidth = 1;
+        ctx.font = '12px sans-serif';
+
+        // Draw path
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        data.forEach((p, i) => {
+            const x = (i / (data.length - 1)) * w;
+            const y = h - ((p - min) / range) * h * 0.9 - h * 0.05;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Draw Y-axis labels
+        ctx.fillStyle = textColor;
+        ctx.fillText(max.toFixed(2), 5, 15);
+        ctx.fillText(min.toFixed(2), 5, h - 5);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new HestonSim();
+});
+</script>
+</body>
+</html>

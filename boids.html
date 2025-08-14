@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boids: Simulating Flocking Behavior</title>
+    <style>
+        :root {
+            --bg-color: #f0f8ff;
+            --text-color: #333;
+            --primary-color: #4682b4;
+            --secondary-color: #5f9ea0;
+            --border-color: #ccc;
+            --canvas-bg: #001;
+            --control-bg: #e6f2f2;
+            --boid-color: #ffeb3b;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #58a6ff;
+            --secondary-color: #7ab8b8;
+            --border-color: #555;
+            --canvas-bg: #0d1117;
+            --control-bg: #2c3e50;
+            --boid-color: #f1c40f;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 16/9; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #eee; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Boids: Simulating Flocking Behavior</h1>
+            <p class="subtitle">How complex, life-like motion emerges from three simple rules.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    How does a flock of birds or a school of fish move in such perfect, fluid harmony without a leader? The "Boids" algorithm, created by Craig Reynolds in 1986, provides a stunningly simple answer. It's an agent-based simulation where each "boid" (bird-oid object) follows just three basic rules based only on its nearest neighbors: 1) steer away from neighbors that are too close (Separation), 2) steer towards the average direction of neighbors (Alignment), and 3) steer towards the average position of neighbors (Cohesion). This simulation demonstrates that from these simple, local interactions, the complex, graceful, and synchronized motion of a flock emerges all on its own, a powerful example of "emergent behavior" in complex systems.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="reset-btn">Reset Simulation</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="boid-count-slider">Boid Count: <output id="boid-count-output">150</output></label>
+                        <input type="range" id="boid-count-slider" min="10" max="300" step="10" value="150" style="width:100%;">
+                    </div>
+                    <hr>
+                    <h4>The Three Rules</h4>
+                    <div class="control-group">
+                        <label for="separation-slider">Separation Force: <output id="separation-output">1.5</output></label>
+                        <input type="range" id="separation-slider" min="0" max="3" step="0.1" value="1.5" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="alignment-slider">Alignment Force: <output id="alignment-output">1.0</output></label>
+                        <input type="range" id="alignment-slider" min="0" max="3" step="0.1" value="1.0" style="width:100%;">
+                    </div>
+                    <div class="control-group">
+                        <label for="cohesion-slider">Cohesion Force: <output id="cohesion-output">1.0</output></label>
+                        <input type="range" id="cohesion-slider" min="0" max="3" step="0.1" value="1.0" style="width:100%;">
+                    </div>
+                    <hr>
+                    <h4>Boid Physics</h4>
+                    <div class="control-group">
+                        <label for="perception-slider">Perception Radius: <output id="perception-output">50</output></label>
+                        <input type="range" id="perception-slider" min="10" max="200" step="5" value="50" style="width:100%;">
+                    </div>
+                    <div class="control-group">
+                        <label for="max-speed-slider">Max Speed: <output id="max-speed-output">4</output></label>
+                        <input type="range" id="max-speed-slider" min="1" max="10" step="0.5" value="4" style="width:100%;">
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="boids-canvas"></canvas>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — The Rules of the Flock</h2>
+
+                <h4>Step 1: The Boid</h4>
+                <p>Each yellow triangle on the screen is a "boid." It's a very simple creature. All it knows is its current position and its current velocity (its speed and direction). It has no grand plan and there is no leader giving orders.</p>
+
+                <h4>Step 2: Local Knowledge Only</h4>
+                <p>A boid cannot see the entire flock. It can only see its nearby neighbors—those that are within its "Perception Radius." You can change this radius with the slider. A larger radius means a boid is influenced by more of the flock, often leading to smoother, more cohesive movement. A smaller radius can lead to more chaotic behavior or the flock breaking apart.</p>
+
+                <h4>Step 3: The Three Simple Rules</h4>
+                <p>At every moment, each boid calculates a steering force based on its neighbors and these three rules:</p>
+                <ol>
+                    <li><strong>Separation (Avoid Crowding):</strong> The boid checks if any neighbors are too close (often a fraction of the perception radius). If so, it creates a steering force that points directly away from those close neighbors. This prevents the boids from clumping into a single ball. Try turning the Separation slider all the way up to see them actively push each other away.</li>
+                    <li><strong>Alignment (Match Heading):</strong> The boid looks at all of its neighbors and calculates their average velocity (their average direction and speed). It then creates a steering force to turn itself in that average direction. This is the key rule for making the flock move as one. If you turn this slider up, the boids will become very good at flying in formation.</li>
+                    <li><strong>Cohesion (Stick Together):</strong> The boid looks at all of its neighbors and calculates their average position (the center of the group). It then creates a steering force that points towards that center. This rule keeps the flock from drifting apart. If you turn Cohesion up, the flock will become very tightly packed.</li>
+                </ol>
+
+                <h4>Step 4: Emergent Behavior</h4>
+                <p>This is the most magical part. No single rule creates the flocking behavior. But when you combine all three, the boids negotiate these competing urges (don't get too close, but don't get too far, and go the same way), and the result is the complex, natural-looking motion of a flock. This is called <strong>emergent behavior</strong>: a complex global pattern emerging from simple local interactions. The flock can flow around corners, split, and merge, all without any central coordination.
+                </p>
+
+                <p><strong>Everyday Analogy: A Crowd at a Concert.</strong> Think about navigating a dense crowd. You're constantly applying the three rules. You try not to bump into people right next to you (Separation). You generally try to move in the same direction as the people around you to get to the exit (Alignment). And you try to stay with your friends or the main body of the crowd (Cohesion). No one is telling you exactly where to step, but the collective movement of the crowd emerges from everyone following these simple instincts.
+                </p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Boid Algorithm</h2>
+                <p>The logic for each boid at each frame of the simulation is a straightforward application of vector mathematics.</p>
+
+                <h4>For each Boid, at each time step:</h4>
+                <ol>
+                    <li><strong>Find Neighbors:</strong> First, create a list of all other boids that are within the <code>perceptionRadius</code>.</li>
+                    <li><strong>Calculate Steering Forces:</strong>
+                        <ul>
+                            <li><strong>Separation Vector:</strong> Iterate through neighbors. If a neighbor is closer than a desired separation distance, calculate a vector pointing away from it. Add all such vectors together.
+                            <br><code>separation_force = Σ (my_position - neighbor_position)</code></li>
+                            <li><strong>Alignment Vector:</strong> Find the average velocity of all neighbors. Steer towards that vector.
+                            <br><code>alignment_force = average_neighbor_velocity - my_velocity</code></li>
+                            <li><strong>Cohesion Vector:</strong> Find the average position (center of mass) of all neighbors. Steer towards that position.
+                            <br><code>cohesion_force = average_neighbor_position - my_position</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>Apply Forces:</strong> Add the three calculated forces together, each multiplied by its weight from the sliders. This gives a final acceleration vector.
+                    <br><code>acceleration = (separation_force * w_sep) + (alignment_force * w_align) + (cohesion_force * w_cohesion)</code></li>
+                    <li><strong>Update Motion (Physics Integration):</strong>
+                        <br><code>velocity = velocity + acceleration</code>
+                        <br><em>Limit velocity to <code>maxSpeed</code>.</em>
+                        <br><code>position = position + velocity</code>
+                    </li>
+                    <li><strong>Handle Edges:</strong> If a boid goes off-screen, make it wrap around to the opposite side.</li>
+                </ol>
+                <p>This entire process is repeated for every boid in the flock, for every frame of the animation, creating the continuous, fluid motion.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class Boid {
+    constructor(x, y) {
+        this.position = { x, y };
+        this.velocity = { x: Math.random() * 2 - 1, y: Math.random() * 2 - 1 };
+        this.acceleration = { x: 0, y: 0 };
+    }
+
+    update(boids, params, canvas) {
+        this.flock(boids, params);
+
+        this.velocity.x += this.acceleration.x;
+        this.velocity.y += this.acceleration.y;
+
+        // Limit speed
+        const speed = Math.sqrt(this.velocity.x**2 + this.velocity.y**2);
+        if (speed > params.maxSpeed) {
+            this.velocity.x = (this.velocity.x / speed) * params.maxSpeed;
+            this.velocity.y = (this.velocity.y / speed) * params.maxSpeed;
+        }
+
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
+
+        this.acceleration.x = 0;
+        this.acceleration.y = 0;
+
+        this.edges(canvas);
+    }
+
+    applyForce(force) {
+        this.acceleration.x += force.x;
+        this.acceleration.y += force.y;
+    }
+
+    flock(boids, params) {
+        let separation = { x: 0, y: 0 };
+        let alignment = { x: 0, y: 0 };
+        let cohesion = { x: 0, y: 0 };
+        let count = 0;
+
+        for (let other of boids) {
+            const d = Math.sqrt((this.position.x - other.position.x)**2 + (this.position.y - other.position.y)**2);
+            if (other !== this && d < params.perceptionRadius) {
+                // Separation
+                if (d < params.perceptionRadius / 2) { // Desired separation
+                    let diff = { x: this.position.x - other.position.x, y: this.position.y - other.position.y };
+                    diff.x /= d; // Normalize
+                    diff.y /= d;
+                    separation.x += diff.x;
+                    separation.y += diff.y;
+                }
+
+                // Alignment
+                alignment.x += other.velocity.x;
+                alignment.y += other.velocity.y;
+
+                // Cohesion
+                cohesion.x += other.position.x;
+                cohesion.y += other.position.y;
+
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            alignment.x /= count;
+            alignment.y /= count;
+            const alignMag = Math.sqrt(alignment.x**2 + alignment.y**2);
+            if(alignMag > 0) {
+                alignment.x = (alignment.x / alignMag) * params.maxSpeed - this.velocity.x;
+                alignment.y = (alignment.y / alignMag) * params.maxSpeed - this.velocity.y;
+            }
+
+
+            cohesion.x /= count;
+            cohesion.y /= count;
+            cohesion.x -= this.position.x;
+            cohesion.y -= this.position.y;
+            const cohMag = Math.sqrt(cohesion.x**2 + cohesion.y**2);
+             if(cohMag > 0) {
+                cohesion.x = (cohesion.x / cohMag) * params.maxSpeed - this.velocity.x;
+                cohesion.y = (cohesion.y / cohMag) * params.maxSpeed - this.velocity.y;
+            }
+        }
+
+        separation.x *= params.separationForce;
+        separation.y *= params.separationForce;
+        alignment.x *= params.alignmentForce;
+        alignment.y *= params.alignmentForce;
+        cohesion.x *= params.cohesionForce;
+        cohesion.y *= params.cohesionForce;
+
+        this.applyForce(separation);
+        this.applyForce(alignment);
+        this.applyForce(cohesion);
+    }
+
+    edges(canvas) {
+        if (this.position.x > canvas.width) this.position.x = 0;
+        else if (this.position.x < 0) this.position.x = canvas.width;
+        if (this.position.y > canvas.height) this.position.y = 0;
+        else if (this.position.y < 0) this.position.y = canvas.height;
+    }
+
+    draw(ctx) {
+        const angle = Math.atan2(this.velocity.y, this.velocity.x);
+        ctx.save();
+        ctx.translate(this.position.x, this.position.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--boid-color') || '#ffeb3b';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-5, -5);
+        ctx.lineTo(-5, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class BoidsSim {
+    constructor() {
+        this.canvas = document.getElementById('boids-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            boidCount: 150,
+            separationForce: 1.5,
+            alignmentForce: 1.0,
+            cohesionForce: 1.0,
+            perceptionRadius: 50,
+            maxSpeed: 4,
+        };
+
+        this.boids = [];
+        this.animationFrameId = null;
+
+        this.initControls();
+        this.resizeCanvas();
+        this.reset();
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    resizeCanvas() {
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper.clientWidth;
+        this.canvas.height = wrapper.clientHeight;
+    }
+
+    initControls() {
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+
+        const sliders = {
+            'boid-count': 'boidCount', 'separation': 'separationForce', 'alignment': 'alignmentForce',
+            'cohesion': 'cohesionForce', 'perception': 'perceptionRadius', 'max-speed': 'maxSpeed'
+        };
+
+        for (const [sliderId, paramName] of Object.entries(sliders)) {
+            const slider = document.getElementById(`${sliderId}-slider`);
+            slider.addEventListener('input', e => {
+                this.params[paramName] = parseFloat(e.target.value);
+                document.getElementById(`${sliderId}-output`).textContent = this.params[paramName].toFixed(1);
+                if (sliderId !== 'boid-count') return; // Don't reset for every small change unless it's the count
+                this.reset();
+            });
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+    }
+
+    reset() {
+        this.boids = [];
+        for (let i = 0; i < this.params.boidCount; i++) {
+            this.boids.push(new Boid(Math.random() * this.canvas.width, Math.random() * this.canvas.height));
+        }
+        if (!this.animationFrameId) this.loop();
+    }
+
+    loop() {
+        this.ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--canvas-bg') || 'rgba(0,0,0,0.2)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        for (let boid of this.boids) {
+            boid.update(this.boids, this.params, this.canvas);
+            boid.draw(this.ctx);
+        }
+
+        this.animationFrameId = requestAnimationFrame(() => this.loop());
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new BoidsSim();
+});
+</script>
+</body>
+</html>

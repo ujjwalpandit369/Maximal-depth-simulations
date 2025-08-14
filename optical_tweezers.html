@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optical Tweezers: Unfolding a Single Protein</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #8c43ff; /* Violet for laser */
+            --secondary-color: #6c757d;
+            --accent-color: #007bff;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #f1f3f5;
+        }
+        [data-theme="dark"] {
+            --bg-color: #161b22;
+            --text-color: #c9d1d9;
+            --primary-color: #a26eff;
+            --secondary-color: #8b949e;
+            --accent-color: #58a6ff;
+            --border-color: #30363d;
+            --canvas-bg: #0d1117;
+            --control-bg: #21262d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        canvas { display: block; width: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #30363d; color: #c9d1d9; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Optical Tweezers: Unfolding a Single Protein</h1>
+            <p class="subtitle">A simulation of a single-molecule force spectroscopy experiment.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    How strong is a single protein molecule? To find out, scientists use a remarkable tool called optical tweezers—a highly focused laser beam that can grab and hold a microscopic bead. In this simulated experiment, we tether a single protein molecule between two such beads. One bead is held by the optical tweezers, which acts like an incredibly sensitive spring, while the other is moved by a mechanical arm. By pulling the beads apart, we stretch the protein. We can measure the minuscule forces involved by tracking the tiny displacement of the bead in the laser trap. As we pull, we can plot a force-versus-extension curve and watch as the protein dramatically "unfolds," revealing the forces that hold its complex structure together, one "rip" at a time.
+                </p>
+            </section>
+
+            <div class="controls-column">
+                <h3>Controls</h3>
+                <div class="button-group">
+                    <button id="start-btn">Start Pulling</button>
+                    <button id="reset-btn">Reset Experiment</button>
+                </div>
+                <div class="control-group">
+                    <label for="speed-slider">Pulling Speed: <output id="speed-output">20</output> nm/s</label>
+                    <input type="range" id="speed-slider" min="5" max="100" step="5" value="20" style="width:100%;">
+                </div>
+                 <div class="control-group">
+                    <label for="stiffness-slider">Trap Stiffness (k): <output id="stiffness-output">0.1</output> pN/nm</label>
+                    <input type="range" id="stiffness-slider" min="0.05" max="0.5" step="0.01" value="0.1" style="width:100%;">
+                </div>
+                <hr>
+                <h3>Presets</h3>
+                <div class="button-group">
+                    <button id="preset-sturdy">Sturdy Protein</button>
+                    <button id="preset-flexible">Flexible Protein</button>
+                </div>
+                <hr>
+                <button id="theme-toggle">Toggle Dark Mode</button>
+            </div>
+
+            <div class="simulation-container">
+                <div class="canvas-wrapper">
+                    <div class="canvas-title">Experimental Setup</div>
+                    <canvas id="exp-canvas" width="550" height="300"></canvas>
+                </div>
+                <div class="canvas-wrapper">
+                    <div class="canvas-title">Force-Extension Curve</div>
+                    <canvas id="plot-canvas" width="550" height="300"></canvas>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — Pulling on Molecules</h2>
+                <p>Let's break down this amazing experiment step-by-step.</p>
+
+                <h4>Step 1: The Building Blocks</h4>
+                <p>
+                    <ul>
+                        <li><strong>Protein:</strong> A protein is like a long string of beads (amino acids) that has folded up into a specific, compact 3D shape. This shape is held together by weak bonds. Our protein model has several of these folded sections, called "domains."</li>
+                        <li><strong>Beads:</strong> We use two microscopic polystyrene beads as "handles" to grab the protein.</li>
+                        <li><strong>Optical Tweezers:</strong> This is the star of the show. A very intense, focused laser beam can create a tiny spot where a bead can be trapped. The bead is pulled towards the center of the beam. Crucially, if something pulls the bead away from the center, the laser pulls it back, acting exactly like a spring.</li>
+                    </ul>
+                </p>
+
+                <h4>Step 2: The Setup</h4>
+                <p>In the "Experimental Setup" canvas, you see the scene. A protein molecule is chemically attached between two beads.
+                    The left bead is held still (e.g., by a glass micropipette, not shown).
+                    The right bead is sitting inside the optical tweezers, represented by the purple potential well. The center of this trap is fixed in space.
+                </p>
+
+                <h4>Step 3: Pulling and Measuring Force</h4>
+                <p>When you click "Start Pulling," the left bead is slowly moved to the left. This pulls on the protein, which in turn pulls on the right bead. As the protein stretches, it exerts a force on the right bead, dragging it away from the center of the laser trap.
+                <br>
+                This is how we measure the force. The laser trap has a known "stiffness" (k). By measuring the bead's displacement (Δx) from the trap center, we can calculate the force using Hooke's Law: <strong>Force = k * Δx</strong>. A bigger displacement means a larger force.
+                </p>
+
+                <h4>Step 4: The Force-Extension Curve</h4>
+                <p>The "Force-Extension Curve" plot shows our results in real-time. The horizontal axis is the distance between the two beads (the "extension"). The vertical axis is the force we just calculated. As we pull, we trace a line on this graph.</p>
+
+                <h4>Step 5: The "Rip" - Unfolding a Domain</h4>
+                <p>Initially, as we stretch the folded protein, the force rises gently. But when the force reaches a certain critical value, it's enough to break the weak bonds holding one of the protein's domains together. The domain suddenly unravels, becoming a floppy chain.
+                <br>
+                This unfolding event has a dramatic effect, visible in both canvases:
+                <ul>
+                    <li><strong>In the experiment:</strong> The protein suddenly gets much longer. This releases the tension, and the right bead snaps back towards the center of the trap.</li>
+                    <li><strong>On the plot:</strong> The force suddenly drops, while the extension rapidly increases. This creates a characteristic "saw-tooth" or "rip" in the curve.</li>
+                </ul>
+                As we continue to pull, the tension builds up again on the now-longer chain until the next domain unfolds, creating another rip. By counting the rips, we can learn how many domains a protein has and how much force it takes to unfold each one.
+                </p>
+                <p><strong>Everyday Analogy: Pulling a Knotted Rope.</strong> Imagine pulling on a rope that has several slipknots in it. At first, you stretch the rope itself, and the tension builds. When the tension is high enough, one knot suddenly gives way and the rope lengthens, causing the tension to drop. You pull again, the tension builds, and the next knot unravels. The protein domains are like these knots.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Physics of a Polymer Chain</h2>
+                <p>The shape of the force-extension curve is described by well-established models of polymer physics.</p>
+
+                <h4>1. The Optical Trap as a Spring</h4>
+                <p>The restoring force of the optical tweezers is linear for small displacements, just like a simple spring. The force `F` is given by Hooke's Law:</p>
+                <p><code>F = k_trap * Δx</code></p>
+                <p>Where `k_trap` is the trap stiffness (a parameter you can control) and `Δx` is the displacement of the bead from the trap's center. This is how the simulation calculates the force shown on the y-axis of the plot.</p>
+
+                <h4>2. Elasticity of an Unfolded Chain: The Worm-Like Chain (WLC) Model</h4>
+                <p>A floppy, unfolded protein chain doesn't behave like a simple spring. Its elasticity is described by the Worm-Like Chain (WLC) model. This model predicts the force `F` required to stretch a polymer to a certain end-to-end distance `x`.</p>
+                <p><code>F(x) = (k_B * T / L_p) * [ 1 / (4 * (1 - x/L_c)²) - 1/4 + x/L_c ]</code></p>
+                <p><strong>Plain English Translation:</strong>
+                <ul>
+                    <li><code>k_B * T</code>: The thermal energy (Boltzmann constant times temperature), which represents the random jiggling that tries to keep the chain coiled up.</li>
+                    <li><code>L_p</code>: The <strong>persistence length</strong>. A measure of the chain's stiffness. It's the length scale over which the chain is "straight" before bending due to thermal motion. A higher `L_p` means a stiffer chain.</li>
+                    <li><code>L_c</code>: The <strong>contour length</strong>. The total length of the polymer if it were stretched out completely straight.</li>
+                </ul>
+                The key part is the `(1 - x/L_c)²` term in the denominator. As the extension `x` gets very close to the full contour length `L_c`, this term approaches zero, causing the force to shoot up towards infinity. This correctly models the fact that it becomes very difficult to fully straighten out a polymer chain. This equation governs the shape of the curves between the "rips."
+                </p>
+
+                <h4>3. The Unfolding Condition</h4>
+                <p>The simulation checks a simple condition at each step. Each folded domain has a characteristic unfolding force, `F_unfold`.</p>
+                <p><code>If (F_current > F_unfold) then: Unfold Domain</code></p>
+                <p>When a domain unfolds, its own contour length is added to the total contour length `L_c` of the unfolded part of the protein. This makes the molecule "longer," causing the force to drop and starting a new WLC curve on the plot.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class OpticalTweezersSim {
+    constructor() {
+        this.expCanvas = document.getElementById('exp-canvas');
+        this.expCtx = this.expCanvas.getContext('2d');
+        this.plotCanvas = document.getElementById('plot-canvas');
+        this.plotCtx = this.plotCanvas.getContext('2d');
+
+        this.params = {
+            pullingSpeed: 20, // nm/s
+            trapStiffness: 0.1, // pN/nm
+            protein: {
+                domains: 3,
+                unfoldingForces: [20, 22, 18], // pN
+                contourLengthPerDomain: 25, // nm
+                persistenceLength: 0.8, // nm
+                foldedSize: 5, // nm
+            },
+            k_BT: 4.11, // pN * nm, at room temp
+        };
+
+        this.state = {
+            isRunning: false,
+            animationFrameId: null,
+            leftBeadPos: 100, // nm, start position
+            trapCenter: 450, // nm
+            trapBeadPos: 450, // nm
+            unfoldedDomains: 0,
+            force: 0,
+            extension: 0,
+            plotData: []
+        };
+
+        this.initControls();
+        this.reset();
+    }
+
+    initControls() {
+        document.getElementById('start-btn').addEventListener('click', () => this.start());
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+
+        document.getElementById('speed-slider').addEventListener('input', e => {
+            this.params.pullingSpeed = parseFloat(e.target.value);
+            document.getElementById('speed-output').textContent = this.params.pullingSpeed;
+        });
+        document.getElementById('stiffness-slider').addEventListener('input', e => {
+            this.params.trapStiffness = parseFloat(e.target.value);
+            document.getElementById('stiffness-output').textContent = this.params.trapStiffness.toFixed(2);
+        });
+
+        document.getElementById('preset-sturdy').addEventListener('click', () => {
+            this.params.protein.unfoldingForces = [25, 28, 23];
+            this.reset();
+        });
+        document.getElementById('preset-flexible').addEventListener('click', () => {
+            this.params.protein.unfoldingForces = [12, 15, 10];
+            this.reset();
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+             this.draw();
+        });
+    }
+
+    start() {
+        if (this.state.isRunning) return;
+        if (this.state.leftBeadPos <= 5) this.reset(); // Reset if already finished
+        this.state.isRunning = true;
+        this.loop();
+    }
+
+    stop() {
+        this.state.isRunning = false;
+        if (this.state.animationFrameId) {
+            cancelAnimationFrame(this.state.animationFrameId);
+        }
+    }
+
+    reset() {
+        this.stop();
+        const p = this.params.protein;
+        const initialExtension = (p.domains - 0) * p.foldedSize;
+
+        this.state = {
+            ...this.state,
+            isRunning: false,
+            leftBeadPos: this.state.trapCenter - initialExtension - 100,
+            trapBeadPos: this.state.trapCenter,
+            unfoldedDomains: 0,
+            force: 0,
+            extension: initialExtension,
+            plotData: []
+        };
+        this.draw();
+    }
+
+    loop() {
+        this.update();
+        this.draw();
+
+        if (this.state.isRunning) {
+            this.state.animationFrameId = requestAnimationFrame(() => this.loop());
+        }
+    }
+
+    // WLC model inverted to get extension from force
+    wlcExtension(force, Lc, Lp) {
+        if (force < 0.01) return 0;
+        const f_factor = force * Lp / this.params.k_BT;
+        // Approximation for high forces
+        let ext = Lc * (1 - 0.5 * Math.pow(f_factor, -0.5));
+        return Math.max(0, ext);
+    }
+
+    wlcForce(extension, Lc, Lp) {
+        if (extension >= Lc) return 100; // Effectively infinite force
+        if (extension <= 0) return 0;
+        const x_L = extension / Lc;
+        const force = (this.params.k_BT / Lp) * (0.25 / Math.pow(1 - x_L, 2) - 0.25 + x_L);
+        return force;
+    }
+
+    update() {
+        if (!this.state.isRunning) return;
+
+        // Move the left bead
+        this.state.leftBeadPos -= this.params.pullingSpeed * 0.016; // dt ~ 16ms
+
+        // System state: D = (trap_center - left_bead_pos) = x_protein + x_trap
+        // F = k*x_trap = F_wlc(x_protein)
+        const D = this.state.trapCenter - this.state.leftBeadPos;
+
+        // Iteratively solve for force, since we have F on both sides of the equation
+        // F = k * (D - x_protein(F))
+        let currentForce = this.state.force;
+        for(let i=0; i<5; i++) { // 5 iterations is enough to converge
+            const unfoldedLc = this.state.unfoldedDomains * this.params.protein.contourLengthPerDomain;
+            const foldedLength = (this.params.protein.domains - this.state.unfoldedDomains) * this.params.protein.foldedSize;
+
+            const wlc_ext = this.wlcExtension(currentForce, unfoldedLc, this.params.protein.persistenceLength);
+            const protein_ext = wlc_ext + foldedLength;
+
+            const trap_ext = currentForce / this.params.trapStiffness;
+
+            const F_target = this.params.trapStiffness * (D - protein_ext);
+            currentForce = currentForce * 0.5 + F_target * 0.5; // Converge smoothly
+        }
+        this.state.force = Math.max(0, currentForce);
+
+        // Check for unfolding
+        if (this.state.unfoldedDomains < this.params.protein.domains) {
+            const nextUnfoldingForce = this.params.protein.unfoldingForces[this.state.unfoldedDomains];
+            if (this.state.force > nextUnfoldingForce) {
+                this.state.unfoldedDomains++;
+                // Force will drop naturally in the next iteration due to increased contour length
+            }
+        }
+
+        const unfoldedLc = this.state.unfoldedDomains * this.params.protein.contourLengthPerDomain;
+        const foldedLength = (this.params.protein.domains - this.state.unfoldedDomains) * this.params.protein.foldedSize;
+        const wlc_ext = this.wlcExtension(this.state.force, unfoldedLc, this.params.protein.persistenceLength);
+        this.state.extension = wlc_ext + foldedLength;
+        this.state.trapBeadPos = this.state.trapCenter - this.state.force / this.params.trapStiffness;
+
+        this.state.plotData.push({ x: this.state.extension, y: this.state.force });
+
+        if (this.state.leftBeadPos < 5) {
+            this.stop();
+        }
+    }
+
+    draw() {
+        this.drawExperiment();
+        this.drawPlot();
+    }
+
+    drawExperiment() {
+        const ctx = this.expCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const y_center = h / 2;
+
+        const bgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw trap potential well
+        const trap_x = this.state.trapCenter;
+        const grad = ctx.createRadialGradient(trap_x, y_center, 5, trap_x, y_center, 50);
+        grad.addColorStop(0, 'rgba(162, 110, 255, 0.5)');
+        grad.addColorStop(1, 'rgba(162, 110, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(trap_x - 50, y_center - 50, 100, 100);
+
+        // Draw beads
+        const beadRadius = 10;
+        ctx.fillStyle = '#d9534f'; // Red bead
+        ctx.beginPath();
+        ctx.arc(this.state.leftBeadPos, y_center, beadRadius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#5bc0de'; // Blue bead
+        ctx.beginPath();
+        ctx.arc(this.state.trapBeadPos, y_center, beadRadius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw protein
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.state.leftBeadPos + beadRadius, y_center);
+
+        const numFolded = this.params.protein.domains - this.state.unfoldedDomains;
+        const unfoldedLength = this.state.trapBeadPos - beadRadius - (this.state.leftBeadPos + beadRadius) - numFolded * this.params.protein.foldedSize;
+        let current_x = this.state.leftBeadPos + beadRadius;
+
+        // Draw unfolded part
+        ctx.lineTo(current_x + unfoldedLength, y_center);
+        current_x += unfoldedLength;
+
+        // Draw folded domains
+        for (let i = 0; i < numFolded; i++) {
+            ctx.ellipse(current_x + this.params.protein.foldedSize / 2, y_center,
+                        this.params.protein.foldedSize / 2, this.params.protein.foldedSize, 0, 0, 2 * Math.PI);
+            current_x += this.params.protein.foldedSize;
+        }
+        ctx.stroke();
+
+        // Draw force vector
+        const force_x = this.state.trapBeadPos;
+        const force_len = this.state.force * 2; // scale for visibility
+        ctx.strokeStyle = '#f0ad4e';
+        ctx.beginPath();
+        ctx.moveTo(force_x, y_center);
+        ctx.lineTo(force_x + force_len, y_center);
+        ctx.lineTo(force_x + force_len - 5, y_center - 3);
+        ctx.moveTo(force_x + force_len, y_center);
+        ctx.lineTo(force_x + force_len - 5, y_center + 3);
+        ctx.stroke();
+    }
+
+    drawPlot() {
+        const ctx = this.plotCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        const bgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+
+        const max_ext = this.params.protein.domains * this.params.protein.contourLengthPerDomain + 50;
+        const max_force = Math.max(...this.params.protein.unfoldingForces) + 10;
+
+        // Draw axes
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--secondary-color').trim();
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(40, 10);
+        ctx.lineTo(40, h - 20);
+        ctx.lineTo(w - 10, h - 20);
+        ctx.stroke();
+        ctx.fillText("Force (pN)", 5, 20);
+        ctx.fillText("Extension (nm)", w/2 - 20, h - 5);
+
+        // Draw ticks
+        for(let f=0; f<=max_force; f+=10) {
+            const y = h - 20 - (f/max_force) * (h - 30);
+            ctx.fillText(f, 15, y+3);
+            ctx.beginPath(); ctx.moveTo(35, y); ctx.lineTo(40, y); ctx.stroke();
+        }
+        for(let e=0; e<=max_ext; e+=50) {
+            const x = 40 + (e/max_ext) * (w - 50);
+            ctx.fillText(e, x-5, h-5);
+            ctx.beginPath(); ctx.moveTo(x, h-20); ctx.lineTo(x, h-25); ctx.stroke();
+        }
+
+        // Draw data
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        this.state.plotData.forEach((p, i) => {
+            const x = 40 + (p.x / max_ext) * (w - 50);
+            const y = h - 20 - (p.y / max_force) * (h - 30);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new OpticalTweezersSim();
+});
+</script>
+</body>
+</html>

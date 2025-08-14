@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Glacial Rebound Simulation</title>
+    <style>
+        :root {
+            --bg-color: #fefefe;
+            --text-color: #333;
+            --primary-color: #2a7a9a;
+            --secondary-color: #5f9ea0;
+            --border-color: #ccc;
+            --canvas-bg: #f0f8ff;
+            --control-bg: #e6f2f2;
+            --mantle-color: #ff8c00;
+            --crust-color: #8b4513;
+            --ice-color: #cceeff;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #4ac3d1;
+            --secondary-color: #7ab8b8;
+            --border-color: #555;
+            --canvas-bg: #0d1b2a;
+            --control-bg: #2c3e50;
+            --mantle-color: #e67e22;
+            --crust-color: #a0522d;
+            --ice-color: #a0d8ef;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        canvas { display: block; width: 100%; background: var(--canvas-bg); border-radius: 4px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--control-bg); }
+        code { background-color: #eee; padding: 2px 4px; border-radius: 3px; font-family: "Courier New", Courier, monospace; color: #333; }
+        [data-theme="dark"] code { background-color: #444; color: #f0f0f0; }
+        .info-box { padding: 10px; background-color: var(--control-bg); border-radius: 5px; margin-top: 10px; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Post-Glacial Rebound Simulation</h1>
+            <p class="subtitle">Visualizing the slow uplift of the Earth's crust after an ice age.</p>
+        </header>
+
+        <main>
+            <section>
+                <h2>One-Paragraph Overview</h2>
+                <p>
+                    During an ice age, the immense weight of continental ice sheets, some several kilometers thick, literally pushes the Earth's rigid crust down into the hotter, slowly flowing upper mantle beneath it. When the climate warms and the ice melts away, this colossal weight is lifted. However, the crust doesn't just snap back into place. Instead, the viscous mantle material slowly flows back in underneath, pushing the crust gradually upwards over thousands of years. This process, known as <strong>post-glacial rebound</strong> or isostatic adjustment, is like a continent-sized block of wood slowly floating back up in extremely thick honey. It's still happening today in places like Canada and Scandinavia, which were covered by ice 20,000 years ago.
+                </p>
+            </section>
+
+            <div class="simulation-container">
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="start-btn">Melt Glacier & Start Rebound</button>
+                        <button id="reset-btn">Reset to Ice Age</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="viscosity-slider">Mantle Viscosity: <output id="viscosity-output">1.0e+21</output> Pa·s</label>
+                        <input type="range" id="viscosity-slider" min="20" max="22" step="0.1" value="21" style="width:100%;">
+                        <small>Controls how "thick" or resistant to flow the mantle is. Higher viscosity means slower rebound.</small>
+                    </div>
+                     <div class="control-group">
+                        <label for="ice-slider">Ice Sheet Thickness: <output id="ice-output">3.0</output> km</label>
+                        <input type="range" id="ice-slider" min="1" max="5" step="0.1" value="3.0" style="width:100%;">
+                        <small>The thickness of the ice sheet during the glacial maximum.</small>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Time Since Melt:</strong> <span id="time-display">0</span> years</p>
+                        <p><strong>Max Uplift:</strong> <span id="uplift-display">0</span> m</p>
+                        <p><strong>Rebound Status:</strong> <span id="status-display">Idle</span></p>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+                <div class="main-content" style="display: grid; grid-template-rows: auto auto; gap: 20px;">
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Crust & Mantle Cross-Section</div>
+                        <canvas id="rebound-canvas" width="750" height="300"></canvas>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div class="canvas-title">Uplift vs. Time</div>
+                        <canvas id="plot-canvas" width="750" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — A Slow-Motion Uplift</h2>
+
+                <h4>Step 1: The Earth's Layers</h4>
+                <p>For this simulation, we care about two of Earth's layers:
+                    <ul>
+                        <li>The <strong>Lithosphere (Crust)</strong>: The rigid, solid outer shell. In the simulation, this is the brown layer.</li>
+                        <li>The <strong>Asthenosphere (Upper Mantle)</strong>: A layer of solid rock that is so hot and under so much pressure that it behaves like an extremely thick fluid over long timescales. It can flow, but incredibly slowly. This is the orange layer.</li>
+                    </ul>
+                The crust essentially "floats" on the mantle.
+                </p>
+
+                <h4>Step 2: The Weight of the Ice</h4>
+                <p>During an ice age, a huge ice sheet builds up. You can set its thickness with the slider. This isn't just a frozen lake; it's a mountain of ice kilometers thick, weighing trillions of tons. When you click "Reset to Ice Age," you see the result: this immense weight has pushed the crust down into the mantle. The mantle fluid has been squeezed out from underneath.</p>
+
+                <h4>Step 3: Melting the Glacier</h4>
+                <p>When you click "Melt Glacier & Start Rebound," the ice disappears relatively quickly (over a few hundred to a couple of thousand years in reality). The weight is now gone, but the crust is still depressed, like a dent in a memory foam mattress after someone gets up.</p>
+
+                <h4>Step 4: The Rebound</h4>
+                <p>Now the main event begins. The system is out of balance. The higher-pressure mantle surrounding the dent slowly flows back in underneath the depressed crust, pushing it upwards. This is the post-glacial rebound.
+                <br>
+                The speed of this process is controlled by the <strong>Mantle Viscosity</strong>.
+                <ul>
+                    <li><strong>Low Viscosity:</strong> If the mantle were like water (very low viscosity), the crust would pop back up almost instantly.</li>
+                    <li><strong>High Viscosity:</strong> Because the mantle is like ultra-thick honey (very high viscosity), it takes a very long time for it to flow back. In the simulation, increasing the viscosity makes the rebound process much slower, as you can see in the "Uplift vs. Time" plot.</li>
+                </ul>
+                The simulation shows thousands of years passing by in seconds, allowing you to watch this geological process unfold.
+                </p>
+
+                <p><strong>Everyday Analogy: A Block of Wood in Honey.</strong> Imagine floating a block of wood in a tub of honey. Now, place a heavy weight on the wood. It will sink down, pushing the honey aside. If you then remove the weight, the wood doesn't instantly pop back to the surface. The thick honey has to slowly flow back underneath it. The wood block is the crust, the weight is the ice sheet, and the honey is the mantle. The "viscosity" of the honey determines how long this rebound takes.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Physics of Isostasy</h2>
+
+                <h4>1. Isostatic Equilibrium and Depression</h4>
+                <p>The core principle is <strong>isostasy</strong>, which states that the crust floats on the mantle at an elevation that depends on its thickness and density. When a load (like an ice sheet) is added, it must be supported by the buoyant force of the displaced mantle. The maximum depression `D₀` can be estimated by balancing the weight of the ice with the weight of the displaced mantle:</p>
+                <p><code>D₀ = (ρ_ice / ρ_mantle) * H_ice</code></p>
+                <p>Where `ρ_ice` is the density of ice (~917 kg/m³), `ρ_mantle` is the density of the mantle (~3300 kg/m³), and `H_ice` is the thickness of the ice sheet. For a 3 km (3000 m) ice sheet, this gives a depression of `D₀ ≈ (917 / 3300) * 3000 m ≈ 830 m`.</p>
+
+                <h4>2. Exponential Rebound Model</h4>
+                <p>The rebound process is not linear; it's fastest at the beginning and slows down as it approaches equilibrium. This is well-described by an exponential decay model. The remaining depression `D(t)` at a time `t` after the ice has melted is:</p>
+                <p><code>D(t) = D₀ * exp(-t / τ)</code></p>
+                <p>The uplift `U(t)` is simply the amount of depression that has been recovered: `U(t) = D₀ - D(t)`.</p>
+
+                <h4>3. The Relaxation Time (τ)</h4>
+                <p>The key parameter `τ` (tau) is the relaxation time, which tells us how long the process takes. It's the time required for the depression to be reduced to `1/e` (about 37%) of its initial value. Crucially, this relaxation time is directly proportional to the mantle's viscosity `η`.</p>
+                <p><code>τ ≈ (4 * π * η) / (ρ_mantle * g * λ)</code></p>
+                <p><strong>Plain English Translation:</strong>
+                <ul>
+                    <li>The rebound time `τ` gets <strong>longer</strong> if the mantle viscosity `η` is <strong>higher</strong> (thicker mantle fluid).</li>
+                    <li>It gets <strong>shorter</strong> if gravity `g` or mantle density `ρ_mantle` are higher (stronger restoring forces).</li>
+                    <li>`λ` (lambda) is the wavelength of the depression, related to the width of the ice sheet. A wider depression takes longer to fill in.</li>
+                </ul>
+                This relationship is the heart of the simulation. When you change the viscosity slider, you are directly changing `τ`, which changes the shape of the uplift curve on the plot.
+                </p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class ReboundSim {
+    constructor() {
+        this.reboundCanvas = document.getElementById('rebound-canvas');
+        this.reboundCtx = this.reboundCanvas.getContext('2d');
+        this.plotCanvas = document.getElementById('plot-canvas');
+        this.plotCtx = this.plotCanvas.getContext('2d');
+
+        this.params = {
+            viscosity: 1e21, // Pa*s
+            iceThickness: 3000, // m
+            rho_ice: 917, // kg/m^3
+            rho_mantle: 3300, // kg/m^3
+            g: 9.81, // m/s^2
+            depression_width: 400000, // m
+        };
+
+        this.state = {
+            isRunning: false,
+            time: 0, // years
+            max_time: 20000, // years
+            initialDepression: 0,
+            currentUplift: 0,
+            plotData: [],
+            animationFrameId: null,
+            mode: 'ice_age', // 'ice_age', 'rebounding'
+        };
+
+        this.initControls();
+        this.reset();
+    }
+
+    initControls() {
+        document.getElementById('start-btn').addEventListener('click', () => this.start());
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+
+        document.getElementById('viscosity-slider').addEventListener('input', e => {
+            const exponent = parseFloat(e.target.value);
+            this.params.viscosity = Math.pow(10, exponent);
+            document.getElementById('viscosity-output').textContent = this.params.viscosity.toExponential(1);
+            if(this.state.mode === 'rebounding') this.recalculateAndRun();
+        });
+        document.getElementById('ice-slider').addEventListener('input', e => {
+            this.params.iceThickness = parseFloat(e.target.value) * 1000;
+            document.getElementById('ice-output').textContent = (this.params.iceThickness/1000).toFixed(1);
+            this.reset(); // Changing ice thickness requires a full reset
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+             this.draw();
+        });
+    }
+
+    start() {
+        if (this.state.mode === 'rebounding') return;
+        this.state.mode = 'rebounding';
+        this.recalculateAndRun();
+    }
+
+    recalculateAndRun() {
+        this.stop();
+        this.state.time = 0;
+        this.state.plotData = [];
+        this.state.isRunning = true;
+        this.loop();
+    }
+
+    reset() {
+        this.stop();
+        this.state.mode = 'ice_age';
+        this.state.time = 0;
+        this.state.currentUplift = 0;
+        this.state.plotData = [];
+        this.state.initialDepression = (this.params.rho_ice / this.params.rho_mantle) * this.params.iceThickness;
+        document.getElementById('status-display').textContent = 'Glacier present';
+        this.draw();
+    }
+
+    stop() {
+        this.state.isRunning = false;
+        if (this.state.animationFrameId) {
+            cancelAnimationFrame(this.state.animationFrameId);
+        }
+    }
+
+    loop() {
+        this.update();
+        this.draw();
+
+        if (this.state.isRunning) {
+            this.state.animationFrameId = requestAnimationFrame(() => this.loop());
+        } else {
+            document.getElementById('status-display').textContent = 'Finished';
+        }
+    }
+
+    update() {
+        if (!this.state.isRunning) return;
+
+        this.state.time += 50; // years per frame
+
+        // Relaxation time tau is proportional to viscosity
+        const tau_years = ( (4 * Math.PI * this.params.viscosity) /
+                            (this.params.rho_mantle * this.params.g * this.params.depression_width) ) / (365.25 * 24 * 3600);
+
+        const currentDepression = this.state.initialDepression * Math.exp(-this.state.time / tau_years);
+        this.state.currentUplift = this.state.initialDepression - currentDepression;
+
+        this.state.plotData.push({ t: this.state.time, u: this.state.currentUplift });
+
+        if (this.state.time >= this.state.max_time) {
+            this.stop();
+        }
+
+        // Update displays
+        document.getElementById('time-display').textContent = Math.round(this.state.time).toLocaleString();
+        document.getElementById('uplift-display').textContent = Math.round(this.state.currentUplift).toLocaleString();
+        document.getElementById('status-display').textContent = 'Rebounding...';
+    }
+
+    draw() {
+        this.drawRebound();
+        this.drawPlot();
+    }
+
+    getCrustShape(uplift) {
+        const w = this.reboundCanvas.width;
+        const h = this.reboundCanvas.height;
+        const depression_center_x = w / 2;
+        const depression_width_px = w * 0.6;
+
+        const max_depression_px = h * 0.2;
+        const current_depression_m = this.state.initialDepression - uplift;
+        const depression_px = (current_depression_m / this.state.initialDepression) * max_depression_px;
+
+        let points = [];
+        for (let x = 0; x <= w; x++) {
+            const dist_from_center = Math.abs(x - depression_center_x);
+            const depression_factor = Math.exp(-Math.pow(dist_from_center / (depression_width_px / 2), 2));
+            const y = h * 0.5 - depression_px * depression_factor;
+            points.push({x, y});
+        }
+        return points;
+    }
+
+    drawRebound() {
+        const ctx = this.reboundCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        const bgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+
+        const crust_points = this.getCrustShape(this.state.currentUplift);
+        const mantle_y_start = h * 0.5 + 50;
+
+        // Draw mantle
+        ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--mantle-color') || 'orange';
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        crust_points.forEach(p => ctx.lineTo(p.x, p.y + 50));
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw crust
+        ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--crust-color') || 'saddlebrown';
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        crust_points.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw ice sheet if in ice age mode
+        if (this.state.mode === 'ice_age') {
+            const ice_height_px = (this.params.iceThickness / 5000) * h * 0.3;
+            const ice_surface_points = this.getCrustShape(0); // Depression is max
+
+            ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--ice-color') || '#a0d8ef';
+            ctx.beginPath();
+            let first_y = 0;
+            ice_surface_points.forEach((p, i) => {
+                 const ice_profile = Math.sqrt(Math.max(0, 1 - Math.pow(p.x / w - 0.5, 2) * 4));
+                 const y = p.y - ice_height_px * ice_profile;
+                 if (i === 0) { ctx.moveTo(p.x, p.y); first_y = p.y; }
+                 ctx.lineTo(p.x, y);
+            });
+            ctx.lineTo(w, first_y);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    drawPlot() {
+        const ctx = this.plotCtx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        const bgColor = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, w, h);
+
+        const max_uplift = this.state.initialDepression;
+        const max_time = this.state.max_time;
+
+        // Draw axes
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.strokeStyle = textColor;
+        ctx.fillStyle = textColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(40, 10);
+        ctx.lineTo(40, h - 20);
+        ctx.lineTo(w - 10, h - 20);
+        ctx.stroke();
+        ctx.fillText("Uplift (m)", 0, 20);
+        ctx.fillText("Time (years)", w/2 - 30, h - 5);
+
+        // Draw ticks
+        for(let u=0; u<=max_uplift; u+=Math.round(max_uplift/4)) {
+            const y = h - 20 - (u/max_uplift) * (h - 30);
+            ctx.fillText(Math.round(u), 5, y+3);
+            ctx.beginPath(); ctx.moveTo(35, y); ctx.lineTo(40, y); ctx.stroke();
+        }
+        for(let t=0; t<=max_time; t+=5000) {
+            const x = 40 + (t/max_time) * (w - 50);
+            ctx.fillText(`${t/1000}k`, x-5, h-5);
+            ctx.beginPath(); ctx.moveTo(x, h-20); ctx.lineTo(x, h-25); ctx.stroke();
+        }
+
+        // Draw data
+        ctx.strokeStyle = getComputedStyle(document.body).style.getPropertyValue('--primary-color') || '#2a7a9a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        this.state.plotData.forEach((p, i) => {
+            const x = 40 + (p.t / max_time) * (w - 50);
+            const y = h - 20 - (p.u / max_uplift) * (h - 30);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new ReboundSim();
+});
+</script>
+</body>
+</html>
