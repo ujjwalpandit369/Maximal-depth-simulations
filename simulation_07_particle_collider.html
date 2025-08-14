@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Collider Event Reconstruction</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #343a40; /* Dark grey for detector */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+            --electron-color: #28a745;
+            --muon-color: #dc3545;
+            --hadron-color: #007bff;
+            --photon-color: #ffc107;
+        }
+        .dark-mode {
+            --bg-color: #121212;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #000;
+            --code-bg: #343a40;
+            --electron-color: #20c997;
+            --muon-color: #ff7b72;
+            --hadron-color: #58a6ff;
+            --photon-color: #ffca28;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 1 / 1; }
+        .button-bar { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; height: 50px; }
+        .legend { margin-top: 10px; padding: 10px; background: var(--code-bg); border-radius: 5px; }
+        .legend-item { display: inline-flex; align-items: center; margin: 5px 10px; }
+        .legend-color { width: 20px; height: 10px; margin-right: 5px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Particle Collider Event Reconstruction</h1>
+            <p class="subtitle">How to "see" the unseeable debris from a particle collision.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 160 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>At particle colliders like the Large Hadron Collider (LHC), scientists accelerate particles like protons to nearly the speed of light and smash them together. The immense energy of the collision creates a shower of new, often exotic particles. These particles are too small and live for too short a time to be seen directly. So how do we know they were there? This simulation shows a simplified cross-section of a giant particle detector. You'll see how different types of particles leave unique "signatures"—tracks, energy deposits, and other signals—in the detector's different layers, allowing physicists to reconstruct the event and identify the particles created.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — A Layered Onion Detector</h2>
+            <p>A modern particle detector is a marvel of engineering, essentially a giant, multi-layered digital camera that takes 3D pictures of particle collisions millions of times per second. Each layer is designed to do a specific job.</p>
+
+            <h3>The Collision and the Magnetic Field</h3>
+            <p>Two particles collide at the very center. The resulting debris flies out in all directions. The entire inner part of the detector is filled with a powerful magnetic field. This field doesn't affect neutral particles, but it causes the paths of charged particles to curve. By measuring the curvature of the track, physicists can determine the particle's momentum.</p>
+
+            <h3>The Signatures: A Field Guide to Particles</h3>
+            <p>Each type of particle interacts with the detector layers in a unique way, leaving a distinct signature.
+            <ul>
+                <li><strong style="color:var(--electron-color);">Electron (e⁻):</strong> Being charged, it leaves a curved track in the **Tracker**. Being light, it is easily stopped by the dense **Electromagnetic Calorimeter (ECAL)**, where it deposits all its energy in a compact shower.</li>
+                <li><strong style="color:var(--photon-color);">Photon (γ):</strong> Being neutral, it leaves **no track** in the Tracker. Like an electron, it is stopped by the **ECAL** and deposits its energy there.</li>
+                <li><strong style="color:var(--hadron-color);">Hadron (e.g., Proton, Pion):</strong> A hadron is a particle made of quarks (unlike electrons). It is charged, so it leaves a curved track in the **Tracker**. It typically passes through the ECAL, only depositing its energy in the much denser **Hadronic Calorimeter (HCAL)**.</li>
+                <li><strong style="color:var(--muon-color);">Muon (μ⁻):</strong> A muon is like a heavy, penetrating version of an electron. It is charged, so it leaves a track in the **Tracker**. But it's so penetrating that it flies through both the ECAL and HCAL with ease. It is the only common charged particle to make it to the outermost **Muon Chambers**.</li>
+                <li><strong>Neutrino (ν):</strong> A neutrino is neutral and interacts extremely weakly. It passes through the entire detector without leaving any signal at all. Its presence is inferred by finding "missing energy" or "missing momentum" in the event.</li>
+            </ul>
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="event-btn">Next Event</button>
+                    <button id="reveal-btn">Reveal Particles</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label>Collision Energy (GeV): <span id="energy-value">100</span></label>
+                    <input type="range" id="energy-slider" min="10" max="1000" step="10" value="100">
+                </div>
+                <div class="legend">
+                    <h4>Particle Signatures</h4>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--electron-color);"></div> Electron</div>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--muon-color);"></div> Muon</div>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--hadron-color);"></div> Hadron</div>
+                    <div class="legend-item"><div class="legend-color" style="background:var(--photon-color);"></div> Photon</div>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — Conservation of Momentum (Click to expand)</button>
+        <div class="content">
+            <h3>Missing Transverse Energy</h3>
+            <p>A fundamental principle in every particle collision is the conservation of momentum. The two particles that collide initially travel along the beam pipe. This means that before the collision, the total momentum in the "transverse" plane (the 2D plane of our detector view) is zero. Therefore, the vector sum of the transverse momenta of all the particles created in the collision must also be zero.</p>
+            <p><code>Σ p_T = 0</code></p>
+            <p>Physicists can measure the transverse momentum of every visible particle (electrons, muons, jets, etc.). They add up all these vectors. If the sum is not zero, the imbalance is called **Missing Transverse Energy (MET)**. This "missing" momentum is the signature of one or more invisible particles, like neutrinos, that must have been produced and escaped detection. The presence of significant MET is a key indicator for many important processes, including the production of W bosons and dark matter candidates.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let particles = [];
+    let showLabels = false;
+
+    const detectorLayers = [
+        { name: 'Tracker', r: 100, color: '#e9ecef', dark_color: '#495057' },
+        { name: 'ECAL', r: 150, color: '#d1e7dd', dark_color: '#345142' },
+        { name: 'HCAL', r: 220, color: '#cce5ff', dark_color: '#2a4365' },
+        { name: 'Muon', r: 280, color: '#f8d7da', dark_color: '#5a2c30' }
+    ];
+
+    const eventTypes = [
+        { name: 'Z -> e+e-', particles: [{type:'electron', q:-1}, {type:'electron', q:1}] },
+        { name: 'Z -> μ+μ-', particles: [{type:'muon', q:-1}, {type:'muon', q:1}] },
+        { name: 'Higgs -> γγ', particles: [{type:'photon', q:0}, {type:'photon', q:0}] },
+        { name: 'W -> eν', particles: [{type:'electron', q:-1}, {type:'neutrino', q:0}] },
+        { name: 'Jet Event', particles: [{type:'hadron', q:1}, {type:'hadron', q:-1}, {type:'hadron', q:1}, {type:'hadron', q:0}] },
+    ];
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        setupControls();
+        draw();
+    }
+
+    function nextEvent() {
+        showLabels = false;
+        particles = [];
+        const energy = parseFloat(document.getElementById('energy-slider').value);
+
+        // Pick a random event type
+        const event = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+
+        const numParticles = event.particles.length;
+        const angleStep = 2 * Math.PI / numParticles;
+
+        let totalPx = 0, totalPy = 0;
+
+        event.particles.forEach((p_info, i) => {
+            const p = {};
+            p.type = p_info.type;
+            p.q = p_info.q;
+            p.angle = Math.random() * 2 * Math.PI; // Random angle
+            p.pT = Math.random() * energy / 2 + energy / 4; // Transverse momentum
+
+            p.vx = Math.cos(p.angle) * p.pT;
+            p.vy = Math.sin(p.angle) * p.pT;
+            totalPx += p.vx;
+            totalPy += p.vy;
+
+            // Animation properties
+            p.x = canvas.width / 2;
+            p.y = canvas.height / 2;
+            p.path = [{x: p.x, y: p.y}];
+            p.stopped = false;
+            p.energyDeposits = [];
+
+            particles.push(p);
+        });
+
+        // Balance momentum if there's no neutrino
+        if (!particles.some(p => p.type === 'neutrino')) {
+            const px_per_p = totalPx / particles.length;
+            const py_per_p = totalPy / particles.length;
+            particles.forEach(p => {
+                p.vx -= px_per_p;
+                p.vy -= py_per_p;
+            });
+        }
+
+        gameLoop();
+    }
+
+    function gameLoop() {
+        let allStopped = true;
+        particles.forEach(p => {
+            if (!p.stopped) {
+                updateParticle(p);
+                allStopped = false;
+            }
+        });
+        draw();
+
+        if (!allStopped) {
+            requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function updateParticle(p) {
+        if (p.type === 'neutrino') { p.stopped = true; return; }
+
+        const B_FIELD = 5;
+        const radiusOfCurvature = p.pT / (Math.abs(p.q) * B_FIELD);
+
+        const speed = 10;
+        let dx = Math.cos(p.angle) * speed;
+        let dy = Math.sin(p.angle) * speed;
+
+        if (p.q !== 0) {
+            const dAngle = speed / radiusOfCurvature * Math.sign(p.q);
+            p.angle += dAngle;
+            dx = Math.cos(p.angle) * speed;
+            dy = Math.sin(p.angle) * speed;
+        }
+
+        p.x += dx;
+        p.y += dy;
+        p.path.push({x:p.x, y:p.y});
+
+        // Check for detector interactions
+        const r = Math.hypot(p.x - canvas.width/2, p.y - canvas.height/2);
+
+        if (p.type === 'electron' || p.type === 'photon') {
+            if (r > detectorLayers[1].r) { // ECAL
+                p.stopped = true;
+                p.energyDeposits.push({layer: 1, x: p.x, y: p.y, size: p.pT/5});
+            }
+        } else if (p.type === 'hadron') {
+            if (r > detectorLayers[1].r) p.energyDeposits.push({layer: 1, x: p.x, y: p.y, size: p.pT/20});
+            if (r > detectorLayers[2].r) { // HCAL
+                p.stopped = true;
+                p.energyDeposits.push({layer: 2, x: p.x, y: p.y, size: p.pT/5});
+            }
+        } else if (p.type === 'muon') {
+            if (r > detectorLayers[3].r) { // Muon Chamber
+                p.energyDeposits.push({layer: 3, x: p.x, y: p.y, size: 5});
+            }
+            if (r > detectorLayers[3].r + 20) p.stopped = true;
+        }
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw detector layers
+        detectorLayers.forEach(layer => {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = (isDark ? layer.dark_color : layer.color) + '40';
+            ctx.strokeStyle = (isDark ? layer.dark_color : layer.color);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, layer.r, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+            ctx.font = '12px Arial';
+            ctx.fillText(layer.name, cx + layer.r - 50, cy - 5);
+        });
+
+        // Draw particles and signatures
+        particles.forEach(p => {
+            const colorMap = {
+                electron: getComputedStyle(document.documentElement).getPropertyValue('--electron-color'),
+                muon: getComputedStyle(document.documentElement).getPropertyValue('--muon-color'),
+                hadron: getComputedStyle(document.documentElement).getPropertyValue('--hadron-color'),
+                photon: getComputedStyle(document.documentElement).getPropertyValue('--photon-color'),
+            };
+
+            // Draw track
+            if (p.q !== 0 && p.path.length > 1) {
+                ctx.strokeStyle = colorMap[p.type];
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(p.path[0].x, p.path[0].y);
+                p.path.forEach(pt => ctx.lineTo(pt.x, pt.y));
+                ctx.stroke();
+            }
+
+            // Draw energy deposits
+            p.energyDeposits.forEach(dep => {
+                ctx.fillStyle = colorMap[p.type];
+                ctx.fillRect(dep.x - dep.size/2, dep.y - dep.size/2, dep.size, dep.size);
+            });
+
+            // Draw labels if revealed
+            if (showLabels && p.type !== 'neutrino') {
+                const lastPos = p.path[p.path.length-1];
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(p.type, lastPos.x, lastPos.y);
+            }
+        });
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('event-btn').addEventListener('click', nextEvent);
+        document.getElementById('reveal-btn').addEventListener('click', () => { showLabels = true; draw(); });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); draw(); }
+
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        setupControls();
+        draw();
+    };
+    </script>
+</body>
+</html>
