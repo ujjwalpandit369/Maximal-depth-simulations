@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Strings & Gravitational Lensing</title>
+    <style>
+        :root {
+            --bg-color: #0c1445;
+            --text-color: #dbeafe;
+            --primary-color: #fde047;
+            --primary-hover: #facc15;
+            --secondary-color: #bfdbfe;
+            --border-color: #312e81;
+            --code-bg: #1e1b4b;
+            --controls-bg: #1e1b4b;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 0 1rem;
+        }
+
+        h1, h2, h3 {
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        h1 { font-size: 2.5rem; text-align: center; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 2.5rem;}
+
+        .simulation-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            max-width: 100%;
+            background-color: #000;
+            cursor: ew-resize;
+        }
+
+        .controls {
+            width: 350px;
+            flex-shrink: 0;
+            background-color: var(--controls-bg);
+            padding: 1rem;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 1100px) {
+            .simulation-area { flex-direction: column; }
+            .controls { width: 100%; max-width: 600px; margin: 0 auto; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cosmic Strings & Gravitational Lensing</h1>
+            <p class="subtitle">Visualizing the unique lensing signature of a hypothetical topological defect in spacetime.</p>
+        </header>
+
+        <main>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>Cosmic strings are hypothetical, one-dimensional "cracks" in the fabric of spacetime, possibly formed during phase transitions in the very early universe. Unlike black holes, they don't have strong local gravity. Instead, they warp spacetime in a very specific way, creating a "conical" geometry. This would cause a unique form of gravitational lensing: instead of distorting and magnifying background objects, a cosmic string would create two identical, undistorted images. This simulation allows you to see this effect in action by dragging a cosmic string in front of a distant quasar.</p>
+            </section>
+
+            <section id="simulation-container">
+                <h2>Interactive Simulation</h2>
+                <div class="simulation-area">
+                    <div id="canvas-container">
+                        <canvas id="main-canvas" width="800" height="500" aria-label="Animation of gravitational lensing by a cosmic string"></canvas>
+                    </div>
+                    <div class="controls">
+                        <h3>Instructions</h3>
+                        <p>Click and drag horizontally on the canvas to move the cosmic string (the vertical line). Observe what happens when it passes in front of the bright quasar in the center.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide to Cosmic Strings</h2>
+
+                <h3>1. What is a Cosmic String?</h3>
+                <p>Imagine water freezing into ice. As ice crystals form and meet, imperfections or "defects" can get trapped between them. Some theories suggest that the universe went through similar "freezing" events, called phase transitions, shortly after the Big Bang. Cosmic strings are hypothetical one-dimensional defects left over from this process—incredibly thin, unimaginably dense filaments of primordial energy stretching across the cosmos.</p>
+
+                <h3>2. Conical Spacetime</h3>
+                <p>The gravity of a cosmic string is strange. If you were floating next to one, you would feel no gravitational pull. Spacetime is perfectly "flat" around it. However, the global geometry is affected.
+                <br><br>
+                <strong>Analogy:</strong> Take a flat sheet of paper. Cut out a thin wedge and tape the edges together. You've created a cone. The surface of the cone is still flat—you can draw straight lines on it perfectly fine. But if you walk all the way around the point of the cone, you'll find you've traveled less than 360 degrees to get back to where you started. A cosmic string does the same thing to spacetime: it removes a "wedge," creating a conical geometry without any local curvature (gravity).
+                </p>
+
+                <h3>3. A Unique Lensing Signature</h3>
+                <p>This conical spacetime has a unique effect on light from distant objects. When light from a quasar passes on either side of the string, it gets deflected. From our perspective on Earth, it looks like the light is coming from two different places.
+                <br><br>
+                Unlike lensing by a galaxy or black hole, which distorts and magnifies images into arcs and rings, a cosmic string creates two identical, undistorted, unmagnified images of the background object. Finding such a pair of images would be strong evidence for the existence of cosmic strings.
+                </p>
+
+                <h3>4. How to Use the Simulation</h3>
+                <p>The canvas shows a distant starfield with a bright quasar at the center. The vertical line is the cosmic string.
+                <ol>
+                    <li>Click and drag your mouse left and right on the canvas to move the cosmic string.</li>
+                    <li>As the string gets close to the quasar, you will see the single image split into two.</li>
+                    <li>Notice that the two new images are perfect copies of the original, just shifted in position. This is the unique signature of cosmic string lensing.</li>
+                </ol>
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const config = {
+            stringX: 100,
+            isDragging: false,
+        };
+
+        const state = {
+            stars: [],
+            quasar: { x: 400, y: 250, size: 5 },
+        };
+
+        const dom = {
+            canvas: document.getElementById('main-canvas'),
+        };
+
+        let ctx;
+
+        function init() {
+            ctx = dom.canvas.getContext('2d');
+            createStarfield();
+            setupEventListeners();
+            requestAnimationFrame(animate);
+        }
+
+        function createStarfield() {
+            for (let i = 0; i < 200; i++) {
+                state.stars.push({
+                    x: Math.random() * dom.canvas.width,
+                    y: Math.random() * dom.canvas.height,
+                    size: Math.random() * 1.5 + 0.5,
+                    opacity: Math.random() * 0.5 + 0.2,
+                });
+            }
+        }
+
+        function setupEventListeners() {
+            dom.canvas.addEventListener('mousedown', e => {
+                config.isDragging = true;
+                updateStringPosition(e);
+            });
+            dom.canvas.addEventListener('mouseup', () => {
+                config.isDragging = false;
+            });
+            dom.canvas.addEventListener('mousemove', e => {
+                if (config.isDragging) {
+                    updateStringPosition(e);
+                }
+            });
+        }
+
+        function updateStringPosition(e) {
+            const rect = dom.canvas.getBoundingClientRect();
+            config.stringX = e.clientX - rect.left;
+        }
+
+        function draw() {
+            const w = dom.canvas.width;
+            const h = dom.canvas.height;
+            const style = getComputedStyle(document.body);
+            const primaryColor = style.getPropertyValue('--primary-color').trim();
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw stars
+            state.stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw Cosmic String
+            ctx.beginPath();
+            ctx.moveTo(config.stringX, 0);
+            ctx.lineTo(config.stringX, h);
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw Quasar (or lensed images)
+            const lensingThreshold = 20;
+            const separationFactor = 0.2;
+            const dist = Math.abs(state.quasar.x - config.stringX);
+
+            if (dist < lensingThreshold) {
+                const separation = (lensingThreshold - dist) * separationFactor;
+                drawQuasar(state.quasar.x - separation, state.quasar.y, primaryColor);
+                drawQuasar(state.quasar.x + separation, state.quasar.y, primaryColor);
+            } else {
+                drawQuasar(state.quasar.x, state.quasar.y, primaryColor);
+            }
+        }
+
+        function drawQuasar(x, y, color) {
+            const size = state.quasar.size;
+            // Core
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, 2 * Math.PI);
+            ctx.fill();
+            // Glow
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
+            grad.addColorStop(0, color + '80');
+            grad.addColorStop(1, color + '00');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 3, 0, 2 * Math.PI);
+            ctx.fill();
+            // Rays
+            ctx.strokeStyle = color + '80';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 4; i++) {
+                const angle = (i / 4) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(x + Math.cos(angle) * size, y + Math.sin(angle) * size);
+                ctx.lineTo(x + Math.cos(angle) * size * 2, y + Math.sin(angle) * size * 2);
+                ctx.stroke();
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            draw();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    })();
+    </script>
+</body>
+</html>
