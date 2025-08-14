@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ultimate Fate Calculator: Crunch vs. Freeze vs. Rip</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --primary-color: #00aaff;
+            --secondary-color: #ff4500;
+            --container-bg: #2a2a2a;
+            --border-color: #444444;
+            --slider-track-color: #444;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #333;
+            --button-hover-bg: #444;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --header-color: #ffff00;
+            --primary-color: #00ffff;
+            --secondary-color: #ff00ff;
+            --container-bg: #111111;
+            --border-color: #666666;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #222;
+            --button-hover-bg: #444;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 1em;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1em;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin-top: 1.5em;}
+        h3 { font-size: 1.5em; color: var(--primary-color); }
+
+        p, li {
+            font-size: 1.1em;
+        }
+
+        a { color: var(--primary-color); }
+        code { background-color: #333; padding: 0.2em 0.4em; border-radius: 4px; }
+
+        .content-section {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5em;
+            margin-top: 1.5em;
+        }
+
+        .simulation-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1em;
+            margin-top: 1.5em;
+        }
+
+        #simulation-container {
+            grid-column: 1 / 2;
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            aspect-ratio: 16 / 9;
+        }
+
+        #simulation-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        #ledger-panel {
+            grid-column: 2 / 3;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+        }
+
+        #controls-panel {
+            grid-column: 1 / 3;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            padding: 1em;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1em;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--button-hover-bg); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--slider-track-color);
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--slider-thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--slider-thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .simulation-layout {
+                grid-template-columns: 1fr;
+            }
+            #simulation-container, #ledger-panel {
+                grid-column: 1 / 2;
+            }
+        }
+
+        #error-panel { display: none; background-color: #ff4500; color: white; padding: 1em; border-radius: 8px; }
+        #dev-console { display: none; background-color: #222; border: 1px solid var(--border-color); padding: 1em; margin-top: 1em; border-radius: 8px; }
+        #metadata-bar, #suggestion-box { text-align: center; font-size: 0.9em; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Ultimate Fate Calculator: Crunch vs. Freeze vs. Rip</h1>
+            <p class="subtitle" style="text-align: center;">Explore the ultimate fate of the universe by tuning its fundamental parameters.</p>
+            <div id="metadata-bar">
+                <span>Est. runtime: N/A (Instant)</span> | <span>Device: Any</span> | <span>Approx. size: 70KB</span>
+                | <span id="perf-meter">FPS: <span id="fps-value">--</span></span>
+            </div>
+            <div id="suggestion-box" class="content-section" style="padding: 1em; margin-top: 1em; font-size: 0.9em;">
+                <h4 style="margin: 0 0 0.5em 0; color: var(--header-color);">Tune Your Experience:</h4>
+                <p style="margin: 0.2em 0;">Audience: <a href="#" onclick="setAudience('beginner'); return false;">Beginner</a> / <a href="#" onclick="setAudience('intermediate'); return false;">Intermediate</a> / <a href="#" onclick="setAudience('advanced'); return false;">Advanced</a></p>
+            </div>
+        </header>
+
+        <main>
+            <div class="simulation-layout">
+                <div id="simulation-container">
+                    <canvas id="simulation-canvas"></canvas>
+                </div>
+                <div id="ledger-panel">
+                    <h3 style="margin-top:0; text-align: center;">Universe Vitals</h3>
+                    <div class="ledger-item">
+                        <strong>Symbolic Universe</strong>
+                        <canvas id="symbolic-view-canvas" style="width:100%; height:120px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div class="ledger-item">
+                        <strong>Temperature vs. Time</strong>
+                        <canvas id="temperature-canvas" style="width:100%; height:120px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div class="ledger-item">
+                        <strong>Phase Space Diagram (Ω_m vs Ω_Λ)</strong>
+                        <canvas id="phase-space-canvas" style="width:100%; height:120px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                </div>
+                <div id="controls-panel">
+                    <div class="control-group">
+                        <label for="omega-m-slider">Matter Density (Ω_m): <span id="omega-m-value">0.30</span></label>
+                        <input type="range" id="omega-m-slider" min="0" max="2" value="0.3" step="0.01" aria-label="Matter Density">
+                        <small>Dark Energy Density (Ω_Λ) = <span id="omega-l-value">0.70</span></small>
+                    </div>
+                    <div class="control-group">
+                        <label for="w-slider">Dark Energy EOS (w): <span id="w-value">-1.00</span></label>
+                        <input type="range" id="w-slider" min="-2" max="0" value="-1" step="0.01" aria-label="Dark Energy Equation of State">
+                    </div>
+                    <div class="control-group">
+                        <label><b>Presets</b></label>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button id="preset-crunch-btn">Big Crunch</button>
+                            <button id="preset-freeze-btn">Big Freeze (Our Universe)</button>
+                            <button id="preset-rip-btn">Big Rip</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label><b>Utilities</b></label>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button id="export-png-btn" aria-label="Export PNG (e)">Export Plot</button>
+                            <button id="export-json-btn">Export Params</button>
+                            <button id="share-preset-btn">Share Params</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="static-content">
+                <section id="overview" class="content-section">
+                    <h2>Plain-Language Overview</h2>
+                    <p>The ultimate fate of our universe depends on a cosmic tug of war between two dominant forces: the inward pull of gravity from all the matter in the cosmos, and a mysterious outward push called "dark energy." This interactive calculator lets you become a cosmologist and explore the possible endings. By adjusting the sliders for the density of matter (<code>Ω_m</code>), the density of dark energy (<code>Ω_Λ</code>), and the nature of dark energy's push (<code>w</code>), you can see the universe's entire history and future plotted on the main graph. Will gravity win, causing a "Big Crunch"? Will dark energy lead to a runaway "Big Rip"? Or will they lead to the slow, cold "Big Freeze" our own universe seems destined for?</p>
+                </section>
+
+                <section id="beginners-guide" class="content-section">
+                    <h2>Beginner's Guide: A Cosmic Tug of War</h2>
+                    <p>Welcome to the driver's seat of the cosmos! This simulation doesn't just show one story; it allows you to write your own by changing the fundamental rules of a toy universe.</p>
+
+                    <h3>Step 1: The Graph of Cosmic History</h3>
+                    <p>The main chart you see is the most important. The horizontal axis is <strong>Time</strong>, with "Now" in the middle. The vertical axis shows the <strong>Scale Factor, a(t)</strong>, which is a measure of the "size" of the universe. By convention, the universe's size today is 1. If the line goes up, the universe is expanding. If it goes down, it's contracting. The shape of this line tells the whole story.</p>
+
+                    <h3>Step 2: The Competitors</h3>
+                    <p>The shape of the line is determined by a battle between two key ingredients you control:</p>
+                    <ul>
+                        <li><strong>Ω_m (Omega Matter):</strong> This represents all the "stuff" in the universe—galaxies, gas, dark matter. All of this stuff has gravity, which acts like a cosmic brake, trying to slow down the expansion and pull everything back together. <strong>More matter means more pull.</strong></li>
+                        <li><strong>Ω_Λ (Omega Lambda):</strong> This represents dark energy, a mysterious energy inherent to space itself that causes an outward push. It acts like a cosmic accelerator, trying to make the universe expand faster and faster. <strong>More dark energy means more push.</strong></li>
+                    </ul>
+                    <p>In this simulation, we assume a "flat" universe (as observations suggest ours is), which means <code>Ω_m + Ω_Λ = 1</code>. When you change one slider, the other will adjust automatically to keep this balance.</p>
+
+                    <h3>Step 3: The Nature of the Push (w)</h3>
+                    <p>The final crucial parameter is <code>w</code>, the "equation of state" for dark energy. This tells us how the push of dark energy behaves as the universe expands.
+                        <ul>
+                            <li><code>w = -1</code>: This is Einstein's "cosmological constant." The push is constant and unchanging. The energy density of space stays the same even as it expands. This is the standard model and leads to the <strong>Big Freeze (or Heat Death)</strong>.</li>
+                            <li><code>w > -1</code> (e.g., -0.8): This is called "Quintessence." The dark energy push gets weaker as the universe expands.</li>
+                            <li><code>w < -1</code> (e.g., -1.2): This is called "Phantom Energy." The dark energy push gets <strong>stronger</strong> as the universe expands. This is a terrifying scenario that leads to the <strong>Big Rip</strong>.</li>
+                        </ul>
+                    </p>
+
+                    <h3>Step 4: The Three Fates</h3>
+                    <p>By adjusting the sliders, you can create three primary scenarios:</p>
+                    <ol>
+                        <li><strong>The Big Crunch:</strong> Set <code>Ω_m</code> to be high (e.g., > 0.5). The universe expands for a while, but gravity is too strong. It eventually halts the expansion and causes everything to re-collapse into a fiery final singularity. The `a(t)` graph goes up, then comes back down.</li>
+                        <li><strong>The Big Freeze:</strong> Set <code>Ω_m</code> to a lower value and <code>w = -1</code> (our universe's parameters are roughly Ω_m=0.3, Ω_Λ=0.7). The universe expands forever at an accelerating rate. It becomes cold, dark, and empty. The `a(t)` graph goes up forever.</li>
+                        <li><strong>The Big Rip:</strong> Keep the parameters similar to the Big Freeze, but set <code>w</code> to be less than -1. The `a(t)` graph goes up so fast that it goes to infinity in a finite amount of time. This tears everything apart, from galaxies to atoms.</li>
+                    </ol>
+                </section>
+
+                <section id="parameters-summary" class="content-section">
+                    <h2>Parameters & Controls Summary</h2>
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Parameter</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Description</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Default (Our Universe)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Matter Density (Ω_m)</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">The fraction of the universe's energy density that is in matter. Drives gravitational collapse.</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">0.3</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Dark Energy Density (Ω_Λ)</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">The fraction in dark energy. Drives cosmic acceleration. (Note: Ω_Λ = 1 - Ω_m in this sim).</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">0.7</td>
+                            </tr>
+                             <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Dark Energy EOS (w)</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">The "equation of state" for dark energy. Determines if its effect is constant, weakening, or strengthening.</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">-1.0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section id="faq" class="content-section">
+                    <h2>FAQ & Troubleshooting</h2>
+                    <dl>
+                        <dt>Which of these fates is most likely for our real universe?</dt>
+                        <dd>Current observations from projects like the Planck satellite suggest that our universe's parameters are very close to Ω_m ≈ 0.3, Ω_Λ ≈ 0.7, and w ≈ -1. This places us firmly in the "Big Freeze" (or Heat Death) scenario.</dd>
+                        <dt>What is Ω_k (Omega Curvature)?</dt>
+                        <dd>This parameter describes the overall geometry of the universe. For simplicity, this simulation assumes a "flat" universe (Ω_k = 0), which is well-supported by observations. In a flat universe, the densities must sum to one: Ω_m + Ω_Λ = 1.</dd>
+                        <dt>Is Phantom Energy (w < -1) physically possible?</dt>
+                        <dd>It's theoretically problematic. It violates several "energy conditions" in general relativity and implies that the energy density of the vacuum would grow to infinity, which is hard to reconcile with known physics. However, it has not been definitively ruled out.</dd>
+                        <dt>Why does the graph for the Big Rip stop before infinity?</dt>
+                        <dd>The scale factor `a(t)` diverges to infinity in a finite amount of time. Our numerical solver cannot handle this divergence, so it stops just before the "rip time." The visualization of objects being torn apart in the side panel helps illustrate the physical meaning.</dd>
+                    </dl>
+                </section>
+            </div>
+
+            <div id="error-panel"></div>
+            <div id="dev-console-container">
+                <button id="toggle-dev-console">Developer Console</button>
+                <div id="dev-console"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Simulation State & Parameters ---
+        let simState = {};
+        let simParams = {};
+
+        let symbolicTime = 0;
+        // --- Visualization and Rendering ---
+        function render() {
+            const canvas = document.getElementById('simulation-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+            }
+            const w = rect.width;
+            const h = rect.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const { t, a } = simState.history;
+            if (t.length < 2) return;
+
+            // Find data bounds
+            const minT = Math.min(...t);
+            const maxT = Math.max(...t);
+            const maxA = Math.max(...a);
+
+            // Draw axes
+            const y_now = h - (1 / maxA) * h;
+            const x_now = (-minT / (maxT - minT)) * w;
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, y_now); ctx.lineTo(w, y_now); // a=1 line
+            ctx.moveTo(x_now, 0); ctx.lineTo(x_now, h); // t=0 line
+            ctx.stroke();
+            ctx.fillStyle = '#888';
+            ctx.fillText("a(t) = 1 (Now)", 5, y_now - 5);
+            ctx.fillText("t = 0 (Now)", x_now + 5, 15);
+
+
+            // Draw plot
+            ctx.strokeStyle = 'var(--primary-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i < t.length; i++) {
+                const tx = ((t[i] - minT) / (maxT - minT)) * w;
+                const ty = h - (a[i] / maxA) * h;
+                if (i === 0) ctx.moveTo(tx, ty);
+                else ctx.lineTo(tx, ty);
+            }
+            ctx.stroke();
+
+            // Draw Fate Text
+            ctx.fillStyle = 'var(--secondary-color)';
+            ctx.font = 'bold 32px var(--font-family)';
+            ctx.textAlign = 'right';
+            ctx.fillText(simState.fate, w - 20, h - 20);
+        }
+
+        function updateLedger() {
+            // Temperature Plot
+            drawSecondaryChart('temperature-canvas', simState.history.t, simState.history.T, '#ff4500');
+            // Phase Space Plot
+            drawPhaseSpace();
+            // Symbolic View
+            drawSymbolicView();
+        }
+
+        function drawSecondaryChart(canvasId, xData, yData, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (xData.length < 2) return;
+            const minX = Math.min(...xData), maxX = Math.max(...xData);
+            const minY = Math.min(...yData), maxY = Math.max(...yData);
+            ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+            for (let i = 0; i < xData.length; i++) {
+                const x = ((xData[i] - minX) / (maxX - minX)) * canvas.width;
+                const y = canvas.height - ((yData[i] - minY) / ((maxY - minY) || 1)) * canvas.height;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        function drawPhaseSpace() {
+            const canvas = document.getElementById('phase-space-canvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            ctx.fillStyle = 'rgba(255, 69, 0, 0.3)'; // Crunch
+            ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = 'rgba(0, 170, 255, 0.3)'; // Freeze/Rip
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,0); ctx.lineTo(0,h); ctx.closePath(); ctx.fill();
+
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0,h); ctx.lineTo(w,0); ctx.stroke();
+
+            ctx.font = '10px var(--font-family)'; ctx.fillStyle = '#fff';
+            ctx.fillText("Crunch", w - 40, h - 10);
+            ctx.fillText("Expand Forever", 10, 20);
+
+            const x = (simParams.omega_m / 2) * w;
+            const y = h - (simParams.omega_l / 2) * h;
+            ctx.fillStyle = 'yellow'; ctx.beginPath(); ctx.arc(x, y, 5, 0, 2 * Math.PI); ctx.fill();
+        }
+
+        function drawSymbolicView() {
+            const canvas = document.getElementById('symbolic-view-canvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const { t, a } = simState.history;
+            if (t.length < 2) return;
+
+            const time = (Date.now() / 3000) % (t[t.length-1] - t[0]) + t[0];
+            let current_a = 1;
+            for(let i=0; i<t.length; i++) {
+                if(t[i] >= time) {
+                    current_a = a[i];
+                    break;
+                }
+            }
+
+            const radius = Math.min(w, h) * 0.5 * current_a * 0.5;
+            ctx.strokeStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, radius, 0, 2*Math.PI);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            for(let i=0; i<20; i++) {
+                 ctx.beginPath();
+                 ctx.arc(w/2 + (Math.random()-0.5)*radius*1.5, h/2 + (Math.random()-0.5)*radius*1.5, 1, 0, 2*Math.PI);
+                 ctx.fill();
+            }
+        }
+
+        function updateAllControls() {
+            const omegaMSlider = document.getElementById('omega-m-slider');
+            const wSlider = document.getElementById('w-slider');
+            omegaMSlider.value = simParams.omega_m;
+            wSlider.value = simParams.w;
+            document.getElementById('omega-m-value').textContent = simParams.omega_m.toFixed(2);
+            document.getElementById('omega-l-value').textContent = simParams.omega_l.toFixed(2);
+            document.getElementById('w-value').textContent = simParams.w.toFixed(2);
+        }
+
+        // --- UI Event Listeners & Wiring ---
+        function setupEventListeners() {
+            const omegaMSlider = document.getElementById('omega-m-slider');
+            const wSlider = document.getElementById('w-slider');
+
+            function onParamsChange() {
+                simParams.omega_m = parseFloat(omegaMSlider.value);
+                simParams.omega_l = 1.0 - simParams.omega_m;
+                simParams.w = parseFloat(wSlider.value);
+                solveFriedmann();
+                updateAllControls();
+            }
+
+            omegaMSlider.addEventListener('input', onParamsChange);
+            wSlider.addEventListener('input', onParamsChange);
+
+            // Presets
+            document.getElementById('preset-crunch-btn').addEventListener('click', () => {
+                simParams.omega_m = 1.5;
+                simParams.omega_l = -0.5;
+                simParams.w = -1.0;
+                solveFriedmann();
+                updateAllControls();
+            });
+            document.getElementById('preset-freeze-btn').addEventListener('click', () => {
+                simParams.omega_m = 0.3;
+                simParams.omega_l = 0.7;
+                simParams.w = -1.0;
+                solveFriedmann();
+                updateAllControls();
+            });
+            document.getElementById('preset-rip-btn').addEventListener('click', () => {
+                simParams.omega_m = 0.3;
+                simParams.omega_l = 0.7;
+                simParams.w = -1.2;
+                solveFriedmann();
+                updateAllControls();
+            });
+
+            // Utilities
+            document.getElementById('export-png-btn').addEventListener('click', () => {
+                const canvas = document.getElementById('simulation-canvas');
+                const link = document.createElement('a');
+                link.download = 'universe-fate.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+            document.getElementById('export-json-btn').addEventListener('click', () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(simParams, null, 2));
+                const link = document.createElement('a');
+                link.href = dataStr;
+                link.download = "fate_params.json";
+                link.click();
+            });
+            document.getElementById('share-preset-btn').addEventListener('click', () => {
+                const url = new URL(window.location);
+                url.hash = btoa(JSON.stringify(simParams));
+                navigator.clipboard.writeText(url.href).then(() => alert('Shareable URL copied to clipboard!'));
+            });
+
+            // Placeholder
+            window.setAudience = (level) => console.log(`Audience set to ${level}`);
+        }
+
+        function loadParamsFromURL() {
+            if (window.location.hash.length > 1) {
+                try {
+                    const params = JSON.parse(atob(window.location.hash.substring(1)));
+                    Object.assign(simParams, params);
+                } catch (e) { console.error("Failed to load params from URL hash:", e); }
+            }
+        }
+
+        function runSelfChecks() {
+             if (!document.getElementById('simulation-canvas')) {
+                document.getElementById('error-panel').style.display = 'block';
+                document.getElementById('error-panel').textContent = 'Critical Error: Missing canvas element.';
+             }
+        }
+
+        document.getElementById('toggle-dev-console').addEventListener('click', () => {
+            const consoleDiv = document.getElementById('dev-console');
+            consoleDiv.style.display = consoleDiv.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // --- Core Simulation Logic: Friedmann Equation Solver ---
+        function resetSimulation() {
+            simParams = {
+                omega_m: 0.3,
+                omega_l: 0.7,
+                w: -1.0,
+            };
+            simState = {
+                history: { t: [], a: [], T: [] },
+                fate: 'Undetermined',
+            };
+            solveFriedmann();
+        }
+
+        // This is the function to be integrated: da/dt = H*a
+        // H^2/H0^2 = omega_m/a^3 + omega_l/a^(3(1+w))
+        function dadt(a, params) {
+            const { omega_m, omega_l, w } = params;
+            const H0 = 1; // Hubble constant, normalized to 1
+
+            const matter_term = omega_m / (a * a * a);
+            const dark_energy_term = omega_l * Math.pow(a, -3 * (1 + w));
+
+            const H_squared = H0 * H0 * (matter_term + dark_energy_term);
+
+            if (H_squared < 0) return 0; // Universe is re-collapsing
+
+            return Math.sqrt(H_squared) * a;
+        }
+
+        function solveFriedmann() {
+            let a = 1.0;
+            let t = 0;
+            const dt = 0.005;
+
+            const history = { t: [0], a: [1], T: [1] };
+
+            // Integrate backwards to the past
+            let a_past = a;
+            let t_past = t;
+            while (t_past > -14 && a_past > 0.01) {
+                // RK4 integration step
+                const k1 = -dt * dadt(a_past, simParams);
+                const k2 = -dt * dadt(a_past + 0.5 * k1, simParams);
+                const k3 = -dt * dadt(a_past + 0.5 * k2, simParams);
+                const k4 = -dt * dadt(a_past + k3, simParams);
+                a_past += (k1 + 2*k2 + 2*k3 + k4) / 6;
+
+                t_past -= dt;
+                history.t.unshift(t_past);
+                history.a.unshift(a_past);
+                history.T.unshift(1 / a_past);
+            }
+
+            // Integrate forwards into the future
+            let a_future = a;
+            let t_future = t;
+            while (t_future < 20) {
+                 // RK4 integration step
+                const k1 = dt * dadt(a_future, simParams);
+                const k2 = dt * dadt(a_future + 0.5 * k1, simParams);
+                const k3 = dt * dadt(a_future + 0.5 * k2, simParams);
+                const k4 = dt * dadt(a_future + k3, simParams);
+                a_future += (k1 + 2*k2 + 2*k3 + k4) / 6;
+
+                t_future += dt;
+                history.t.push(t_future);
+                history.a.push(a_future);
+                history.T.push(1 / a_future);
+
+                if (a_future <= 0.001) {
+                    simState.fate = 'Big Crunch';
+                    break;
+                }
+                if (a_future > 100) { // Stop if it expands too much
+                    if (simParams.w < -1) simState.fate = 'Big Rip';
+                    else simState.fate = 'Big Freeze';
+                    break;
+                }
+            }
+            simState.history = history;
+        }
+
+        // --- Main Simulation Loop ---
+        function simulationLoop() {
+            // This simulation is not real-time, but we can use the loop for animations in the ledger
+            render();
+            updateLedger();
+            requestAnimationFrame(simulationLoop);
+        }
+
+        // --- Initial Setup ---
+        try {
+            setupEventListeners();
+            loadParamsFromURL();
+            resetSimulation();
+            updateAllControls();
+            simulationLoop();
+            runSelfChecks();
+        } catch (e) {
+            const devConsole = document.getElementById('dev-console');
+            if(devConsole) {
+                devConsole.style.display = 'block';
+                devConsole.textContent = `A critical error occurred: ${e.message}\n${e.stack}`;
+            }
+            console.error(e);
+        }
+
+        // Expose functions for UI
+        window.sim = { resetSimulation, solveFriedmann, simState, simParams };
+    });
+    </script>
+</body>
+</html>
