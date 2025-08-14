@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Entropy: The Rise and Fall of Cosmic Complexity</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --primary-color: #00aaff;
+            --secondary-color: #ff4500;
+            --container-bg: #2a2a2a;
+            --border-color: #444444;
+            --slider-track-color: #444;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #333;
+            --button-hover-bg: #444;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --header-color: #ffff00;
+            --primary-color: #00ffff;
+            --secondary-color: #ff00ff;
+            --container-bg: #111111;
+            --border-color: #666666;
+            --slider-thumb-color: var(--primary-color);
+            --button-bg: #222;
+            --button-hover-bg: #444;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 1em;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1em;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; margin-top: 1.5em;}
+        h3 { font-size: 1.5em; color: var(--primary-color); }
+
+        p, li {
+            font-size: 1.1em;
+        }
+
+        a { color: var(--primary-color); }
+        code { background-color: #333; padding: 0.2em 0.4em; border-radius: 4px; }
+
+        .content-section {
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5em;
+            margin-top: 1.5em;
+        }
+
+        .simulation-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1em;
+            margin-top: 1.5em;
+        }
+
+        #simulation-container {
+            grid-column: 1 / 2;
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            aspect-ratio: 16 / 9;
+        }
+
+        #simulation-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        #ledger-panel {
+            grid-column: 2 / 3;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1em;
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+        }
+
+        #controls-panel {
+            grid-column: 1 / 3;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            padding: 1em;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1em;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5em 1em;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--button-hover-bg); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--slider-track-color);
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--slider-thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--slider-thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .simulation-layout {
+                grid-template-columns: 1fr;
+            }
+            #simulation-container, #ledger-panel {
+                grid-column: 1 / 2;
+            }
+        }
+
+        #error-panel { display: none; background-color: #ff4500; color: white; padding: 1em; border-radius: 8px; }
+        #dev-console { display: none; background-color: #222; border: 1px solid var(--border-color); padding: 1em; margin-top: 1em; border-radius: 8px; }
+        #metadata-bar, #suggestion-box { text-align: center; font-size: 0.9em; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gravitational Entropy: The Rise and Fall of Cosmic Complexity</h1>
+            <p class="subtitle" style="text-align: center;">An N-body simulation of cosmic structure formation.</p>
+            <div id="metadata-bar">
+                <span>Est. runtime: Varies</span> | <span>Device: Desktop</span> | <span>Approx. size: 60KB</span>
+                | <span id="perf-meter">FPS: <span id="fps-value">--</span></span>
+            </div>
+            <div id="suggestion-box" class="content-section" style="padding: 1em; margin-top: 1em; font-size: 0.9em;">
+                <h4 style="margin: 0 0 0.5em 0; color: var(--header-color);">Tune Your Experience:</h4>
+                <p style="margin: 0.2em 0;">Audience: <a href="#" onclick="setAudience('beginner'); return false;">Beginner</a> / <a href="#" onclick="setAudience('intermediate'); return false;">Intermediate</a> / <a href="#" onclick="setAudience('advanced'); return false;">Advanced</a></p>
+                <p style="margin: 0.2em 0;">Analogy Style: <a href="#" onclick="setAnalogy('everyday'); return false;">Everyday</a> / <a href="#" onclick="setAnalogy('mechanical'); return false;">Mechanical</a> / <a href="#" onclick="setAnalogy('visual'); return false;">Visual</a></p>
+                <p style="margin: 0.2em 0;">Intensity: <a href="#" onclick="setIntensity('light'); return false;">Light</a> / <a href="#" onclick="setIntensity('medium'); return false;">Medium</a> / <a href="#" onclick="setIntensity('heavy'); return false;">Heavy</a></p>
+            </div>
+        </header>
+
+        <main>
+            <div class="simulation-layout">
+                <div id="simulation-container">
+                    <canvas id="simulation-canvas"></canvas>
+                </div>
+                <div id="ledger-panel">
+                    <h3 style="margin-top:0; text-align: center;">Dual Entropy Ledger</h3>
+                    <div class="ledger-item">
+                        <strong>Thermal Entropy (S_thermal)</strong>
+                        <canvas id="thermal-entropy-canvas" style="width:100%; height:100px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div class="ledger-item">
+                        <strong>Gravitational Entropy (S_grav)</strong>
+                        <canvas id="grav-entropy-canvas" style="width:100%; height:100px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div class="ledger-item">
+                        <strong>Total Entropy (S_total)</strong>
+                        <canvas id="total-entropy-canvas" style="width:100%; height:100px; background-color: #111; border-radius: 4px;"></canvas>
+                    </div>
+                    <div class="ledger-item">
+                        <label for="complexity-meter"><strong>Complexity Meter</strong></label>
+                        <div id="complexity-meter" style="width: 100%; background-color: #444; border-radius: 5px; padding: 2px; border: 1px solid var(--border-color);">
+                            <div id="complexity-bar" style="width: 0%; height: 20px; background-color: var(--primary-color); border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="controls-panel">
+                     <div class="control-group">
+                        <label><b>Simulation</b></label>
+                        <div style="display: flex; gap: 5px;">
+                            <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                            <button id="step-btn" aria-label="Step Forward (Right Arrow)">Step</button>
+                            <button id="reset-btn" aria-label="Reset (r)">Reset</button>
+                        </div>
+                    </div>
+                    <div class="control-group" style="flex-grow: 1;">
+                        <label for="speed-slider">Speed: <span id="speed-value">1.0x</span></label>
+                        <input type="range" id="speed-slider" min="0.1" max="5" value="1" step="0.1" aria-label="Simulation Speed">
+                    </div>
+                    <div class="control-group" style="flex-basis: 100%;">
+                        <label for="perturbation-slider">Initial Perturbation (δρ/ρ): <span id="perturbation-value">1.0e-4</span></label>
+                        <input type="range" id="perturbation-slider" min="-5" max="-2" value="-4" step="0.1" aria-label="Initial Perturbation Amplitude (log scale)">
+                    </div>
+                    <div class="control-group">
+                        <label><b>Utilities</b></label>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <button id="export-png-btn" aria-label="Export PNG (e)">Export PNG</button>
+                            <button id="export-json-btn">Export JSON</button>
+                            <button id="share-preset-btn">Share Preset</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label><b>Settings</b></label>
+                        <div><label><input type="checkbox" id="perf-mode-toggle"> Performance Mode</label></div>
+                        <div><label><input type="checkbox" id="contrast-toggle"> High Contrast</label></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="static-content">
+                <section id="overview" class="content-section">
+                    <h2>Plain-Language Overview</h2>
+                    <p>This simulation explores one of the most profound and counter-intuitive ideas in cosmology: the role of gravity in the universe's entropy. We typically associate entropy with disorder, thinking a smooth, uniform gas is more disordered than a lumpy, structured one. However, with gravity, the opposite is true. A perfectly smooth universe is an incredibly special, unlikely state with very low gravitational entropy. Gravity is an attractive force that naturally pulls matter together. Therefore, a clumpy universe—full of dense galaxies and vast empty voids—is actually the more probable, high-entropy state. This simulation shows this process in action, demonstrating how the beautiful, complex structures of the cosmos are a direct consequence of the universe's inexorable march towards maximum gravitational disorder.</p>
+                </section>
+
+                <section id="beginners-guide" class="content-section">
+                    <h2>Beginner's Guide — How Gravity Creates Complexity from Smoothness</h2>
+                    <p>Welcome to the story of how the universe got its shape. It's a tale of two entropies, and it explains how a smooth, boring early universe could evolve into the rich cosmic web we see today.</p>
+
+                    <h3>Step 1: The Smooth Beginning - An Unlikely State</h3>
+                    <p>The simulation starts with a box full of particles distributed almost perfectly uniformly. This represents the state of the universe shortly after the Big Bang. In terms of matter and heat, this is a very high-entropy state—the particles are maximally spread out and disordered, like a gas filling its container. This is represented by the <strong>S_thermal</strong> graph, which starts HIGH. However, from the perspective of gravity, this is a shockingly special, ordered, and low-entropy state. A perfectly smooth gravitational field is as unlikely as a billion coins all landing on heads.</p>
+                    <p><strong>Everyday Analogy: A Sandcastle Foundation.</strong> Imagine a perfectly flat, smooth, level bed of sand. This is your starting state. It's "disordered" in the sense that sand grains are randomly placed, but it's a very special, low-entropy foundation. Any small disturbance—a single dropped pebble—will cause an avalanche that creates lumps and bumps. Gravity acts like that disturbance, turning the smooth cosmic "sand" into the lumpy galaxies and voids we see today.</p>
+
+                    <h3>Step 2: The Two Faces of Entropy</h3>
+                    <p>The key to understanding this simulation is to realize there are two types of entropy competing and cooperating:</p>
+                    <ul>
+                        <li><strong>Thermal Entropy (S_thermal):</strong> This is the "classic" entropy you might have learned about. It measures the disorder in the positions and velocities of particles. A hot, uniform gas has high thermal entropy. A cold, dense crystal has low thermal entropy. As gravity pulls particles into clumps, their positions become more predictable (they're in "that clump"), so <strong>S_thermal goes DOWN</strong>.</li>
+                        <li><strong>Gravitational Entropy (S_grav):</strong> This is a measure of the "clumpiness" of the gravitational field itself. A smooth, uniform field has very LOW entropy. A lumpy field, with intense pockets of gravity (like stars and galaxies) and vast empty spaces, has very HIGH entropy. As structure forms, <strong>S_grav goes UP</strong>.</li>
+                    </ul>
+                    <p>The Second Law of Thermodynamics still holds! The total entropy (<strong>S_total = S_thermal + S_grav</strong>) must always increase. As you will see, the increase in S_grav is so gigantic that it completely dominates the small decrease in S_thermal.</p>
+
+                    <h3>Step 3: The "Rich Get Richer" Effect</h3>
+                    <p>Gravity is a runaway force. The simulation begins with tiny, quantum-scale density fluctuations, which you control with the "Initial Perturbation Amplitude" slider. A region that is, by pure chance, infinitesimally denser than its surroundings has slightly more mass. This gives it slightly more gravity, allowing it to pull in neighboring particles. This makes it even denser and more massive, giving it even more gravity. It's a feedback loop. The rich get richer, and the poor (the voids) get poorer. Over millions of years, this process amplifies the initial tiny ripples into the vast filaments, clusters, and voids of the cosmic web that you see forming in the simulation window.</p>
+
+                    <h3>Step 4: The Rise of Complexity</h3>
+                    <p>For a while, the universe exists in a sweet spot. Gravitational entropy is rising, creating dense clumps, but thermal entropy hasn't been completely crushed yet. These clumps are dense enough to form galaxies and stars, which are pockets of immense order and complexity. Stars, planets, and eventually life are all temporary, beautiful structures that ride the wave of increasing gravitational entropy. Our "Complexity Meter" in the ledger tries to capture this idea. It will peak during this "Stelliferous Era," when the universe is clumpy enough to be interesting but not so clumpy that everything has collapsed into black holes.</p>
+
+                    <h3>Step 5: The End Game - Maximum Gravitational Entropy</h3>
+                    <p>If you let the simulation run for a very long time (conceptually), all the structures would eventually merge. Galaxies would merge, and eventually, all matter would collapse into supermassive black holes. A black hole is the ultimate victory of gravitational entropy—it is the most compact, gravitationally "clumpy" state possible for a given amount of mass. At this point, S_grav would be at its absolute maximum, while S_thermal would be near zero. The "Complexity Meter" would fall back to zero, as all the rich, detailed structure has been erased in favor of a few simple, ultra-dense objects.</p>
+                </section>
+
+                <section id="parameters-summary" class="content-section">
+                    <h2>Parameters & Controls Summary</h2>
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Parameter</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Description</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Units</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Default</th>
+                                <th style="border: 1px solid var(--border-color); padding: 8px;">Examples (Light/Med/Heavy)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Initial Perturbation (δρ/ρ)</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Controls the amplitude of initial density fluctuations.</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">Dimensionless</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">1.0e-4</td>
+                                <td style="border: 1px solid var(--border-color); padding: 8px;">1.0e-5 / 1.0e-4 / 1.0e-2</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top: 1em;"><strong>Worked Example:</strong> The slider for this parameter works on a logarithmic scale (from -5 to -2). If you set the slider to <strong>-3.5</strong>, the actual value used is 10<sup>-3.5</sup>, which is approximately <strong>3.16e-4</strong>.</p>
+                </section>
+
+                <section id="presets-section" class="content-section">
+                    <h2>Try These Examples</h2>
+                    <div style="display: flex; flex-direction: column; gap: 1em;">
+                        <div>
+                            <button id="preset-smooth-btn" style="float: right; margin-left: 1em;">Apply Preset</button>
+                            <h3>Smooth Start</h3>
+                            <p><strong>Parameter (δρ/ρ): 1.0e-5</strong>. This sets the initial perturbations to a very small value. Expect to see structure form very slowly and gracefully, resulting in a fine, delicate cosmic web. The "Complexity" meter will rise slowly but may reach a high peak.</p>
+                        </div>
+                        <hr style="border-color: var(--border-color);">
+                        <div>
+                            <button id="preset-typical-btn" style="float: right; margin-left: 1em;">Apply Preset</button>
+                            <h3>Typical Universe</h3>
+                            <p><strong>Parameter (δρ/ρ): 1.0e-4</strong>. This is analogous to our own universe. Structure forms at a moderate pace, creating a good balance of large clumps and distinct filaments. This is often the "sweet spot" for complexity.</p>
+                        </div>
+                        <hr style="border-color: var(--border-color);">
+                        <div>
+                            <button id="preset-violent-btn" style="float: right; margin-left: 1em;">Apply Preset</button>
+                            <h3>Violent Collapse</h3>
+                            <p><strong>Parameter (δρ/ρ): 1.0e-2</strong>. This sets the initial perturbations to a very high value. Expect to see a rapid, chaotic collapse into a few massive super-clumps, with little filamentary structure. The system quickly reaches its final, high-gravitational-entropy state.</p>
+                        </div>
+                    </div>
+                </section>
+                <section id="walkthroughs" class="content-section">
+                    <h2>Worked Walkthroughs & Micro-Experiments</h2>
+
+                    <h3>Walkthrough: The Size of the Seeds (δρ/ρ)</h3>
+                    <p>The parameter <strong>δρ/ρ</strong> (Delta-Rho over Rho) sets the size of the initial ripples in the otherwise smooth universe. A tiny value means the universe starts very smooth, a large value means it starts lumpier.</p>
+                    <ol>
+                        <li>Start with the default preset ("Typical Universe"). Watch as the cosmic web gracefully forms over time from almost invisible fluctuations. Note the peak value on the "Complexity" meter.</li>
+                        <li>Reset the simulation. Now, push the <strong>Initial Perturbation</strong> slider to its minimum value (e.g., 1e-5). Press Play. Notice how long it takes for any significant structure to form. The universe stays smooth and boring for a much longer time. This is a universe with very small initial "seeds" for gravity to work with.</li>
+                        <li>Reset again. This time, set the slider to its maximum value. The result is immediate and violent. The initial state is so perturbed that gravity doesn't form a delicate web; it just causes a rapid, chaotic collapse into a few massive clumps. The "Complexity" meter will barely register a high value because the system rushes to its simple, high-clumpiness end state.</li>
+                    </ol>
+                    <p><strong>Analogy:</strong> This is like making rock candy. A few small seed crystals (low δρ/ρ) in a sugar solution will lead to large, well-formed crystals over time. Throwing in a huge amount of sugar dust (high δρ/ρ) just makes the whole thing seize up into a sugary sludge. The numeric difference between δρ/ρ = 1e-5 and δρ/ρ = 1e-2 is the difference between careful crystal growth and a messy, rapid solidification.</p>
+
+                    <h3>Micro-Experiments to Try</h3>
+                    <ol>
+                        <li><strong>Find the "Sweet Spot":</strong> Experiment with the Initial Perturbation slider to find the value that results in the highest peak on the "Complexity" meter. Is it the default value, or slightly higher or lower?</li>
+                        <li><strong>Entropy Race:</strong> Set the perturbation to a high value. Watch the S_grav and S_thermal graphs. They should race to their final values (high and low, respectively) very quickly.</li>
+                        <li><strong>The Coasting Universe:</strong> Set the perturbation to a very low value. Watch the same graphs. You'll see S_thermal stay high for a long time before it slowly begins to trade places with S_grav.</li>
+                        <li><strong>Pause and Ponder:</strong> Let the simulation run until a clear filament forms. Pause it. Notice that the particles within the filament are moving more slowly (they are "colder"), while particles in the voids are still moving faster. This is a visual representation of thermal entropy decreasing in the dense regions.</li>
+                        <li><strong>The Total Never Fails:</strong> No matter what parameters you choose, the <strong>S_total</strong> graph should only ever go up (or stay flat). This demonstrates that the Second Law of Thermodynamics is always obeyed.</li>
+                        <li><strong>Void Formation:</strong> Focus your attention not on the clumps, but on the empty spaces between them (the voids). Watch as they grow, actively emptying themselves out as particles stream away towards the filaments.</li>
+                    </ol>
+                </section>
+
+                <section id="core-theory" class="content-section">
+                    <h2>Core Theory: The Entropy Equations</h2>
+                    <p>The simulation's ledger is based on these key conceptual equations.</p>
+
+                    <h3>1. Total Entropy</h3>
+                    <p><code>S_total = S_thermal + S_grav</code></p>
+                    <p><strong>Plain English:</strong> The total entropy of the universe is the sum of its thermal (or material) entropy and its gravitational entropy. The Second Law of Thermodynamics requires that <code>ΔS_total ≥ 0</code>. This simulation shows how this law holds even when one of its components decreases.</p>
+
+                    <h3>2. Thermal Entropy</h3>
+                    <p><code>S_thermal ∝ -Σ p_i * log(p_i)</code></p>
+                    <p><strong>Plain English:</strong> This is the Shannon entropy of the particle distribution. We divide the box into a grid and count the fraction of particles, <code>p_i</code>, in each cell <code>i</code>. When the particles are spread out uniformly, all <code>p_i</code> are small and equal, making <strong>S_thermal HIGH</strong>. When particles are in a few clumps, most cells are empty (<code>p_i = 0</code>) and a few have high <code>p_i</code>, making <strong>S_thermal LOW</strong>.</p>
+                    <p><strong>Numeric Example:</strong> Imagine 4 particles in 4 cells. If they are spread out (1 per cell), p_i=0.25 for all, and S is high. If they are clumped (all 4 in one cell), p_i=1 for one cell and 0 for the others, and S is zero. This is why clumping reduces thermal entropy.</p>
+
+                    <h3>3. Gravitational Entropy</h3>
+                    <p><code>S_grav ∝ -E_potential</code></p>
+                    <p><strong>Plain English:</strong> While a formal definition is complex, gravitational entropy is conceptually related to the negative of the system's total gravitational potential energy. As particles fall together into clumps, they move from a state of high potential energy to low potential energy (like a ball rolling downhill). This makes the potential energy <code>E_potential</code> a large negative number. Therefore, <code>-E_potential</code> becomes a large positive number, and <strong>S_grav goes UP</strong>.</p>
+                    <p><strong>Approximation Used:</strong> We calculate the potential of the density grid, which is much faster than calculating it for every pair of particles. This captures the essential behavior: as clumping increases, S_grav increases.</p>
+                </section>
+
+                <section id="advanced-notes" class="content-section">
+                    <h2>Advanced Notes & Extensions</h2>
+                    <ul>
+                        <li><strong>N-Body Solver:</strong> This simulation uses a Particle-Mesh (PM) algorithm. We assign particles to a grid, use a Fast Fourier Transform (FFT) to solve Poisson's equation for the gravitational potential on that grid, and then interpolate the forces back to the particles. This is much faster (O(N log N)) than a direct N² calculation but loses resolution at small scales.</li>
+                        <li><strong>Collisionless Fluid:</strong> The particles are treated as a collisionless fluid, which is a good approximation for dark matter. In reality, baryonic (normal) matter would have gas pressure, which would resist collapse on small scales and lead to shock heating, processes not included here.</li>
+                        <li><strong>Periodic Boundary Conditions:</strong> The simulation box wraps around on itself (a torus). A particle leaving the right side re-enters on the left. This is a standard technique to simulate a small, representative patch of an infinite universe, avoiding edge effects.</li>
+                        <li><strong>Possible Improvements:</strong> A more advanced simulation could use a Tree-PM code, which uses the PM method for long-range forces and a more accurate direct-summation tree algorithm for short-range forces. One could also add a second fluid for baryonic matter with pressure to see more complex astrophysical effects.</li>
+                    </ul>
+                </section>
+
+                <section id="analogies" class="content-section">
+                    <h2>Analogies & Intuition</h2>
+                    <p>Understanding why gravity makes clumpiness a high-entropy state is tricky. Here are a few ways to think about it.</p>
+
+                    <h3>1. The Social Analogy: A Party</h3>
+                    <p>Imagine 100 people in a large, empty hall. If they don't know each other, they will likely wander around randomly, keeping a respectful distance. The distribution is smooth and uniform (high thermal entropy). Now, imagine they are all friends and want to talk (this is "gravity"). They will quickly form into a few tight conversation circles. The system is now "clumpy." There are far more ways to arrange people into conversation groups than to have them all stay perfectly, uniformly distributed. Thus, the clumpy state is the more probable, higher-entropy state for a social system.</p>
+                    <p><strong>Limitation:</strong> People have personal space and stop clumping at a certain density. Gravity does not; it will collapse matter all the way to a black hole if unchecked.</p>
+
+                    <h3>2. The Economic Analogy: Wealth Distribution</h3>
+                    <p>Imagine distributing $1 million equally among 1,000 people. Each person has $1,000. This is a smooth, uniform, low-entropy state (in the "structural" sense). Now, let them interact in a free market with feedback loops (like gravity's "rich get richer" effect). Over time, it's highly probable that wealth will concentrate, with a few people having a lot of money and most having very little. This "clumpy" distribution is a state of higher structural entropy; it's a more generic and probable outcome than perfect equality.</p>
+                    <p><strong>Limitation:</strong> Economic systems have regulations and external inputs. The universe is a closed system governed only by its internal physics.</p>
+
+                    <h3>3. The Information Analogy: Compressing a File</h3>
+                    <p>A picture of a perfectly smooth, grey screen contains very little information and can be compressed to a tiny file (e.g., "one million grey pixels"). This is a low-entropy state. A picture of a complex scene with stars and galaxies contains a vast amount of information and is hard to compress. However, gravity does something like the opposite of data compression. It takes the simple, smooth state and creates a complex, structured state. The "information" about the system's initial state is encoded into the intricate positions of all the particles in the final cosmic web. The loss of thermal entropy (knowing particles are in clumps) is paid for by a massive increase in the structural/gravitational information (the precise shape and location of those clumps).</p>
+                    <p><strong>Limitation:</strong> This is a highly abstract analogy. The key takeaway is that "simple" does not always mean "high entropy" when gravity is involved.</p>
+                </section>
+
+                <section id="faq" class="content-section">
+                    <h2>FAQ & Troubleshooting</h2>
+                    <dl>
+                        <dt>Why does thermal entropy go down? Doesn't that violate the Second Law of Thermodynamics?</dt>
+                        <dd>No, because thermal entropy is only one part of the story. The Second Law applies to the <strong>total</strong> entropy. The massive increase in gravitational entropy (from clumping) more than compensates for the decrease in thermal entropy, so the total entropy always rises.</dd>
+
+                        <dt>Is this how galaxies really formed?</dt>
+                        <dd>This simulation captures the fundamental principle of gravitational instability, which is the core of all modern galaxy formation theories. However, it is a simplified model using only dark matter. Real galaxy formation is much more complex, involving gas dynamics, star formation, and feedback from supernovae.</dd>
+
+                        <dt>Why don't the particles bounce off each other?</dt>
+                        <dd>They represent a "collisionless" fluid, which is an excellent approximation for dark matter. Dark matter particles interact via gravity but are thought to barely interact, if at all, through other forces. They can pass right through each other.</dd>
+
+                        <dt>Why does the simulation eventually slow down or stop?</dt>
+                        <dd>The simulation doesn't stop, but after the initial collapse phase, the system reaches a state of "virial equilibrium." The clumps are stable, with particles orbiting within them at high speed. The large-scale structure changes very slowly after this point.</dd>
+
+                        <dt>What is the "Complexity" meter showing?</dt>
+                        <dd>It's a qualitative measure we invented for this simulation, calculated roughly as `S_grav * S_thermal`. It's meant to capture the idea that "interesting" structure exists when the universe is neither perfectly smooth (low S_grav) nor fully collapsed (low S_thermal), but in a rich state in between.</dd>
+                    </dl>
+                    <h3>Troubleshooting</h3>
+                    <ul>
+                        <li><strong>The simulation is very slow or freezes my browser:</strong> This N-body simulation is computationally intensive. If it's too slow, try reloading the page and using a "Light" preset or enabling "Performance Mode" (when implemented), which will use fewer particles.</li>
+                        <li><strong>The canvas is blank:</strong> Please ensure you are using a modern browser like Chrome, Firefox, or Edge. This simulation requires HTML5 Canvas support.</li>
+                    </ul>
+                </section>
+            </div>
+
+            <div id="error-panel"></div>
+            <div id="dev-console-container">
+                <button id="toggle-dev-console">Developer Console</button>
+                <div id="dev-console"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Simulation Constants ---
+        const GRID_SIZE = 64;
+        const NUM_PARTICLES_NORMAL = 4096;
+        const NUM_PARTICLES_PERF = 1024;
+        const G = 1; // Gravitational constant
+
+        // --- Simulation State & Parameters ---
+        let simState = {};
+        let simParams = {};
+        let particles = [];
+        let grid = {
+            density: new Float32Array(GRID_SIZE * GRID_SIZE),
+            potential: new Float32Array(GRID_SIZE * GRID_SIZE),
+            forceX: new Float32Array(GRID_SIZE * GRID_SIZE),
+            forceY: new Float32Array(GRID_SIZE * GRID_SIZE),
+        };
+        let entropyHistories = { thermal: [], grav: [], total: [] };
+
+        // --- Visualization and Rendering ---
+        function render() {
+            const canvas = document.getElementById('simulation-canvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const scaleX = canvas.width / GRID_SIZE;
+            const scaleY = canvas.height / GRID_SIZE;
+
+            // This is a simple but effective way to visualize density
+            const imageData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (const p of particles) {
+                const gx = Math.floor(p.x);
+                const gy = Math.floor(p.y);
+                const density = grid.density[gy * GRID_SIZE + gx];
+                const brightness = Math.min(255, density * 50);
+
+                const screenX = Math.floor(p.x * scaleX);
+                const screenY = Math.floor(p.y * scaleY);
+
+                if (screenX >= 0 && screenX < canvas.width && screenY >= 0 && screenY < canvas.height) {
+                    const idx = (screenY * canvas.width + screenX) * 4;
+                    data[idx] = brightness;     // R
+                    data[idx + 1] = brightness; // G
+                    data[idx + 2] = 255;        // B
+                    data[idx + 3] = 255;        // A
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function drawChart(canvasId, dataHistory, color) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (dataHistory.length < 2) return;
+
+            const maxVal = Math.max(...dataHistory);
+            const minVal = Math.min(...dataHistory);
+            const range = maxVal - minVal;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            for (let i = 0; i < dataHistory.length; i++) {
+                const x = (i / (dataHistory.length - 1)) * canvas.width;
+                const y = canvas.height - ((dataHistory[i] - minVal) / (range || 1)) * canvas.height;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        function updateLedger() {
+            drawChart('thermal-entropy-canvas', entropyHistories.thermal, '#00aaff');
+            drawChart('grav-entropy-canvas', entropyHistories.grav, '#ff4500');
+            drawChart('total-entropy-canvas', entropyHistories.total, '#e0e0e0');
+
+            const complexityBar = document.getElementById('complexity-bar');
+            if (simState.complexity > (simState.maxComplexity || 0)) {
+                simState.maxComplexity = simState.complexity;
+            }
+            const complexityPercent = (simState.complexity / (simState.maxComplexity || 1)) * 100;
+            complexityBar.style.width = `${complexityPercent}%`;
+        }
+
+        function updateAllControls() {
+            // Syncs UI controls with the current simParams state.
+            const perturbationSlider = document.getElementById('perturbation-slider');
+            const perturbationValue = document.getElementById('perturbation-value');
+            perturbationSlider.value = Math.log10(simParams.perturbation);
+            perturbationValue.textContent = simParams.perturbation.toExponential(1);
+
+            document.getElementById('perf-mode-toggle').checked = simParams.performanceMode;
+        }
+
+        // Placeholder for suggestion box functions
+        function setAudience(level) { console.log(`Audience level set to: ${level}`); }
+        function setAnalogy(style) { console.log(`Analogy style set to: ${style}`); }
+        function setIntensity(level) { console.log(`Intensity level set to: ${level}`); }
+        window.setAudience = setAudience;
+        window.setAnalogy = setAnalogy;
+        window.setIntensity = setIntensity;
+
+        // --- UI Event Listeners & Wiring ---
+        function setupEventListeners() {
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const stepBtn = document.getElementById('step-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const speedSlider = document.getElementById('speed-slider');
+            const speedValue = document.getElementById('speed-value');
+            const perturbationSlider = document.getElementById('perturbation-slider');
+            const perturbationValue = document.getElementById('perturbation-value');
+            const perfModeToggle = document.getElementById('perf-mode-toggle');
+            const contrastToggle = document.getElementById('contrast-toggle');
+
+            playPauseBtn.addEventListener('click', () => {
+                simState.isRunning = !simState.isRunning;
+                playPauseBtn.textContent = simState.isRunning ? 'Pause' : 'Play';
+            });
+
+            stepBtn.addEventListener('click', () => {
+                simState.isRunning = false;
+                playPauseBtn.textContent = 'Play';
+                update(0.05); // Fixed time step
+            });
+
+            resetBtn.addEventListener('click', () => {
+                resetSimulation();
+                updateAllControls();
+            });
+
+            speedSlider.addEventListener('input', () => {
+                simState.speed = parseFloat(speedSlider.value);
+                speedValue.textContent = `${simState.speed.toFixed(1)}x`;
+            });
+
+            perturbationSlider.addEventListener('change', () => { // Use 'change' to avoid resetting while dragging
+                simParams.perturbation = Math.pow(10, parseFloat(perturbationSlider.value));
+                perturbationValue.textContent = simParams.perturbation.toExponential(1);
+                resetSimulation();
+                updateAllControls();
+            });
+            perturbationSlider.addEventListener('input', () => { // Update label while dragging
+                 perturbationValue.textContent = Math.pow(10, parseFloat(perturbationSlider.value)).toExponential(1);
+            });
+
+            perfModeToggle.addEventListener('change', () => {
+                simParams.performanceMode = perfModeToggle.checked;
+                resetSimulation();
+                updateAllControls();
+            });
+
+            contrastToggle.addEventListener('change', () => {
+                document.body.classList.toggle('high-contrast', contrastToggle.checked);
+            });
+
+            // Presets
+            document.getElementById('preset-smooth-btn').addEventListener('click', () => {
+                simParams.perturbation = 1e-5;
+                resetSimulation();
+                updateAllControls();
+            });
+            document.getElementById('preset-typical-btn').addEventListener('click', () => {
+                simParams.perturbation = 1e-4;
+                resetSimulation();
+                updateAllControls();
+            });
+            document.getElementById('preset-violent-btn').addEventListener('click', () => {
+                const confirmed = confirm("Warning: This preset uses a high perturbation value which can be computationally intensive. It may run slowly. Do you want to continue?");
+                if (confirmed) {
+                    simParams.perturbation = 1e-2;
+                    resetSimulation();
+                    updateAllControls();
+                }
+            });
+
+            // Utilities
+            document.getElementById('export-png-btn').addEventListener('click', () => {
+                const canvas = document.getElementById('simulation-canvas');
+                const link = document.createElement('a');
+                link.download = 'gravitational-entropy.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+
+            document.getElementById('export-json-btn').addEventListener('click', () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(simParams, null, 2));
+                const link = document.createElement('a');
+                link.href = dataStr;
+                link.download = "gravitational_entropy_params.json";
+                link.click();
+            });
+
+            document.getElementById('share-preset-btn').addEventListener('click', () => {
+                const url = new URL(window.location);
+                url.hash = btoa(JSON.stringify(simParams));
+                navigator.clipboard.writeText(url.href).then(() => alert('Shareable URL copied to clipboard!'));
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.target.type === 'range') return;
+                if (e.code === 'Space') { e.preventDefault(); playPauseBtn.click(); }
+                if (e.code === 'ArrowRight') { e.preventDefault(); stepBtn.click(); }
+                if (e.key === 'r') { e.preventDefault(); resetBtn.click(); }
+                if (e.key === 'e') { e.preventDefault(); document.getElementById('export-png-btn').click(); }
+            });
+        }
+
+        function loadParamsFromURL() {
+            if (window.location.hash.length > 1) {
+                try {
+                    const decodedString = atob(window.location.hash.substring(1));
+                    const params = JSON.parse(decodedString);
+                    Object.assign(simParams, params);
+                } catch (e) {
+                    console.error("Failed to load params from URL hash:", e);
+                }
+            }
+        }
+
+        function runSelfChecks() {
+            const requiredIds = ['simulation-canvas', 'controls-panel', 'ledger-panel', 'play-pause-btn'];
+            const missing = requiredIds.filter(id => !document.getElementById(id));
+            if (missing.length > 0) {
+                const errorPanel = document.getElementById('error-panel');
+                errorPanel.style.display = 'block';
+                errorPanel.textContent = `Error: Page failed to load correctly. Missing element(s): ${missing.join(', ')}.`;
+            }
+        }
+
+        document.getElementById('toggle-dev-console').addEventListener('click', () => {
+            const consoleDiv = document.getElementById('dev-console');
+            consoleDiv.style.display = consoleDiv.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // --- FFT Implementation (Radix-2 Cooley-Tukey) ---
+        // This is a complex but necessary component for the PM solver.
+        // It's self-contained to adhere to the no-external-dependencies rule.
+        const fft = (function() {
+            function c_add(a, b) { return [a[0] + b[0], a[1] + b[1]]; }
+            function c_sub(a, b) { return [a[0] - b[0], a[1] - b[1]]; }
+            function c_mul(a, b) { return [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]]; }
+            function c_exp(x) { return [Math.cos(x), Math.sin(x)]; }
+
+            function _fft(c, N, inverse) {
+                if (N === 1) return c;
+                const even = _fft(c.filter((_, i) => i % 2 === 0), N / 2, inverse);
+                const odd = _fft(c.filter((_, i) => i % 2 === 1), N / 2, inverse);
+                const sign = inverse ? 1 : -1;
+                const result = new Array(N);
+                for (let k = 0; k < N / 2; k++) {
+                    const t = c_mul(odd[k], c_exp(sign * 2 * Math.PI * k / N));
+                    result[k] = c_add(even[k], t);
+                    result[k + N / 2] = c_sub(even[k], t);
+                }
+                return result;
+            }
+
+            function fft1d(amplitudes, inverse = false) {
+                const N = amplitudes.length;
+                if ((N & (N - 1)) !== 0) throw new Error("FFT size must be a power of 2");
+                const complex_amps = amplitudes.map(a => [a, 0]);
+                const result = _fft(complex_amps, N, inverse);
+                if (inverse) {
+                    for (let i = 0; i < N; i++) {
+                        result[i][0] /= N;
+                        result[i][1] /= N;
+                    }
+                }
+                return result;
+            }
+
+            function fft2d(matrix, width, height, inverse = false) {
+                const transform = new Array(height);
+                // FFT rows
+                for (let y = 0; y < height; y++) {
+                    transform[y] = fft1d(matrix.slice(y * width, (y + 1) * width), inverse);
+                }
+                // FFT columns
+                const final_transform = new Array(height).fill(0).map(() => new Array(width));
+                 for (let x = 0; x < width; x++) {
+                    const column = transform.map(row => row[x]);
+                    const transformed_col = _fft(column, height, inverse);
+                    for (let y = 0; y < height; y++) {
+                        final_transform[y][x] = transformed_col[y];
+                         if (inverse) {
+                            final_transform[y][x][0] /= height;
+                            final_transform[y][x][1] /= height;
+                        }
+                    }
+                }
+                return final_transform;
+            }
+            return {fft2d};
+        })();
+
+
+        // --- Core N-Body & Entropy Logic ---
+        function resetSimulation() {
+            entropyHistories = { thermal: [], grav: [], total: [] };
+            simState = {
+                isRunning: false,
+                time: 0,
+                speed: 1,
+                s_thermal: 0, s_grav: 0, s_total: 0, complexity: 0,
+                maxComplexity: 0,
+                lastFrameTime: performance.now(),
+            };
+            simParams = {
+                perturbation: 1e-4,
+                performanceMode: false,
+            };
+
+            // Initialize particles
+            const num_particles = simParams.performanceMode ? NUM_PARTICLES_PERF : NUM_PARTICLES_NORMAL;
+            particles = new Array(num_particles);
+            for (let i = 0; i < num_particles; i++) {
+                particles[i] = {
+                    x: Math.random() * GRID_SIZE,
+                    y: Math.random() * GRID_SIZE,
+                    vx: 0, vy: 0,
+                    ax: 0, ay: 0,
+                };
+            }
+            // Apply initial perturbations
+            applyPerturbations(simParams.perturbation);
+        }
+
+        function applyPerturbations(amplitude) {
+            // A simple random displacement to seed structure formation
+            for(let p of particles) {
+                p.x += (Math.random() - 0.5) * amplitude * GRID_SIZE;
+                p.y += (Math.random() - 0.5) * amplitude * GRID_SIZE;
+            }
+        }
+
+        function assignToGrid() {
+            grid.density.fill(0);
+            for (const p of particles) {
+                const gx = Math.floor(p.x);
+                const gy = Math.floor(p.y);
+                // Cloud-in-Cell (CIC) assignment
+                const fx = p.x - gx;
+                const fy = p.y - gy;
+
+                const idx00 = (gy % GRID_SIZE) * GRID_SIZE + (gx % GRID_SIZE);
+                const idx10 = (gy % GRID_SIZE) * GRID_SIZE + ((gx + 1) % GRID_SIZE);
+                const idx01 = ((gy + 1) % GRID_SIZE) * GRID_SIZE + (gx % GRID_SIZE);
+                const idx11 = ((gy + 1) % GRID_SIZE) * GRID_SIZE + ((gx + 1) % GRID_SIZE);
+
+                grid.density[idx00] += (1 - fx) * (1 - fy);
+                grid.density[idx10] += fx * (1 - fy);
+                grid.density[idx01] += (1 - fx) * fy;
+                grid.density[idx11] += fx * fy;
+            }
+        }
+
+        function calculateForces() {
+            // 1. FFT density grid
+            const density_k = fft.fft2d(grid.density, GRID_SIZE, GRID_SIZE);
+
+            // 2. Apply potential kernel in Fourier space
+            const potential_k = new Array(GRID_SIZE).fill(0).map(() => new Array(GRID_SIZE));
+            const k_factor = 4 * Math.PI * G;
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const kx = (x > GRID_SIZE / 2) ? x - GRID_SIZE : x;
+                    const ky = (y > GRID_SIZE / 2) ? y - GRID_SIZE : y;
+                    const k2 = kx * kx + ky * ky;
+                    if (k2 === 0) continue;
+
+                    const green = -k_factor / k2;
+                    potential_k[y][x] = [
+                        (density_k[y][x][0] * green),
+                        (density_k[y][x][1] * green)
+                    ];
+                }
+            }
+
+            // 3. Inverse FFT to get potential
+            const potential_flat = fft.fft2d(potential_k.flat(), GRID_SIZE, GRID_SIZE, true);
+            for(let i=0; i<GRID_SIZE*GRID_SIZE; i++) {
+                grid.potential[i] = potential_flat[Math.floor(i/GRID_SIZE)][i%GRID_SIZE][0];
+            }
+
+            // 4. Calculate forces from potential (finite difference)
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const idx = y * GRID_SIZE + x;
+                    const idx_xp1 = y * GRID_SIZE + (x + 1) % GRID_SIZE;
+                    const idx_xm1 = y * GRID_SIZE + (x - 1 + GRID_SIZE) % GRID_SIZE;
+                    const idx_yp1 = ((y + 1) % GRID_SIZE) * GRID_SIZE + x;
+                    const idx_ym1 = ((y - 1 + GRID_SIZE) % GRID_SIZE) * GRID_SIZE + x;
+
+                    grid.forceX[idx] = -(grid.potential[idx_xp1] - grid.potential[idx_xm1]) / 2;
+                    grid.forceY[idx] = -(grid.potential[idx_yp1] - grid.potential[idx_ym1]) / 2;
+                }
+            }
+        }
+
+        function updateParticles(dt) {
+            // Interpolate forces and update particles (Leapfrog integrator)
+            for (const p of particles) {
+                // Interpolate force from grid to particle position (reverse of CIC)
+                const gx = Math.floor(p.x);
+                const gy = Math.floor(p.y);
+                const fx = p.x - gx;
+                const fy = p.y - gy;
+
+                const idx00 = (gy % GRID_SIZE) * GRID_SIZE + (gx % GRID_SIZE);
+                const idx10 = (gy % GRID_SIZE) * GRID_SIZE + ((gx + 1) % GRID_SIZE);
+                const idx01 = ((gy + 1) % GRID_SIZE) * GRID_SIZE + (gx % GRID_SIZE);
+                const idx11 = ((gy + 1) % GRID_SIZE) * GRID_SIZE + ((gx + 1) % GRID_SIZE);
+
+                const ax = (grid.forceX[idx00]*(1-fx)*(1-fy) + grid.forceX[idx10]*fx*(1-fy) + grid.forceX[idx01]*(1-fx)*fy + grid.forceX[idx11]*fx*fy);
+                const ay = (grid.forceY[idx00]*(1-fx)*(1-fy) + grid.forceY[idx10]*fx*(1-fy) + grid.forceY[idx01]*(1-fx)*fy + grid.forceY[idx11]*fx*fy);
+
+                // Leapfrog integration
+                p.vx += ax * dt;
+                p.vy += ay * dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                // Periodic boundary conditions
+                p.x = (p.x + GRID_SIZE) % GRID_SIZE;
+                p.y = (p.y + GRID_SIZE) % GRID_SIZE;
+            }
+        }
+
+        function calculateEntropies() {
+            let s_thermal = 0;
+            let s_grav = 0;
+            const total_mass = particles.length;
+            if(total_mass === 0) return;
+
+            for(let i=0; i<grid.density.length; i++) {
+                const p_i = grid.density[i] / total_mass;
+                if (p_i > 0) {
+                    s_thermal -= p_i * Math.log(p_i);
+                }
+                s_grav -= grid.density[i] * grid.potential[i]; // E_pot = 1/2 sum(rho*phi)
+            }
+
+            simState.s_thermal = s_thermal;
+            simState.s_grav = s_grav * 0.01; // Scale for visualization
+            simState.s_total = simState.s_thermal + simState.s_grav;
+            simState.complexity = simState.s_thermal * simState.s_grav * 0.1;
+
+            // Push to history for graphing
+            if (simState.isRunning) {
+                entropyHistories.thermal.push(simState.s_thermal);
+                entropyHistories.grav.push(simState.s_grav);
+                entropyHistories.total.push(simState.s_total);
+                if (entropyHistories.thermal.length > 500) {
+                    entropyHistories.thermal.shift();
+                    entropyHistories.grav.shift();
+                    entropyHistories.total.shift();
+                }
+            }
+        }
+
+        // --- Main Simulation Loop ---
+        function update(dt) {
+            assignToGrid();
+            calculateForces();
+            updateParticles(dt);
+            calculateEntropies();
+        }
+
+        function simulationLoop() {
+            const now = performance.now();
+            const dt = (now - simState.lastFrameTime) / 1000.0;
+            simState.lastFrameTime = now;
+
+            if (simState.isRunning) {
+                const timeStep = dt * simState.speed;
+                update(timeStep);
+                simState.time += timeStep;
+            }
+
+            render();
+            updateLedger();
+            requestAnimationFrame(simulationLoop);
+        }
+
+        // --- Initial Setup ---
+        try {
+            setupEventListeners();
+            loadParamsFromURL();
+            resetSimulation();
+            updateAllControls();
+            simulationLoop();
+            runSelfChecks();
+        } catch (e) {
+            const devConsole = document.getElementById('dev-console');
+            if(devConsole) {
+                devConsole.style.display = 'block';
+                devConsole.textContent = `A critical error occurred: ${e.message}\n${e.stack}`;
+            }
+            console.error(e);
+        }
+    });
+    </script>
+</body>
+</html>
