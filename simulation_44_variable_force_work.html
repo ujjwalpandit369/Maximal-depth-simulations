@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Done by a Variable Force</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #28a745; /* Green for work/energy */
+            --secondary-color: #6c757d; /* Grey for structure */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #20c997;
+            --secondary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 16 / 9; cursor: pointer; }
+        #animCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 100px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; width: 100%; }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+        .readout p { margin: 5px 0; font-family: monospace; font-size: 1.1em;}
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Work Done by a Variable Force</h1>
+            <p class="subtitle">Visualizing work as the area under the Force-Position curve.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>When a constant force pushes an object, the work done is simply `Force × Distance`. But what if the force changes as the object moves, like when you stretch a rubber band? This simulation provides an interactive tool to understand this common scenario. You can draw your own custom Force vs. Position graph, and the simulation will demonstrate that the work done is equal to the **area under the curve**. It then uses this calculated work to show how it affects the object's kinetic energy and final speed, demonstrating the Work-Energy Theorem.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — Area is Work</h2>
+
+            <h3>Step 1: Constant Force - A Simple Rectangle</h3>
+            <p>Imagine pushing a box with a constant force of 10 Newtons over a distance of 5 meters. The work done is `10 N × 5 m = 50 Joules`. If you were to graph this, with Force on the y-axis and Position on the x-axis, the work would be the area of a simple rectangle (height 10, width 5).</p>
+
+            <h3>Step 2: Variable Force - A Complex Shape</h3>
+            <p>Now imagine the force is not constant. For example, the force from a spring gets stronger the more you stretch it. The Force vs. Position graph is no longer a flat line, but a sloped line or a curve. How do we find the work done now? The answer is the same: the work is still the **area under the curve**, even if the shape is more complex.</p>
+
+            <h3>Step 3: The Interactive Graph</h3>
+            <p>This simulation's main feature is the interactive graph. You can click and drag the control points to create any `F(x)` curve you like. The simulation will then calculate the area under that curve between the start and end points you specify. This area is the total work done by your custom force. You can see this area shaded in on the graph.</p>
+
+            <h3>Step 4: The Work-Energy Theorem</h3>
+            <p>So what does this "work" actually do? The Work-Energy Theorem provides the answer: the net work done on an object equals the change in its kinetic energy (`W = ΔKE`). Kinetic energy is the energy of motion (`KE = ½mv²`). In our simulation, the object starts from rest, so the work you calculate by finding the area under the curve is directly converted into the object's final kinetic energy. The simulation calculates this and the object's final velocity, and then plays a short animation to show the result of your work.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="plotCanvas"></canvas>
+                <canvas id="animCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <p>Drag the points on the graph to define the force curve.</p>
+                <hr>
+                <div class="control-group">
+                    <label>Object Mass (m): <span id="mass-value">2.0</span> kg</label>
+                    <input type="range" id="mass-slider" min="0.5" max="10" step="0.1" value="2.0">
+                </div>
+                 <div class="control-group">
+                    <label>Start Position (x_i): <span id="xi-value">1.0</span> m</label>
+                    <input type="range" id="xi-slider" min="0" max="9.9" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label>End Position (x_f): <span id="xf-value">8.0</span> m</label>
+                    <input type="range" id="xf-slider" min="0.1" max="10" step="0.1" value="8.0">
+                </div>
+                <div class="button-bar">
+                    <button id="run-btn">Run Animation</button>
+                </div>
+                <div class="readout">
+                    <h4>Results</h4>
+                    <p>Work Done (Area): <span id="work-value">--</span> J</p>
+                    <p>Final KE: <span id="ke-value">--</span> J</p>
+                    <p>Final Velocity: <span id="v-final-value">--</span> m/s</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Work as an Integral</h3>
+            <p>The method of finding the area under a curve is formally known as integration in calculus. The work `W` done by a variable force `F(x)` in moving an object from an initial position `x_i` to a final position `x_f` is given by the definite integral:</p>
+            <p><code>W = ∫ (from x_i to x_f) F(x) dx</code></p>
+            <p>The simulation performs this integral numerically. It slices the shaded area into hundreds of very thin trapezoids, calculates the area of each one, and sums them up to get a very precise approximation of the total area, and thus the total work.</p>
+
+            <h3>The Work-Energy Theorem</h3>
+            <p>This is one of the most important theorems in mechanics. It states that the net work `W_net` done on an object equals the change in its kinetic energy, `ΔKE`.</p>
+            <p><code>W_net = KE_final - KE_initial</code></p>
+            <p>Since Kinetic Energy is `KE = ½mv²`, we have:</p>
+            <p><code>W_net = ½mv_f² - ½mv_i²</code></p>
+            <p>In our simulation, the object always starts from rest, so `v_i = 0` and `KE_i = 0`. This simplifies the theorem to `W_net = KE_final`. Once the simulation calculates the work `W` from the area under the curve, it can find the final velocity `v_f` by rearranging the formula:</p>
+            <p><code>v_f = sqrt(2 * W_net / m)</code></p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let plotCanvas, plotCtx, animCanvas, animCtx;
+    let animationFrameId;
+
+    let config = { mass: 2.0, xi: 1.0, xf: 8.0 };
+
+    let controlPoints = [];
+    let draggedPoint = null;
+    let animState = { running: false, progress: 0 };
+
+    function setup() {
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+        animCanvas = document.getElementById('animCanvas');
+        animCtx = animCanvas.getContext('2d');
+
+        setupControls();
+        reset();
+
+        plotCanvas.addEventListener('mousedown', e => {
+            const rect = plotCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            for(const p of controlPoints) {
+                const dist = Math.hypot(mouseX - p.x, mouseY - p.y);
+                if (dist < 10) {
+                    draggedPoint = p;
+                    plotCanvas.style.cursor = 'grabbing';
+                    return;
+                }
+            }
+        });
+        plotCanvas.addEventListener('mouseup', () => { draggedPoint = null; plotCanvas.style.cursor = 'pointer'; });
+        plotCanvas.addEventListener('mouseleave', () => { draggedPoint = null; });
+        plotCanvas.addEventListener('mousemove', e => {
+            if (draggedPoint) {
+                const rect = plotCanvas.getBoundingClientRect();
+                draggedPoint.y = e.clientY - rect.top;
+                draggedPoint.y = Math.max(0, Math.min(plotCanvas.height, draggedPoint.y));
+                update();
+            }
+        });
+    }
+
+    function reset() {
+        controlPoints = [];
+        const numPoints = 6;
+        for (let i = 0; i < numPoints; i++) {
+            controlPoints.push({
+                x: i * (plotCanvas.width / (numPoints - 1)),
+                y: plotCanvas.height * (0.5 + (Math.random() - 0.5) * 0.6)
+            });
+        }
+        update();
+    }
+
+    function getForceAtX(x_px) {
+        const i = Math.floor(x_px / (plotCanvas.width / (controlPoints.length - 1)));
+        if (i >= controlPoints.length - 1) return controlPoints[controlPoints.length - 1].y;
+
+        const p1 = controlPoints[i];
+        const p2 = controlPoints[i+1];
+        const t = (x_px - p1.x) / (p2.x - p1.x);
+        // Linear interpolation
+        return p1.y + (p2.y - p1.y) * t;
+    }
+
+    function update() {
+        const x_max_m = 10;
+        const F_max_N = 50;
+        const px_to_m = x_max_m / plotCanvas.width;
+        const px_to_N = F => F_max_N * (1 - F / plotCanvas.height);
+
+        const xi_px = config.xi / px_to_m;
+        const xf_px = config.xf / px_to_m;
+
+        // Numerical integration using Trapezoidal rule
+        let work = 0;
+        const dx_px = 1;
+        for (let x = xi_px; x < xf_px; x += dx_px) {
+            const f1 = px_to_N(getForceAtX(x));
+            const f2 = px_to_N(getForceAtX(x + dx_px));
+            const area = (f1 + f2) / 2 * (dx_px * px_to_m);
+            work += area;
+        }
+
+        const ke = work > 0 ? work : 0;
+        const vf = work > 0 ? Math.sqrt(2 * work / config.mass) : 0;
+
+        document.getElementById('work-value').textContent = work.toFixed(2);
+        document.getElementById('ke-value').textContent = ke.toFixed(2);
+        document.getElementById('v-final-value').textContent = vf.toFixed(2);
+
+        draw();
+    }
+
+    function runAnimation() {
+        animState = { running: true, progress: 0, startTime: Date.now() };
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        gameLoop();
+    }
+
+    function gameLoop() {
+        if (animState.running) {
+            const duration = 2000; // 2 seconds
+            animState.progress = (Date.now() - animState.startTime) / duration;
+            if (animState.progress >= 1) {
+                animState.progress = 1;
+                animState.running = false;
+            }
+        }
+        draw();
+        if (animState.running) {
+            animationFrameId = requestAnimationFrame(gameLoop);
+        } else {
+            animationFrameId = null;
+        }
+    }
+
+    function draw() {
+        if (!plotCtx || !animCtx) return;
+        drawPlot();
+        drawAnim();
+    }
+
+    function drawPlot() {
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        // Draw axes
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        plotCtx.lineWidth = 1;
+        plotCtx.beginPath();
+        plotCtx.moveTo(30, 0); plotCtx.lineTo(30, height);
+        plotCtx.moveTo(0, height - 30); plotCtx.lineTo(width, height - 30);
+        plotCtx.stroke();
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.fillText("Position, x (m)", width/2, height - 10);
+        plotCtx.save();
+        plotCtx.translate(10, height/2);
+        plotCtx.rotate(-Math.PI/2);
+        plotCtx.fillText("Force, F (N)", 0, 0);
+        plotCtx.restore();
+
+        // Shade area under curve
+        const xi_px = (config.xi / 10) * width;
+        const xf_px = (config.xf / 10) * width;
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '40';
+        plotCtx.beginPath();
+        plotCtx.moveTo(xi_px, height - 30);
+        for (let x = xi_px; x <= xf_px; x++) {
+            plotCtx.lineTo(x, getForceAtX(x));
+        }
+        plotCtx.lineTo(xf_px, height - 30);
+        plotCtx.closePath();
+        plotCtx.fill();
+
+        // Draw the curve
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        plotCtx.lineWidth = 3;
+        plotCtx.beginPath();
+        for (let i = 0; i < controlPoints.length - 1; i++) {
+            plotCtx.lineTo(controlPoints[i].x, controlPoints[i].y);
+        }
+        plotCtx.lineTo(controlPoints[controlPoints.length - 1].x, controlPoints[controlPoints.length - 1].y);
+        plotCtx.stroke();
+
+        // Draw control points
+        controlPoints.forEach(p => {
+            plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+            plotCtx.beginPath();
+            plotCtx.arc(p.x, p.y, 8, 0, 2*Math.PI);
+            plotCtx.fill();
+        });
+    }
+
+    function drawAnim() {
+        const { width, height } = animCanvas;
+        animCtx.clearRect(0, 0, width, height);
+
+        const xi_px = (config.xi / 10) * width;
+        const xf_px = (config.xf / 10) * width;
+
+        // Draw track
+        animCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        animCtx.lineWidth = 2;
+        animCtx.beginPath();
+        animCtx.moveTo(0, height/2 + 10);
+        animCtx.lineTo(width, height/2 + 10);
+        animCtx.stroke();
+
+        // Draw object
+        const x = xi_px + (xf_px - xi_px) * animState.progress;
+        animCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        animCtx.fillRect(x - 10, height/2 - 10, 20, 20);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('run-btn').addEventListener('click', runAnimation);
+
+        const sliders = ['mass', 'xi', 'xf'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', e => {
+                config[id] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = e.target.value;
+                update();
+            });
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); update(); }
+
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>

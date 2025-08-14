@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moment of Inertia of Different Shapes</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #343a40; /* Dark grey for a mechanical feel */
+            --secondary-color: #007bff;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --secondary-color: #58a6ff;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; cursor: pointer; }
+        .button-bar { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .button-bar button.active { background-color: var(--secondary-color); }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+        .readout p { margin: 5px 0; font-family: monospace; font-size: 1.1em;}
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Moment of Inertia of Different Shapes</h1>
+            <p class="subtitle">An interactive calculator for rotational mass.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>In linear motion, mass measures an object's resistance to being accelerated. In rotational motion, that role is played by the **moment of inertia (`I`)**. It's a measure of how difficult it is to make an object spin. It depends not only on the object's mass, but also on its shape and how the mass is distributed relative to the axis of rotation. This interactive tool lets you choose different common shapes, change their properties, and see how their moment of inertia changes. You can also drag the pivot point to explore the powerful **Parallel Axis Theorem**.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — Resistance to Rotation</h2>
+
+            <h3>Step 1: What is Moment of Inertia?</h3>
+            <p>Imagine trying to spin a bicycle wheel. A heavier wheel is harder to spin than a lighter one. Now imagine two wheels of the same weight, but one has a heavy rim and light spokes, while the other has a heavy hub and light rim. The one with the heavy rim will be much harder to spin. This resistance to being spun is the moment of inertia. It's determined by `mass` and how that mass is `distributed`.</p>
+
+            <h3>Step 2: The Role of Shape</h3>
+            <p>Because mass distribution is key, every shape has a different formula for its moment of inertia. In the simulation, select different shapes and observe how the formula changes.
+            <ul>
+                <li>A **Ring** has all its mass at the maximum distance `R` from the center, giving it a large `I = MR²`.</li>
+                <li>A **Solid Disk** has its mass spread out, so its `I = ½MR²` is smaller than a ring of the same mass and radius. It's easier to spin.</li>
+                <li>A **Solid Sphere** concentrates even more mass near the center, making it even easier to spin: `I = (2/5)MR²`.</li>
+            </ul>
+            </p>
+
+            <h3>Step 3: The Parallel Axis Theorem</h3>
+            <p>What if you don't spin an object around its center? The Parallel Axis Theorem is a powerful shortcut for this. It states that the moment of inertia (`I`) about any new axis is equal to the moment of inertia about the center of mass (`I_cm`), plus a term `Md²`, where `M` is the total mass and `d` is the distance you moved the pivot point.</p>
+            <p><code>I = I_cm + M*d²</code></p>
+            <p>In the simulation, you can **drag the pivot point** (the small circle) away from the center of mass (the 'x'). Watch the readouts. You will see the `I_cm` term stay constant, while the `Md²` term grows rapidly as you move the pivot further away, leading to a much larger total `I`. The animation will also slow down, giving you a feel for this increased resistance to rotation.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Object Shape</h3>
+                <div class="button-bar" id="shape-selector">
+                    <button class="active" data-shape="disk">Disk</button>
+                    <button data-shape="ring">Ring</button>
+                    <button data-shape="rod">Rod</button>
+                    <button data-shape="sphere">Sphere</button>
+                </div>
+                <hr>
+                <h3>Object Properties</h3>
+                 <div class="control-group">
+                    <label for="mass-slider">Mass (M): <span id="mass-value">5.0</span> kg</label>
+                    <input type="range" id="mass-slider" min="1" max="20" step="0.5" value="5.0">
+                </div>
+                <div class="control-group">
+                    <label for="radius-slider">Radius/Length (R/L): <span id="radius-value">2.0</span> m</label>
+                    <input type="range" id="radius-slider" min="0.5" max="4" step="0.1" value="2.0">
+                </div>
+                <div class="readout">
+                    <h4>Moment of Inertia Calculation</h4>
+                    <p>Formula: <code id="formula-display">I = ?</code></p>
+                    <p>I_cm: <span id="icm-value">--</span> kg·m²</p>
+                    <p>+ M·d²: <span id="md2-value">--</span> kg·m²</p>
+                    <hr>
+                    <p>I_total: <span id="i-total-value">--</span> kg·m²</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let animationFrameId;
+
+    let config = {
+        shape: 'disk',
+        M: 5.0,
+        R: 2.0,
+    };
+
+    let simState = {
+        angle: 0,
+        omega: 0,
+        pivot_d: 0, // distance from center of mass
+        I_total: 0
+    };
+
+    let isDragging = false;
+
+    const formulas = {
+        disk: { name: "Solid Disk", formula: "I = ½MR²", I_cm: (M,R) => 0.5 * M * R*R },
+        ring: { name: "Ring / Hoop", formula: "I = MR²", I_cm: (M,R) => M * R*R },
+        rod: { name: "Thin Rod", formula: "I = (1/12)ML²", I_cm: (M,L) => (1/12) * M * L*L },
+        sphere: { name: "Solid Sphere", formula: "I = (2/5)MR²", I_cm: (M,R) => (2/5) * M * R*R }
+    };
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        recalculate();
+        gameLoop();
+
+        canvas.addEventListener('mousedown', e => { isDragging = true; canvas.style.cursor = 'grabbing'; handleMouseMove(e); });
+        canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'pointer'; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+        canvas.addEventListener('mousemove', handleMouseMove);
+    }
+
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const R_px = config.R * 50;
+        const d_px = mouseX - canvas.width / 2;
+        simState.pivot_d = Math.max(0, Math.min(R_px, d_px)) / 50; // convert back to meters
+        recalculate();
+    }
+
+    function recalculate() {
+        const shapeInfo = formulas[config.shape];
+        const I_cm = shapeInfo.I_cm(config.M, config.R);
+        const Md2 = config.M * simState.pivot_d**2;
+        simState.I_total = I_cm + Md2;
+
+        // Rotational speed is inversely proportional to inertia
+        simState.omega = 5 / (simState.I_total + 1);
+
+        // Update readouts
+        document.getElementById('formula-display').textContent = `I_cm = ${shapeInfo.formula}`;
+        document.getElementById('icm-value').textContent = I_cm.toFixed(2);
+        document.getElementById('md2-value').textContent = Md2.toFixed(2);
+        document.getElementById('i-total-value').textContent = simState.I_total.toFixed(2);
+    }
+
+    function simulationStep(dt) {
+        simState.angle += simState.omega * dt;
+    }
+
+    function gameLoop() {
+        simulationStep(1/60);
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        ctx.clearRect(0, 0, width, height);
+
+        const R_px = config.R * 50;
+        const pivotX_offset = simState.pivot_d * 50;
+
+        ctx.save();
+        ctx.translate(cx + pivotX_offset, cy);
+        ctx.rotate(simState.angle);
+        ctx.translate(-(cx + pivotX_offset), -cy);
+
+        // Draw shape
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.lineWidth = 2;
+
+        switch(config.shape) {
+            case 'disk':
+            case 'sphere': // Represent sphere as a disk with shading
+                ctx.beginPath();
+                ctx.arc(cx, cy, R_px, 0, 2*Math.PI);
+                ctx.fill();
+                ctx.stroke();
+                if (config.shape === 'sphere') {
+                    const gradient = ctx.createRadialGradient(cx-R_px/3, cy-R_px/3, R_px/10, cx, cy, R_px);
+                    gradient.addColorStop(0, 'rgba(255,255,255,0.4)');
+                    gradient.addColorStop(1, 'rgba(0,0,0,0.4)');
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                }
+                break;
+            case 'ring':
+                ctx.beginPath();
+                ctx.arc(cx, cy, R_px, 0, 2*Math.PI);
+                ctx.arc(cx, cy, R_px * 0.8, 0, 2*Math.PI, true); // counter-clockwise for hole
+                ctx.fill();
+                ctx.stroke();
+                break;
+            case 'rod':
+                const L_px = R_px; // R represents L/2 for rod
+                ctx.fillRect(cx - 5, cy - L_px, 10, L_px * 2);
+                ctx.strokeRect(cx - 5, cy - L_px, 10, L_px * 2);
+                break;
+        }
+
+        // Draw Center of Mass marker
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy - 10);
+        ctx.lineTo(cx + 10, cy + 10);
+        ctx.moveTo(cx + 10, cy - 10);
+        ctx.lineTo(cx - 10, cy + 10);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Draw pivot point
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.beginPath();
+        ctx.arc(cx + pivotX_offset, cy, 8, 0, 2*Math.PI);
+        ctx.fill();
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        const sliders = ['mass', 'radius'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', e => {
+                const key = id === 'mass' ? 'M' : 'R';
+                config[key] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = e.target.value;
+                recalculate();
+            });
+        });
+
+        document.getElementById('shape-selector').addEventListener('click', e => {
+            if (e.target.tagName === 'BUTTON') {
+                config.shape = e.target.dataset.shape;
+                document.querySelectorAll('#shape-selector button').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                recalculate();
+            }
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>

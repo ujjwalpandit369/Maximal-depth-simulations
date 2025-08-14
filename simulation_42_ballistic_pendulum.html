@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ballistic Pendulum</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #8B4513; /* Brown for wood block */
+            --secondary-color: #343a40; /* Grey for gun/structure */
+            --border-color: #dee2e6;
+            --canvas-bg: #e9ecef;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #cd853f;
+            --secondary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 4 / 3; }
+        .button-bar { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; height: 50px; }
+        .button-bar button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .readout { background: var(--code-bg); padding: 15px; border-radius: 5px; margin-top: 15px; }
+        .readout h4 { margin-top: 0; }
+        .readout p { margin: 5px 0; font-family: monospace; font-size: 1.1em;}
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Ballistic Pendulum</h1>
+            <p class="subtitle">Using conservation laws to measure the speed of a bullet.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>How can you measure the speed of a bullet using only a block of wood, some string, and a ruler? The ballistic pendulum is a classic physics experiment that does just that. It's a beautiful demonstration of two different fundamental conservation laws working in sequence. First, a bullet embeds itself in a suspended block in a collision where **momentum is conserved**. Second, the block and bullet swing upwards like a pendulum in a process where **mechanical energy is conserved**. By measuring the final height of the swing, you can work backwards to find the bullet's initial speed.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — A Two-Part Problem</h2>
+            <p>The key to understanding the ballistic pendulum is to break the process down into its two distinct parts.</p>
+
+            <h3>Part 1: The Collision (Conserve Momentum!)</h3>
+            <p>The first event is the bullet striking and embedding itself in the block. This is a **perfectly inelastic collision**.
+            <ul>
+                <li><strong>What's Conserved?</strong> In any collision, the total momentum of the system is conserved (as long as there are no external forces). Momentum is `mass × velocity`.</li>
+                <li><strong>What's NOT Conserved?</strong> Kinetic energy is *not* conserved in an inelastic collision. A huge amount of energy is lost to heat, sound, and the work done to splinter the wood and deform the bullet.</li>
+            </ul>
+            So, we can use the law of conservation of momentum to find the velocity of the combined block-and-bullet system immediately after the collision.
+            </p>
+
+            <h3>Part 2: The Swing (Conserve Energy!)</h3>
+            <p>The second event is the block-and-bullet system swinging upwards.
+            <ul>
+                <li><strong>What's Conserved?</strong> During this swing, we can assume that mechanical energy is conserved (ignoring air resistance). The kinetic energy the block has just after the collision is converted into gravitational potential energy as it rises.</li>
+                <li><strong>What's NOT Conserved?</strong> Momentum is *not* conserved during the swing, because there is now an external force on the system (the tension in the strings).</li>
+            </ul>
+            We use the law of conservation of energy to relate the velocity after the collision to the maximum height `h` that the pendulum reaches.
+            </p>
+
+            <h3>Working Backwards</h3>
+            <p>By running the simulation, you are doing what a physicist would do in the lab:
+            <ol>
+                <li>You observe the final height `h` of the swing.</li>
+                <li>From `h`, you can calculate the kinetic energy the block had just after the collision.</li>
+                <li>From that kinetic energy, you can find the velocity `V` it had just after the collision.</li>
+                <li>Using that velocity `V` and the conservation of momentum from the collision, you can calculate the original, unknown speed of the bullet.</li>
+            </ol>
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="fire-btn">Fire</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label>Bullet Mass (m_b): <span id="m_b-value">10</span> g</label>
+                    <input type="range" id="m_b-slider" min="1" max="100" step="1" value="10">
+                </div>
+                <div class="control-group">
+                    <label>Bullet Velocity (v_b): <span id="v_b-value">400</span> m/s</label>
+                    <input type="range" id="v_b-slider" min="100" max="1000" step="10" value="400">
+                </div>
+                <div class="control-group">
+                    <label>Block Mass (M_B): <span id="M_B-value">5</span> kg</label>
+                    <input type="range" id="M_B-slider" min="1" max="20" step="0.5" value="5">
+                </div>
+                <div class="readout">
+                    <h4>Results</h4>
+                    <p>V_after_collision: <span id="v-final-value">--</span> m/s</p>
+                    <p>Max Height (h): <span id="h-max-value">--</span> m</p>
+                    <hr>
+                    <p>KE Lost in Collision: <span id="ke-lost-value">--</span> %</p>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Part 1: Inelastic Collision</h3>
+            <p>We apply conservation of momentum. Let `m_b` and `v_b` be the bullet's mass and velocity, and `M_B` be the block's mass. The final velocity of the combined system is `V_f`.</p>
+            <p><code>Momentum_initial = Momentum_final</code></p>
+            <p><code>m_b * v_b + M_B * 0 = (m_b + M_B) * V_f</code></p>
+            <p>Solving for the velocity just after the collision:</p>
+            <p><code>V_f = (m_b * v_b) / (m_b + M_B)</code></p>
+
+            <h3>Part 2: Energy Conservation in the Swing</h3>
+            <p>We apply conservation of mechanical energy. The kinetic energy just after the collision is converted into gravitational potential energy at the peak of the swing.</p>
+            <p><code>KE_initial = PE_final</code></p>
+            <p><code>(1/2) * (m_b + M_B) * V_f² = (m_b + M_B) * g * h</code></p>
+            <p>The `(m_b + M_B)` terms cancel, and we can solve for the maximum height `h`:</p>
+            <p><code>h = V_f² / (2g)</code></p>
+
+            <p><strong>Example:</strong> Using default values: `m_b = 0.01 kg`, `v_b = 400 m/s`, `M_B = 5 kg`, `g = 9.8 m/s²`.
+            <br>
+            1. Find `V_f`: `V_f = (0.01 * 400) / (0.01 + 5) = 4 / 5.01 ≈ 0.798 m/s`.
+            <br>
+            2. Find `h`: `h = (0.798)² / (2 * 9.8) = 0.637 / 19.6 ≈ 0.0325 m` (or 3.25 cm).
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let animationFrameId;
+
+    let config = {};
+    let g = 9.81;
+
+    let bullet, block;
+    let simState = 'idle'; // idle, firing, swinging, finished
+    let maxAngle = 0;
+
+    function updateConfig() {
+        config = {
+            m_b: parseFloat(document.getElementById('m_b-slider').value) / 1000, // convert g to kg
+            v_b: parseFloat(document.getElementById('v_b-slider').value),
+            M_B: parseFloat(document.getElementById('M_B-slider').value),
+        };
+        document.getElementById('m_b-value').textContent = (config.m_b*1000).toFixed(0);
+        document.getElementById('v_b-value').textContent = config.v_b.toFixed(0);
+        document.getElementById('M_B-value').textContent = config.M_B.toFixed(1);
+        reset();
+    }
+
+    function reset() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+        simState = 'idle';
+
+        const stringLength = 200;
+        block = {
+            x: canvas.width * 0.6, y: canvas.height * 0.6,
+            w: 80, h: 80,
+            angle: 0, omega: 0,
+            stringLength: stringLength,
+            pivotX: canvas.width * 0.6, pivotY: canvas.height * 0.6 - stringLength,
+        };
+        bullet = { x: 50, y: block.y, w: 10, h: 4, vx: config.v_b, visible: true };
+        maxAngle = 0;
+
+        document.getElementById('fire-btn').disabled = false;
+        document.getElementById('v-final-value').textContent = '--';
+        document.getElementById('h-max-value').textContent = '--';
+        document.getElementById('ke-lost-value').textContent = '--';
+
+        draw();
+    }
+
+    function fire() {
+        if (simState !== 'idle') return;
+        simState = 'firing';
+        gameLoop();
+    }
+
+    function simulationStep(dt) {
+        if (simState === 'firing') {
+            bullet.x += bullet.vx * dt;
+            if (bullet.x >= block.x - block.w/2) {
+                // Collision!
+                const V_f = (config.m_b * config.v_b) / (config.m_b + config.M_B);
+                block.omega = V_f / block.stringLength; // v = r*omega
+
+                const KE_initial = 0.5 * config.m_b * config.v_b**2;
+                const KE_final = 0.5 * (config.m_b + config.M_B) * V_f**2;
+                const ke_lost_pct = (KE_initial - KE_final) / KE_initial * 100;
+
+                document.getElementById('v-final-value').textContent = V_f.toFixed(2);
+                document.getElementById('ke-lost-value').textContent = ke_lost_pct.toFixed(1);
+
+                bullet.visible = false;
+                simState = 'swinging';
+            }
+        } else if (simState === 'swinging') {
+            const alpha = -(g / block.stringLength) * Math.sin(block.angle);
+            block.omega += alpha * dt;
+            block.angle += block.omega * dt;
+
+            if (block.angle > maxAngle) {
+                maxAngle = block.angle;
+            }
+
+            if (block.omega < 0 && block.angle < maxAngle) {
+                // Reached peak
+                const h = block.stringLength * (1 - Math.cos(maxAngle));
+                document.getElementById('h-max-value').textContent = h.toFixed(3);
+                simState = 'finished';
+            }
+        }
+    }
+
+    function gameLoop() {
+        if (simState === 'idle' || simState === 'finished') {
+             cancelAnimationFrame(animationFrameId);
+             animationFrameId = null;
+             return;
+        }
+        simulationStep(1/60);
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // Update block position based on angle
+        block.x = block.pivotX + block.stringLength * Math.sin(block.angle);
+        block.y = block.pivotY + block.stringLength * Math.cos(block.angle);
+
+        // Draw gun
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.fillRect(0, block.y - 10, 50, 20);
+
+        // Draw pivot and strings
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(block.pivotX, block.pivotY, 5, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(block.pivotX, block.pivotY);
+        ctx.lineTo(block.x, block.y);
+        ctx.stroke();
+
+        // Draw block
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.fillRect(block.x - block.w/2, block.y - block.h/2, block.w, block.h);
+
+        // Draw bullet
+        if (bullet.visible) {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(bullet.x - bullet.w/2, bullet.y - bullet.h/2, bullet.w, bullet.h);
+        }
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('fire-btn').addEventListener('click', fire);
+        document.getElementById('reset-btn').addEventListener('click', reset);
+
+        const sliders = ['m_b', 'v_b', 'M_B'];
+        sliders.forEach(id => {
+            document.getElementById(`${id}-slider`).addEventListener('input', e => {
+                updateConfig();
+            });
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); draw(); }
+
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        updateConfig();
+    };
+    </script>
+</body>
+</html>
