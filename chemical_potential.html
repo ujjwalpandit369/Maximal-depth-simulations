@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemical Potential and Diffusion</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --header-color: #3730a3;
+            --accent-color: #4f46e5;
+            --accent-hover: #4338ca;
+            --control-bg: #fff;
+            --control-border: #d1d5db;
+            --canvas-bg: #e0e7ff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #4b5563; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { text-align: center; padding-bottom: 20px; border-bottom: 1px solid var(--control-border); }
+        .control-group { display: inline-block; margin: 0 15px; }
+
+        .sim-canvas { width: 100%; height: 250px; background: var(--canvas-bg); border-radius: 4px; }
+        .graph-canvas { width: 100%; height: 200px; background: var(--canvas-bg); border-radius: 4px; margin-top: 10px; }
+
+        button { background-color: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1.2em; transition: background-color 0.2s; }
+        button:hover { background-color: var(--accent-hover); }
+
+        .readouts { display: flex; justify-content: space-around; font-weight: bold; margin-top: 10px; font-family: monospace; }
+        #readout-a { color: #d32f2f; }
+        #readout-b { color: #1976d2; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chemical Potential and Diffusion</h1>
+            <p class="subtitle">Visualizing the driving force behind particle flow.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why do things mix? If you open a bottle of perfume, why do the scent molecules spread throughout the room? The answer lies in a fundamental concept of thermodynamics and chemistry called <strong>Chemical Potential (μ)</strong>. Often described as a measure of "chemical eagerness," it represents the free energy per particle. Just as heat flows from high to low temperature, particles spontaneously flow from a region of high chemical potential to a region of low chemical potential. This simulation visualizes this process for a simple gas, showing how an initial difference in density (and thus chemical potential) drives diffusion until equilibrium is reached.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="n-a-slider">Particles in A: <span id="n-a-value">150</span></label><br>
+                    <input type="range" id="n-a-slider" min="10" max="200" step="5" value="150">
+                </div>
+                <div class="control-group">
+                    <label for="n-b-slider">Particles in B: <span id="n-b-value">50</span></label><br>
+                    <input type="range" id="n-b-slider" min="10" max="200" step="5" value="50">
+                </div>
+                <br><br>
+                <button id="valve-toggle">Open Valve</button>
+            </div>
+
+            <div>
+                <h3>Particle Distribution</h3>
+                <canvas id="sim-canvas" class="sim-canvas"></canvas>
+                <div class="readouts">
+                    <div id="readout-a">Box A: 150 particles</div>
+                    <div id="readout-b">Box B: 50 particles</div>
+                </div>
+            </div>
+
+            <div>
+                <h3>Chemical Potential (μ) Over Time</h3>
+                <canvas id="graph-canvas" class="graph-canvas"></canvas>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>The "Eagerness" to Move</h2>
+            <p>While we often think of diffusion as particles simply spreading out to fill a space, the more fundamental driving force is the equalization of chemical potential. For a simple ideal gas like the one shown, the chemical potential is primarily determined by its density (number of particles per unit volume).</p>
+            <ul>
+                <li><strong>High Density = High Chemical Potential:</strong> A densely packed gas has a high chemical potential. The particles are "eager" to leave.</li>
+                <li><strong>Low Density = Low Chemical Potential:</strong> A sparsely populated gas has a low chemical potential.</li>
+            </ul>
+            <p>When you click "Open Valve," you connect the two systems. The particles in the high-density box (which has high μ) immediately start to flow into the low-density box (which has low μ). This continues until the densities—and therefore the chemical potentials—are equal in both boxes. At this point, the system has reached <strong>diffusive equilibrium</strong>. Individual particles still move back and forth, but the net flow is zero.</p>
+
+            <h3>The Graph</h3>
+            <p>The graph below the simulation plots the chemical potential of Box A (red) and Box B (blue) over time. You can see that before the valve is opened, they are at different, constant levels. The moment you open the valve, the two lines begin to converge, meeting at a single equilibrium value. This powerfully illustrates how the abstract quantity of chemical potential governs the physical process of diffusion you see in the top panel.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const simCanvas = document.getElementById('sim-canvas');
+        const sCtx = simCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        const controls = {
+            nA: document.getElementById('n-a-slider'),
+            nB: document.getElementById('n-b-slider'),
+            valve: document.getElementById('valve-toggle'),
+        };
+        const values = {
+            nA: document.getElementById('n-a-value'),
+            nB: document.getElementById('n-b-value'),
+            readoutA: document.getElementById('readout-a'),
+            readoutB: document.getElementById('readout-b'),
+        };
+
+        let state = {
+            nA_initial: 150, nB_initial: 50,
+            volA: 0.5, volB: 0.5,
+            valveOpen: false,
+        };
+
+        let particles = [];
+        let history = { muA: [], muB: [] };
+
+        class Particle {
+            constructor(box) {
+                this.box = box; // 'A' or 'B'
+                this.x = (box === 'A') ? Math.random() * (simCanvas.width * state.volA) : (simCanvas.width * state.volA) + Math.random() * (simCanvas.width * state.volB);
+                this.y = Math.random() * simCanvas.height;
+                const angle = Math.random() * 2 * Math.PI;
+                this.vx = Math.cos(angle) * 2;
+                this.vy = Math.sin(angle) * 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off top/bottom walls
+                if (this.y < 0 || this.y > simCanvas.height) this.vy *= -1;
+
+                // Bounce off side walls
+                const partitionX = simCanvas.width * state.volA;
+                if (this.box === 'A') {
+                    if (this.x < 0) this.vx *= -1;
+                    if (this.x > partitionX && !state.valveOpen) this.vx *= -1;
+                } else { // Box B
+                    if (this.x > simCanvas.width) this.vx *= -1;
+                    if (this.x < partitionX && !state.valveOpen) this.vx *= -1;
+                }
+
+                // Update box if valve is open
+                if (state.valveOpen) {
+                    this.box = (this.x < partitionX) ? 'A' : 'B';
+                }
+            }
+            draw() {
+                sCtx.fillStyle = this.box === 'A' ? '#d32f2f' : '#1976d2';
+                sCtx.beginPath();
+                sCtx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                sCtx.fill();
+            }
+        }
+
+        function setup() {
+            state.nA_initial = parseInt(controls.nA.value);
+            state.nB_initial = parseInt(controls.nB.value);
+            values.nA.textContent = state.nA_initial;
+            values.nB.textContent = state.nB_initial;
+            state.valveOpen = false;
+            controls.valve.textContent = "Open Valve";
+
+            particles = [];
+            for(let i=0; i<state.nA_initial; i++) particles.push(new Particle('A'));
+            for(let i=0; i<state.nB_initial; i++) particles.push(new Particle('B'));
+
+            history = { muA: [], muB: [] };
+            updateReadouts();
+            drawGraph();
+        }
+
+        function drawSim() {
+            sCtx.clearRect(0,0,simCanvas.width, simCanvas.height);
+            const partitionX = simCanvas.width * state.volA;
+
+            // Draw boxes
+            sCtx.fillStyle = 'rgba(200,200,200,0.1)';
+            sCtx.fillRect(0,0,partitionX, simCanvas.height);
+            sCtx.fillRect(partitionX,0,simCanvas.width - partitionX, simCanvas.height);
+
+            // Draw valve
+            sCtx.strokeStyle = '#666';
+            sCtx.lineWidth = 4;
+            sCtx.beginPath();
+            if (state.valveOpen) {
+                sCtx.moveTo(partitionX, 0); sCtx.lineTo(partitionX, simCanvas.height * 0.4);
+                sCtx.moveTo(partitionX, simCanvas.height); sCtx.lineTo(partitionX, simCanvas.height * 0.6);
+            } else {
+                sCtx.moveTo(partitionX, 0); sCtx.lineTo(partitionX, simCanvas.height);
+            }
+            sCtx.stroke();
+
+            particles.forEach(p => p.draw());
+        }
+
+        function updateReadouts() {
+            const countA = particles.filter(p => p.box === 'A').length;
+            const countB = particles.length - countA;
+            values.readoutA.textContent = `Box A: ${countA} particles`;
+            values.readoutB.textContent = `Box B: ${countB} particles`;
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width;
+            const h = graphCanvas.height;
+            gCtx.clearRect(0,0,w,h);
+            gCtx.fillStyle = '#e0e7ff';
+            gCtx.fillRect(0,0,w,h);
+
+            // Chemical potential mu is proportional to log(N/V)
+            const countA = particles.filter(p => p.box === 'A').length;
+            const countB = particles.length - countA;
+            const densityA = countA / state.volA;
+            const densityB = countB / state.volB;
+
+            const muA = (densityA > 0) ? Math.log(densityA) : -Infinity;
+            const muB = (densityB > 0) ? Math.log(densityB) : -Infinity;
+
+            history.muA.push(muA);
+            history.muB.push(muB);
+            if (history.muA.length > w) {
+                history.muA.shift();
+                history.muB.shift();
+            }
+
+            const maxMu = Math.log( (state.nA_initial + state.nB_initial) / Math.min(state.volA, state.volB) ) * 1.1;
+            const minMu = Math.log(10 / Math.max(state.volA, state.volB));
+
+            function plotHistory(hist, color) {
+                gCtx.strokeStyle = color;
+                gCtx.lineWidth = 2;
+                gCtx.beginPath();
+                hist.forEach((mu, i) => {
+                    const y = h - ( (mu - minMu) / (maxMu - minMu) * h );
+                    if (i===0) gCtx.moveTo(i,y);
+                    else gCtx.lineTo(i,y);
+                });
+                gCtx.stroke();
+            }
+            plotHistory(history.muA, '#d32f2f');
+            plotHistory(history.muB, '#1976d2');
+        }
+
+        function animate() {
+            particles.forEach(p => p.update());
+            drawSim();
+            if(state.valveOpen) {
+                 drawGraph();
+                 updateReadouts();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        controls.valve.addEventListener('click', () => {
+            state.valveOpen = !state.valveOpen;
+            controls.valve.textContent = state.valveOpen ? "Close Valve" : "Open Valve";
+            if (!state.valveOpen) setup();
+        });
+
+        controls.nA.addEventListener('input', setup);
+        controls.nB.addEventListener('input', setup);
+
+        setup();
+        animate();
+    });
+    </script>
+</body>
+</html>

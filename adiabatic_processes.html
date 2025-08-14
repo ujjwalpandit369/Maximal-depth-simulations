@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adiabatic vs. Isothermal Processes</title>
+    <style>
+        :root {
+            --bg-color: #f3e5f5;
+            --text-color: #333;
+            --header-color: #6a1b9a;
+            --accent-color: #8e24aa;
+            --accent-hover: #6a1b9a;
+            --control-bg: #fff;
+            --control-border: #e1bee7;
+            --canvas-bg: #f3e5f5;
+            --iso-color: #0288d1;
+            --adia-color: #d32f2f;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.5em; text-align: center; }
+        .subtitle { text-align: center; font-style: italic; color: #666; margin-top: 0; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            background: var(--control-bg);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .controls { grid-column: 1 / -1; text-align: center; }
+        .sim-panel { border: 2px solid var(--control-border); border-radius: 8px; padding: 15px; }
+        .sim-panel h3 { margin-top: 0; text-align: center; }
+        .sim-canvas { width: 100%; height: 250px; background: var(--canvas-bg); border-radius: 4px; }
+        .readouts { display: flex; justify-content: space-around; font-weight: bold; margin-top: 10px; }
+        #iso-readout { color: var(--iso-color); }
+        #adia-readout { color: var(--adia-color); }
+
+        .pv-diagram { grid-column: 1 / -1; }
+        #pv-canvas { height: 350px; }
+
+        @media (max-width: 780px) {
+            .main-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Adiabatic vs. Isothermal Processes</h1>
+            <p class="subtitle">A comparative simulation of two fundamental thermodynamic processes.</p>
+        </header>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>When you compress a gas, where does the energy go? The answer depends on how you compress it. This simulation compares two fundamental types of thermodynamic processes: <strong>isothermal</strong> and <strong>adiabatic</strong>. In an isothermal process, the compression happens slowly and heat is allowed to escape, keeping the temperature constant. In an adiabatic process, the system is perfectly insulated and the compression happens quickly, so the work done on the gas increases its internal energy, causing its temperature to soar. This simple difference has profound consequences, from the efficiency of engines to the way sound travels through the air.</p>
+        </section>
+
+        <div class="main-container">
+            <div class="controls">
+                <label for="volume-slider"><strong>Master Volume Control</strong></label><br>
+                <input type="range" id="volume-slider" min="0.1" max="1" step="0.01" value="1">
+            </div>
+
+            <div class="sim-panel">
+                <h3 style="color: var(--iso-color);">Isothermal Process</h3>
+                <canvas id="iso-canvas" class="sim-canvas"></canvas>
+                <div class="readouts" id="iso-readout">
+                    <span>P: 1.00 atm</span><span>T: 300 K</span>
+                </div>
+            </div>
+
+            <div class="sim-panel">
+                <h3 style="color: var(--adia-color);">Adiabatic Process</h3>
+                <canvas id="adia-canvas" class="sim-canvas"></canvas>
+                <div class="readouts" id="adia-readout">
+                    <span>P: 1.00 atm</span><span>T: 300 K</span>
+                </div>
+            </div>
+
+            <div class="pv-diagram sim-panel">
+                <h3>P-V Diagram</h3>
+                <canvas id="pv-canvas" class="sim-canvas"></canvas>
+            </div>
+        </div>
+
+        <section id="guide">
+            <h2>What's the Difference?</h2>
+            <h3>Isothermal: Constant Temperature</h3>
+            <p>The key to an isothermal process is that it's done slowly enough for heat to exchange with the environment, keeping the temperature of the gas constant. In the simulation, you can see heat waves leaving the cylinder during compression. Because temperature is proportional to the average kinetic energy of the particles, the particles in the isothermal cylinder maintain the same average speed. On the P-V diagram, this process follows the ideal gas law, <code>PV = constant</code>, resulting in a gentle curve.</p>
+
+            <h3>Adiabatic: No Heat Exchange</h3>
+            <p>The key to an adiabatic process is that it's perfectly insulated (or happens so fast that heat has no time to escape). When you do work on the gas by compressing it, that energy has nowhere to go, so it increases the internal energy of the gas itself. This causes a sharp rise in temperature and pressure. In the simulation, you can see the particles speed up and turn red during compression. On the P-V diagram, this process follows the relation <code>PV^γ = constant</code> (where γ is a property of the gas > 1), resulting in a much steeper curve than the isothermal one.</p>
+
+            <h3>Real-World Example: Diesel vs. Gasoline Engines</h3>
+            <p>This difference is why a diesel engine works. A gasoline engine uses a spark plug to ignite its fuel. A diesel engine has no spark plugs. Instead, it uses a very high compression ratio to compress air adiabatically. The compression happens so fast that the air's temperature rises dramatically—to a point where it's hot enough to ignite diesel fuel spontaneously as soon as it's injected. The work of compression directly creates the heat for combustion.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const isoCanvas = document.getElementById('iso-canvas');
+        const iCtx = isoCanvas.getContext('2d');
+        const adiaCanvas = document.getElementById('adia-canvas');
+        const aCtx = adiaCanvas.getContext('2d');
+        const pvCanvas = document.getElementById('pv-canvas');
+        const pvCtx = pvCanvas.getContext('2d');
+
+        const volumeSlider = document.getElementById('volume-slider');
+        const isoReadout = document.getElementById('iso-readout');
+        const adiaReadout = document.getElementById('adia-readout');
+
+        const state = {
+            V: 1.0, // relative volume
+            P0: 1.0, T0: 300, V0: 1.0,
+            gamma: 1.4,
+            isoPath: [],
+            adiaPath: [],
+        };
+
+        function calculateStates() {
+            const V = state.V;
+            // Isothermal
+            const P_iso = state.P0 * state.V0 / V;
+            const T_iso = state.T0;
+
+            // Adiabatic
+            const P_adia = state.P0 * Math.pow(state.V0 / V, state.gamma);
+            const T_adia = state.T0 * Math.pow(state.V0 / V, state.gamma - 1);
+
+            return { P_iso, T_iso, P_adia, T_adia };
+        }
+
+        function drawPiston(ctx, volume, temp) {
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+            ctx.clearRect(0,0,w,h);
+
+            const pistonHeight = 20;
+            const maxVolHeight = h - 10 - pistonHeight;
+            const pistonY = 10 + maxVolHeight * (1 - volume);
+
+            // Cylinder
+            ctx.strokeStyle = '#9e9e9e';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(w/2 - 50, 10, 100, h - 20);
+
+            // Piston
+            ctx.fillStyle = '#607d8b';
+            ctx.fillRect(w/2 - 50, pistonY, 100, pistonHeight);
+
+            // Gas particles
+            const numParticles = 20;
+            for (let i = 0; i < numParticles; i++) {
+                const particleX = w/2 - 45 + Math.random() * 90;
+                const particleY = pistonY + pistonHeight + Math.random() * (h - pistonY - pistonHeight - 10);
+
+                // Color based on temperature
+                const tempRatio = Math.min(1, (temp - 250) / 500);
+                const r = 255 * tempRatio;
+                const b = 255 * (1 - tempRatio);
+                ctx.fillStyle = `rgb(${r}, 50, ${b})`;
+                ctx.beginPath();
+                ctx.arc(particleX, particleY, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawPVDiagram() {
+            const w = pvCanvas.width;
+            const h = pvCanvas.height;
+            pvCtx.clearRect(0,0,w,h);
+
+            const V_min = 0.1;
+            const V_max = 1.0;
+            const P_max_iso = state.P0 * state.V0 / V_min;
+            const P_max_adia = state.P0 * Math.pow(state.V0 / V_min, state.gamma);
+            const P_max = Math.max(P_max_iso, P_max_adia);
+
+            const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+            const x = v => margin.left + (v - V_min) / (V_max - V_min) * (w - margin.left - margin.right);
+            const y = p => (h - margin.bottom) - (p - state.P0) / (P_max - state.P0) * (h - margin.top - margin.bottom);
+
+            // Axes
+            pvCtx.strokeStyle = '#333';
+            pvCtx.lineWidth = 1;
+            pvCtx.beginPath();
+            pvCtx.moveTo(margin.left, h - margin.bottom); pvCtx.lineTo(w - margin.right, h - margin.bottom);
+            pvCtx.moveTo(margin.left, h - margin.bottom); pvCtx.lineTo(margin.left, margin.top);
+            pvCtx.stroke();
+            pvCtx.fillStyle = '#333';
+            pvCtx.fillText("Volume (V)", w/2, h - 10);
+            pvCtx.save();
+            pvCtx.translate(15, h/2); pvCtx.rotate(-Math.PI/2);
+            pvCtx.fillText("Pressure (P)", 0, 0);
+            pvCtx.restore();
+
+            // Isothermal curve
+            pvCtx.strokeStyle = '#0288d1';
+            pvCtx.beginPath();
+            for (let v = V_max; v >= V_min; v -= 0.01) {
+                let p = state.P0 * state.V0 / v;
+                if (v === V_max) pvCtx.moveTo(x(v), y(p));
+                else pvCtx.lineTo(x(v), y(p));
+            }
+            pvCtx.stroke();
+
+            // Adiabatic curve
+            pvCtx.strokeStyle = '#d32f2f';
+            pvCtx.beginPath();
+            for (let v = V_max; v >= V_min; v -= 0.01) {
+                let p = state.P0 * Math.pow(state.V0 / v, state.gamma);
+                if (v === V_max) pvCtx.moveTo(x(v), y(p));
+                else pvCtx.lineTo(x(v), y(p));
+            }
+            pvCtx.stroke();
+
+            // Current points
+            const { P_iso, P_adia } = calculateStates();
+            pvCtx.fillStyle = '#0288d1';
+            pvCtx.beginPath();
+            pvCtx.arc(x(state.V), y(P_iso), 6, 0, Math.PI * 2);
+            pvCtx.fill();
+
+            pvCtx.fillStyle = '#d32f2f';
+            pvCtx.beginPath();
+            pvCtx.arc(x(state.V), y(P_adia), 6, 0, Math.PI * 2);
+            pvCtx.fill();
+        }
+
+        function update() {
+            const { P_iso, T_iso, P_adia, T_adia } = calculateStates();
+
+            isoReadout.innerHTML = `<span>P: ${P_iso.toFixed(2)} atm</span><span>T: ${T_iso.toFixed(0)} K</span>`;
+            adiaReadout.innerHTML = `<span>P: ${P_adia.toFixed(2)} atm</span><span>T: ${T_adia.toFixed(0)} K</span>`;
+
+            drawPiston(iCtx, state.V, T_iso);
+            drawPiston(aCtx, state.V, T_adia);
+            drawPVDiagram();
+        }
+
+        volumeSlider.addEventListener('input', e => {
+            state.V = parseFloat(e.target.value);
+            update();
+        });
+
+        update();
+    });
+    </script>
+</body>
+</html>
