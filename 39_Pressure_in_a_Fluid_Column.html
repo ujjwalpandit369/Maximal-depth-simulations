@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pressure in a Fluid Column Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #2980b9;
+            --accent-color-dark: #2471a3;
+            --code-bg: #e2e8f0;
+            --fluid-color-top: #5dade2;
+            --fluid-color-bottom: #21618c;
+            --sensor-color: #f1c40f;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #5dade2;
+            --accent-color-dark: #3498db;
+            --code-bg: #2d3748;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; display: flex; justify-content: center; align-items: center; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            cursor: ns-resize;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pressure in a Fluid Column</h1>
+            <p class="subtitle">An interactive demonstration of how pressure increases with fluid depth.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop/Mobile</span>
+                <span><strong>Approx. HTML Size:</strong> 190 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Anyone who has dived to the bottom of a swimming pool has felt it: the deeper you go, the more pressure you feel on your ears. This phenomenon is a fundamental property of all fluids (liquids and gases). The pressure at any point within a fluid is caused by the weight of all the fluid directly above that point. This simulation provides a simple, interactive way to explore this concept. You can drag a pressure sensor up and down in a column of fluid and see the pressure reading change in real-time. By adjusting the fluid's density and the planet's gravity, you can discover for yourself the exact factors that determine how pressure behaves beneath the surface.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Weight of Water</h2>
+
+            <h3>Step 1: What is Pressure?</h3>
+            <p>Pressure is defined as force per unit area. A sharp needle can create a high pressure with a small force because the area is tiny. In a fluid, this force is exerted by the fluid itself on any surface it touches, including the walls of its container or an object submerged in it. This pressure acts in all directions at once.</p>
+
+            <h3>Step 2: Pressure and Depth</h3>
+            <p>The key idea is that the pressure at a certain depth is caused by the **weight** of the column of fluid sitting on top of it. Imagine you're at the bottom of the container in the simulation. The entire column of fluid above you is being pulled down by gravity, and you are supporting its weight. If you move the sensor halfway up, you are only supporting the weight of the fluid that is still above you. Therefore, the pressure is less.</p>
+            <p>This leads to a simple relationship: **pressure increases linearly with depth.** If you go twice as deep, the pressure increase from the fluid is twice as much.</p>
+
+            <h3>Step 3: Using the Simulation</h3>
+            <p>The simulation allows you to test this principle directly.
+            <ul>
+                <li><strong>Drag the Sensor:</strong> Click and drag the yellow pressure sensor up and down. Watch the pressure reading on the sensor and the bar graph on the side. You'll see a direct, linear relationship between the sensor's depth and the measured pressure.</li>
+                <li><strong>Change Fluid Density (ρ):</strong> The density of a substance is its mass per unit of volume. A dense fluid like mercury has more mass packed into the same space than water does. Use the slider to change the fluid's density. You'll see that a denser fluid exerts much more pressure at the same depth because the column of fluid above the sensor is heavier.</li>
+                <li><strong>Change Gravity (g):</strong> On the Moon, where gravity is weaker, the same column of water would weigh less. Use the gravity slider to simulate being on different planets. You'll find that stronger gravity leads to higher pressure at the same depth.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Animation of a pressure sensor in a fluid"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="density-slider">Fluid Density (ρ): <span id="density-label">1000</span> kg/m³</label>
+                    <input type="range" id="density-slider" min="100" max="13600" value="1000" step="10">
+                </div>
+                <div class="control-group">
+                    <label for="gravity-slider">Gravity (g): <span id="gravity-label">9.8</span> m/s²</label>
+                    <input type="range" id="gravity-slider" min="1.0" max="25.0" value="9.8" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Hydrostatic Equation</h2>
+            <p>The relationship between pressure and depth in a static fluid is described by the hydrostatic equation.</p>
+
+            <h3>1. Derivation from a Fluid Column</h3>
+            <p>Consider a flat, horizontal area <code>A</code> at a depth <code>h</code> below the surface of a fluid with density <code>&rho;</code>.
+            <ul>
+                <li>The volume of the column of fluid above this area is <code>V = A &times; h</code>.</li>
+                <li>The mass of this fluid column is <code>m = &rho; &times; V = &rho;Ah</code>.</li>
+                <li>The weight of this fluid column is <code>W = mg = &rho;Ahg</code>.</li>
+                <li>Pressure is force (in this case, weight) per unit area: <code>P<sub>fluid</sub> = W / A = (&rho;Ahg) / A = &rho;gh</code>.</li>
+            </ul>
+            </p>
+
+            <h3>2. The Full Equation</h3>
+            <p>The total pressure (absolute pressure) at a depth <code>h</code> is the pressure from the fluid plus the pressure at the surface, which is usually the atmospheric pressure, P₀.</p>
+            <p><code><strong>P = P₀ + &rho;gh</strong></code></p>
+            <p>In this simulation, we set P₀ to 1 atmosphere (≈101,325 Pascals) and calculate the total pressure based on the sensor's depth <code>h</code>.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const densitySlider = document.getElementById('density-slider');
+        const densityLabel = document.getElementById('density-label');
+        const gravitySlider = document.getElementById('gravity-slider');
+        const gravityLabel = document.getElementById('gravity-label');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+        // --- Simulation State ---
+        let simParams = { rho: 1000, g: 9.8 };
+        let sensor = { y: 256 };
+        let dragging = false;
+        const P0 = 101325; // Pascals (1 atm)
+
+        function updateParams() {
+            simParams.rho = parseFloat(densitySlider.value);
+            simParams.g = parseFloat(gravitySlider.value);
+            densityLabel.textContent = simParams.rho.toFixed(0);
+            gravityLabel.textContent = simParams.g.toFixed(1);
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const surface_y = 50;
+            const bottom_y = canvas.height - 50;
+
+            // Draw fluid with gradient
+            const grad = ctx.createLinearGradient(0, surface_y, 0, bottom_y);
+            const topColor = getComputedStyle(document.documentElement).getPropertyValue('--fluid-color-top').trim();
+            const bottomColor = getComputedStyle(document.documentElement).getPropertyValue('--fluid-color-bottom').trim();
+            grad.addColorStop(0, topColor);
+            grad.addColorStop(1, bottomColor);
+            ctx.fillStyle = grad;
+            ctx.fillRect(50, surface_y, canvas.width - 100, bottom_y - surface_y);
+
+            // Calculate pressure
+            const depth_m = (sensor.y - surface_y) / 10; // 10 pixels = 1 meter
+            const P_fluid = simParams.rho * simParams.g * depth_m;
+            const P_total = P0 + P_fluid;
+
+            // Draw pressure bar
+            const max_P = P0 + 13600 * 9.8 * ((bottom_y - surface_y)/10);
+            const bar_h = (P_total / max_P) * (bottom_y - surface_y);
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(canvas.width - 90, surface_y, 30, bottom_y - surface_y);
+            ctx.fillStyle = 'var(--sensor-color)';
+            ctx.fillRect(canvas.width - 90, bottom_y - bar_h, 30, bar_h);
+
+            // Draw sensor
+            ctx.fillStyle = 'var(--sensor-color)';
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, sensor.y, 15, 0, 2*Math.PI);
+            ctx.fill();
+
+            // Draw readout
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${(P_total/1000).toFixed(1)} kPa`, canvas.width/2, sensor.y + 5);
+        }
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        densitySlider.addEventListener('input', updateParams);
+        gravitySlider.addEventListener('input', updateParams);
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            if(Math.abs(y - sensor.y) < 20) dragging = true;
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if(dragging) {
+                const rect = canvas.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                sensor.y = Math.max(50, Math.min(canvas.height - 50, y));
+            }
+        });
+        window.addEventListener('mouseup', () => { dragging = false; });
+
+        // --- Init ---
+        updateParams();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

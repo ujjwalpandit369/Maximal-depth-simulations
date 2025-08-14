@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave on a String Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #27ae60;
+            --accent-color-dark: #229954;
+            --code-bg: #e2e8f0;
+            --string-color: #c0392b;
+            --marker-color: #2980b9;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #2ecc71;
+            --accent-color-dark: #27ae60;
+            --code-bg: #2d3748;
+            --string-color: #e74c3c;
+            --marker-color: #5dade2;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4/1;
+        }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: calc(50% - 5px);
+            padding: 8px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .control-group button.active { background-color: var(--accent-color); color: white; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Wave on a String Simulator</h1>
+            <p class="subtitle">Exploring wave propagation, reflection, and standing waves.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 220 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Waves are everywhere, from the ripples in a pond to the light from the sun. This simulation lets you explore the fundamental properties of waves using a simple, intuitive model: a taut string. You can send a single pulse down the string or create a continuous wave by making one end oscillate. Observe how the wave travels, reflects off the other end, and interferes with itself. By adjusting the frequency of the oscillation, you can discover the "magic" frequencies that create beautiful, stable **standing waves**—the same principle that creates musical notes on a guitar or violin string.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: Making Waves</h2>
+
+            <h3>Step 1: What is a Wave?</h3>
+            <p>A wave is a disturbance that transfers energy from one place to another. In a **transverse wave**, like the one on our string, the particles of the medium move perpendicular to the direction the wave is traveling. The simulation shows small <span style="color:var(--marker-color)">blue dots</span> on the string. Notice that as the red wave travels from left to right, the blue dots only move up and down; they don't travel along with the wave.</p>
+
+            <h3>Step 2: Pulse vs. Continuous Wave</h3>
+            <p>You can create two types of waves:
+            <ul>
+                <li><strong>Pulse:</strong> Click the "Send Pulse" button. The oscillator on the left will move up and down once, sending a single hump of energy down the string.</li>
+                <li><strong>Continuous Wave:</strong> Click the "Oscillate" button. The oscillator will move up and down continuously, creating a repeating wave train.</li>
+            </ul>
+            You can control the wave's **Amplitude** (how high the peaks are) and **Frequency** (how rapidly the oscillator moves) with the sliders.</p>
+
+            <h3>Step 3: Reflection</h3>
+            <p>What happens when a wave reaches the end of the string? It reflects. The way it reflects depends on the boundary condition, which you can change with the toggle at the bottom of the controls.
+            <ul>
+                <li><strong>Fixed End:</strong> The end of the string is tied down and cannot move. When the wave hits this fixed point, it exerts an upward force on the wall, and the wall exerts an equal and opposite downward force on the string. This causes the reflected wave to be **inverted** (an upward pulse reflects back as a downward pulse).</li>
+                <li><strong>Loose End:</strong> The end of the string is attached to a frictionless ring that can slide freely up and down a pole. When the wave reaches this end, the end moves freely, and the wave reflects back **without being inverted**.</li>
+            </ul>
+            </p>
+
+            <h3>Step 4: Standing Waves</h3>
+            <p>Click "Oscillate" and make sure the string has a "Fixed End". Now, slowly adjust the **Frequency** slider. You will notice that at certain specific frequencies, the back-and-forth traveling waves interfere in a special way to create a stable pattern that doesn't appear to travel at all. This is a **standing wave**.
+            <br>
+            These patterns have points that don't move at all, called **nodes**, and points of maximum vibration, called **antinodes**. These special frequencies are the "resonant frequencies" or "harmonics" of the string. The lowest frequency that creates a standing wave (with one antinode) is the fundamental frequency. The next one up (with two antinodes) is the second harmonic, and so on. This is exactly how a guitar string works!</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="200" aria-label="Animation of a wave on a string"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="pulse-btn">Send Pulse</button>
+                    <button id="oscillate-btn" class="active">Oscillate</button>
+                </div>
+                <div class="control-group">
+                    <label for="amp-slider">Amplitude: <span id="amp-label">20</span></label>
+                    <input type="range" id="amp-slider" min="5" max="40" value="20" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="freq-slider">Frequency: <span id="freq-label">1.0</span> Hz</label>
+                    <input type="range" id="freq-slider" min="0.1" max="5.0" value="1.0" step="0.05">
+                </div>
+                 <div class="control-group">
+                    <label for="speed-slider">Wave Speed: <span id="speed-label">100</span></label>
+                    <input type="range" id="speed-slider" min="50" max="300" value="100" step="5">
+                </div>
+                 <div class="control-group">
+                    <label for="damping-slider">Damping: <span id="damping-label">0.01</span></label>
+                    <input type="range" id="damping-slider" min="0" max="0.1" value="0.01" step="0.001">
+                </div>
+                 <div class="control-group">
+                    <label>End Condition:</label>
+                    <button id="fixed-end-btn" class="active">Fixed End</button>
+                    <button id="loose-end-btn">Loose End</button>
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: The Wave Equation</h2>
+
+            <h3>1. The Traveling Wave</h3>
+            <p>A simple sinusoidal wave traveling in the positive x-direction can be described by the function:</p>
+            <p><code>y(x, t) = A sin(kx - &omega;t)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>A</code> is the Amplitude.</li>
+                <li><code>&omega;</code> is the angular frequency (<code>&omega; = 2&pi;f</code>).</li>
+                <li><code>k</code> is the wavenumber (<code>k = 2&pi;/&lambda;</code>, where &lambda; is the wavelength).</li>
+                <li>The wave speed is given by <code>v = &omega;/k = f&lambda;</code>.</li>
+            </ul>
+            </p>
+
+            <h3>2. Reflection and Superposition</h3>
+            <p>When a wave reflects, the total displacement of the string is the sum of the incident wave and the reflected wave (the principle of superposition).</p>
+            <p><code>y<sub>total</sub>(x, t) = y<sub>incident</sub>(x, t) + y<sub>reflected</sub>(x, t)</code></p>
+            <p>For a fixed end at x=L, the reflected wave is inverted: <code>y<sub>reflected</sub> = -A sin(k(L-x) - &omega;t)</code> (this is a simplified form). For a loose end, it is not inverted.</p>
+
+            <h3>3. Standing Waves</h3>
+            <p>When the incident and reflected waves interfere, they can form a standing wave. The mathematical form of a standing wave is:</p>
+            <p><code>y(x, t) = [2A sin(kx)] cos(&omega;t)</code></p>
+            <p>The <code>sin(kx)</code> term describes the shape (the "envelope") with fixed nodes where <code>sin(kx)=0</code>. The <code>cos(&omega;t)</code> term describes how all points on the string oscillate up and down in time.</p>
+            <p>For a string of length L fixed at both ends, standing waves can only form when the length is an integer multiple of half-wavelengths:</p>
+            <p><code>L = n * (&lambda;/2)</code>, where n = 1, 2, 3,...</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const sliders = {
+            amp: document.getElementById('amp-slider'),
+            freq: document.getElementById('freq-slider'),
+            speed: document.getElementById('speed-slider'),
+            damping: document.getElementById('damping-slider'),
+        };
+        const labels = {
+            amp: document.getElementById('amp-label'),
+            freq: document.getElementById('freq-label'),
+            speed: document.getElementById('speed-label'),
+            damping: document.getElementById('damping-label'),
+        };
+        const pulseBtn = document.getElementById('pulse-btn');
+        const oscillateBtn = document.getElementById('oscillate-btn');
+        const fixedEndBtn = document.getElementById('fixed-end-btn');
+        const looseEndBtn = document.getElementById('loose-end-btn');
+
+        // --- Simulation State ---
+        const N_POINTS = 200;
+        let y = new Array(N_POINTS).fill(0);
+        let vy = new Array(N_POINTS).fill(0);
+        let simMode = 'oscillate'; // 'pulse', 'oscillate'
+        let endMode = 'fixed'; // 'fixed', 'loose'
+        let time = 0;
+
+        function updateParams() {
+            Object.keys(sliders).forEach(key => {
+                labels[key].textContent = parseFloat(sliders[key].value).toFixed(key === 'freq' ? 1 : (key === 'damping' ? 3 : 0));
+            });
+        }
+
+        function update() {
+            const amp = parseFloat(sliders.amp.value);
+            const freq = parseFloat(sliders.freq.value);
+            const speed = parseFloat(sliders.speed.value);
+            const damping = parseFloat(sliders.damping.value);
+
+            const c = speed * 0.1; // Spring constant / wave speed relation
+            const dt = 0.1;
+
+            // Drive the oscillator
+            if (simMode === 'oscillate') {
+                y[0] = amp * Math.sin(2 * Math.PI * freq * time);
+            } else if (simMode === 'pulse' && time < 1/freq) {
+                y[0] = amp * Math.sin(2 * Math.PI * freq * time);
+            } else if(simMode === 'pulse') {
+                y[0] = 0;
+            }
+
+            // Propagate the wave using coupled oscillator model
+            const ay = new Array(N_POINTS).fill(0);
+            for(let i=1; i<N_POINTS-1; i++) {
+                ay[i] = c * (y[i+1] + y[i-1] - 2*y[i]);
+            }
+
+            for(let i=1; i<N_POINTS; i++) {
+                if(i === N_POINTS-1 && endMode === 'loose') {
+                    // Loose end: acceleration depends only on left neighbor
+                    ay[i] = c * (y[i-1] - y[i]);
+                }
+                vy[i] = (vy[i] + ay[i] * dt) * (1 - damping);
+                y[i] += vy[i] * dt;
+            }
+
+            time += dt;
+        }
+
+        function draw() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const dx = canvas.width / (N_POINTS - 1);
+            const centerY = canvas.height / 2;
+
+            // Draw string
+            ctx.strokeStyle = 'var(--string-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, centerY - y[0]);
+            for(let i=1; i<N_POINTS; i++) {
+                ctx.lineTo(i * dx, centerY - y[i]);
+            }
+            ctx.stroke();
+
+            // Draw markers
+            ctx.fillStyle = 'var(--marker-color)';
+            for(let i=0; i<N_POINTS; i+=10) {
+                 ctx.beginPath();
+                 ctx.arc(i * dx, centerY - y[i], 3, 0, 2*Math.PI);
+                 ctx.fill();
+            }
+
+            // Draw fixed/loose end
+            ctx.fillStyle = isDark ? '#95a5a6' : '#7f8c8d';
+            if(endMode === 'fixed') {
+                ctx.fillRect(canvas.width-5, 0, 5, canvas.height);
+            } else {
+                ctx.fillRect(canvas.width-5, centerY - 50, 5, 100);
+            }
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        Object.values(sliders).forEach(s => s.addEventListener('input', updateParams));
+
+        const setSimMode = (mode) => {
+            simMode = mode;
+            time = 0;
+            oscillateBtn.classList.toggle('active', mode === 'oscillate');
+            pulseBtn.classList.toggle('active', mode === 'pulse');
+        };
+        pulseBtn.addEventListener('click', () => setSimMode('pulse'));
+        oscillateBtn.addEventListener('click', () => setSimMode('oscillate'));
+
+        const setEndMode = (mode) => {
+            endMode = mode;
+            fixedEndBtn.classList.toggle('active', mode === 'fixed');
+            looseEndBtn.classList.toggle('active', mode === 'loose');
+        };
+        fixedEndBtn.addEventListener('click', () => setEndMode('fixed'));
+        looseEndBtn.addEventListener('click', () => setEndMode('loose'));
+
+        // --- Init ---
+        updateParams();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
