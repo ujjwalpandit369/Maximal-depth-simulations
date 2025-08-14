@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Explorable: Feynman Diagram Builder</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #d6336c;
+            --border-color: #dee2e6;
+            --code-bg: #e9ecef;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-theme {
+            --bg-color: #1f2124;
+            --text-color: #e9ecef;
+            --primary-color: #f06595;
+            --border-color: #495057;
+            --code-bg: #343a40;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h1 { font-size: 2.5rem; text-align: center; }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1rem; transition: background-color 0.2s; }
+        button:hover { opacity: 0.9; }
+
+        .interactive-area {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        #diagram-canvas {
+            width: 100%;
+            height: 400px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+        }
+
+        .palette {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            background-color: var(--code-bg);
+        }
+        .palette h3 { margin-top: 0; }
+        .draggable-vertex { cursor: grab; padding: 10px; border: 1px solid var(--border-color); background: var(--bg-color); text-align: center; margin-bottom: 10px; border-radius: 4px; }
+
+        #feedback-panel {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 50px;
+            border: 1px solid var(--border-color);
+        }
+        #feedback-panel.success { border-color: var(--success-color); background-color: rgba(40, 167, 69, 0.1); }
+        #feedback-panel.error { border-color: var(--error-color); background-color: rgba(220, 53, 69, 0.1); }
+
+        /* SVG Styles */
+        .particle-line { stroke: var(--text-color); stroke-width: 3; }
+        .propagator-line { stroke: var(--primary-color); stroke-width: 4; stroke-dasharray: 8 4; }
+        .vertex-point { fill: var(--primary-color); }
+        .snap-point { fill: transparent; cursor: pointer; }
+        .snap-point:hover { fill: rgba(214, 51, 108, 0.5); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Feynman Diagram Builder</h1>
+            <p class="subtitle" style="text-align:center;">Learn the rules of particle physics by building the diagrams yourself.</p>
+        </header>
+
+        <section>
+            <h2>Interactive Builder</h2>
+            <div class="interactive-area">
+                <svg id="diagram-canvas"></svg>
+                <div class="palette">
+                    <h3>Palette</h3>
+                    <p>Drag a vertex onto the canvas.</p>
+                    <div id="vertex-qed" class="draggable-vertex" draggable="true">QED Vertex (γ, e⁻, e⁺)</div>
+                    <button id="reset-button" style="width: 100%; margin-top: 20px;">Reset Diagram</button>
+                </div>
+            </div>
+            <div id="feedback-panel">
+                <p><strong>Instructions:</strong> Select a scenario below. Drag a vertex from the palette to the canvas. Connect the incoming, outgoing, and virtual particle lines to build a valid diagram.</p>
+            </div>
+             <div class="scenario-controls" style="margin-top: 20px;">
+                <label for="scenario-select">Choose a scenario:</label>
+                <select id="scenario-select">
+                    <option value="electron_scattering">Electron-Electron Scattering</option>
+                    <option value="compton_scattering">Compton Scattering</option>
+                </select>
+            </div>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide: Spacetime Cartoons</h2>
+            <p>At first glance, a Feynman Diagram looks like a drawing of particles colliding. But it's important to know that they are not literal pictures of what happens in spacetime. Instead, they are powerful "cartoons" or "bookkeeping devices" that help physicists represent and calculate the probabilities of particle interactions. Each line and intersection in a diagram corresponds to a mathematical term in a very complex equation.</p>
+
+            <h3>The Cast of Characters: Lines and Vertices</h3>
+            <p>Every Feynman diagram is made of just a few simple parts. In this builder, time flows from left to right.</p>
+
+            <h4>1. External Lines: The Real Particles</h4>
+            <p>The lines entering the diagram from the left are the <strong>incoming particles</strong>—the ones that exist long before the interaction happens. The lines exiting to the right are the <strong>outgoing particles</strong>—the ones that exist long after the interaction is over. These are called "external" lines and they represent real, physical particles that we could, in principle, detect in a laboratory. They must obey the laws of physics, including Einstein's famous energy-momentum relation, <code>E² = p²c² + m²c⁴</code>.</p>
+
+            <h4>2. Vertices: The Interaction</h4>
+            <p>A <strong>vertex</strong> is a point where lines meet. This represents the fundamental interaction itself—the moment where particles are created, destroyed, or change their direction by emitting or absorbing a force-carrying particle (a boson). The universe has very strict rules about which particles can meet at a vertex. For example, in the theory of Quantum Electrodynamics (QED), the only valid vertex is one where two matter particles (like an electron and a positron) meet a force particle (a photon). A key rule at every vertex is that properties like <strong>electric charge must be conserved</strong>. If a total charge of -1 enters a vertex, a total charge of -1 must exit it.</p>
+
+            <h4>3. Internal Lines: The Virtual Particles</h4>
+            <p>The lines that connect two vertices—which start and end entirely within the diagram—are called <strong>internal lines</strong> or "propagators." These represent <strong>virtual particles</strong>. They are the messengers, the force-carriers being exchanged between the interacting particles. For example, when two electrons repel each other, they do so by exchanging a virtual photon. This is the most mysterious part of the diagram. These virtual particles are "off-shell," meaning they do not have to obey the normal laws of physics. They can have combinations of energy and momentum that are impossible for real particles. They are a manifestation of the quantum world's fuzziness, allowed to exist for a fleeting moment by the Heisenberg Uncertainty Principle.</p>
+
+            <h3>Building a Story</h3>
+            <p>Putting it all together, a Feynman diagram tells a "story" of an interaction. For example, in electron-electron scattering:</p>
+            <ol>
+                <li>Two electrons (external lines) come in from the left.</li>
+                <li>The first electron emits a virtual photon (internal line) at a vertex, changing its own path.</li>
+                <li>This virtual photon travels a short distance and is absorbed by the second electron at another vertex, causing the second electron to change its path.</li>
+                <li>The two electrons then travel away to the right as outgoing external lines.</li>
+            </ol>
+            <p>By building these diagrams yourself in the interactive tool, you are learning the fundamental grammar of the universe. You are discovering which interactions are allowed by the laws of physics and which are forbidden. Each valid diagram you build represents a possible way an interaction can happen, and by adding up all possible valid diagrams, physicists can calculate the total probability of that interaction occurring.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: Virtual Particles and Uncertainty</h2>
+            <p>The concept of a "virtual particle" is one of the most profound and confusing ideas in quantum physics. How can a particle exist if it violates the laws of physics? The answer lies in the Heisenberg Uncertainty Principle, specifically its time-energy formulation.</p>
+
+            <h3>The Time-Energy Uncertainty Principle</h3>
+            <p>The principle states that there is a fundamental trade-off in how precisely you can know a particle's energy (ΔE) and the duration for which you observe it (Δt).</p>
+            <pre><code>ΔE * Δt ≥ ħ / 2</code></pre>
+            <p>In plain English: For a very short amount of time (small Δt), there can be a very large uncertainty in energy (large ΔE). The quantum vacuum is not empty; it's a bubbling foam of particle-antiparticle pairs that pop into existence and annihilate each other within this time limit. They can "borrow" energy from the vacuum, as long as they "pay it back" before the universe "notices" they've broken the law of energy conservation.</p>
+            <p>A virtual particle is one of these temporary fluctuations. It acts as a messenger between two real particles. Because its existence is confined to the tiny time and space of the internal line in the diagram, its energy and momentum are "uncertain." This means it does not have to obey the rule s<code>E² = p²c² + m²c⁴</code>. It is "off-shell." This temporary violation of classical rules is what allows forces to be transmitted across space.</p>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Walkthrough: Building Your First Diagram</h2>
+            <p>Let's build the "Electron-Electron Scattering" diagram step-by-step.</p>
+            <ol>
+                <li><strong>Select the Scenario:</strong> Make sure "Electron-Electron Scattering" is selected in the dropdown. You should see two electron lines on the left (incoming) and two on the right (outgoing).</li>
+                <li><strong>Drag a Vertex:</strong> Drag the "QED Vertex" from the palette and drop it somewhere in the middle-left of the canvas. You'll see a point with three connection "snap" circles appear.</li>
+                <li><strong>Drag a Second Vertex:</strong> Drag another "QED Vertex" and drop it in the middle-right of the canvas. You now have two interaction points.</li>
+                <li><strong>Make the First Connection:</strong> Click and drag from the snap point on the top-left incoming electron line to one of the snap points on the first vertex (the one on the left). A wavy line will appear and snap into place. The vertex will turn red because it's not fully connected yet.</li>
+                <li><strong>Connect the Propagator:</strong> Click and drag from another snap point on the first vertex to a snap point on the second vertex. This line is the "internal line" or propagator—the virtual photon being exchanged. Both vertices should still be red.</li>
+                <li><strong>Complete the Diagram:</strong> Connect the remaining incoming and outgoing electron lines to the available snap points on the vertices. As you make the final, correct connections, you should see the vertices turn green and a success message appear in the feedback panel.</li>
+            </ol>
+            <p>Congratulations! You have successfully built a valid tree-level Feynman diagram representing the electromagnetic repulsion between two electrons.</p>
+        </section>
+        <section id="faq">
+            <h2>FAQ</h2>
+            <dl>
+                <dt>1. Are virtual particles real?</dt>
+                <dd>Physicists debate this. Some view them as purely mathematical tools—a handy way to visualize terms in an equation. Others argue that their measurable effects (like the Casimir effect or the Lamb shift) mean they have a real, albeit fleeting, existence. It's best to think of them not as particles, but as disturbances in a quantum field.</dd>
+
+                <dt>2. Do antiparticles really travel backward in time?</dt>
+                <dd>In the mathematics of Feynman diagrams, an antiparticle (like a positron) can be treated as its corresponding particle (an electron) traveling backward in time. This is a powerful mathematical trick that simplifies calculations enormously. It does not mean that there are actual particles time-traveling in our universe. It's a feature of the model, not necessarily a feature of physical reality.</dd>
+
+                <dt>3. What do the angles of the lines mean?</dt>
+                <dd>In a professional context, the angles and lengths of the lines are precisely calculated to represent the momentum of the particles. However, in these introductory diagrams, the angles are purely schematic. We only care about the topology—what's connected to what.</dd>
+
+                <dt>4. What about loops in diagrams?</dt>
+                <dd>The diagrams you can build here are "tree-level" diagrams, the simplest possible interactions. More complex interactions can involve closed loops of virtual particles. These "higher-order" diagrams are corrections to the main calculation and are much more difficult to compute, often leading to infinities that must be dealt with through a process called "renormalization."</dd>
+            </dl>
+        </section>
+    </div>
+
+    <script>
+        // --- Core Data Structures ---
+
+        const PARTICLE_TYPES = {
+            'electron': { charge: -1, lepton_number: 1, is_fermion: true },
+            'positron': { charge: 1, lepton_number: -1, is_fermion: true },
+            'photon': { charge: 0, lepton_number: 0, is_fermion: false },
+        };
+
+        const INTERACTION_RULES = {
+            'QED_VERTEX': {
+                // A QED vertex must connect two fermions (matter/antimatter) and one photon.
+                isValid: (particles) => {
+                    const fermions = particles.filter(p => p && PARTICLE_TYPES[p.type]?.is_fermion);
+                    const photons = particles.filter(p => p && p.type === 'photon');
+                    return fermions.length === 2 && photons.length === 1;
+                },
+                // At a QED vertex, charge and lepton number must be conserved.
+                conserves: (incoming, outgoing) => {
+                    let charge_in = 0, lepton_in = 0;
+                    incoming.forEach(p => {
+                        charge_in += PARTICLE_TYPES[p.type].charge;
+                        lepton_in += PARTICLE_TYPES[p.type].lepton_number;
+                    });
+
+                    let charge_out = 0, lepton_out = 0;
+                    outgoing.forEach(p => {
+                        charge_out += PARTICLE_TYPES[p.type].charge;
+                        lepton_out += PARTICLE_TYPES[p.type].lepton_number;
+                    });
+
+                    return charge_in === charge_out && lepton_in === lepton_out;
+                }
+            }
+        };
+
+        const SCENARIOS = {
+            'electron_scattering': {
+                title: 'Electron-Electron Scattering',
+                incoming: [
+                    { id: 'in1', type: 'electron', label: 'e⁻', x: 50, y: 50 },
+                    { id: 'in2', type: 'electron', label: 'e⁻', x: 50, y: 350 },
+                ],
+                outgoing: [
+                    { id: 'out1', type: 'electron', label: 'e⁻', x: 550, y: 50 },
+                    { id: 'out2', type: 'electron', label: 'e⁻', x: 550, y: 350 },
+                ],
+                vertices: [{ id: 'v1', type: 'QED_VERTEX' }, { id: 'v2', type: 'QED_VERTEX' }],
+                propagators: [{ id: 'p1', type: 'photon' }]
+            },
+            'compton_scattering': {
+                title: 'Compton Scattering',
+                incoming: [
+                    { id: 'in1', type: 'electron', label: 'e⁻', x: 50, y: 50 },
+                    { id: 'in2', type: 'photon', label: 'γ', x: 50, y: 350 },
+                ],
+                outgoing: [
+                    { id: 'out1', type: 'electron', label: 'e⁻', x: 550, y: 50 },
+                    { id: 'out2', type: 'photon', label: 'γ', x: 550, y: 350 },
+                ],
+                vertices: [{ id: 'v1', type: 'QED_VERTEX' }, { id: 'v2', type: 'QED_VERTEX' }],
+                propagators: [{ id: 'p1', type: 'electron' }]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const svgNS = "http://www.w3.org/2000/svg";
+            const canvas = document.getElementById('diagram-canvas');
+            const scenarioSelect = document.getElementById('scenario-select');
+            const feedbackPanel = document.getElementById('feedback-panel');
+            const resetButton = document.getElementById('reset-button');
+
+            let state = {}; // Holds the current state of the diagram
+            let selectedElement = null; // For dragging vertices
+            let activeLine = null; // For drawing lines
+
+            function createSVGElement(tag, attributes) {
+                const el = document.createElementNS(svgNS, tag);
+                for (const key in attributes) {
+                    el.setAttributeNS(null, key, attributes[key]);
+                }
+                return el;
+            }
+
+            function loadScenario(scenarioId) {
+                const scenario = SCENARIOS[scenarioId];
+                if (!scenario) return;
+
+                // Clear canvas
+                canvas.innerHTML = '';
+
+                // Reset state
+                state = {
+                    scenario: scenario,
+                    vertices: [], // {id, x, y, connections: [null, null, null]}
+                    lines: [], // {from: {el, pointIdx}, to: {el, pointIdx}}
+                };
+
+                // Draw external particles
+                [...scenario.incoming, ...scenario.outgoing].forEach(p => {
+                    const group = createSVGElement('g');
+                    const line = createSVGElement('line', { x1: p.x, y1: p.y, x2: p.x + (p.x < 100 ? 100 : -100), y2: p.y, class: 'particle-line' });
+                    const text = createSVGElement('text', { x: p.x + (p.x < 100 ? 5 : -35), y: p.y - 10, 'font-size': '16px', fill: 'var(--text-color)' });
+                    text.textContent = p.label;
+
+                    const snapPoint = createSVGElement('circle', { cx: p.x, cy: p.y, r: 15, class: 'snap-point' });
+                    snapPoint.dataset.ownerId = p.id;
+                    snapPoint.dataset.ownerType = 'external';
+
+                    group.appendChild(line);
+                    group.appendChild(text);
+                    group.appendChild(snapPoint);
+                    canvas.appendChild(group);
+                });
+                updateFeedback(`Scenario loaded: ${scenario.title}. Drag a vertex to the canvas.`);
+            }
+
+            function updateFeedback(message, type = 'info') {
+                feedbackPanel.textContent = message;
+                feedbackPanel.className = `feedback-panel ${type}`;
+            }
+
+            // --- Drag and Drop for Vertices ---
+            document.getElementById('vertex-qed').addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', 'QED_VERTEX');
+            });
+
+            canvas.addEventListener('dragover', (e) => e.preventDefault());
+
+            canvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const vertexType = e.dataTransfer.getData('text/plain');
+                if (INTERACTION_RULES[vertexType]) {
+                    const CTM = canvas.getScreenCTM();
+                    const dropX = (e.clientX - CTM.e) / CTM.a;
+                    const dropY = (e.clientY - CTM.f) / CTM.d;
+                    addVertex(vertexType, dropX, dropY);
+                }
+            });
+
+            function addVertex(type, x, y) {
+                const vertexId = `v${state.vertices.length + 1}`;
+                const vertexGroup = createSVGElement('g', { transform: `translate(${x}, ${y})` });
+                vertexGroup.dataset.ownerId = vertexId;
+                vertexGroup.dataset.ownerType = 'vertex';
+
+                const mainPoint = createSVGElement('circle', { cx: 0, cy: 0, r: 5, class: 'vertex-point' });
+
+                // 3 snap points around the vertex
+                const snapPoints = [
+                    createSVGElement('circle', { cx: 0, cy: -25, r: 10, class: 'snap-point' }),
+                    createSVGElement('circle', { cx: 21.6, cy: 12.5, r: 10, class: 'snap-point' }),
+                    createSVGElement('circle', { cx: -21.6, cy: 12.5, r: 10, class: 'snap-point' }),
+                ];
+                snapPoints.forEach((sp, i) => {
+                    sp.dataset.ownerId = vertexId;
+                    sp.dataset.ownerType = 'vertex';
+                    sp.dataset.pointIndex = i;
+                });
+
+                vertexGroup.appendChild(mainPoint);
+                snapPoints.forEach(sp => vertexGroup.appendChild(sp));
+                canvas.appendChild(vertexGroup);
+                state.vertices.push({ id: vertexId, type, x, y, connections: [null, null, null] });
+            }
+
+            // --- Line Drawing ---
+            canvas.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('snap-point')) {
+                    const CTM = canvas.getScreenCTM();
+                    const startX = (e.clientX - CTM.e) / CTM.a;
+                    const startY = (e.clientY - CTM.f) / CTM.d;
+
+                    activeLine = createSVGElement('line', { x1: startX, y1: startY, x2: startX, y2: startY, class: 'propagator-line' });
+                    canvas.insertBefore(activeLine, canvas.firstChild); // Draw under other elements
+
+                    selectedElement = {
+                        el: e.target,
+                        id: e.target.dataset.ownerId,
+                        type: e.target.dataset.ownerType,
+                        pointIndex: e.target.dataset.pointIndex
+                    };
+                }
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (activeLine) {
+                    const CTM = canvas.getScreenCTM();
+                    activeLine.setAttributeNS(null, 'x2', (e.clientX - CTM.e) / CTM.a);
+                    activeLine.setAttributeNS(null, 'y2', (e.clientY - CTM.f) / CTM.d);
+                }
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                if (activeLine) {
+                    const endTarget = e.target;
+                    if (endTarget.classList.contains('snap-point') && endTarget !== selectedElement.el) {
+                        // Successful connection
+                        const endPoint = {
+                            el: endTarget,
+                            id: endTarget.dataset.ownerId,
+                            type: endTarget.dataset.ownerType,
+                            pointIndex: endTarget.dataset.pointIndex
+                        };
+
+                        // Update line to snap to the center of the end snap point
+                        const endCx = parseFloat(endTarget.getAttribute('cx'));
+                        const endCy = parseFloat(endTarget.getAttribute('cy'));
+                        const transform = endTarget.parentElement.getAttribute('transform');
+                        let endX, endY;
+                        if(transform) {
+                            const parts = /translate\(([^,]+),([^)]+)\)/.exec(transform);
+                            endX = parseFloat(parts[1]) + endCx;
+                            endY = parseFloat(parts[2]) + endCy;
+                        } else {
+                            endX = endCx;
+                            endY = endCy;
+                        }
+                        activeLine.setAttributeNS(null, 'x2', endX);
+                        activeLine.setAttributeNS(null, 'y2', endY);
+
+                        // Update state
+                        const lineId = `l${state.lines.length}`;
+                        activeLine.dataset.lineId = lineId;
+                        const lineData = { id: lineId, from: selectedElement, to: endPoint, el: activeLine };
+                        state.lines.push(lineData);
+
+                        connect(selectedElement, lineData);
+                        connect(endPoint, lineData);
+
+                        validateDiagram();
+                    } else {
+                        // Failed connection
+                        activeLine.remove();
+                    }
+                }
+                activeLine = null;
+                selectedElement = null;
+            });
+
+
+            // --- State Management ---
+            function connect(point, lineData) {
+                if (point.type === 'vertex') {
+                    const vertex = state.vertices.find(v => v.id === point.id);
+                    vertex.connections[point.pointIndex] = lineData;
+                }
+            }
+
+            // --- Validation Engine ---
+            function validateDiagram() {
+                let allVerticesValid = true;
+                let allConnectionsMade = true;
+
+                if (state.vertices.length !== state.scenario.vertices.length) {
+                    allConnectionsMade = false;
+                }
+
+                state.vertices.forEach(vertex => {
+                    const vertexEl = document.querySelector(`[data-owner-id="${vertex.id}"]`);
+                    let connectedParticles = [];
+                    let isValid = true;
+
+                    if(vertex.connections.includes(null)) {
+                        allConnectionsMade = false;
+                    }
+
+                    vertex.connections.forEach(line => {
+                        if (!line) return;
+
+                        // Figure out what's at the other end of the line
+                        const otherEnd = line.from.id === vertex.id ? line.to : line.from;
+                        let particleType;
+                        if (otherEnd.type === 'external') {
+                            const externalParticle = [...state.scenario.incoming, ...state.scenario.outgoing].find(p => p.id === otherEnd.id);
+                            particleType = externalParticle.type;
+                        } else { // It's connected to another vertex, so it's a propagator
+                            const propagator = state.scenario.propagators[0]; // Simple for now
+                            particleType = propagator.type;
+                        }
+                        connectedParticles.push({type: particleType});
+                    });
+
+                    // Check if the vertex rule is satisfied
+                    const rule = INTERACTION_RULES[vertex.type];
+                    if (connectedParticles.length === 3) {
+                        if (!rule.isValid(connectedParticles)) {
+                            isValid = false;
+                            allVerticesValid = false;
+                        }
+                    } else {
+                       isValid = false; // Not fully connected
+                    }
+
+                    // Visual feedback
+                    vertexEl.querySelector('.vertex-point').style.fill = isValid ? 'var(--success-color)' : 'var(--error-color)';
+                });
+
+                if (allConnectionsMade && allVerticesValid) {
+                    updateFeedback('Success! This is a valid Feynman diagram for this interaction.', 'success');
+                } else if (!allVerticesValid) {
+                    updateFeedback('Invalid connection found. Check the red vertices and ensure they follow the rules (e.g., 2 fermions + 1 photon).', 'error');
+                } else {
+                    updateFeedback('Diagram in progress. Keep connecting the lines!', 'info');
+                }
+            }
+
+
+            // --- Initialization ---
+            function runSelfChecks() {
+                const errorPanel = document.getElementById('feedback-panel');
+                let errors = [];
+                if (!canvas) errors.push("SVG canvas not found.");
+                if (!SCENARIOS || Object.keys(SCENARIOS).length === 0) errors.push("Scenario data is missing.");
+                if (!INTERACTION_RULES || Object.keys(INTERACTION_RULES).length === 0) errors.push("Interaction rule data is missing.");
+
+                if (errors.length > 0) {
+                    updateFeedback(`Initialization Error: ${errors.join(', ')}`, 'error');
+                    return false;
+                }
+                console.log("Self-checks passed.");
+                return true;
+            }
+
+            if (runSelfChecks()) {
+                scenarioSelect.addEventListener('change', () => loadScenario(scenarioSelect.value));
+                resetButton.addEventListener('click', () => loadScenario(scenarioSelect.value));
+                loadScenario(scenarioSelect.value); // Load initial scenario
+            }
+        });
+    </script>
+</body>
+</html>
