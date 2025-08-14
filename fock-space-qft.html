@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Field Theory: Fock Space</title>
+    <style>
+        :root {
+            --primary-color: #007bff; --primary-hover: #0056b3;
+            --text-color: #212529; --bg-color: #f8f9fa;
+            --section-bg: #ffffff; --border-color: #dee2e6;
+            --subtle-bg: #e9ecef;
+        }
+        body.high-contrast {
+            --primary-color: #00ffff; --primary-hover: #00cccc;
+            --text-color: #ffffff; --bg-color: #000000;
+            --section-bg: #111111; --border-color: #555555;
+            --subtle-bg: #333333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        header { text-align: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        h2 { margin-top: 0; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .subtitle { font-size: 1.1rem; color: #6c757d; }
+        body.high-contrast .subtitle { color: #bbbbbb; }
+        #metadata-bar { font-size: 0.9rem; color: #6c757d; margin-top: 1rem; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 1rem; }
+        body.high-contrast #metadata-bar { color: #bbbbbb; }
+        main { max-width: 1200px; margin: 0 auto; }
+        section { margin-bottom: 2rem; padding: 1.5rem; background-color: var(--section-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Fock Space Specific Styles */
+        .fock-space-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--subtle-bg);
+            min-height: 150px;
+        }
+        .mode-container {
+            background-color: var(--section-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            width: 150px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .mode-container h4 { margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: normal; }
+        .occupation-number {
+            font-size: 3rem;
+            font-weight: bold;
+            line-height: 1;
+            margin: 1rem 0;
+            color: var(--primary-color);
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mode-controls { display: flex; justify-content: space-around; }
+        .mode-controls button {
+            font-size: 1.5rem;
+            font-weight: bold;
+            width: 45px;
+            height: 45px;
+            line-height: 1;
+            padding: 0;
+            border-radius: 50%;
+        }
+        .mode-controls .create-btn { background-color: #28a745; border-color: #28a745; }
+        .mode-controls .annihilate-btn { background-color: #dc3545; border-color: #dc3545; }
+        body.high-contrast .mode-controls .create-btn { color: white; }
+        body.high-contrast .mode-controls .annihilate-btn { color: white; }
+
+        #total-state-display {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-top: 1.5rem;
+            font-family: monospace;
+            padding: 1rem;
+            background-color: var(--subtle-bg);
+            border-radius: 8px;
+            word-wrap: break-word;
+        }
+        #ket-vector { font-weight: bold; color: var(--primary-color); }
+        #controls { padding: 1rem; margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+
+        /* General Controls */
+        button {
+            padding: 0.5rem 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);
+            background-color: var(--primary-color); color: white; border-radius: 5px;
+            cursor: pointer; transition: background-color 0.2s, transform 0.1s, color 0.2s;
+        }
+        body.high-contrast button { color: black; }
+        button:hover, button:focus { background-color: var(--primary-hover); border-color: var(--primary-hover); }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #6c757d; border-color: #6c757d; cursor: not-allowed; }
+
+        /* Other styles */
+        #suggestion-box { background-color: #eef7ff; border: 1px solid var(--primary-color); border-radius: 5px; padding: 1rem; margin-bottom: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        body.high-contrast #suggestion-box { background-color: #1a1a1a; }
+        #suggestion-box p { margin: 0 0 0.5rem 0; }
+        #suggestion-box .button-group button { background-color: var(--section-bg); color: var(--primary-color); border: 1px solid var(--primary-color); }
+        #suggestion-box .button-group button.selected { background-color: var(--primary-color); color: white; }
+        body.high-contrast #suggestion-box .button-group button.selected { color: black; }
+        footer { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: center; color: #6c757d; font-size: 0.9rem; }
+        #dev-console { margin-top: 1rem; background: var(--subtle-bg); border: 1px solid var(--border-color); border-radius: 8px; text-align: left; max-width: 1200px; margin-left: auto; margin-right: auto; }
+        #dev-console-header { cursor: pointer; padding: 0.5rem 1rem; margin: 0; background: var(--subtle-bg); border-radius: 8px 8px 0 0; }
+        #dev-console-content { max-height: 200px; overflow-y: auto; padding: 0.5rem 1rem; display: none; }
+        #dev-console-content.open { display: block; }
+        #dev-log { list-style-type: none; padding: 0; margin: 0; font-family: monospace; font-size: 0.85rem; }
+        #dev-log li { padding: 2px 0; border-bottom: 1px solid #e0e0e0; }
+        body.high-contrast #dev-log li { border-bottom-color: #444; }
+        .equation { background-color: var(--subtle-bg); padding: 1rem; border-radius: 5px; margin: 1rem 0; font-family: monospace; text-align: center; font-size: 1.1rem; line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <p>Tune this simulation to your liking:</p>
+        <div class="button-group">
+            <button data-pref="audience" data-value="beginner">Audience: Beginner</button>
+            <button data-pref="audience" data-value="intermediate">Audience: Intermediate</button>
+            <button data-pref="audience" data-value="advanced">Audience: Advanced</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>Conceptual Simulation of Fock Space</h1>
+        <p class="subtitle">Visualizing states with a variable number of particles.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span>
+            <span>Recommended Device: Desktop/Mobile</span>
+            <span id="html-size"></span>
+            <button id="theme-toggle-btn" aria-label="Toggle high contrast theme">Toggle Contrast</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <section id="simulation-area">
+            <h2>Fock Space State</h2>
+            <div id="fock-space-display" class="fock-space-container">
+                <!-- Modes will be dynamically generated here -->
+            </div>
+            <div id="total-state-display">
+                Current State: <span id="ket-vector">|0, 0, 0⟩</span>
+            </div>
+             <div id="controls">
+                <div class="button-group">
+                    <button id="add-mode-btn" title="Add a new energy/momentum mode to the system">Add Mode</button>
+                    <button id="remove-mode-btn" title="Remove the highest energy mode">Remove Mode</button>
+                    <button id="reset-btn" title="Reset all modes to the vacuum state |0,0,...⟩">Reset to Vacuum</button>
+                </div>
+                <div class="button-group">
+                    <button id="preset-single-btn" title="Set to a state with one particle in mode 2">Preset: Single Particle</button>
+                    <button id="preset-multi-btn" title="Set to the state |2,0,1⟩">Preset: Multi-Particle</button>
+                </div>
+                <div class="button-group">
+                    <button id="export-json-btn" title="Download the current state as a JSON file">Export JSON</button>
+                    <button id="share-btn" title="Copy a shareable link of the current state">Share State</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation provides a conceptual introduction to <strong>Fock Space</strong>, the mathematical framework used in Quantum Field Theory (QFT) to describe systems where the number of particles is not constant. Instead of tracking individual particles, we track "modes" of a quantum field, each of which can be excited. The level of excitement, or <strong>occupation number</strong>, corresponds to the number of particles in that mode. Use the <code>+</code> (create) and <code>-</code> (annihilate) buttons to add or remove particles from different modes and see how the overall state of the system changes.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. Beyond a Fixed Number of Particles</h3>
+            <p>In everyday physics and even in introductory quantum mechanics, we usually deal with a fixed number of particles. You have a system with one electron, or two billiard balls, and you track their properties. However, in high-energy physics (like in particle colliders) and even in condensed matter physics, particles can be <strong>created and destroyed</strong>. A photon can be absorbed by an atom (destroyed), or an electron-positron pair can be created from pure energy. How do we describe a system where the number of particles itself can change?</p>
+
+            <h3>2. Fields, Not Particles, are Fundamental</h3>
+            <p>The answer from Quantum Field Theory (QFT) is to shift our perspective. The fundamental building blocks of the universe are not particles, but <strong>fields</strong>—like the electromagnetic field, or the electron field—that permeate all of spacetime. What we perceive as a "particle" is just a ripple, or a quantized excitation, of its underlying field. Think of the field as a calm lake. A ripple on the surface would be a particle. You can add energy to create more ripples, or they can dissipate, leaving the calm lake behind.</p>
+
+            <h3>3. Fock Space: A List of Excitations</h3>
+            <p><strong>Fock Space</strong> is a way of organizing all the possible states of these fields. Instead of saying "I have a particle here and another one there," we first define all the possible "modes" a particle can be in. A mode is just a specific state, usually defined by its momentum and energy. For simplicity, this simulation just labels them Mode 1, Mode 2, etc.</p>
+            <p>A complete state of the system is then just a list of how many particles are in each mode. This list of numbers is called the <strong>occupation number representation</strong>.
+            <br><br>
+            The state `|2, 0, 1⟩` means:
+            <ul>
+                <li><strong>2</strong> particles in Mode 1</li>
+                <li><strong>0</strong> particles in Mode 2</li>
+                <li><strong>1</strong> particle in Mode 3</li>
+            </ul>
+            This is the state you see represented in the simulation. The entire collection of all possible states—`|0,0,0⟩`, `|1,0,0⟩`, `|0,1,0⟩`, `|1,1,0⟩`, etc.—is the Fock space.</p>
+
+            <h3>4. Creation and Annihilation</h3>
+            <p>In QFT, we have special mathematical tools that let us move between these states. They are called <strong>operators</strong>.
+            <ul>
+                <li>The <strong>Creation Operator (a†)</strong> adds one particle to a specific mode. In the simulation, this is the <code>+</code> button.</li>
+                <li>The <strong>Annihilation Operator (a)</strong> removes one particle from a specific mode. This is the <code>-</code> button.</li>
+            </ul>
+            By applying these operators, we can describe any process involving the creation or destruction of particles. The state with no particles in any mode, `|0, 0, 0, ...⟩`, is called the <strong>vacuum state</strong>.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory</h2>
+            <h4>Fock States and the Vacuum</h4>
+            <p>A state in Fock space, known as a Fock state, is specified by the set of occupation numbers for each mode. It is written as a "ket" vector:</p>
+            <p class="equation">|n₁, n₂, n₃, ...⟩</p>
+            <p>Where <code>nᵢ</code> is the number of particles in the i-th mode. The state with zero particles in all modes is the vacuum state, denoted simply as <code>|0⟩</code> or <code>|0, 0, 0, ...⟩</code>.</p>
+
+            <h4>Creation (a†) and Annihilation (a) Operators</h4>
+            <p>These operators are the building blocks of QFT. They act on a Fock state to change the number of particles in a specific mode `k`. Their actions are defined as:</p>
+            <p class="equation">a†<sub>k</sub> |..., n<sub>k</sub>, ...⟩ = √(n<sub>k</sub>+1) |..., n<sub>k</sub>+1, ...⟩</p>
+            <p>The creation operator <code>a†<sub>k</sub></code> adds one particle to mode `k` and multiplies the state by a normalization factor.</p>
+            <p class="equation">a<sub>k</sub> |..., n<sub>k</sub>, ...⟩ = √n<sub>k</sub> |..., n<sub>k</sub>-1, ...⟩</p>
+            <p>The annihilation operator <code>a<sub>k</sub></code> removes one particle from mode `k`. Note that if you apply it to a state with no particles in that mode (i.e., n<sub>k</sub>=0), the result is 0, correctly telling us you cannot remove a particle that isn't there. This is why the <code>-</code> button is disabled at 0.</p>
+            <p>Any state can be built by applying creation operators to the vacuum state. For example, the state `|2,0,1⟩` can be written as: <code>(a†₁) (a†₁) (a†₃) |0,0,0⟩</code> (ignoring normalization factors).</p>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>This is a conceptual simulation with no physical parameters to adjust. The controls all directly manipulate the state of the system.</p>
+            <table>
+                <thead>
+                    <tr><th>Control</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>+ (Create)</strong></td><td>Adds one particle to that specific mode.</td></tr>
+                    <tr><td><strong>- (Annihilate)</strong></td><td>Removes one particle from that mode (if > 0).</td></tr>
+                    <tr><td><strong>Add Mode</strong></td><td>Adds a new, empty mode to the system.</td></tr>
+                    <tr><td><strong>Remove Mode</strong></td><td>Removes the last mode from the system.</td></tr>
+                    <tr><td><strong>Reset to Vacuum</strong></td><td>Sets the particle count in all modes to zero.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Building a State from the Vacuum</h4>
+            <ol>
+                <li>First, click the <strong>"Reset to Vacuum"</strong> button. The state should be `|0,0,0⟩`.</li>
+                <li>In "Mode 1", click the <code>+</code> button twice. The occupation number becomes 2.</li>
+                <li>In "Mode 3", click the <code>+</code> button once. The occupation number becomes 1.</li>
+                <li>Look at the total state display. It now reads <strong>`|2,0,1⟩`</strong>, exactly matching the state you have built.</li>
+                <li>Now, try using the <code>-</code> button on "Mode 1". The number decreases. Try using it on "Mode 2". Nothing happens, because you can't remove a particle that isn't there.</li>
+            </ol>
+            <p>This process of applying creation operators (the `+` button) to the vacuum state is conceptually how all possible states in the universe are constructed in Quantum Field Theory.</p>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group">
+                <h4>1. The Vacuum State</h4>
+                <p>The "ground state" of the system with zero particles.</p>
+                <p><strong>Action:</strong> Click the "Reset to Vacuum" button.</p>
+                <p><strong>Observe:</strong> All modes show '0' and the state vector is `|0,0,0⟩`.</p>
+            </div>
+            <div class="example-group">
+                <h4>2. Single-Particle State</h4>
+                <p>A state where exactly one particle exists in a specific mode.</p>
+                <p><strong>Action:</strong> Click the "Preset: Single Particle" button.</p>
+                <p><strong>Observe:</strong> The system is set to the state `|0,1,0⟩`.</p>
+            </div>
+            <div class="example-group">
+                <h4>3. Multi-Particle State</h4>
+                <p>A more complex state with multiple particles across different modes.</p>
+                <p><strong>Action:</strong> Click the "Preset: Multi-Particle" button.</p>
+                <p><strong>Observe:</strong> The system is set to `|2,0,1⟩`, representing two particles in mode 1 and one particle in mode 3.</p>
+            </div>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>Bosons vs. Fermions</h4>
+            <p>This simulation models <strong>bosons</strong> (like photons or Higgs bosons), which are particles that are allowed to occupy the same state. You can add as many particles to a single mode as you like. The other main class of particles, <strong>fermions</strong> (like electrons or quarks), obey the <strong>Pauli Exclusion Principle</strong>. This principle states that no two identical fermions can occupy the same quantum state.
+            <br><br>
+            A Fock space for fermions would be different: the occupation number `nᵢ` for any mode could only be 0 or 1. The creation operator `a†ᵢ` would give 0 if it acted on a state that already had a particle in mode `i`.</p>
+
+            <h4>What are the Modes?</h4>
+            <p>In a realistic QFT, the "modes" are not just arbitrary labels. They usually represent the possible momentum states of a particle. For a field in a box, the momentum is quantized, meaning it can only take on discrete values (like the harmonics of a guitar string). Each of these allowed momenta would be a mode in the Fock space. For a field in open space, the momentum is continuous, and the Fock space becomes more complex, but the principle remains the same.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. The Abacus (Mechanical Analogy)</h4>
+            <p>An abacus is a great analogy for a bosonic Fock space.
+            <ul>
+                <li><strong>A Row on the Abacus:</strong> Each row represents a different mode.</li>
+                <li><strong>Beads:</strong> The beads are the particles.</li>
+                <li><strong>State:</strong> The configuration of all beads on the abacus at one time is the Fock state. `|2, 5, 0⟩` would be 2 beads slid over on the first row, 5 on the second, and 0 on the third.</li>
+                <li><strong>Creation/Annihilation:</strong> The act of sliding a bead over is a creation operator. Sliding it back is an annihilation operator.</li>
+                <li><strong>Limitation:</strong> This is a purely classical analogy; it doesn't capture any quantum weirdness, but it's excellent for the bookkeeping aspect of Fock space.</li>
+            </ul>
+            <h4>2. Buckets of Marbles (Visualization Analogy)</h4>
+            <p>Imagine you have a row of labeled buckets ("Mode 1", "Mode 2", etc.) and a large supply of marbles.
+            <ul>
+                <li><strong>Buckets:</strong> Each bucket is a mode.</li>
+                <li><strong>Marbles:</strong> The marbles are the particles.</li>
+                <li><strong>State:</strong> The number of marbles in each bucket defines the state of the system.</li>
+                <li><strong>Creation/Annihilation:</strong> Physically adding a marble to a bucket is `a†`. Removing one is `a`.</li>
+                <li><strong>Limitation:</strong> Like the abacus, this is a classical analogy. It's good for visualizing occupation numbers but doesn't capture the underlying quantum field.</li>
+            </ul>
+            <h4>3. A Computer Array (Computational Analogy)</h4>
+            <p>This is the analogy closest to how the simulation is actually programmed.
+            <ul>
+                <li><strong>The Array:</strong> The Fock space is represented by an array, like `let fockState = [1, 5, 2];`.</li>
+                <li><strong>Array Index:</strong> The index of the array (`0`, `1`, `2`, ...) corresponds to the mode.</li>
+                <li><strong>Value at Index:</strong> The number stored at that index is the occupation number.</li>
+                <li><strong>Creation/Annihilation:</strong> The operators are simply functions that modify the array, e.g., `fockState[i]++` or `fockState[i]--`.</li>
+                <li><strong>Limitation:</strong> This is a perfect analogy for the data structure but offers little physical intuition on its own.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What is a "mode" really?</dt>
+                <dd>A mode is a specific, allowed state for a single particle. Think of it like a parking spot. Each spot is a different mode (e.g., a different possible momentum), and the occupation number is how many cars (particles) are in that spot.</dd>
+                <dt>2. Where do the particles come from?</dt>
+                <dd>In QFT, particles are not fundamental. They are excitations of an underlying field. When you "create" a particle, you are adding a quantum of energy to a specific mode of the field. This energy manifests as what we observe to be a particle.</dd>
+                <dt>3. Why can't I have negative particles?</dt>
+                <dd>The occupation number represents a count of existing particles. You can't have fewer than zero particles. The annihilation operator `a` acting on a state with zero particles in that mode results in a null state (represented as 0), not a state with -1 particles.</dd>
+                <dt>4. Is this related to Schrödinger's Cat?</dt>
+                <dd>Indirectly. Schrödinger's Cat is a thought experiment about quantum superposition—the idea that a system can be in multiple states at once. Fock space is a framework that *uses* superposition. A general state in Fock space can be a superposition of different Fock states, e.g., `α|1,0,0⟩ + β|0,1,0⟩`, which would represent an uncertain state that is part "one particle in mode 1" and part "one particle in mode 2". This simulation only shows the simple, non-superposed basis states.</dd>
+                <dt>5. Why did you leave out the `√(n+1)` factors from the Core Theory section?</dt>
+                <dd>This is a conceptual simulation focused on the "counting" aspect of the operators. The `√(n+1)` and `√n` factors are crucial for ensuring that quantum states have the correct length (normalization) and that certain operator combinations give the right results, but they are not needed to understand the basic idea of adding and removing particles from modes.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sim = {
+            fockState: [0, 0, 0],
+            maxModes: 12,
+        };
+
+        const elements = {};
+
+        function init() {
+            getDOMElements();
+            addEventListeners();
+            loadStateFromURL();
+            render();
+            populateMetadata();
+            runQualityChecks();
+            log("Fock Space simulation initialized.");
+        }
+
+        function getDOMElements() {
+            const ids = [
+                'fock-space-display', 'ket-vector', 'add-mode-btn', 'remove-mode-btn',
+                'reset-btn', 'preset-single-btn', 'preset-multi-btn', 'export-json-btn', 'share-btn',
+                'quality-check-panel', 'html-size', 'theme-toggle-btn',
+                'dev-console-header', 'dev-console-content', 'dev-log', 'performance-meter'
+            ];
+            ids.forEach(id => {
+                const camelCaseId = id.replace(/-./g, x => x[1].toUpperCase());
+                elements[camelCaseId] = document.getElementById(id);
+            });
+            elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+        }
+
+        function addEventListeners() {
+            elements.addModeBtn.addEventListener('click', addMode);
+            elements.removeModeBtn.addEventListener('click', removeMode);
+            elements.resetBtn.addEventListener('click', resetToVacuum);
+            elements.presetSingleBtn.addEventListener('click', () => setPreset([0, 1, 0]));
+            elements.presetMultiBtn.addEventListener('click', () => setPreset([2, 0, 1]));
+            elements.exportJsonBtn.addEventListener('click', exportJSON);
+            elements.shareBtn.addEventListener('click', shareState);
+            elements.themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                log(`Theme toggled to ${document.body.classList.contains('high-contrast') ? 'high contrast' : 'default'}.`);
+            });
+            elements.suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                    button.classList.add('selected');
+                });
+            });
+            elements.devConsoleHeader.addEventListener('click', () => elements.devConsoleContent.classList.toggle('open'));
+        }
+
+        // --- State Modification ---
+        function createParticle(modeIndex) {
+            if (modeIndex < 0 || modeIndex >= sim.fockState.length) return;
+            sim.fockState[modeIndex]++;
+            render();
+        }
+
+        function annihilateParticle(modeIndex) {
+            if (modeIndex < 0 || modeIndex >= sim.fockState.length) return;
+            if (sim.fockState[modeIndex] > 0) {
+                sim.fockState[modeIndex]--;
+                render();
+            }
+        }
+
+        function addMode() {
+            if (sim.fockState.length < sim.maxModes) {
+                sim.fockState.push(0);
+                render();
+            }
+        }
+
+        function removeMode() {
+            if (sim.fockState.length > 1) {
+                sim.fockState.pop();
+                render();
+            }
+        }
+
+        function resetToVacuum() {
+            sim.fockState = sim.fockState.map(() => 0);
+            render();
+        }
+
+        function setPreset(state) {
+            sim.fockState = [...state];
+            render();
+        }
+
+        // --- UI and Export ---
+        function updateKetDisplay() {
+            elements.ketVectorEl.textContent = `|${sim.fockState.join(', ')}⟩`;
+        }
+
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify({ fockState: sim.fockState }, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'fock_state.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function shareState() {
+            const encoded = btoa(JSON.stringify(sim.fockState));
+            const url = `${window.location.origin}${window.location.pathname}#state=${encoded}`;
+            navigator.clipboard.writeText(url).then(() => {
+                const originalText = elements.shareBtn.textContent;
+                elements.shareBtn.textContent = 'Copied!';
+                setTimeout(() => { elements.shareBtn.textContent = originalText; }, 2000);
+            });
+        }
+
+        function loadStateFromURL() {
+            if (!window.location.hash.startsWith('#state=')) return;
+            try {
+                const encoded = window.location.hash.substring(7);
+                const state = JSON.parse(atob(encoded));
+                if (Array.isArray(state) && state.every(n => typeof n === 'number')) {
+                    sim.fockState = state;
+                }
+            } catch (e) {
+                console.error("Failed to load state from URL:", e);
+            }
+        }
+
+        function render() {
+            if(!elements.fockSpaceDisplay) return;
+            elements.fockSpaceDisplay.innerHTML = '';
+            sim.fockState.forEach((occupationNumber, index) => {
+                const modeEl = document.createElement('div');
+                modeEl.className = 'mode-container';
+                modeEl.innerHTML = `<h4>Mode ${index + 1}</h4><div class="occupation-number">${occupationNumber}</div><div class="mode-controls"><button class="annihilate-btn" data-index="${index}">-</button><button class="create-btn" data-index="${index}">+</button></div>`;
+                elements.fockSpaceDisplay.appendChild(modeEl);
+            });
+
+            elements.fockSpaceDisplay.querySelectorAll('.create-btn').forEach(btn => btn.addEventListener('click', () => createParticle(parseInt(btn.dataset.index))));
+            elements.fockSpaceDisplay.querySelectorAll('.annihilate-btn').forEach(btn => {
+                const index = parseInt(btn.dataset.index);
+                btn.addEventListener('click', () => annihilateParticle(index));
+                if (sim.fockState[index] === 0) btn.disabled = true;
+            });
+
+            elements.removeModeBtn.disabled = sim.fockState.length <= 1;
+            elements.addModeBtn.disabled = sim.fockState.length >= sim.maxModes;
+            updateKetDisplay();
+        }
+
+        // --- Utility & Quality ---
+        function log(message) {
+            if (elements.devLog) {
+                const li = document.createElement('li');
+                li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                elements.devLog.prepend(li);
+            }
+        }
+        function logError(message) {
+             if (elements.devLog) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`;
+                elements.devLog.prepend(li);
+            }
+            console.error(message);
+        }
+        function runQualityChecks() {
+             let errors = [];
+            for (const key in elements) {
+                if (elements[key] === null) {
+                    errors.push(`Required element with ID '#${key.replace(/([A-Z])/g, "-$1").toLowerCase()}' not found.`);
+                }
+            }
+            if (errors.length > 0) {
+                elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                elements.qualityCheckPanel.style.display = 'block';
+            } else {
+                log("Quality checks passed.");
+            }
+        }
+        function populateMetadata() {
+            const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            const htmlSizeKB = (htmlSize / 1024).toFixed(1);
+            if (elements.htmlSize) {
+                elements.htmlSize.textContent = `Size: ${htmlSizeKB} KB`;
+            }
+            if(elements.performanceMeter) {
+                elements.performanceMeter.textContent = 'No performance metrics for this conceptual simulation.';
+            }
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
