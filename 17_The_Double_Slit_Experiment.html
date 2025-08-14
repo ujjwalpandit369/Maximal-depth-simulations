@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Double-Slit Experiment</title>
+    <style>
+        /* General Styles */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --accent-color: #17a2b8;
+            --border-color: #dee2e6;
+            --code-bg: #f8f9fa;
+            --error-color: #dc3545;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-theme {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #4da3ff;
+            --secondary-color: #8a9299;
+            --accent-color: #35c4da;
+            --border-color: #444444;
+            --code-bg: #2a2a2a;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        a {
+            color: var(--primary-color);
+        }
+
+        code {
+            background-color: var(--code-bg);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.secondary {
+             background-color: var(--secondary-color);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--code-bg);
+        }
+
+        /* Layout */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        @media (min-width: 992px) {
+            .main-layout {
+                grid-template-columns: 2fr 1fr;
+            }
+            .simulation-area {
+                grid-column: 1 / 2;
+            }
+            .controls-area {
+                grid-column: 2 / 3;
+                grid-row: 1 / 2;
+            }
+        }
+
+        /* Specific Sections */
+        .metadata-bar {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        #suggestion-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-size: 0.9em;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        #simulation-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 4 / 3;
+            background-color: #000;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        #detector-canvas {
+            width: 100%;
+            height: 150px;
+            background-color: #111;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .control-group span {
+            font-family: "Courier New", Courier, monospace;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .error-panel {
+            display: none;
+            background-color: var(--error-color);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        #dev-console {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        .collapsible {
+            background-color: var(--code-bg);
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1rem;
+            margin-top: 10px;
+            border-radius: 5px;
+            color: var(--text-color);
+        }
+
+        .collapsible:after {
+            content: '\\002B'; /* Plus sign */
+            font-weight: bold;
+            float: right;
+            margin-left: 5px;
+        }
+
+        .active:after {
+            content: "\\2212"; /* Minus sign */
+        }
+
+        .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: var(--bg-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header and Metadata -->
+        <header>
+            <h1>The Double-Slit Experiment</h1>
+            <p class="subtitle" style="text-align:center;">Visualizing Wave-Particle Duality and Quantum Interference</p>
+            <div class="metadata-bar">
+                <span>Estimated Runtime: Real-time</span> |
+                <span>Recommended Device: Desktop</span> |
+                <span>Approx. Size: 150 KB</span>
+            </div>
+        </header>
+
+        <!-- Suggestion Box -->
+        <div id="suggestion-box">
+            <strong>Quick Tune:</strong>
+            <button class="secondary" onclick="alert('Audience set to Beginner')">Audience: Beginner</button>
+            <button class="secondary" onclick="alert('Analogy style set to Visual')">Analogy: Visual</button>
+            <button class="secondary" onclick="alert('Intensity set to Light')">Intensity: Light</button>
+        </div>
+
+        <!-- Plain-language Overview -->
+        <section>
+            <h2>Overview</h2>
+            <p>This simulation explores one of the most famous and mind-boggling experiments in physics. When we fire tiny particles like electrons at a barrier with two small openings (slits), they behave in a way that defies everyday intuition. Instead of creating two simple pile-ups behind each slit, they create a complex "interference pattern" of many bands, as if they were waves interfering with each other. This interactive tool lets you run the experiment yourself, control the parameters, and see how something can act like both a particle and a wave at the same time.</p>
+        </section>
+
+        <div class="main-layout">
+            <div class="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <canvas id="simulation-canvas" aria-label="Main visualization of the double-slit experiment"></canvas>
+                <canvas id="detector-canvas" aria-label="Histogram showing the interference pattern on the detector screen"></canvas>
+            </div>
+            <div class="controls-area">
+                <h2>Controls</h2>
+                <div class="controls-grid">
+                    <button id="play-pause-btn" aria-label="Play or Pause Simulation (Space)">Play</button>
+                    <button id="step-btn" aria-label="Advance one time step (Right Arrow)">Step</button>
+                    <button id="reset-btn" aria-label="Reset Simulation (R)">Reset</button>
+                    <button id="export-png-btn" aria-label="Export current view as PNG (E)">Export PNG</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="speed-slider">Speed: <span id="speed-value">1.0</span>x</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" step="0.1" value="1" aria-label="Simulation Speed">
+                </div>
+
+                <div class="control-group">
+                    <label for="slit-separation-slider">Slit Separation: <span id="slit-separation-value">100</span> nm</label>
+                    <input type="range" id="slit-separation-slider" min="50" max="500" step="1" value="100" aria-label="Distance between the two slits">
+                </div>
+
+                <div class="control-group">
+                    <label for="slit-width-slider">Slit Width: <span id="slit-width-value">20</span> nm</label>
+                    <input type="range" id="slit-width-slider" min="5" max="100" step="1" value="20" aria-label="Width of each slit">
+                </div>
+
+                <div class="control-group">
+                    <label for="wavelength-slider">Particle Wavelength (λ): <span id="wavelength-value">5</span> nm</label>
+                    <input type="range" id="wavelength-slider" min="1" max="20" step="0.5" value="5" aria-label="De Broglie wavelength of the particles">
+                </div>
+
+                <div class="control-group">
+                    <label for="emission-rate-slider">Emission Rate: <span id="emission-rate-value">10</span> particles/frame</label>
+                    <input type="range" id="emission-rate-slider" min="1" max="50" step="1" value="10" aria-label="Number of particles emitted per frame">
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="detector-toggle"> Which-Slit Detector
+                    </label>
+                </div>
+
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button id="preset-classic-btn">Classic Interference</button>
+                    <button id="preset-particle-btn">Particle-like</button>
+                    <button id="preset-fringes-btn">Narrow Fringes</button>
+                </div>
+
+                <div class="control-group" style="margin-top: 20px;">
+                    <button id="export-json-btn" class="secondary">Export JSON</button>
+                    <button id="share-btn" class="secondary">Share Preset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sections for detailed content -->
+        <section id="beginners-guide">
+            <h2>Beginner's Guide: The Quantum World's Strangest Secret</h2>
+            <p>Welcome to one of the most profound and beautiful experiments in all of science. At first glance, it seems simple. We're going to fire some things at a wall with two holes in it. But what happens next reveals the fundamentally strange nature of reality. Let's walk through it step-by-step.</p>
+
+            <h3>Step 1: The "Common Sense" Expectation (Particles)</h3>
+            <p>Imagine you have a paintball gun and you're shooting paintballs at a solid wall with two narrow vertical slits in it. Behind this wall is another wall that will record where the paintballs land. What would you expect the pattern on the back wall to be? </p>
+            <p>It's simple, right? Some paintballs would go through the left slit and make a splat mark on the wall behind it. Others would go through the right slit and make a mark behind it. If you shoot thousands of paintballs, you'd end up with two distinct vertical bands of paint, centered behind each slit. This is how normal, everyday objects—particles—behave. They take one path, and one path only.</p>
+
+            <h3>Step 2: The Wave Expectation (Water Waves)</h3>
+            <p>Now, let's change the setup. Instead of a paintball gun, imagine a wave tank. You generate a series of straight waves that travel towards the barrier with the two slits. What happens now?</p>
+            <p>When the wave front hits the barrier, it gets blocked everywhere except at the two slits. Each slit acts as a new source of circular waves. These two new sets of circular waves travel outwards and, crucially, start to interfere with each other. </p>
+            <p>Where a crest from one wave meets a crest from the other, they add up to create a bigger wave (constructive interference). Where a crest meets a trough, they cancel each other out (destructive interference). The result on the back wall is not two simple bands. Instead, you get a series of many bands: a bright band in the center (strong waves), then a dark band (no waves), then another bright band, and so on. This is called an <strong>interference pattern</strong>, and it's a classic signature of all wave-like phenomena, from sound to light to ripples in a pond.</p>
+
+            <h3>Step 3: The Quantum Surprise (Electrons)</h3>
+            <p>Now for the experiment itself. Physicists decided to do this experiment with electrons, which we have always thought of as tiny, fundamental <em>particles</em>. They set up an electron gun to fire electrons one by one. This is key: they are not fired in a big crowd. Each electron is sent out individually, travels to the barrier, and makes a single, tiny dot on the detector screen behind it.</p>
+            <p>If electrons are particles like paintballs, we should expect to see two bands on the screen after firing thousands of them. But that is <strong>not</strong> what happens.</p>
+            <p>As the dots accumulate one by one, an interference pattern emerges. The very pattern we saw with water waves! This is deeply strange. How can individual particles, fired one at a time, create a wave pattern? It's as if each electron somehow "knows" about the existence of both slits and interferes with itself. It acts like a wave when it's traveling, but like a particle when it hits the screen (making a single dot).</p>
+            <p>This is the heart of <strong>wave-particle duality</strong>: at the quantum level, entities like electrons, photons, and even atoms exhibit both wave-like and particle-like properties. Which property you see depends on how you measure it.</p>
+
+            <h3>Step 4: The Twist - What if we look?</h3>
+            <p>The result is so bizarre that physicists naturally asked: "Which slit did the electron actually go through?" To find out, they placed a detector right at the slits, capable of telling us whether an electron passed through the left or the right slit. Now they ran the experiment again, firing electrons one by one.</p>
+            <p>The result was even more shocking. The moment they started "watching" which slit the electron went through, the interference pattern vanished completely. The electrons went back to behaving like paintballs, forming two simple bands on the screen. </p>
+            <p>The very act of measuring or observing which path the particle took forced it to "choose" a single path, destroying its wave-like behavior. This is called the <strong>Observer Effect</strong>. In the quantum world, you cannot passively observe something; the act of measurement is an active process that fundamentally changes the outcome. The electron's wave of possibilities "collapses" into a single reality the moment it is measured.</p>
+            <p>This simulation lets you explore this phenomenon directly. Run it with the "Which-Slit Detector" off and watch the interference pattern build. Then, turn the detector on and see the pattern disappear. You are witnessing the core mystery of quantum mechanics in action.</p>
+        </section>
+
+        <section id="params-summary">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Slit Separation (d)</td><td>nm</td><td>100</td><td>50-500</td><td>The distance between the centers of the two slits.</td></tr>
+                    <tr><td>Slit Width (a)</td><td>nm</td><td>20</td><td>5-100</td><td>The physical width of each individual slit opening.</td></tr>
+                    <tr><td>Wavelength (λ)</td><td>nm</td><td>5</td><td>1-20</td><td>The De Broglie wavelength of the particles, related to their momentum.</td></tr>
+                    <tr><td>Emission Rate</td><td>particles/frame</td><td>10</td><td>1-50</td><td>How many particles are fired from the source per animation frame.</td></tr>
+                    <tr><td>Which-Slit Detector</td><td>On/Off</td><td>Off</td><td>N/A</td><td>If on, attempts to measure which slit each particle goes through.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <p>Use these presets to see classic behaviors of the double-slit experiment.</p>
+            <div class="preset-buttons" style="flex-direction: column; align-items: flex-start;">
+                <div>
+                    <h4>Classic Interference</h4>
+                    <p>Parameters: <code>{"slitSeparation": 120, "slitWidth": 20, "wavelength": 5}</code><br>
+                    <strong>Observation:</strong> You will see a standard, clear interference pattern with multiple, well-defined bright and dark fringes. This is the textbook example of wave-like behavior.</p>
+                    <button onclick="document.getElementById('preset-classic-btn').click()">Run "Classic Interference"</button>
+                </div>
+                <hr style="width:100%; border-color:var(--border-color);">
+                <div>
+                    <h4>Particle-like Behavior</h4>
+                    <p>Parameters: <code>{"slitSeparation": 300, "slitWidth": 80, "wavelength": 1}</code><br>
+                    <strong>Observation:</strong> With a very small wavelength and wide slits, the wave effects are suppressed. The result is two broad peaks behind each slit, much like you'd expect from firing paintballs. The interference is still there, but it's very fine and washed out.</p>
+                    <button onclick="document.getElementById('preset-particle-btn').click()">Run "Particle-like"</button>
+                </div>
+                <hr style="width:100%; border-color:var(--border-color);">
+                <div>
+                    <h4>Narrow Fringes</h4>
+                    <p>Parameters: <code>{"slitSeparation": 250, "slitWidth": 10, "wavelength": 10}</code><br>
+                    <strong>Observation:</strong> With a large separation between the slits, the interference fringes become packed very tightly together. This demonstrates the inverse relationship between slit separation and fringe spacing.</p>
+                    <button onclick="document.getElementById('preset-fringes-btn').click()">Run "Narrow Fringes"</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <p>Perform these small experiments to build your intuition.</p>
+            <ol>
+                <li><strong>Wavelength and Fringe Spacing:</strong>
+                    <ul>
+                        <li>Start with the "Classic Interference" preset. Note the spacing of the bright bands.</li>
+                        <li>Slowly increase the <strong>Particle Wavelength (λ)</strong> slider from 5 nm to 15 nm.</li>
+                        <li><strong>Observe:</strong> The fringes spread farther apart. A longer wavelength leads to wider interference patterns. This is because <code>sin(θ) ≈ nλ/d</code>.</li>
+                    </ul>
+                </li>
+                <li><strong>Slit Separation and Fringe Spacing:</strong>
+                    <ul>
+                        <li>Reset to the "Classic Interference" preset.</li>
+                        <li>Slowly increase the <strong>Slit Separation</strong> from 120 nm to 400 nm.</li>
+                        <li><strong>Observe:</strong> The fringes get closer together. Wider slit separation leads to a tighter pattern.</li>
+                    </ul>
+                </li>
+                <li><strong>Slit Width and Brightness:</strong>
+                    <ul>
+                        <li>Reset to the "Classic Interference" preset.</li>
+                        <li>Slowly increase the <strong>Slit Width</strong> from 20 nm to 100 nm.</li>
+                        <li><strong>Observe:</strong> The central bright fringe becomes much narrower and more defined. The overall pattern is "squeezed" by the single-slit diffraction envelope.</li>
+                    </ul>
+                </li>
+                <li><strong>The Observer Effect:</strong>
+                    <ul>
+                        <li>Start the "Classic Interference" preset and let the pattern build for ~10 seconds.</li>
+                        <li>Click the <strong>Which-Slit Detector</strong> checkbox.</li>
+                        <li><strong>Observe:</strong> The simulation resets, and the interference pattern is completely replaced by two broad bands. The act of "measuring" forces particle-like behavior.</li>
+                    </ul>
+                </li>
+                <li><strong>Losing Interference:</strong>
+                    <ul>
+                        <li>Start with the "Classic Interference" preset.</li>
+                        <li>Decrease the <strong>Particle Wavelength (λ)</strong> to its minimum (1 nm).</li>
+                        <li><strong>Observe:</strong> The fringes become so close they merge into what looks like two bands. The quantum behavior is still there, but it's becoming too fine to easily resolve, approaching the classical limit.</li>
+                    </ul>
+                </li>
+                 <li><strong>Single Slit Diffraction:</strong>
+                    <ul>
+                        <li>Set <strong>Slit Separation</strong> to its minimum value (50 nm). Set <strong>Slit Width</strong> to 50 nm as well.</li>
+                        <li>This makes the two slits effectively merge into one wide slit.</li>
+                        <li><strong>Observe:</strong> You no longer see the rapid interference fringes. Instead, you see a wide central maximum with smaller, dimmer peaks on the side. This is the classic single-slit diffraction pattern.</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Math Behind the Pattern</h2>
+            <p>The interference pattern isn't random; it's described by precise mathematics. The key is understanding the "path length difference" for a particle/wave arriving at a point on the screen.</p>
+
+            <h3>Path Difference and Interference</h3>
+            <p>Imagine a point <code>P</code> on the detector screen. A wave from slit 1 travels a distance <code>L₁</code> to get there, and a wave from slit 2 travels a distance <code>L₂</code>. The difference in distance, <code>ΔL = |L₂ - L₁|</code>, determines whether the waves arrive in sync (constructive) or out of sync (destructive).</p>
+            <p>For a setup where the screen is far away compared to the slit separation <code>d</code>, we can approximate this path difference using trigonometry:</p>
+
+            <pre><code>ΔL ≈ d * sin(θ)</code></pre>
+            <p>Here, <code>d</code> is the distance between the slits and <code>θ</code> is the angle to the point <code>P</code> from the center of the slits.</p>
+
+            <h4>Constructive Interference (Bright Fringes)</h4>
+            <p>A bright fringe appears when the path difference is a whole number of wavelengths. The waves arrive crest-to-crest.</p>
+            <pre><code>d * sin(θ) = n * λ</code></pre>
+            <p>Where <code>n</code> is an integer (0, ±1, ±2, ...) called the order number, and <code>λ</code> is the particle's De Broglie wavelength.</p>
+            <p><strong>Numeric Example:</strong> If slit separation <code>d</code> is <strong>200 nm</strong> and wavelength <code>λ</code> is <strong>5 nm</strong>, the first bright fringe (n=1) occurs at an angle <code>θ</code> where <code>sin(θ) = (1 * 5) / 200 = 0.025</code>. This corresponds to an angle of about <strong>1.43 degrees</strong>.</p>
+
+            <h4>Destructive Interference (Dark Fringes)</h4>
+            <p>A dark fringe appears when the path difference is a half-integer number of wavelengths. The waves arrive crest-to-trough and cancel out.</p>
+            <pre><code>d * sin(θ) = (n + 1/2) * λ</code></pre>
+            <p><strong>Numeric Example:</strong> For the same setup, the first dark fringe (n=0) occurs where <code>sin(θ) = (0.5 * 5) / 200 = 0.0125</code>. This corresponds to an angle of about <strong>0.72 degrees</strong>.</p>
+
+            <h3>De Broglie Wavelength</h3>
+            <p>In quantum mechanics, every particle has a wavelength associated with its momentum (<code>p</code>). This is given by the De Broglie relation:</p>
+            <pre><code>λ = h / p</code></pre>
+            <p>Where <code>h</code> is Planck's constant. In this simulation, a smaller wavelength corresponds to a higher-energy, higher-momentum particle. Notice how changing the wavelength slider directly impacts the spacing of the interference fringes, as predicted by the equations above.</p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes / Extensions</h2>
+            <p><strong>Numerical Stability:</strong> The simulation uses an efficient probability-based sampling method (Inverse Transform Sampling) rather than simulating a full wave equation (like a Finite-Difference Time-Domain solver). This is very stable and fast but is an abstraction. It calculates the final probability distribution on the screen and samples from it, rather than propagating a wave through space. This correctly reproduces the final pattern without the heavy computational cost of a true wave simulation.</p>
+            <p><strong>Approximations:</strong> The core physics equations use the Fraunhofer (far-field) approximation, which assumes the distance to the screen is much larger than the slit separation. This is a very good approximation for most physical setups and for this simulation's geometry. For a "near-field" simulation (Fresnel diffraction), the calculations would be significantly more complex.</p>
+            <p><strong>Possible Extensions for Developers:</strong>
+                <ul>
+                    <li><strong>Three Slits:</strong> A motivated developer could modify the `calculateProbabilityDistribution` function to add a third amplitude source. The core interference term `cos²(alpha)` would be replaced by a more complex term like `(1 + 2*cos(2*alpha))²/3`, leading to a different pattern with sharper primary peaks.</li>
+                    <li><strong>Particle Momentum Visualization:</strong> One could visualize the particle's wavelength by drawing it as a wave packet, with the packet's visual frequency changing based on the `wavelength` slider.</li>
+                    <li><strong>Energy Levels:</strong> Instead of a continuous wavelength slider, one could have discrete energy levels for the particle source, mimicking atomic emission spectra and leading to specific, fixed interference patterns for each level.</li>
+                </ul>
+            </p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <p>Quantum mechanics is notoriously counter-intuitive. Analogies can help bridge the gap, but each has its limits.</p>
+
+            <h3>1. The Water Wave Analogy</h3>
+            <p><strong>Analogy:</strong> As described in the beginner's guide, the interference pattern is perfectly analogous to the pattern created by two synchronized ripples in a pond. Each slit is a source of new waves, and their interaction creates the characteristic bands of high and low intensity.</p>
+            <p><strong>Strength:</strong> This is the best visual analogy for understanding interference patterns and the role of wavelength and slit separation.</p>
+            <p><strong>Limitation:</strong> A water wave is a collective excitation of many molecules, and it physically splits. An electron is a fundamental, indivisible particle. It doesn't split in two. The "wave" is more abstract—it's a wave of probability. Also, this analogy completely fails to explain the particle-like impact on the screen or the collapse caused by observation.</p>
+
+            <h3>2. The Probability Wave Analogy</h3>
+            <p><strong>Analogy:</strong> Don't think of a physical wave. Instead, imagine a "wave of possibility" that represents the electron. The amplitude of this wave at any point in space corresponds to the probability of finding the electron there if you were to look. The electron isn't in any one place; it is the wave. This probability wave passes through both slits, interferes with itself, and creates a high-probability interference pattern on the screen. When the particle hits the screen, this "wave of possibility" collapses to a single point, and we see a dot.</p>
+            <p><strong>Strength:</strong> This is much closer to the standard (Copenhagen) interpretation of quantum mechanics. It correctly frames the wave as being about information and probability, not a physical substance. It also provides a framework for understanding measurement (collapse).</p>
+            <p><strong>Limitation:</strong> The concept of a "probability wave" is still highly abstract and doesn't have a perfect everyday equivalent. The "collapse" mechanism is itself a subject of deep debate and is not truly explained, just described.</p>
+
+            <h3>3. The "Many Paths" Computational Analogy</h3>
+            <p><strong>Analogy:</strong> Imagine the electron is a tiny, super-powered computer. To get from the gun to a point on the screen, it doesn't just take one path. It simultaneously computes and explores <em>every possible path</em> it could take. It goes through the left slit, the right slit, both, neither (by bouncing off the wall), and so on. Each path has a "phase" (like the hand of a clock). The paths that go through the slits are the most important. To find the final probability of landing at a point, we add up all these "path phases." In some places, the phases align (constructive), and in others, they cancel out (destructive). This is a simplified view of Richard Feynman's path integral formulation.</p>
+            <p><strong>Strength:</strong> This is a powerful and mathematically robust way of thinking about quantum mechanics. It elegantly explains why the slits' properties matter—they define the set of possible paths. It also handles the observer effect: if a detector "pins down" the electron at one slit, it erases the memory of all other paths, and the interference disappears.</p>
+            <p><strong>Limitation:</strong> This is not intuitive at all from a physical standpoint. The idea of a particle taking "all paths at once" is a mathematical construct, not something we can easily visualize or relate to everyday experience.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What is "waving" in the electron wave?</dt>
+                <dd>Nothing is physically waving up and down like in water. The wave is a mathematical object called the "wave function" (often denoted as Ψ). The height (amplitude) of the wave at a certain point, when squared, gives you the probability of finding the electron at that point.</dd>
+
+                <dt>2. Why does looking at the slits destroy the pattern?</dt>
+                <dd>In quantum mechanics, "looking" is not a passive act. To detect which slit an electron goes through, you have to interact with it, for example, by bouncing a photon off it. This interaction is energetic enough to "knock it off its course" and randomize its phase. This destroys the delicate interference relationship between the two paths, so the wave-like pattern vanishes.</dd>
+
+                <dt>3. Does this happen with larger objects like baseballs?</dt>
+                <dd>Yes, in principle! Everything has a De Broglie wavelength. However, the wavelength is inversely proportional to momentum (λ = h/p). For a macroscopic object like a baseball, its momentum is so enormous that its wavelength is astronomically small, far smaller than an atomic nucleus. The resulting interference fringes would be so infinitesimally close together that they would be impossible to ever measure. So, for all practical purposes, large objects behave classically.</dd>
+
+                <dt>4. Is the particle really in multiple places at once?</dt>
+                <dd>According to the standard Copenhagen interpretation, yes. Before a measurement is made, the particle does not have a well-defined position. It is described by its wave function, which is spread out and passes through both slits. It's better to say it exists in a "superposition" of states (going through slit 1 AND going through slit 2).</dd>
+
+                <dt>5. What happens if I close one of the slits?</dt>
+                <dd>If you close one slit, the interference pattern disappears completely. You are left with a single, wide band of hits behind the one open slit (this pattern is called a diffraction pattern). This proves that both slits are required for the interference to occur; the particle is somehow "aware" of the entire experimental setup.</dd>
+
+                <dt>6. The simulation is running slow. What can I do?</dt>
+                <dd>Try reducing the "Emission Rate" using the slider. This reduces the number of calculations the simulation needs to perform per frame. You can also toggle the "Low-Fi Performance Mode" which may reduce visual quality but improve speed. If it freezes, a simple refresh of the page (F5 or Cmd+R) will restart it with default safe parameters.</dd>
+            </dl>
+        </section>
+
+        <section id="accessibility-performance">
+             <h2>Accessibility & Performance</h2>
+             <div class="controls-grid">
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="contrast-toggle"> High Contrast Mode
+                    </label>
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="performance-mode-toggle"> Low-Fi Performance Mode
+                    </label>
+                </div>
+             </div>
+             <div id="perf-meter">FPS: ... | Particles: 0</div>
+        </section>
+
+        <!-- Self-Check Panel -->
+        <div id="error-panel" class="error-panel" role="alert">
+            <strong>Initialization Error:</strong> <span id="error-message"></span>
+            <p>The simulation failed to start. Please try refreshing the page. If the problem persists, please report the bug using the details in the developer console below.</p>
+        </div>
+
+        <!-- Developer Console -->
+        <button class="collapsible">Developer Console</button>
+        <div class="content">
+            <div id="dev-console">
+                <p>Runtime logs and errors will appear here.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const canvas = document.getElementById('simulation-canvas');
+            const ctx = canvas.getContext('2d');
+            const detectorCanvas = document.getElementById('detector-canvas');
+            const detectorCtx = detectorCanvas.getContext('2d');
+            const devConsole = document.getElementById('dev-console');
+
+            // --- Simulation State ---
+            const simState = {
+                isRunning: false,
+                speed: 1.0,
+                slitSeparation: 100, // nm
+                slitWidth: 20, // nm
+                wavelength: 5, // nm
+                emissionRate: 10, // particles per frame
+                isDetectorOn: false,
+                performanceMode: false,
+                totalParticles: 0,
+                particles: [], // {x, y, vx, vy, targetX}
+                detectorHits: null, // Will be an array
+                probabilityDistribution: null, // Theoretical probability curve
+                cumulativeDistribution: null, // For efficient particle generation
+            };
+
+            // --- Constants and Configuration ---
+            const BARRIER_X_RATIO = 0.3;
+            const PARTICLE_SPEED = 2;
+            const SCREEN_WIDTH_NM = 1000; // The physical width of the detector screen in simulation units (nm)
+
+            // --- Logging ---
+            function log(message) {
+                const p = document.createElement('p');
+                p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                devConsole.insertBefore(p, devConsole.firstChild);
+            }
+
+            // --- Canvas and Sizing ---
+            function setupCanvases() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+
+                const detectorRect = detectorCanvas.getBoundingClientRect();
+                detectorCanvas.width = detectorRect.width * dpr;
+                detectorCanvas.height = detectorRect.height * dpr;
+                detectorCtx.scale(dpr, dpr);
+
+                log(`Canvases resized. Main: ${canvas.width}x${canvas.height}, Detector: ${detectorCanvas.width}x${detectorCanvas.height}`);
+                resetSimulation();
+            }
+
+            // --- Core Physics Calculation ---
+            function calculateProbabilityDistribution() {
+                const dist = new Array(detectorCanvas.width).fill(0);
+                const cdf = new Array(detectorCanvas.width).fill(0);
+                let totalProbability = 0;
+
+                const L = (1 - BARRIER_X_RATIO) * canvas.width; // Effective distance to screen in pixels
+                const d = simState.slitSeparation;
+                const a = simState.slitWidth;
+                const lambda = simState.wavelength;
+
+                for (let i = 0; i < detectorCanvas.width; i++) {
+                    const screenX_nm = (i / detectorCanvas.width - 0.5) * SCREEN_WIDTH_NM;
+                    const theta = Math.atan2(screenX_nm, L);
+
+                    // Diffraction term (from slit width 'a')
+                    let beta = (Math.PI * a / lambda) * Math.sin(theta);
+                    let diffraction = (beta === 0) ? 1 : Math.pow(Math.sin(beta) / beta, 2);
+
+                    // Interference term (from slit separation 'd')
+                    let alpha = (Math.PI * d / lambda) * Math.sin(theta);
+                    let interference = Math.pow(Math.cos(alpha), 2);
+
+                    let probability;
+                    if (simState.isDetectorOn) {
+                        // No interference, just two diffraction patterns added
+                        // Simplified: just show two humps for visualization
+                        const dist1 = Math.exp(-Math.pow(screenX_nm - d / 2, 2) / (2 * a * a));
+                        const dist2 = Math.exp(-Math.pow(screenX_nm + d / 2, 2) / (2 * a * a));
+                        probability = (dist1 + dist2) * diffraction; // still modulate by diffraction
+                    } else {
+                        probability = diffraction * interference;
+                    }
+
+                    dist[i] = probability;
+                    totalProbability += probability;
+                }
+
+                // Normalize and create CDF
+                let cumulative = 0;
+                for (let i = 0; i < detectorCanvas.width; i++) {
+                    dist[i] /= totalProbability;
+                    cumulative += dist[i];
+                    cdf[i] = cumulative;
+                }
+
+                simState.probabilityDistribution = dist;
+                simState.cumulativeDistribution = cdf;
+                log("Calculated new probability distribution.");
+            }
+
+            // --- Particle Generation ---
+            function generateParticleTargetX() {
+                const rand = Math.random();
+                // Inverse transform sampling using the CDF
+                let low = 0, high = simState.cumulativeDistribution.length - 1;
+                while(low < high) {
+                    const mid = Math.floor((low + high) / 2);
+                    if(simState.cumulativeDistribution[mid] < rand) {
+                        low = mid + 1;
+                    } else {
+                        high = mid;
+                    }
+                }
+                return low / detectorCanvas.width * canvas.width;
+            }
+
+            function emitParticles() {
+                if (!simState.isRunning) return;
+                const numToEmit = simState.emissionRate * simState.speed;
+                for (let i = 0; i < numToEmit; i++) {
+                    simState.particles.push({
+                        x: 0,
+                        y: canvas.height / 2,
+                        vx: PARTICLE_SPEED * simState.speed,
+                        vy: 0,
+                        targetX: generateParticleTargetX(),
+                    });
+                }
+            }
+
+            function updateParticles() {
+                const barrierX = canvas.width * BARRIER_X_RATIO;
+                const screenX = canvas.width;
+
+                for (let i = simState.particles.length - 1; i >= 0; i--) {
+                    const p = simState.particles[i];
+                    p.x += p.vx;
+
+                    // Simple path correction to aim for target
+                    if(p.x > barrierX) {
+                        const targetY = (p.targetX / canvas.width) * canvas.height;
+                        p.vy = (targetY - p.y) / ((screenX - p.x)/p.vx) * 0.1; // simplified aiming
+                        p.y += p.vy;
+                    }
+
+                    if (p.x >= screenX) {
+                        const hitIndex = Math.floor(p.targetX / canvas.width * detectorCanvas.width);
+                        if(hitIndex >= 0 && hitIndex < simState.detectorHits.length) {
+                           simState.detectorHits[hitIndex]++;
+                           simState.totalParticles++;
+                        }
+                        simState.particles.splice(i, 1);
+                    }
+                }
+            }
+
+            // --- Rendering ---
+            function drawSimulation() {
+                const { width, height } = canvas;
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw barrier
+                const barrierX = width * BARRIER_X_RATIO;
+                const slitSep = (simState.slitSeparation / SCREEN_WIDTH_NM) * height; // Scale to canvas
+                const slitWidth = (simState.slitWidth / SCREEN_WIDTH_NM) * height;
+
+                ctx.fillStyle = 'grey';
+                ctx.fillRect(barrierX - 5, 0, 10, height);
+
+                // Draw slits
+                ctx.clearRect(barrierX - 5, height/2 - slitSep/2 - slitWidth/2, 10, slitWidth);
+                ctx.clearRect(barrierX - 5, height/2 + slitSep/2 - slitWidth/2, 10, slitWidth);
+
+                // Draw particles
+                ctx.fillStyle = simState.isDetectorOn ? 'yellow' : 'cyan';
+                simState.particles.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            function drawDetector() {
+                const { width, height } = detectorCanvas;
+                detectorCtx.clearRect(0, 0, width, height);
+
+                // Draw theoretical curve
+                if (simState.probabilityDistribution) {
+                    detectorCtx.strokeStyle = 'red';
+                    detectorCtx.lineWidth = 1;
+                    detectorCtx.beginPath();
+                    const maxProb = Math.max(...simState.probabilityDistribution);
+                    for (let i = 0; i < width; i++) {
+                        const x = i;
+                        const y = height - (simState.probabilityDistribution[i] / maxProb) * height;
+                        if (i === 0) detectorCtx.moveTo(x, y);
+                        else detectorCtx.lineTo(x, y);
+                    }
+                    detectorCtx.stroke();
+                }
+
+                // Draw histogram of hits
+                if (simState.totalParticles > 0) {
+                    const maxHits = Math.max(...simState.detectorHits);
+                    detectorCtx.fillStyle = 'rgba(0, 255, 255, 0.7)';
+                    for (let i = 0; i < width; i++) {
+                        if (simState.detectorHits[i] > 0) {
+                            const barHeight = (simState.detectorHits[i] / maxHits) * height;
+                            detectorCtx.fillRect(i, height - barHeight, 1, barHeight);
+                        }
+                    }
+                }
+            }
+
+            // --- Main Loop and Controls ---
+            function mainLoop() {
+                emitParticles();
+                updateParticles();
+                drawSimulation();
+                drawDetector();
+
+                if (simState.isRunning) {
+                    requestAnimationFrame(mainLoop);
+                }
+            }
+
+            function resetSimulation() {
+                log("Resetting simulation.");
+                simState.particles = [];
+                simState.totalParticles = 0;
+                simState.detectorHits = new Array(detectorCanvas.width).fill(0);
+                calculateProbabilityDistribution();
+                // Redraw one frame
+                drawSimulation();
+                drawDetector();
+            }
+
+            function initialize() {
+                log("Initializing simulation and wiring controls...");
+                window.addEventListener('resize', setupCanvases);
+
+                // --- Get all control elements ---
+                const playPauseBtn = document.getElementById('play-pause-btn');
+                const stepBtn = document.getElementById('step-btn');
+                const resetBtn = document.getElementById('reset-btn');
+                const exportPngBtn = document.getElementById('export-png-btn');
+                const exportJsonBtn = document.getElementById('export-json-btn');
+                const shareBtn = document.getElementById('share-btn');
+
+                const speedSlider = document.getElementById('speed-slider');
+                const slitSeparationSlider = document.getElementById('slit-separation-slider');
+                const slitWidthSlider = document.getElementById('slit-width-slider');
+                const wavelengthSlider = document.getElementById('wavelength-slider');
+                const emissionRateSlider = document.getElementById('emission-rate-slider');
+
+                const detectorToggle = document.getElementById('detector-toggle');
+                const contrastToggle = document.getElementById('contrast-toggle');
+                const perfModeToggle = document.getElementById('performance-mode-toggle');
+
+                const presetClassicBtn = document.getElementById('preset-classic-btn');
+                const presetParticleBtn = document.getElementById('preset-particle-btn');
+                const presetFringesBtn = document.getElementById('preset-fringes-btn');
+
+                // --- Helper to update slider value display ---
+                function updateSliderValue(sliderId, value, unit = '') {
+                    const valueEl = document.getElementById(`${sliderId}-value`);
+                    if (valueEl) valueEl.textContent = `${value}${unit}`;
+                }
+
+                // --- Control Logic ---
+                function togglePlayPause() {
+                    simState.isRunning = !simState.isRunning;
+                    playPauseBtn.textContent = simState.isRunning ? 'Pause' : 'Play';
+                    playPauseBtn.setAttribute('aria-label', simState.isRunning ? 'Pause Simulation (Space)' : 'Play Simulation (Space)');
+                    if (simState.isRunning) {
+                        log("Simulation started.");
+                        lastTime = performance.now(); // Reset FPS timer on play
+                        requestAnimationFrame(mainLoop);
+                    } else {
+                        log("Simulation paused.");
+                    }
+                }
+
+                function stepOnce() {
+                    if (simState.isRunning) return;
+                    log("Stepping once.");
+                    emitParticles();
+                    updateParticles();
+                    drawSimulation();
+                    drawDetector();
+                }
+
+                // --- Event Listeners ---
+                playPauseBtn.addEventListener('click', togglePlayPause);
+                stepBtn.addEventListener('click', stepOnce);
+                resetBtn.addEventListener('click', () => {
+                    if(simState.isRunning) togglePlayPause();
+                    resetSimulation();
+                });
+
+                // Sliders
+                speedSlider.addEventListener('input', e => {
+                    simState.speed = parseFloat(e.target.value);
+                    updateSliderValue('speed', simState.speed.toFixed(1), 'x');
+                });
+                slitSeparationSlider.addEventListener('input', e => {
+                    simState.slitSeparation = parseInt(e.target.value);
+                    updateSliderValue('slit-separation', simState.slitSeparation, ' nm');
+                    if (!simState.isRunning) resetSimulation(); else calculateProbabilityDistribution();
+                });
+                slitWidthSlider.addEventListener('input', e => {
+                    simState.slitWidth = parseInt(e.target.value);
+                    updateSliderValue('slit-width', simState.slitWidth, ' nm');
+                    if (!simState.isRunning) resetSimulation(); else calculateProbabilityDistribution();
+                });
+                wavelengthSlider.addEventListener('input', e => {
+                    simState.wavelength = parseFloat(e.target.value);
+                    updateSliderValue('wavelength', simState.wavelength.toFixed(1), ' nm');
+                    if (!simState.isRunning) resetSimulation(); else calculateProbabilityDistribution();
+                });
+                emissionRateSlider.addEventListener('input', e => {
+                    simState.emissionRate = parseInt(e.target.value);
+                    updateSliderValue('emission-rate', simState.emissionRate, ' particles/frame');
+                });
+                emissionRateSlider.addEventListener('change', e => {
+                    if(parseInt(e.target.value) > 40) {
+                        if(!confirm('Warning: High emission rates may cause performance issues. Do you want to proceed?')) {
+                            e.target.value = 40;
+                            simState.emissionRate = 40;
+                            updateSliderValue('emission-rate', 40, ' particles/frame');
+                        }
+                    }
+                });
+
+                // Toggles
+                detectorToggle.addEventListener('change', e => {
+                    simState.isDetectorOn = e.target.checked;
+                    log(`Which-slit detector turned ${simState.isDetectorOn ? 'ON' : 'OFF'}.`);
+                    resetSimulation();
+                });
+                contrastToggle.addEventListener('change', e => {
+                    document.body.classList.toggle('dark-theme', e.target.checked);
+                    log(`High contrast mode ${e.target.checked ? 'enabled' : 'disabled'}.`);
+                    drawSimulation();
+                    drawDetector();
+                });
+                perfModeToggle.addEventListener('change', e => {
+                    simState.performanceMode = e.target.checked;
+                     log(`Performance mode ${e.target.checked ? 'enabled' : 'disabled'}.`);
+                });
+
+                // Presets
+                const presets = {
+                    classic: { slitSeparation: 120, slitWidth: 20, wavelength: 5 },
+                    particle: { slitSeparation: 300, slitWidth: 80, wavelength: 1 },
+                    fringes: { slitSeparation: 250, slitWidth: 10, wavelength: 10 },
+                };
+
+                function applyPreset(preset) {
+                    if(simState.isRunning) togglePlayPause();
+
+                    slitSeparationSlider.value = preset.slitSeparation;
+                    slitWidthSlider.value = preset.slitWidth;
+                    wavelengthSlider.value = preset.wavelength;
+
+                    simState.slitSeparation = preset.slitSeparation;
+                    simState.slitWidth = preset.slitWidth;
+                    simState.wavelength = preset.wavelength;
+
+                    updateSliderValue('slit-separation', simState.slitSeparation, ' nm');
+                    updateSliderValue('slit-width', simState.slitWidth, ' nm');
+                    updateSliderValue('wavelength', simState.wavelength.toFixed(1), ' nm');
+
+                    resetSimulation();
+                    log(`Applied preset: ${JSON.stringify(preset)}`);
+                }
+
+                presetClassicBtn.addEventListener('click', () => applyPreset(presets.classic));
+                presetParticleBtn.addEventListener('click', () => applyPreset(presets.particle));
+                presetFringesBtn.addEventListener('click', () => applyPreset(presets.fringes));
+
+                // Export
+                exportPngBtn.addEventListener('click', () => {
+                    const wasRunning = simState.isRunning;
+                    if (wasRunning) togglePlayPause();
+
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height + detectorCanvas.height;
+
+                    tempCtx.fillStyle = document.body.classList.contains('dark-theme') ? '#1a1a1a' : '#ffffff';
+                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+                    tempCtx.drawImage(canvas, 0, 0);
+                    tempCtx.drawImage(detectorCanvas, 0, canvas.height);
+
+                    const link = document.createElement('a');
+                    link.download = 'double-slit-simulation.png';
+                    link.href = tempCanvas.toDataURL();
+                    link.click();
+                    log("Exported canvas as PNG.");
+
+                    if (wasRunning) togglePlayPause();
+                });
+
+                exportJsonBtn.addEventListener('click', () => {
+                    const data = {
+                        slitSeparation: simState.slitSeparation,
+                        slitWidth: simState.slitWidth,
+                        wavelength: simState.wavelength,
+                        emissionRate: simState.emissionRate,
+                        isDetectorOn: simState.isDetectorOn,
+                    };
+                    const json = JSON.stringify(data, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const link = document.createElement('a');
+                    link.download = 'simulation-preset.json';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    log("Exported parameters as JSON.");
+                });
+
+                shareBtn.addEventListener('click', () => {
+                     const data = {
+                        slitSeparation: simState.slitSeparation,
+                        slitWidth: simState.slitWidth,
+                        wavelength: simState.wavelength,
+                    };
+                    const jsonString = JSON.stringify(data);
+                    navigator.clipboard.writeText(window.location.href.split('#')[0] + '#' + btoa(jsonString))
+                        .then(() => alert('Shareable link copied to clipboard!'))
+                        .catch(err => alert('Failed to copy link.'));
+                    log("Share link copied to clipboard.");
+                });
+
+                // Keyboard shortcuts
+                window.addEventListener('keydown', (e) => {
+                    if (document.activeElement.type === 'range') return; // Ignore shortcuts if slider is focused
+                    if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+                    else if (e.code === 'ArrowRight') { e.preventDefault(); stepOnce(); }
+                    else if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetBtn.click(); }
+                    else if (e.key.toLowerCase() === 'e') { e.preventDefault(); exportPngBtn.click(); }
+                });
+
+                // Load from URL hash
+                function loadFromHash() {
+                    if (window.location.hash) {
+                        try {
+                            const jsonString = atob(window.location.hash.substring(1));
+                            const preset = JSON.parse(jsonString);
+                            applyPreset(preset);
+                            log("Loaded preset from URL hash.");
+                        } catch (e) {
+                            log("Failed to load preset from URL hash.");
+                        }
+                    }
+                }
+
+                // Performance Meter
+                let lastTime = 0;
+                let frameCount = 0;
+                const perfMeter = document.getElementById('perf-meter');
+                const originalMainLoop = mainLoop;
+                mainLoop = function() {
+                    const timestamp = performance.now();
+                    frameCount++;
+                    const delta = timestamp - lastTime;
+                    if (delta >= 1000) {
+                        const fps = (frameCount * 1000 / delta).toFixed(0);
+                        perfMeter.textContent = `FPS: ${fps} | Particles: ${simState.totalParticles}`;
+                        lastTime = timestamp;
+                        frameCount = 0;
+                    }
+                    originalMainLoop();
+                    if(simState.isRunning) requestAnimationFrame(mainLoop);
+                }
+
+                // Self-checks
+                function runSelfChecks() {
+                    const errorPanel = document.getElementById('error-panel');
+                    const errorMessage = document.getElementById('error-message');
+                    let errors = [];
+
+                    if (!canvas || !ctx) errors.push("Main canvas context not found.");
+                    if (!detectorCanvas || !detectorCtx) errors.push("Detector canvas context not found.");
+                    if (!playPauseBtn || !presetClassicBtn) errors.push("A required control button was not found.");
+                    if (!presets || !presets.classic) errors.push("Preset data is missing from the script.");
+
+                    if (errors.length > 0) {
+                        errorMessage.textContent = errors.join(' ');
+                        errorPanel.style.display = 'block';
+                        log(`FATAL: Self-check failed: ${errors.join(' ')}`);
+                        return false;
+                    }
+
+                    log("Self-checks passed successfully.");
+                    return true;
+                }
+
+                // Basic collapsible functionality for dev console
+                const coll = document.querySelector(".collapsible");
+                coll.addEventListener("click", function() {
+                    this.classList.toggle("active");
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight){
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+
+                if (runSelfChecks()) {
+                    setupCanvases();
+                    loadFromHash();
+                }
+            }
+
+            initialize();
+        });
+    </script>
+</body>
+</html>
