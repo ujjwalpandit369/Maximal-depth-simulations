@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Conway's Game of Life</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --code-bg: #f8f9fa;
+            --controls-bg: #f8f9fa;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --cell-alive-color: #1a1a1a;
+            --cell-dead-color: #ffffff;
+            --grid-line-color: #e0e0e0;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #00aaff;
+            --primary-hover: #0077cc;
+            --secondary-color: #bbbbbb;
+            --border-color: #555555;
+            --code-bg: #1e1e1e;
+            --controls-bg: #1e1e1e;
+            --shadow-color: rgba(255, 255, 255, 0.2);
+            --cell-alive-color: #ffff00;
+            --cell-dead-color: #000000;
+            --grid-line-color: #333333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 0 1rem;
+        }
+
+        h1, h2, h3 {
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        h3 { font-size: 1.5rem; }
+
+        p { margin-bottom: 1rem; }
+        a { color: var(--primary-color); }
+        a:hover { color: var(--primary-hover); }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: "Courier New", Courier, monospace; }
+        pre { background-color: var(--code-bg); padding: 1rem; border-radius: 5px; overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th { background-color: var(--controls-bg); }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+            margin: 0.2rem;
+        }
+        button:hover, button:focus {
+            background-color: var(--primary-hover);
+            outline: 2px solid var(--primary-hover);
+            outline-offset: 2px;
+        }
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .suggestion-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-color);
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .suggestion-box button { font-size: 0.8rem; padding: 0.2rem 0.5rem; }
+
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+        .metadata-bar span { margin-right: 1rem; }
+
+        .simulation-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 8px var(--shadow-color);
+            max-width: 100%;
+        }
+        .controls {
+            width: 300px;
+            flex-shrink: 0;
+            background-color: var(--controls-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px var(--shadow-color);
+        }
+        .control-group {
+            margin-bottom: 1rem;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .control-group .value-display {
+            font-family: "Courier New", Courier, monospace;
+            font-weight: bold;
+        }
+
+        .warning-banner, .error-panel {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            display: none;
+        }
+        .error-panel {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .dev-console {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .dev-console summary {
+            padding: 0.5rem;
+            cursor: pointer;
+            background-color: var(--code-bg);
+            font-weight: bold;
+        }
+        .dev-console-content {
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+        }
+        #perf-meter {
+            font-size: 0.9rem;
+            font-family: monospace;
+            margin-bottom: 0.5rem;
+        }
+        #error-log {
+            font-size: 0.8rem;
+            color: #c00;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Responsive layout */
+        @media (max-width: 900px) {
+            .simulation-area {
+                flex-direction: column;
+            }
+            .controls {
+                width: 100%;
+                max-width: 500px;
+                margin: 0 auto;
+                box-sizing: border-box;
+            }
+        }
+
+        [data-tooltip] {
+          position: relative;
+          cursor: help;
+        }
+        [data-tooltip]::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: 100%;
+          margin-bottom: 5px;
+          background: #333;
+          color: white;
+          padding: 5px 10px;
+          border-radius: 5px;
+          font-size: 0.9em;
+          white-space: nowrap;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.2s, visibility 0.2s;
+          z-index: 10;
+        }
+        [data-tooltip]:hover::after {
+          opacity: 1;
+          visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Interactive Conway's Game of Life</h1>
+            <p class="subtitle">A simple, elegant "zero-player game" that demonstrates complex emergent behavior from a few basic rules.</p>
+            <div class="suggestion-box">
+                <strong>Quick Tune-up:</strong> This page is currently set for a <strong>beginner</strong> audience, using <strong>everyday</strong> analogies with <strong>light</strong> computational intensity. You can change these defaults in a future version.
+            </div>
+            <div class="metadata-bar">
+                <span>Estimated Runtime: Continuous</span>
+                <span>Recommended Device: Desktop</span>
+                <span>Approx. Page Size: 120 KB</span>
+                <button id="theme-toggle" class="secondary" style="float: right;">Toggle High Contrast</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="self-check-error" class="error-panel"></div>
+
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>Conway's Game of Life is not a game in the typical sense. It's a "zero-player game," meaning its evolution is determined by its initial state, requiring no further input. You start by setting up an initial configuration of "live" cells on a grid. Then, you watch what happens. The "game" is to see how complex patterns, structures, and behaviors can emerge from a handful of very simple rules that govern whether a cell lives, dies, or is born in the next generation.</p>
+            </section>
+
+            <section id="simulation-container">
+                <h2>Interactive Simulation</h2>
+                <div id="heavy-warning" class="warning-banner">
+                    <strong>Warning:</strong> The selected settings may be computationally intensive and could cause your browser to become unresponsive. Proceed with caution. <button id="confirm-heavy">I Understand</button>
+                </div>
+                <div class="simulation-area">
+                    <div id="canvas-container">
+                        <canvas id="life-canvas" width="600" height="600" aria-label="Conway's Game of Life simulation grid"></canvas>
+                    </div>
+                    <div class="controls">
+                        <div class="control-group">
+                            <button id="play-pause-btn" data-tooltip="Toggle simulation (Space)" aria-label="Play or Pause Simulation">Play</button>
+                            <button id="step-btn" data-tooltip="Advance one step (→)" aria-label="Advance one step">Step</button>
+                            <button id="reset-btn" data-tooltip="Reset to new random state (R)" aria-label="Reset Simulation">Reset</button>
+                        </div>
+                        <div class="control-group">
+                            <label for="speed-slider">Speed: <span id="speed-value" class="value-display">5</span> steps/sec</label>
+                            <input type="range" id="speed-slider" min="1" max="60" value="5" aria-label="Simulation speed slider">
+                        </div>
+                        <hr>
+                        <div class="control-group">
+                            <h3>Parameters</h3>
+                            <label for="grid-size-slider">Grid Size: <span id="grid-size-value" class="value-display">100</span>x<span class="grid-size-value-dup">100</span></label>
+                            <input type="range" id="grid-size-slider" min="20" max="400" step="10" value="100" aria-label="Grid size slider">
+
+                            <label for="cell-size-slider">Cell Size: <span id="cell-size-value" class="value-display">6</span> px</label>
+                            <input type="range" id="cell-size-slider" min="2" max="20" value="6" aria-label="Cell size slider">
+
+                            <label for="density-slider">Initial Density: <span id="density-value" class="value-display">20</span>%</label>
+                            <input type="range" id="density-slider" min="1" max="100" value="20" aria-label="Initial density slider">
+                        </div>
+                        <hr>
+                        <div class="control-group">
+                            <h3>Presets</h3>
+                            <button id="preset-sparse" class="preset-btn">Sparse Garden</button>
+                            <button id="preset-typical" class="preset-btn">Typical Soup</button>
+                            <button id="preset-dense" class="preset-btn">Dense Chaos</button>
+                        </div>
+                        <hr>
+                        <div class="control-group">
+                            <h3>Tools</h3>
+                            <button id="export-png-btn" data-tooltip="Save current view as PNG (E)" aria-label="Export as PNG">Export PNG</button>
+                            <button id="export-json-btn" aria-label="Export parameters as JSON">Export JSON</button>
+                            <button id="share-btn" aria-label="Copy shareable link">Share Preset</button>
+                            <label><input type="checkbox" id="perf-mode-toggle"> Performance Mode</label>
+                        </div>
+                    </div>
+                </div>
+                <details class="dev-console">
+                    <summary>Developer Console</summary>
+                    <div class="dev-console-content">
+                        <div id="perf-meter">FPS: N/A | Memory: N/A | Live Cells: N/A</div>
+                        <pre id="error-log">No errors.</pre>
+                    </div>
+                </details>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide to the Game of Life</h2>
+                <p>Welcome! If you've never seen the Game of Life before, you're in for a treat. Let's walk through it step-by-step.</p>
+
+                <h3>1. The "World" is a Grid</h3>
+                <p>Imagine a giant checkerboard. This is the world where our "cells" live. Each square on the board can either be empty (dead) or have a cell in it (alive). In our simulation, the black squares are live cells, and the white squares are dead ones. The grid is a torus, meaning it wraps around: if a cell goes off the right edge, it reappears on the left, and the same for top and bottom. This prevents edge effects from influencing the simulation.</p>
+
+                <h3>2. The "Rules" of Life and Death</h3>
+                <p>The entire simulation is governed by three very simple rules that are checked for every single cell at each step (or "generation"). To check the rules, we count how many live neighbors a cell has. A cell has 8 possible neighbors: the squares directly above, below, to the sides, and on the diagonals.</p>
+                <ul>
+                    <li><strong>Rule 1: Survival.</strong> A living cell with <strong>2 or 3</strong> live neighbors survives to the next generation. It's got just the right amount of company.</li>
+                    <li><strong>Rule 2: Death.</strong> A living cell with fewer than 2 neighbors dies (from "underpopulation"). A living cell with more than 3 neighbors also dies (from "overpopulation").</li>
+                    <li><strong>Rule 3: Birth.</strong> A dead cell with <strong>exactly 3</strong> live neighbors becomes a live cell in the next generation. This is the only way new cells are born.</li>
+                </ul>
+                <p>That's it! Every cell on the grid has these rules applied to it simultaneously to calculate the state of the grid in the next generation. The complexity you see arises from these simple local interactions.</p>
+
+                <h3>3. An Everyday Analogy: A Party</h3>
+                <p>Think of the grid as a giant ballroom, and each live cell is a person at a party.
+                <ul>
+                    <li>If a person (a live cell) is standing with 2 or 3 other people, they are having a good time and will stay (<strong>Survival</strong>).</li>
+                    <li>If a person is all alone or with just one other person (0 or 1 neighbor), they get bored and go home (<strong>Death by Underpopulation</strong>).</li>
+                    <li>If a person is in a packed group of 4 or more people, it's too crowded and noisy, so they leave (<strong>Death by Overpopulation</strong>).</li>
+                    <li>If an empty spot on the floor is surrounded by exactly 3 people, the conversation is so interesting that a new person comes over to join them (<strong>Birth</strong>).</li>
+                </ul>
+                The "game" is watching how these groups form, shrink, and move around the ballroom based on these social rules.</p>
+
+                <h3>4. A Visualization Analogy: Pixel Snow</h3>
+                <p>Imagine your screen is an old black-and-white TV showing static, but this static isn't random. Each pixel looks at its 8 neighbors. If a white pixel sees exactly three black pixels around it, it turns black. If a black pixel sees a number of black pixels other than 2 or 3, it turns white. The "snow" on the screen would start to organize itself, forming clumps, oscillating patterns, and "fliers" that move across the screen. You're not watching random noise, but a system with its own internal physics, where the patterns are like digital organisms.</p>
+
+                <h3>5. How to Use This Simulation</h3>
+                <p>Start by pressing the <strong>Play</strong> button. You'll see the initial random pattern of cells begin to evolve. Use the <strong>Speed</strong> slider to make it faster or slower. If you see an interesting pattern, press <strong>Pause</strong> to examine it. The <strong>Step</strong> button lets you move forward one generation at a time. When you want to start over, press <strong>Reset</strong> to get a new random layout. Try adjusting the <strong>Grid Size</strong> and <strong>Initial Density</strong> sliders (you'll need to press Reset for them to take full effect) to see how they change the character of the simulation.</p>
+            </section>
+
+            <section id="params-summary">
+                <h2>Parameters & Controls Summary</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Units</th>
+                            <th>Default</th>
+                            <th>Range</th>
+                            <th>Description & Worked Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Grid Size</td>
+                            <td>cells</td>
+                            <td>100</td>
+                            <td>20-400</td>
+                            <td>The width and height of the simulation grid. A larger grid allows for more complex patterns to evolve without hitting the boundaries. <br><strong>Example:</strong> A grid size of <strong>100</strong> creates a 100x100 grid, for a total of <code>100 * 100 = 10,000</code> cells.</td>
+                        </tr>
+                        <tr>
+                            <td>Cell Size</td>
+                            <td>pixels</td>
+                            <td>6</td>
+                            <td>2-20</td>
+                            <td>The size of each square cell when drawn on the screen. This is a visual parameter and doesn't affect the simulation logic. <br><strong>Example:</strong> With a grid size of 100 and a cell size of <strong>6</strong>, the canvas will be <code>100 * 6 = 600</code> pixels wide.</td>
+                        </tr>
+                        <tr>
+                            <td>Initial Density</td>
+                            <td>percent (%)</td>
+                            <td>20</td>
+                            <td>1-100</td>
+                            <td>The percentage of cells that will be "alive" when the grid is first randomized. <br><strong>Example:</strong> On a 100x100 grid (10,000 cells), an initial density of <strong>20%</strong> means approximately <code>10,000 * 0.20 = 2,000</code> cells will be alive on frame 0.</td>
+                        </tr>
+                        <tr>
+                            <td>Speed</td>
+                            <td>steps/sec</td>
+                            <td>5</td>
+                            <td>1-60</td>
+                            <td>How many generations (steps) the simulation calculates per second. <br><strong>Example:</strong> A speed of <strong>5</strong> means the simulation updates 5 times per second, so there is <code>1000ms / 5 = 200ms</code> between each step.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="presets-section">
+                <h2>Try These Examples</h2>
+                <div class="preset-example">
+                    <h3>1. Sparse Garden</h3>
+                    <p><strong>Observation:</strong> Watch for small, stable patterns to emerge from the chaos. You will see many "blinkers" (oscillating lines of 3 cells) and "blocks" (stable 2x2 squares) forming and settling down. The world will quickly become static or filled with simple oscillators.</p>
+                    <button onclick="window.applyPreset('sparse')">Run "Sparse Garden"</button>
+                    <pre>{"gridSize": 100, "cellSize": 6, "density": 10, "speed": 10}</pre>
+                </div>
+                <div class="preset-example">
+                    <h3>2. Typical Soup</h3>
+                    <p><strong>Observation:</strong> This is the classic Game of Life experience. You will see a dynamic mix of stable patterns, oscillators, and, most importantly, "spaceships" like the famous "glider" - a small 5-cell pattern that travels diagonally across the grid.</p>
+                    <button onclick="window.applyPreset('typical')">Run "Typical Soup"</button>
+                    <pre>{"gridSize": 150, "cellSize": 4, "density": 25, "speed": 15}</pre>
+                </div>
+                <div class="preset-example">
+                    <h3>3. Dense Chaos</h3>
+                    <p><strong>Observation:</strong> The initial state is very crowded. Watch how this density is unsustainable. The grid will rapidly "burn out," with most cells dying from overpopulation, leaving behind a few scattered, simple survivors in a near-empty world after about 50-100 generations.</p>
+                    <button onclick="window.applyPreset('dense')">Run "Dense Chaos"</button>
+                    <pre>{"gridSize": 200, "cellSize": 3, "density": 55, "speed": 30}</pre>
+                </div>
+            </section>
+
+            <section id="walkthroughs">
+                <h2>Walkthroughs & Micro-Experiments</h2>
+                <h3>Changing Initial Density</h3>
+                <p>The initial density dramatically changes the fate of the world.</p>
+                <ul>
+                    <li><strong>Example 1:</strong> Set density to <strong>10%</strong>. The world is sparse. Most cells die from isolation. The final state is usually empty or has a few static patterns. Now, set density to <strong>25%</strong>. There's enough critical mass for gliders and more complex structures to form. The difference of <strong>+15%</strong> is the difference between a barren world and a living one.</li>
+                    <li><strong>Analogy:</strong> This is like trying to start a fire. Too little kindling (low density) and the fire sputters out. Too much fuel packed too tightly (high density) and it chokes from lack of air. You need just the right amount (medium density) for a sustained, interesting burn.</li>
+                </ul>
+
+                <h3>Micro-Experiments to Try</h3>
+                <ol>
+                    <li><strong>The Blinker:</strong> Pause the simulation. Reset until the grid is empty (or set density to 0). Carefully click three cells in a vertical line. Press 'Step' and watch them become a horizontal line. It will oscillate forever.</li>
+                    <li><strong>The Glider:</strong> Create the classic 5-cell glider pattern. (A 2x2 block with one cell attached to a corner). Press Play and watch it travel diagonally. Can you predict its position after 20 steps? (It moves 1 cell diagonally every 4 generations).</li>
+                    <li><strong>Extinction Event:</strong> Use the "Dense Chaos" preset. How many steps does it take for the live cell count to drop below 500? It's usually surprisingly fast.</li>
+                    <li><strong>Edge of Chaos:</strong> Find the lowest density percentage that can still produce a glider. Start at 5% and slowly increase, resetting each time. It's usually around 12-15%.</li>
+                    <li><strong>Manual Seeding:</strong> Set density to 0. Click the canvas to draw your own patterns. Can you create a pattern that grows forever? (These are called "Gosper's Glider Gun" and are very large and specific).</li>
+                    <li><strong>Performance Test:</strong> Set Grid Size to 400 and Cell Size to 2. Press Reset, then Play. Watch the FPS meter in the developer console. How does your machine handle it?</li>
+                    <li><strong>Still Lifes:</strong> How many different stable, non-moving patterns (still lifes) can you spot in a "Typical Soup" run? Common ones are the 2x2 block, the "beehive," and the "boat."</li>
+                    <li><strong>Interaction:</strong> Create two gliders on a collision course. What happens when they crash? Pause and step through the collision to see the result. Sometimes they annihilate, sometimes they create new patterns.</li>
+                </ol>
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory & Equations</h2>
+                <p>The logic is simple and can be expressed without complex math. Let <code>C(x, y)</code> be the state of the cell at position (x, y), where 1 is alive and 0 is dead. Let <code>N(x, y)</code> be the number of live neighbors for that cell.</p>
+
+                <h3>1. Neighbor Summation</h3>
+                <p>For each cell, we sum the states of its 8 neighbors.</p>
+                <pre>N(x, y) = C(x-1, y-1) + C(x, y-1) + C(x+1, y-1) +
+          C(x-1, y)   +             C(x+1, y)   +
+          C(x-1, y+1) + C(x, y+1) + C(x+1, y+1)</pre>
+                <p><strong>Plain English:</strong> To find out a cell's situation, you just count how many of its 8 immediate neighbors are alive.</p>
+                <p><strong>Numeric Example:</strong> If a cell has live neighbors above it, to its right, and diagonally down-left, then its neighbor count is <code>N = 1 + 1 + 1 = 3</code>.</p>
+
+                <h3>2. The Rules of State Transition</h3>
+                <p>Let <code>C_t(x, y)</code> be the cell's state at the current time (generation) <code>t</code>, and <code>C_{t+1}(x, y)</code> be its state in the next generation.</p>
+                <ol>
+                    <li>If <code>C_t(x, y) = 1</code> AND (<code>N(x, y) < 2</code> OR <code>N(x, y) > 3</code>) &rarr; <code>C_{t+1}(x, y) = 0</code>  (Death)</li>
+                    <li>If <code>C_t(x, y) = 1</code> AND (<code>N(x, y) = 2</code> OR <code>N(x, y) = 3</code>) &rarr; <code>C_{t+1}(x, y) = 1</code>  (Survival)</li>
+                    <li>If <code>C_t(x, y) = 0</code> AND <code>N(x, y) = 3</code> &rarr; <code>C_{t+1}(x, y) = 1</code> (Birth)</li>
+                </ol>
+                <p><strong>Plain English:</strong> A living cell dies if it's lonely or crowded. A dead cell comes to life only if it's surrounded by a perfect little group of three.</p>
+                <p><strong>Numeric Example:</strong> A live cell <code>C_t = 1</code> has 4 neighbors (<code>N = 4</code>). Since 4 > 3, it dies from overpopulation, and its next state is <code>C_{t+1} = 0</code>.</p>
+
+                <h3>Approximations & Limits</h3>
+                <p>The simulation is deterministic and exact. There are no mathematical approximations. The main limitation is numerical: the grid is finite. To mitigate this, the grid "wraps around" (a toroidal array), so a pattern moving off one edge reappears on the opposite side. This prevents the edges from being sterile boundaries and allows patterns to exist indefinitely.</p>
+            </section>
+
+            <section id="advanced-notes">
+                <h2>Advanced Notes & Extensions</h2>
+                <ul>
+                    <li><strong>Numerical Stability:</strong> The simulation is perfectly stable as it relies on integer counting and boolean logic. It will never "blow up." Performance is the only concern, as the number of calculations is proportional to the number of cells (Grid Size squared).</li>
+                    <li><strong>Improving Performance:</strong> A key optimization is to only check cells that are currently alive or are neighbors of a live cell. A completely dead region of the grid doesn't need to be checked. This simulation uses a simpler approach of checking every cell for clarity, but a "sparse grid" or "quadtree" implementation would be much faster for mostly empty worlds.</li>
+                    <li><strong>Extension 1: Different Rules:</strong> The B3/S23 rule is not the only one. You could try others! "HighLife" (B36/S23) has a "replicator" pattern. "Day & Night" (B3678/S34678) creates beautiful coral-like structures. To implement this, you would change the hardcoded numbers in the state transition logic.
+                    <pre>// Original Rule
+if (isAlive) {
+  nextState = (neighbors === 2 || neighbors === 3);
+} else {
+  nextState = (neighbors === 3);
+}
+
+// HighLife Rule (B36/S23)
+if (isAlive) {
+  nextState = (neighbors === 2 || neighbors === 3);
+} else {
+  nextState = (neighbors === 3 || neighbors === 6);
+}</pre>
+                    </li>
+                    <li><strong>Extension 2: More States:</strong> You could add more than two states (dead/alive). For example, a cell could age, changing color with each generation it survives, and dying after a certain number of generations. This would require changing the cell data from a boolean to a number representing its state.</li>
+                </ul>
+            </section>
+
+            <section id="analogies">
+                <h2>Analogies & Intuition</h2>
+                <ul>
+                    <li><strong>Physical Analogy (Crystallization):</strong> Think of a supersaturated solution. A few seed crystals (the initial pattern) can trigger a chain reaction where new crystals form based on the local concentration and structure of existing ones. Some structures are stable (like a finished crystal), some are unstable and dissolve (death), and some trigger new growth (birth). The rules of Life are like a simplified law of crystallization. Its limitation is that cells in Life can die from overpopulation, which isn't typical for crystal growth.</li>
+                    <li><strong>Visualization Analogy (Image Processing Kernel):</strong> Imagine the grid is an image, and you're applying a filter (or "kernel") to it. The filter looks at the 3x3 pixel neighborhood around a central pixel and decides its new color based on a formula. This is exactly how the Game of Life works; it's a specific type of cellular automaton, which is a concept used in image processing, texture generation, and scientific modeling. The limitation is that this analogy is very technical and may not be intuitive for everyone.</li>
+                    <li><strong>Computational Analogy (Parallel Processing):</strong> The grid is like a huge array of tiny, simple processors. Each processor can only see its 8 immediate neighbors. On each "clock cycle" (a generation), every processor simultaneously runs the same simple program (the B3/S23 rule) on its local data and updates its own state. It's a model for massively parallel, decentralized computation. The limitation is that true parallel hardware isn't what's running this simulation (it's a single-threaded JS program), but it's a powerful mental model for how the system works.</li>
+                </ul>
+            </section>
+
+            <section id="faq">
+                <h2>FAQ & Troubleshooting</h2>
+                <dl>
+                    <dt>1. Why is it called a "game"?</dt>
+                    <dd>It's a "game" in the mathematical sense, like game theory. The "player" just sets up the initial conditions. The challenge and fun come from discovering interesting starting patterns.</dd>
+                    <dt>2. Do the patterns mean anything?</dt>
+                    <dd>In themselves, no. But they are a beautiful example of "emergence"—how complex, seemingly intelligent behavior can arise from simple, mindless rules. Philosophers and computer scientists find this very profound.</dd>
+                    <dt>3. Can a pattern grow forever?</dt>
+                    <dd>Yes! There are patterns called "guns" that repeatedly create spaceships (like the glider), leading to infinite growth in the number of live cells. There are also "puffers" that move and leave a trail of debris behind them.</dd>
+                    <dt>4. Is the simulation result random?</dt>
+                    <dd>No. The simulation is 100% deterministic. If you start with the exact same initial pattern, you will get the exact same result every time. The only randomness is in how the initial pattern is generated when you press "Reset".</dd>
+                    <dt>5. Why does my screen go blank after a while?</dt>
+                    <dd>This is a common outcome. Many initial configurations eventually lead to extinction, where all cells die. This is called a "Garden of Eden" state in reverse. Try a higher initial density or a larger grid.</dd>
+                    <dt>6. The simulation is running slowly. What can I do?</dt>
+                    <dd>The easiest way to speed it up is to make the grid smaller. Use the "Grid Size" slider to reduce the number of cells. You can also check the "Performance Mode" box, which may reduce visual quality but speed up calculations. A grid of 100x100 is usually fast on most computers.</dd>
+                </dl>
+                <h3>Troubleshooting</h3>
+                <ul>
+                    <li><strong>Canvas is blank or not showing:</strong> Your browser might be old or have JavaScript disabled. Try updating your browser (Chrome, Firefox, Safari, Edge are recommended) or enabling JavaScript.</li>
+                    <li><strong>Simulation hangs or browser freezes:</strong> You may have set the Grid Size too high. Try refreshing the page, which should restore the safe defaults. Avoid setting the grid size above 250 unless you have a very powerful computer.</li>
+                    <li><strong>Something else is wrong:</strong> Open your browser's developer tools (usually by pressing F12), click on the "Console" tab, and copy any red error messages. This information is very helpful for debugging.</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    // --- JAVASCRIPT IMPLEMENTATION ---
+    (function() {
+        'use strict';
+
+        // --- GLOBAL STATE & CONFIG ---
+        const config = {
+            gridSize: 100,
+            cellSize: 6,
+            density: 20,
+            speed: 5, // steps per second
+            perfMode: false,
+            safeGridSize: 250,
+        };
+
+        const state = {
+            grid: [],
+            isRunning: false,
+            animationFrameId: null,
+            lastUpdateTime: 0,
+            liveCells: 0,
+            generation: 0,
+            isHeavyWarningConfirmed: false,
+        };
+
+        // --- DOM ELEMENT CACHE ---
+        const dom = {
+            canvas: document.getElementById('life-canvas'),
+            ctx: null,
+            playPauseBtn: document.getElementById('play-pause-btn'),
+            stepBtn: document.getElementById('step-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            speedSlider: document.getElementById('speed-slider'),
+            speedValue: document.getElementById('speed-value'),
+            gridSizeSlider: document.getElementById('grid-size-slider'),
+            gridSizeValue: document.getElementById('grid-size-value'),
+            gridSizeValueDups: document.querySelectorAll('.grid-size-value-dup'),
+            cellSizeSlider: document.getElementById('cell-size-slider'),
+            cellSizeValue: document.getElementById('cell-size-value'),
+            densitySlider: document.getElementById('density-slider'),
+            densityValue: document.getElementById('density-value'),
+            exportPngBtn: document.getElementById('export-png-btn'),
+            exportJsonBtn: document.getElementById('export-json-btn'),
+            shareBtn: document.getElementById('share-btn'),
+            perfModeToggle: document.getElementById('perf-mode-toggle'),
+            themeToggle: document.getElementById('theme-toggle'),
+            presetButtons: document.querySelectorAll('.preset-btn'),
+            heavyWarning: document.getElementById('heavy-warning'),
+            confirmHeavyBtn: document.getElementById('confirm-heavy'),
+            selfCheckError: document.getElementById('self-check-error'),
+            perfMeter: document.getElementById('perf-meter'),
+            errorLog: document.getElementById('error-log'),
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            try {
+                runSelfChecks();
+                setupDOM();
+                setupEventListeners();
+                loadParamsFromURL();
+                resetSimulation();
+                mainLoop();
+            } catch (error) {
+                logError(error);
+                dom.selfCheckError.textContent = `Fatal error during initialization: ${error.message}. Please refresh the page.`;
+                dom.selfCheckError.style.display = 'block';
+            }
+        }
+
+        function setupDOM() {
+            dom.ctx = dom.canvas.getContext('2d');
+            if (!dom.ctx) throw new Error("Could not get 2D rendering context.");
+
+            // Set initial slider values from config
+            dom.speedSlider.value = config.speed;
+            dom.speedValue.textContent = `${config.speed}`;
+            dom.gridSizeSlider.value = config.gridSize;
+            dom.gridSizeValue.textContent = `${config.gridSize}`;
+            dom.gridSizeValueDups.forEach(el => el.textContent = config.gridSize);
+            dom.cellSizeSlider.value = config.cellSize;
+            dom.cellSizeValue.textContent = `${config.cellSize}`;
+            dom.densitySlider.value = config.density;
+            dom.densityValue.textContent = `${config.density}`;
+            dom.perfModeToggle.checked = config.perfMode;
+        }
+
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            dom.playPauseBtn.addEventListener('click', togglePlayPause);
+            dom.stepBtn.addEventListener('click', doStep);
+            dom.resetBtn.addEventListener('click', () => {
+                state.isHeavyWarningConfirmed = false;
+                resetSimulation();
+            });
+
+            dom.speedSlider.addEventListener('input', e => {
+                config.speed = parseInt(e.target.value, 10);
+                dom.speedValue.textContent = `${config.speed}`;
+            });
+
+            dom.gridSizeSlider.addEventListener('input', e => {
+                const newSize = parseInt(e.target.value, 10);
+                config.gridSize = newSize;
+                dom.gridSizeValue.textContent = `${newSize}`;
+                dom.gridSizeValueDups.forEach(el => el.textContent = newSize);
+                if (newSize > config.safeGridSize && !state.isHeavyWarningConfirmed) {
+                    dom.heavyWarning.style.display = 'block';
+                    pauseSimulation();
+                } else {
+                    dom.heavyWarning.style.display = 'none';
+                }
+            });
+            dom.gridSizeSlider.addEventListener('change', () => {
+                 if (config.gridSize <= config.safeGridSize || state.isHeavyWarningConfirmed) {
+                    resetSimulation();
+                }
+            });
+
+            dom.cellSizeSlider.addEventListener('input', e => {
+                config.cellSize = parseInt(e.target.value, 10);
+                dom.cellSizeValue.textContent = `${config.cellSize}`;
+            });
+            dom.cellSizeSlider.addEventListener('change', () => {
+                resizeCanvas();
+                drawGrid();
+            });
+
+            dom.densitySlider.addEventListener('input', e => {
+                config.density = parseInt(e.target.value, 10);
+                dom.densityValue.textContent = `${config.density}`;
+            });
+             dom.densitySlider.addEventListener('change', resetSimulation);
+
+            dom.exportPngBtn.addEventListener('click', exportPNG);
+            dom.exportJsonBtn.addEventListener('click', exportJSON);
+            dom.shareBtn.addEventListener('click', sharePreset);
+
+            dom.themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+                drawGrid(); // Redraw with new colors
+            });
+
+            dom.perfModeToggle.addEventListener('change', e => {
+                config.perfMode = e.target.checked;
+                drawGrid(); // Redraw grid lines or not
+            });
+
+            dom.confirmHeavyBtn.addEventListener('click', () => {
+                state.isHeavyWarningConfirmed = true;
+                dom.heavyWarning.style.display = 'none';
+                resetSimulation();
+            });
+
+            dom.canvas.addEventListener('click', handleCanvasClick);
+
+            dom.presetButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const presetName = btn.id.replace('preset-', '');
+                    applyPreset(presetName);
+                });
+            });
+
+            // Keyboard shortcuts
+            window.addEventListener('keydown', e => {
+                if (document.activeElement.tagName === 'INPUT') return;
+                switch(e.key) {
+                    case ' ': e.preventDefault(); togglePlayPause(); break;
+                    case 'ArrowRight': e.preventDefault(); doStep(); break;
+                    case 'r': case 'R': e.preventDefault(); resetSimulation(); break;
+                    case 'e': case 'E': e.preventDefault(); exportPNG(); break;
+                }
+            });
+
+            // Global error handler
+            window.onerror = function(message, source, lineno, colno, error) {
+                logError(error || { message, source, lineno, colno });
+            };
+        }
+
+        // --- SIMULATION LOGIC ---
+        function createGrid(size) {
+            state.grid = new Array(size).fill(null).map(() => new Array(size).fill(0));
+        }
+
+        function randomizeGrid() {
+            state.liveCells = 0;
+            for (let y = 0; y < config.gridSize; y++) {
+                for (let x = 0; x < config.gridSize; x++) {
+                    if (Math.random() < config.density / 100) {
+                        state.grid[y][x] = 1;
+                        state.liveCells++;
+                    } else {
+                        state.grid[y][x] = 0;
+                    }
+                }
+            }
+        }
+
+        function updateGrid() {
+            const nextGrid = state.grid.map(arr => [...arr]);
+            let newLiveCells = 0;
+
+            for (let y = 0; y < config.gridSize; y++) {
+                for (let x = 0; x < config.gridSize; x++) {
+                    const neighbors = countNeighbors(x, y);
+                    const isAlive = state.grid[y][x] === 1;
+
+                    if (isAlive && (neighbors < 2 || neighbors > 3)) {
+                        nextGrid[y][x] = 0; // Death
+                    } else if (!isAlive && neighbors === 3) {
+                        nextGrid[y][x] = 1; // Birth
+                    }
+
+                    if (nextGrid[y][x] === 1) {
+                        newLiveCells++;
+                    }
+                }
+            }
+            state.grid = nextGrid;
+            state.liveCells = newLiveCells;
+            state.generation++;
+        }
+
+        function countNeighbors(x, y) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const newY = (y + i + config.gridSize) % config.gridSize;
+                    const newX = (x + j + config.gridSize) % config.gridSize;
+                    count += state.grid[newY][newX];
+                }
+            }
+            return count;
+        }
+
+        function handleCanvasClick(event) {
+            const rect = dom.canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const col = Math.floor(x / config.cellSize);
+            const row = Math.floor(y / config.cellSize);
+
+            if (row >= 0 && row < config.gridSize && col >= 0 && col < config.gridSize) {
+                state.grid[row][col] = state.grid[row][col] ? 0 : 1;
+                state.liveCells += state.grid[row][col] ? 1 : -1;
+                drawGrid();
+            }
+        }
+
+        // --- RENDERING ---
+        function resizeCanvas() {
+            const size = config.gridSize * config.cellSize;
+            dom.canvas.width = size;
+            dom.canvas.height = size;
+        }
+
+        function drawGrid() {
+            if (!dom.ctx) return;
+            const computedStyle = getComputedStyle(document.body);
+            const aliveColor = computedStyle.getPropertyValue('--cell-alive-color').trim();
+            const deadColor = computedStyle.getPropertyValue('--cell-dead-color').trim();
+            const gridLineColor = computedStyle.getPropertyValue('--grid-line-color').trim();
+
+            dom.ctx.fillStyle = deadColor;
+            dom.ctx.fillRect(0, 0, dom.canvas.width, dom.canvas.height);
+
+            dom.ctx.fillStyle = aliveColor;
+            for (let y = 0; y < config.gridSize; y++) {
+                for (let x = 0; x < config.gridSize; x++) {
+                    if (state.grid[y][x] === 1) {
+                        dom.ctx.fillRect(x * config.cellSize, y * config.cellSize, config.cellSize, config.cellSize);
+                    }
+                }
+            }
+
+            if (!config.perfMode && config.cellSize > 3) {
+                dom.ctx.strokeStyle = gridLineColor;
+                dom.ctx.lineWidth = 1;
+                for (let i = 0; i <= config.gridSize; i++) {
+                    const pos = i * config.cellSize;
+                    dom.ctx.beginPath();
+                    dom.ctx.moveTo(pos, 0);
+                    dom.ctx.lineTo(pos, dom.canvas.height);
+                    dom.ctx.stroke();
+                    dom.ctx.beginPath();
+                    dom.ctx.moveTo(0, pos);
+                    dom.ctx.lineTo(dom.canvas.width, pos);
+                    dom.ctx.stroke();
+                }
+            }
+        }
+
+        // --- CONTROLS ---
+        function togglePlayPause() {
+            state.isRunning = !state.isRunning;
+            dom.playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play';
+        }
+
+        function pauseSimulation() {
+            if (state.isRunning) {
+                togglePlayPause();
+            }
+        }
+
+        function doStep() {
+            pauseSimulation();
+            updateGrid();
+            drawGrid();
+        }
+
+        function resetSimulation() {
+            pauseSimulation();
+            state.generation = 0;
+            createGrid(config.gridSize);
+            randomizeGrid();
+            resizeCanvas();
+            drawGrid();
+        }
+
+        window.applyPreset = applyPreset; // Expose to global scope for onclick attributes
+        function applyPreset(name) {
+            const presets = {
+                sparse: { gridSize: 100, cellSize: 6, density: 10, speed: 10 },
+                typical: { gridSize: 150, cellSize: 4, density: 25, speed: 15 },
+                dense: { gridSize: 200, cellSize: 3, density: 55, speed: 30 },
+            };
+            const preset = presets[name];
+            if (preset) {
+                Object.assign(config, preset);
+                state.isHeavyWarningConfirmed = false;
+                setupDOM(); // Update sliders to match new config
+                resetSimulation();
+                togglePlayPause(); // Start running automatically
+            }
+        }
+
+        // --- MAIN LOOP ---
+        let frameCount = 0;
+        let lastPerfUpdate = 0;
+        function mainLoop(timestamp) {
+            state.animationFrameId = requestAnimationFrame(mainLoop);
+            const elapsed = timestamp - state.lastUpdateTime;
+            const interval = 1000 / config.speed;
+
+            if (state.isRunning && elapsed > interval) {
+                state.lastUpdateTime = timestamp - (elapsed % interval);
+                updateGrid();
+                drawGrid();
+            }
+
+            // Performance monitoring
+            if (timestamp - lastPerfUpdate > 500) {
+                const fps = frameCount * 2;
+                const memory = window.performance.memory ? `${(window.performance.memory.usedJSHeapSize / 1048576).toFixed(1)} MB` : 'N/A';
+                dom.perfMeter.textContent = `FPS: ${fps} | Mem: ${memory} | Live: ${state.liveCells} | Gen: ${state.generation}`;
+                frameCount = 0;
+                lastPerfUpdate = timestamp;
+            }
+            frameCount++;
+        }
+
+        // --- TOOLS & EXPORT ---
+        function exportPNG() {
+            const link = document.createElement('a');
+            link.download = `conways-game-of-life_${Date.now()}.png`;
+            link.href = dom.canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function exportJSON() {
+            const dataStr = JSON.stringify(config, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `gol-parameters.json`;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function sharePreset() {
+            const params = {
+                gs: config.gridSize,
+                cs: config.cellSize,
+                d: config.density,
+                s: config.speed,
+            };
+            const hash = btoa(JSON.stringify(params));
+            const url = `${window.location.origin}${window.location.pathname}#${hash}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Shareable link copied to clipboard!');
+            }, () => {
+                alert('Failed to copy link.');
+            });
+        }
+
+        function loadParamsFromURL() {
+            if (window.location.hash) {
+                try {
+                    const hash = window.location.hash.substring(1);
+                    const params = JSON.parse(atob(hash));
+                    config.gridSize = parseInt(params.gs, 10) || config.gridSize;
+                    config.cellSize = parseInt(params.cs, 10) || config.cellSize;
+                    config.density = parseInt(params.d, 10) || config.density;
+                    config.speed = parseInt(params.s, 10) || config.speed;
+                } catch(e) {
+                    console.error("Failed to load parameters from URL hash.", e);
+                    logError(e);
+                }
+            }
+        }
+
+        // --- UTILITY & DEBUGGING ---
+        function runSelfChecks() {
+            const errors = [];
+            if (!dom.canvas) errors.push("Canvas element '#life-canvas' not found.");
+            if (!dom.playPauseBtn) errors.push("Control button '#play-pause-btn' not found.");
+            if (!dom.resetBtn) errors.push("Control button '#reset-btn' not found.");
+            if (dom.presetButtons.length < 3) errors.push("Did not find at least 3 preset buttons.");
+
+            if (errors.length > 0) {
+                dom.selfCheckError.innerHTML = `<strong>Page self-check failed:</strong><ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul>Please report this issue. The simulation may not function correctly.`;
+                dom.selfCheckError.style.display = 'block';
+                throw new Error("Self-check failed.");
+            }
+        }
+
+        function logError(error) {
+            console.error(error);
+            if (dom.errorLog.textContent === 'No errors.') {
+                dom.errorLog.textContent = '';
+            }
+            dom.errorLog.textContent += `${new Date().toISOString()}: ${error.message}\n${error.stack || ''}\n\n`;
+        }
+
+        // --- START THE SIMULATION ---
+        document.addEventListener('DOMContentLoaded', init);
+
+    })();
+    </script>
+</body>
+</html>

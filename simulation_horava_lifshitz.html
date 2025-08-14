@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spacetime as a Superfluid: Hořava-Lifshitz Gravity</title>
+    <style>
+        :root {
+            --bg-color: #18181b;
+            --text-color: #d4d4d8;
+            --primary-color: #a78bfa;
+            --primary-hover: #8b5cf6;
+            --secondary-color: #a1a1aa;
+            --border-color: #3f3f46;
+            --code-bg: #27272a;
+            --controls-bg: #27272a;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #c4b5fd;
+            --primary-hover: #a78bfa;
+            --secondary-color: #e5e5e5;
+            --border-color: #666666;
+            --code-bg: #222222;
+            --controls-bg: #222222;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 0 1rem;
+        }
+
+        h1, h2, h3 {
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        h1 { font-size: 2.5rem; text-align: center; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-top: 2.5rem;}
+        h3 { font-size: 1.5rem; }
+
+        p, li { color: var(--secondary-color); }
+        a { color: var(--primary-color); }
+        a:hover { color: var(--primary-hover); }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: "Courier New", Courier, monospace; color: #f0f0f0; }
+        pre { background-color: var(--code-bg); padding: 1rem; border-radius: 5px; overflow-x: auto; }
+
+        .simulation-area {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            max-width: 100%;
+            background-color: #000;
+        }
+
+        .controls {
+            width: 350px;
+            flex-shrink: 0;
+            background-color: var(--controls-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        #plot-canvas {
+            margin-top: 1rem;
+            width: 100%;
+            height: 250px;
+        }
+
+        .error-panel {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        /* Responsive layout */
+        @media (max-width: 1100px) {
+            .simulation-area {
+                flex-direction: column;
+            }
+            .controls {
+                width: 100%;
+                max-width: 600px;
+                margin: 0 auto;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Spacetime as a Superfluid</h1>
+            <p class="subtitle">A conceptual visualization of Hořava-Lifshitz Gravity.</p>
+             <div class="metadata-bar">
+                <span>Estimated Runtime: Continuous</span>
+                <span>Recommended Device: Desktop</span>
+                <span>Approx. Page Size: 50 KB</span>
+                <button id="theme-toggle" class="secondary" style="float: right;">Toggle High Contrast</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="self-check-error" class="error-panel"></div>
+
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>General Relativity, our best theory of gravity, is built on the idea that space and time are fundamentally linked and that the laws of physics are the same for all observers (Lorentz invariance). Hořava-Lifshitz gravity is a fascinating alternative that challenges this. It proposes that at extremely high energies, like those in the very early universe, space and time behave differently. Spacetime, in this view, acts less like a rigid fabric and more like a "superfluid"—a bizarre state of matter with zero viscosity. This simulation provides a conceptual look at how the texture of spacetime and the behavior of waves might change as we move from the low-energy universe we see today to the high-energy "superfluid" state of its birth.</p>
+            </section>
+
+            <section id="simulation-container">
+                <h2>Interactive Simulation</h2>
+                <div class="simulation-area">
+                    <div id="canvas-container">
+                        <h3>Spacetime Texture</h3>
+                        <canvas id="texture-canvas" width="600" height="400" aria-label="Conceptual animation of spacetime texture"></canvas>
+                        <h3>Dispersion Relation</h3>
+                        <canvas id="plot-canvas" width="600" height="250" aria-label="Plot of dispersion relation for gravitational waves"></canvas>
+                    </div>
+                    <div class="controls">
+                        <h3>Controls</h3>
+                        <div class="control-group">
+                            <label for="energy-slider">Energy Scale: <span id="energy-value" class="value-display">0.0</span></label>
+                            <input type="range" id="energy-slider" min="0" max="1" step="0.01" value="0.0" aria-label="Energy Scale Slider">
+                        </div>
+                        <p>Slide from left (Low Energy, today) to right (High Energy, early universe) to see how spacetime's properties change.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide to a Superfluid Universe</h2>
+
+                <h3>1. The Fabric of Spacetime</h3>
+                <p>Einstein taught us to think of spacetime as a unified fabric. The rules of this fabric are the same everywhere and for everyone, regardless of how fast they are moving. This principle is called <strong>Lorentz Invariance</strong>. It's a cornerstone of modern physics and implies that the speed of light, <em>c</em>, is the ultimate speed limit for everything, including gravity.</p>
+
+                <h3>2. A Superfluid Analogy</h3>
+                <p>Imagine a glass of water. At normal temperatures, it's a regular fluid. You can stir it, make waves, and it behaves as you'd expect. This is like our low-energy universe, governed by General Relativity. Now, if you cool liquid helium to near absolute zero, it becomes a "superfluid." It can flow without any friction, creep up walls, and exhibits bizarre quantum effects on a large scale. The rules that govern it are different from normal water.
+                <br><br>
+                Hořava-Lifshitz gravity proposes that spacetime is similar. At low energies (today), it behaves like water (Einstein's theory). But at extremely high energies (the Big Bang), it behaved like a superfluid. In this state, the link between space and time could be different, and the "speed of gravity" might not have been the same as the speed of light.
+                </p>
+
+                <h3>3. What the Simulation Shows</h3>
+                <p>This simulation has two parts, both controlled by the <strong>Energy Scale</strong> slider.</p>
+                <ul>
+                    <li><strong>Spacetime Texture (Top Canvas):</strong> This is a conceptual animation. At low energy, you see a calm, ordered grid, representing the smooth spacetime of today. As you increase the energy, the grid becomes distorted, chaotic, and flows like a turbulent fluid, representing the "superfluid" state.</li>
+                    <li><strong>Dispersion Relation (Bottom Canvas):</strong> This plot shows how waves travel through spacetime. The horizontal axis is the wave's spatial frequency (wavenumber `k`), and the vertical axis is its temporal frequency (`ω`).
+                        <ul>
+                            <li>At <strong>low energy</strong>, the graph is a straight line. This means all waves, regardless of their frequency, travel at the same speed (the speed of light, `c`). This is Lorentz invariance.</li>
+                            <li>At <strong>high energy</strong>, the graph curves upwards. This means high-frequency (short-wavelength) waves travel much faster than low-frequency waves. The speed of gravity is no longer constant! This violation of Lorentz invariance is the key feature of the theory.</li>
+                        </ul>
+                    </li>
+                </ul>
+                <p>The main takeaway is that by treating space and time differently at high energies, this theory might explain some cosmological mysteries (like the horizon problem) without needing a period of cosmic inflation.</p>
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory: The Dispersion Relation</h2>
+                <p>The heart of Hořava-Lifshitz gravity's unique behavior can be seen in its "dispersion relation," which describes the relationship between a wave's frequency (ω) and its wavenumber (k, which is proportional to 1/wavelength).</p>
+
+                <h3>1. Standard Relativity (Low Energy)</h3>
+                <p>In Einstein's General Relativity, the dispersion relation is simple:</p>
+                <pre>ω² = c²k²   or   ω = ck</pre>
+                <p><strong>Plain English:</strong> A wave's temporal frequency (ω) is directly proportional to its spatial frequency (k). The constant of proportionality is the speed of light, `c`. This means all waves travel at the same speed, `c`, regardless of their energy or wavelength. This is a straight line on the plot.</p>
+
+                <h3>2. Hořava-Lifshitz Gravity (High Energy)</h3>
+                <p>At high energies, new terms are added to the equation. A simplified version looks like this:</p>
+                <pre>ω² = c²k² + αk⁴ + βk⁶ + ...</pre>
+                <p><strong>Plain English:</strong> At low energies (small `k`), the `k⁴` and `k⁶` terms are negligible, and the equation is nearly identical to Einstein's. But at very high energies (large `k`), these higher-order terms dominate. The relationship is no longer linear, and the propagation speed of waves changes dramatically with their frequency. This is what causes the line on the plot to curve upwards.</p>
+                <p><strong>Numeric Example:</strong> In the simulation, when the Energy Scale is 0, `α` and `β` are zero, giving a straight line. When the Energy Scale is 1, `α` and `β` are large, and the `k⁴`, `k⁶` terms cause the dramatic curve for high `k` values (the right side of the plot).</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    // --- SIMULATION SCRIPT ---
+    (function() {
+        'use strict';
+
+        // --- Perlin Noise Generator ---
+        const PerlinNoise = new function() {
+            this.noise = function(x, y, z) {
+                let p = new Array(512);
+                let permutation = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180];
+                for (let i = 0; i < 256; i++) p[256 + i] = p[i] = permutation[i];
+                let X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+                x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+                let u = fade(x), v = fade(y), w = fade(z);
+                let A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z, B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+                return scale(lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z), grad(p[BA], x - 1, y, z)), lerp(u, grad(p[AB], x, y - 1, z), grad(p[BB], x - 1, y - 1, z))), lerp(v, lerp(u, grad(p[AA + 1], x, y, z - 1), grad(p[BA + 1], x - 1, y, z - 1)), lerp(u, grad(p[AB + 1], x, y - 1, z - 1), grad(p[BB + 1], x - 1, y - 1, z - 1)))));
+                function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+                function lerp(t, a, b) { return a + t * (b - a); }
+                function grad(hash, x, y, z) {
+                    let h = hash & 15;
+                    let u = h < 8 ? x : y, v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+                    return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+                }
+                function scale(n) { return (1 + n) / 2; }
+            }
+        };
+
+        // --- SIMULATION STATE ---
+        const config = {
+            energy: 0.0,
+            time: 0,
+        };
+
+        // --- DOM ELEMENTS ---
+        const dom = {
+            textureCanvas: document.getElementById('texture-canvas'),
+            plotCanvas: document.getElementById('plot-canvas'),
+            energySlider: document.getElementById('energy-slider'),
+            energyValue: document.getElementById('energy-value'),
+            themeToggle: document.getElementById('theme-toggle'),
+            selfCheckError: document.getElementById('self-check-error'),
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            runSelfChecks();
+            setupEventListeners();
+            animate();
+        }
+
+        function setupEventListeners() {
+            dom.energySlider.addEventListener('input', e => {
+                config.energy = parseFloat(e.target.value);
+                dom.energyValue.textContent = config.energy.toFixed(2);
+            });
+            dom.themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('high-contrast');
+            });
+        }
+
+        // --- ANIMATION & DRAWING ---
+        function drawTexture() {
+            const ctx = dom.textureCanvas.getContext('2d');
+            const w = dom.textureCanvas.width;
+            const h = dom.textureCanvas.height;
+            const style = getComputedStyle(document.body);
+            const lineColor = style.getPropertyValue('--primary-color').trim();
+
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 1;
+
+            const gridSize = 20;
+            const noiseAmp = config.energy * 30;
+            const noiseFreq = 0.05 + config.energy * 0.1;
+            config.time += 0.01;
+
+            for (let i = 0; i <= gridSize; i++) {
+                // Vertical lines
+                ctx.beginPath();
+                let x = (i / gridSize) * w;
+                ctx.moveTo(x, 0);
+                for (let j = 0; j <= h; j++) {
+                    const offset = noiseAmp * PerlinNoise.noise(x * noiseFreq, j * noiseFreq, config.time);
+                    ctx.lineTo(x + offset, j);
+                }
+                ctx.stroke();
+
+                // Horizontal lines
+                ctx.beginPath();
+                let y = (i / gridSize) * h;
+                ctx.moveTo(0, y);
+                for (let j = 0; j <= w; j++) {
+                    const offset = noiseAmp * PerlinNoise.noise(j * noiseFreq, y * noiseFreq, config.time + 100);
+                    ctx.lineTo(j, y + offset);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function drawPlot() {
+            const ctx = dom.plotCanvas.getContext('2d');
+            const w = dom.plotCanvas.width;
+            const h = dom.plotCanvas.height;
+            const style = getComputedStyle(document.body);
+
+            ctx.fillStyle = style.getPropertyValue('--code-bg').trim();
+            ctx.fillRect(0, 0, w, h);
+
+            // Axes
+            ctx.strokeStyle = style.getPropertyValue('--secondary-color').trim();
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(30, 10);
+            ctx.lineTo(30, h - 20);
+            ctx.lineTo(w - 10, h - 20);
+            ctx.stroke();
+            ctx.fillStyle = style.getPropertyValue('--secondary-color').trim();
+            ctx.font = '12px monospace';
+            ctx.fillText('ω (Frequency)', 35, 20);
+            ctx.fillText('k (Wavenumber)', w - 100, h - 5);
+
+
+            // Dispersion relation
+            ctx.beginPath();
+            ctx.strokeStyle = style.getPropertyValue('--primary-color').trim();
+            ctx.lineWidth = 2;
+
+            const kMax = 10;
+            const alpha = config.energy * 0.1;
+            const beta = config.energy * 0.01;
+
+            let omegaMax = Math.sqrt(kMax*kMax + alpha*Math.pow(kMax,4) + beta*Math.pow(kMax,6));
+
+            for (let i = 0; i <= w - 40; i++) {
+                const k = (i / (w - 40)) * kMax;
+                const omega_sq = k*k + alpha*Math.pow(k,4) + beta*Math.pow(k,6);
+                const omega = Math.sqrt(omega_sq);
+
+                const px = 30 + i;
+                const py = h - 20 - (omega / omegaMax) * (h - 30);
+
+                if (i === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.stroke();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            drawTexture();
+            drawPlot();
+        }
+
+        function runSelfChecks() {
+            const errors = [];
+            if (!dom.textureCanvas) errors.push("Canvas element '#texture-canvas' not found.");
+            if (!dom.plotCanvas) errors.push("Canvas element '#plot-canvas' not found.");
+            if (!dom.energySlider) errors.push("Control '#energy-slider' not found.");
+
+            if (errors.length > 0) {
+                dom.selfCheckError.innerHTML = `<strong>Page self-check failed:</strong><ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul>The simulation may not function correctly.`;
+                dom.selfCheckError.style.display = 'block';
+                throw new Error("Self-check failed.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+    })();
+    </script>
+</body>
+</html>
