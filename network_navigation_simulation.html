@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Science: Navigating a Network Space</title>
+    <style>
+        /* --- General Styles & Resets --- */
+        :root {
+            --bg-color: #f4f7f9;
+            --text-color: #333;
+            --primary-color: #00796b; /* Teal for network theme */
+            --primary-text: #ffffff;
+            --secondary-color: #5f7d8c;
+            --border-color: #dce4e8;
+            --canvas-bg: #ffffff;
+            --code-bg: #e8eef1;
+            --link-color: #004d40;
+            --header-bg: #e8eef1;
+            --node-color: #00796b;
+            --node-highlight-color: #ffab40;
+            --edge-color: #90a4ae;
+            --path-color: #d84315;
+        }
+
+        .high-contrast {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --primary-color: #29b6f6; /* Light Blue */
+            --primary-text: #000000;
+            --secondary-color: #aaaaaa;
+            --border-color: #ffffff;
+            --canvas-bg: #111111;
+            --code-bg: #333333;
+            --link-color: #29b6f6;
+            --header-bg: #1a1a1a;
+            --node-color: #29b6f6;
+            --node-highlight-color: #ffff00;
+            --edge-color: #cccccc;
+            --path-color: #ff6e40;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* --- Layout --- */
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        header { background-color: var(--header-bg); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        .main-layout { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+        .simulation-column { flex: 2; min-width: 400px; }
+        .controls-column { flex: 1; min-width: 300px; }
+
+        @media (max-width: 800px) {
+            .main-layout { flex-direction: column; }
+        }
+
+        /* --- Typography & Content --- */
+        h1, h2, h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+        h1 { font-size: 2.5rem; color: var(--primary-color); }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        h3 { font-size: 1.5rem; }
+        a { color: var(--link-color); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+        pre { background-color: var(--code-bg); padding: 1em; border-radius: 5px; overflow-x: auto; }
+
+        /* --- UI Elements --- */
+        button { background-color: var(--primary-color); color: var(--primary-text); border: none; padding: 0.5em 1em; border-radius: 5px; cursor: pointer; font-size: 1rem; transition: opacity 0.2s; }
+        button:hover { opacity: 0.85; }
+        button.secondary { background-color: var(--secondary-color); }
+        .controls-group { border: 1px solid var(--border-color); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+        .info-readout { background-color: var(--code-bg); padding: 0.5rem 1rem; border-radius: 5px; margin-top: 1rem; }
+
+        /* --- Simulation Canvas --- */
+        #simulationCanvas { width: 100%; height: auto; aspect-ratio: 4 / 3; background-color: var(--canvas-bg); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; }
+
+        /* --- Helper Classes --- */
+        .hidden { display: none; }
+        .error-panel { background-color: #ffcccc; color: #cc0000; border: 1px solid #cc0000; padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+        .dev-console { background-color: #333; color: #eee; padding: 1rem; margin-top: 1rem; border-radius: 8px; }
+        .dev-console summary { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Navigating a Network Space</h1>
+            <p>An interactive simulation of pathfinding in different network topologies.</p>
+            <div id="metadata-bar">
+                <small>Est. Runtime: Real-time | Recommended Device: Desktop | Approx. Size: 30KB</small>
+                <button id="theme-toggle" class="secondary" style="float: right;">High Contrast</button>
+            </div>
+        </header>
+
+        <div id="quality-check-panel" class="error-panel hidden">
+            <h3>Quality Check Failed</h3>
+            <p>Some parts of the simulation may not work as expected. Please report the bug with the details from the developer console below.</p>
+            <ul id="quality-check-list"></ul>
+        </div>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <section id="simulation-area">
+                    <h2>Network Visualization</h2>
+                    <canvas id="simulationCanvas" width="800" height="600"></canvas>
+                    <div class="info-readout" id="sim-info">
+<div class="info-readout" id="perf-meter" style="margin-top: 0.5rem; font-size: 0.9rem;">FPS: -- | Nodes: -- | Edges: --</div>
+                        Select a start node by clicking on it.
+                    </div>
+                </section>
+
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>This simulation explores the fascinating field of network science by visualizing how different network structures affect our ability to find paths within them. A network is simply a collection of items (nodes) connected by links (edges). By generating both "Random" and "Scale-Free" networks, you can discover how the underlying architecture dramatically changes properties like the famous "six degrees of separation," and see firsthand why most real-world networks, from the internet to our social circles, are not random at all.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide to Networks</h2>
+
+                    <h3>Step 1: What are Nodes and Edges?</h3>
+                    <p>At its heart, a network is a simple concept made of two parts:</p>
+                    <ul>
+                        <li><strong>Nodes (or Vertices):</strong> These are the individual items in the network. In our simulation, they are the colored circles. A node could represent a person, a city, a website, or a protein in a cell.</li>
+                        <li><strong>Edges (or Links):</strong> These are the connections between the nodes. In our simulation, they are the grey lines. An edge could represent a friendship, a flight path, a hyperlink, or a chemical interaction.</li>
+                    </ul>
+                    <p>Pathfinding, the goal of this simulation, is the process of finding a sequence of edges to get from a starting node to an ending node.</p>
+
+                    <h3>Step 2: The "Random Network"</h3>
+                    <p>Click the <strong>"Generate Random Network"</strong> button. This creates a network using the Erdős-Rényi (ER) model. It's a very simple recipe: take a set of nodes, and for every possible pair of nodes, create an edge between them with a certain fixed probability. </p>
+                    <p>Look at the structure. Most nodes have roughly the same number of connections. There are no massive "super-hubs." While simple to create, this randomness doesn't accurately reflect most networks we see in the real world.</p>
+
+                    <h3>Step 3: The "Scale-Free Network" and the Power of Hubs</h3>
+                    <p>Now, click the <strong>"Generate Scale-Free Network"</strong> button. This uses the Barabási-Albert (BA) model, which is based on a "rich get richer" principle called <strong>preferential attachment</strong>. It starts with a small cluster of nodes, and then adds new nodes one by one. Each new node prefers to connect to existing nodes that *already have many connections*.</p>
+                    <p>The result is a very different structure. You'll notice that most nodes have only one or two connections, but a few nodes have grown into massive <strong>hubs</strong> with a huge number of edges. This is the defining feature of a scale-free network, and it's what we see in reality: some websites (like Google) have vastly more links than others; some people (celebrities) have vastly more social connections.</p>
+
+                    <h3>Step 4: Finding Paths and the "Small World" Effect</h3>
+                    <p>Now, try finding paths in both network types. Click on a node to select it as the start, and click on another to find the shortest path.</p>
+                    <ul>
+                        <li>In the <strong>Random Network</strong>, path lengths can sometimes be quite long, and you may even find that some nodes are completely disconnected in isolated clusters.</li>
+                        <li>In the <strong>Scale-Free Network</strong>, try finding a path between two seemingly distant nodes. You'll likely find that the path is surprisingly short. This is the famous <strong>"small-world" property</strong>. The hubs act as super-highways, connecting disparate parts of the network and dramatically reducing the average distance between any two nodes. This is the mathematical reality behind the "six degrees of separation" idea!</li>
+                    </ul>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory: Algorithms at Work</h2>
+
+                    <h3>Network Generation Models</h3>
+                    <ul>
+                        <li><strong>Erdős-Rényi (ER) Model:</strong> Given <em>N</em> nodes and a probability <em>p</em>, for each of the N*(N-1)/2 possible pairs of nodes, an edge is created with probability <em>p</em>.</li>
+                        <li><strong>Barabási-Albert (BA) Model:</strong> Start with a small seed network. For i = 1 to N, add a new node and connect it to <em>m</em> existing nodes. The probability of connecting to an existing node <em>j</em> is proportional to the number of connections (degree) that <em>j</em> already has. Π(j) = degree(j) / &sum;degree(k).</li>
+                    </ul>
+
+                    <h3>Pathfinding: Breadth-First Search (BFS)</h3>
+                    <p>To find the shortest path in an unweighted graph like this, Breadth-First Search is the perfect tool. It works as follows:</p>
+                    <ol>
+                        <li>Start at the <strong>start node</strong> and add it to a queue. Mark it as visited.</li>
+                        <li>While the queue is not empty, take the next node from the front of the queue.</li>
+                        <li>For that node, look at all of its unvisited neighbors. Mark them as visited and add them to the back of the queue. Keep a record that you reached them from the current node.</li>
+                        <li>If you find the <strong>end node</strong>, you are done. The path is guaranteed to be one of the shortest possible paths.</li>
+                    </ol>
+                    <p>Because BFS explores the network layer by layer, it's like a wave expanding from the start node. The first time this "wave" hits the end node, it must have taken the shortest route.</p>
+                </section>
+
+                <section id="faq">
+                    <h2>FAQ & Troubleshooting</h2>
+                     <dl>
+                        <dt>What do the different colors mean?</dt>
+                        <dd>The default nodes are teal. The selected start and end nodes are highlighted in yellow-orange. The shortest path connecting them is shown in a darker, thicker orange.</dd>
+
+                        <dt>Why can't I find a path between two nodes?</dt>
+                        <dd>It's possible for a network, especially a random one with a low connection probability, to be disconnected. This means it consists of two or more separate "islands" of nodes with no edges between them.</dd>
+
+                        <dt>Why is the path in the scale-free network almost always so short?</dt>
+                        <dd>This is a key takeaway! The highly-connected "hub" nodes act as shortcuts across the network. A path can "jump" from one side of the network to a hub, and then from the hub to another distant part of the network, making the total path length very small. This is known as the "small-world" effect.</dd>
+
+                        <dt>How do I start over with pathfinding?</dt>
+                        <dd>Use the "Clear Selection" button in the "Pathfinding" controls group. This will reset the start node, end node, and the path.</dd>
+                    </dl>
+                </section>
+            </div>
+
+            <div class="controls-column">
+                <div class="controls-group">
+                    <h3>Network Generation</h3>
+                    <button id="generate-random-btn">Generate Random Network</button>
+                    <button id="generate-scale-free-btn" style="margin-top: 0.5rem;">Generate Scale-Free Network</button>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Parameters</h3>
+                    <div id="sliders-container">
+                        <!-- Sliders for network parameters will go here -->
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Pathfinding</h3>
+                    <p><strong>Start Node:</strong> <span id="start-node-info">None</span></p>
+                    <p><strong>End Node:</strong> <span id="end-node-info">None</span></p>
+                    <p><strong>Shortest Path Length:</strong> <span id="path-length-info">N/A</span></p>
+                    <button id="clear-selection-btn" class="secondary">Clear Selection</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <details id="dev-console" class="dev-console">
+                <summary>Developer Console</summary>
+                <pre id="dev-log">Initializing...</pre>
+            </details>
+        </footer>
+    </div>
+
+    <script>
+        // --- Core Classes ---
+        class Vector {
+            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+            add(v) { return new Vector(this.x + v.x, this.y + v.y); }
+            sub(v) { return new Vector(this.x - v.x, this.y - v.y); }
+            mult(s) { return new Vector(this.x * s, this.y * s); }
+            get magnitude() { return Math.sqrt(this.x ** 2 + this.y ** 2); }
+        }
+        class Node {
+            constructor(id, x, y) {
+                this.id = id;
+                this.pos = new Vector(x, y);
+                this.vel = new Vector();
+                this.force = new Vector();
+                this.neighbors = new Set();
+            }
+            applyForce(force) { this.force = this.force.add(force); }
+        }
+        class Graph {
+            constructor() { this.nodes = new Map(); this.edges = []; }
+            addNode(id, x, y) { if (!this.nodes.has(id)) this.nodes.set(id, new Node(id, x, y)); }
+            addEdge(id1, id2) {
+                if (this.nodes.has(id1) && this.nodes.has(id2)) {
+                    const node1 = this.nodes.get(id1);
+                    const node2 = this.nodes.get(id2);
+                    node1.neighbors.add(node2);
+                    node2.neighbors.add(node1);
+                    this.edges.push({ from: node1, to: node2 });
+                }
+            }
+            clear() {
+                this.nodes.clear();
+                this.edges = [];
+            }
+        }
+
+        // --- Force-Directed Layout Logic ---
+
+        const Layout = {
+            repulsion: 1000,
+            stiffness: 0.05,
+            damping: 0.7,
+
+            applyForces(graph) {
+                graph.nodes.forEach(nodeA => {
+                    nodeA.force = new Vector(); // Reset force
+                    // Repulsion from all other nodes
+                    graph.nodes.forEach(nodeB => {
+                        if (nodeA !== nodeB) {
+                            const delta = nodeA.pos.sub(nodeB.pos);
+                            const distance = Math.max(1, delta.magnitude);
+                            const force = delta.normalize().mult(this.repulsion / (distance * distance));
+                            nodeA.applyForce(force);
+                        }
+                    });
+                });
+
+                // Spring force from edges
+                graph.edges.forEach(edge => {
+                    const delta = edge.to.pos.sub(edge.from.pos);
+                    const distance = Math.max(1, delta.magnitude);
+                    const force = delta.normalize().mult(this.stiffness * distance);
+                    edge.from.applyForce(force);
+                    edge.to.applyForce(force.mult(-1));
+                });
+            },
+
+            updatePositions(graph, dt) {
+                graph.nodes.forEach(node => {
+                    node.vel = node.vel.add(node.force.mult(dt)).mult(this.damping);
+                    node.pos = node.pos.add(node.vel.mult(dt));
+                });
+            },
+
+            runLayout(graph, steps = 200) {
+                for (let i = 0; i < steps; i++) {
+                    this.applyForces(graph);
+                    this.updatePositions(graph, 0.1);
+                }
+            }
+        };
+
+        // --- Network Generation Algorithms ---
+
+        const NetworkGenerator = {
+            // Erdős-Rényi model
+            generateRandom(graph, numNodes, probability, canvasWidth, canvasHeight) {
+                graph.clear();
+                // 1. Add nodes at random positions
+                for (let i = 0; i < numNodes; i++) {
+                    graph.addNode(i, Math.random() * canvasWidth, Math.random() * canvasHeight);
+                }
+                // 2. Add edges with a given probability
+                const nodes = Array.from(graph.nodes.keys());
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        if (Math.random() < probability) {
+                            graph.addEdge(nodes[i], nodes[j]);
+                        }
+                    }
+                }
+            },
+
+            // Barabási-Albert model
+            generateScaleFree(graph, totalNodes, initialNodes, canvasWidth, canvasHeight) {
+                graph.clear();
+                // 1. Create a small initial seed network
+                for (let i = 0; i < initialNodes; i++) {
+                    graph.addNode(i, Math.random() * canvasWidth, Math.random() * canvasHeight);
+                }
+                for (let i = 0; i < initialNodes; i++) {
+                    for (let j = i + 1; j < initialNodes; j++) {
+                        graph.addEdge(i, j);
+                    }
+                }
+
+                // 2. Add new nodes with preferential attachment
+                for (let i = initialNodes; i < totalNodes; i++) {
+                    graph.addNode(i, Math.random() * canvasWidth, Math.random() * canvasHeight);
+
+                    // Build a target list where more connected nodes appear more often
+                    const targets = [];
+                    graph.edges.forEach(edge => {
+                        targets.push(edge.from.id);
+                        targets.push(edge.to.id);
+                    });
+
+                    // Connect the new node to 'initialNodes' existing nodes
+                    const connected = new Set();
+                    for (let j = 0; j < initialNodes; j++) {
+                        if (targets.length === 0) break;
+                        const targetId = targets[Math.floor(Math.random() * targets.length)];
+                        if (!connected.has(targetId)) {
+                            graph.addEdge(i, targetId);
+                            connected.add(targetId);
+                        }
+                    }
+                }
+            }
+        };
+
+        // --- Pathfinding Logic ---
+
+        const Pathfinder = {
+            bfs(startNode, endNode) {
+                if (!startNode || !endNode) return null;
+
+                const queue = [startNode];
+                const visited = new Set([startNode]);
+                const parent = new Map();
+
+                while (queue.length > 0) {
+                    const currentNode = queue.shift();
+
+                    if (currentNode === endNode) {
+                        // Path found, reconstruct it
+                        const path = [];
+                        let n = endNode;
+                        while (n) {
+                            path.unshift(n);
+                            n = parent.get(n);
+                        }
+                        return path;
+                    }
+
+                    for (const neighbor of currentNode.neighbors) {
+                        if (!visited.has(neighbor)) {
+                            visited.add(neighbor);
+                            parent.set(neighbor, currentNode);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return null; // No path found
+            }
+        };
+
+        // --- Main Application and Rendering Logic ---
+
+        const App = {
+            canvas: null,
+            ctx: null,
+            graph: new Graph(),
+
+            // App state
+            startNode: null,
+            endNode: null,
+            path: [],
+
+            init() {
+                this.canvas = document.getElementById('simulationCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                console.log("Network navigation simulation page loaded.");
+                this.generateAndDraw(); // Generate a default graph on load
+                this.render();
+            },
+
+            generateAndDraw() {
+                // Default to a random network
+                NetworkGenerator.generateRandom(this.graph, 30, 0.15, this.canvas.width, this.canvas.height);
+                Layout.runLayout(this.graph);
+            },
+
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                const pathNodes = new Set(this.path);
+                const pathEdges = new Set();
+                for(let i=0; i<this.path.length-1; i++) {
+                    pathEdges.add(`${this.path[i].id}-${this.path[i+1].id}`);
+                    pathEdges.add(`${this.path[i+1].id}-${this.path[i].id}`);
+                }
+
+                // Draw edges
+                this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--edge-color');
+                this.ctx.lineWidth = 1;
+                this.graph.edges.forEach(edge => {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(edge.from.pos.x, edge.from.pos.y);
+                    this.ctx.lineTo(edge.to.pos.x, edge.to.pos.y);
+                    this.ctx.stroke();
+                });
+
+                // Draw path edges
+                this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--path-color');
+                this.ctx.lineWidth = 3;
+                 this.graph.edges.forEach(edge => {
+                    if (pathEdges.has(`${edge.from.id}-${edge.to.id}`)) {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(edge.from.pos.x, edge.from.pos.y);
+                        this.ctx.lineTo(edge.to.pos.x, edge.to.pos.y);
+                        this.ctx.stroke();
+                    }
+                });
+
+                // Draw nodes
+                this.graph.nodes.forEach(node => {
+                    this.ctx.beginPath();
+                    let radius = 7;
+                    if (node === this.startNode || node === this.endNode) {
+                        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--node-highlight-color');
+                        radius = 10;
+                    } else if (pathNodes.has(node)) {
+                         this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--path-color');
+                         radius = 8;
+                    }
+                    else {
+                        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--node-color');
+                    }
+                    this.ctx.arc(node.pos.x, node.pos.y, radius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                });
+
+                requestAnimationFrame(() => this.render());
+            }
+        };
+
+        // --- UI Control and App Logic ---
+
+        const App = {
+            canvas: null, ctx: null, graph: new Graph(),
+            startNode: null, endNode: null, path: [],
+            mousePos: new Vector(-1, -1), hoverNode: null,
+
+            // Performance metrics
+            frameCount: 0, lastPerfTime: 0,
+
+            init() {
+                this.canvas = document.getElementById('simulationCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.lastPerfTime = performance.now();
+
+                this.addEventListeners();
+                this.generateAndDraw('random');
+                this.render();
+            },
+
+            addEventListeners() {
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('mousemove', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mousePos = new Vector(e.clientX - rect.left, e.clientY - rect.top);
+                });
+                document.getElementById('generate-random-btn').addEventListener('click', () => this.generateAndDraw('random'));
+                document.getElementById('generate-scale-free-btn').addEventListener('click', () => this.generateAndDraw('scale-free'));
+                document.getElementById('clear-selection-btn').addEventListener('click', () => this.clearSelection());
+                document.getElementById('theme-toggle').addEventListener('click', () => document.body.classList.toggle('high-contrast'));
+            },
+
+            generateAndDraw(type) {
+                this.clearSelection();
+                Utils.log(`Generating ${type} network...`);
+                const numNodes = 40, prob = 0.1, initialNodes = 3;
+                if (type === 'random') {
+                    NetworkGenerator.generateRandom(this.graph, numNodes, prob, this.canvas.width, this.canvas.height);
+                } else {
+                    NetworkGenerator.generateScaleFree(this.graph, numNodes, initialNodes, this.canvas.width, this.canvas.height);
+                }
+                Layout.runLayout(this.graph);
+                Utils.log(`Generated network with ${this.graph.nodes.size} nodes.`);
+            },
+
+            selectNode(node) {
+                if (!this.startNode) {
+                    this.startNode = node;
+                } else if (!this.endNode && node !== this.startNode) {
+                    this.endNode = node;
+                    this.path = Pathfinder.bfs(this.startNode, this.endNode) || [];
+                }
+                this.updateInfoPanel();
+            },
+
+            clearSelection() {
+                this.startNode = null;
+                this.endNode = null;
+                this.path = [];
+                this.updateInfoPanel();
+            },
+
+            handleCanvasClick(e) {
+                if (this.hoverNode) this.selectNode(this.hoverNode);
+            },
+
+            updateInfoPanel() {
+                document.getElementById('start-node-info').textContent = this.startNode ? this.startNode.id : 'None';
+                document.getElementById('end-node-info').textContent = this.endNode ? this.endNode.id : 'None';
+
+                if (this.path.length > 0) {
+                    document.getElementById('path-length-info').textContent = `${this.path.length - 1} edges`;
+                    document.getElementById('sim-info').textContent = `Shortest path found with ${this.path.length - 1} edges.`;
+                } else if (this.startNode && this.endNode) {
+                    document.getElementById('path-length-info').textContent = 'No Path';
+                    document.getElementById('sim-info').textContent = 'No path exists between the selected nodes.';
+                } else if (this.startNode) {
+                    document.getElementById('sim-info').textContent = 'Select an end node.';
+                } else {
+                    document.getElementById('sim-info').textContent = 'Select a start node by clicking on it.';
+                }
+            },
+
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Find hover node
+                this.hoverNode = null;
+                for (const node of this.graph.nodes.values()) {
+                    if (this.mousePos.sub(node.pos).magnitude < 10) {
+                        this.hoverNode = node;
+                        break;
+                    }
+                }
+
+                const pathNodes = new Set(this.path);
+                const pathEdges = new Set();
+                for(let i=0; i<this.path.length-1; i++) {
+                    pathEdges.add(`${this.path[i].id}-${this.path[i+1].id}`);
+                    pathEdges.add(`${this.path[i+1].id}-${this.path[i].id}`);
+                }
+
+                // Draw edges
+                this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--edge-color');
+                this.ctx.lineWidth = 1;
+                this.graph.edges.forEach(edge => {
+                    if (pathEdges.has(`${edge.from.id}-${edge.to.id}`)) {
+                        this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--path-color');
+                        this.ctx.lineWidth = 3;
+                    } else {
+                        this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--edge-color');
+                        this.ctx.lineWidth = 1;
+                    }
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(edge.from.pos.x, edge.from.pos.y);
+                    this.ctx.lineTo(edge.to.pos.x, edge.to.pos.y);
+                    this.ctx.stroke();
+                });
+
+                // Draw nodes
+                this.graph.nodes.forEach(node => {
+                    this.ctx.beginPath();
+                    let radius = 7;
+                    if (node === this.startNode || node === this.endNode) {
+                        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--node-highlight-color');
+                        radius = 10;
+                    } else if (pathNodes.has(node)) {
+                         this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--path-color');
+                         radius = 8;
+                    } else if (node === this.hoverNode) {
+                        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--node-highlight-color');
+                        radius = 9;
+                    } else {
+                        this.ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--node-color');
+                    }
+                    this.ctx.arc(node.pos.x, node.pos.y, radius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                });
+
+                Utils.updatePerfMeter(this);
+                requestAnimationFrame(() => this.render());
+            }
+        };
+
+        const Utils = {
+            devLog: document.getElementById('dev-log'),
+            perfMeter: document.getElementById('perf-meter'),
+            log(msg) {
+                const time = new Date().toLocaleTimeString();
+                this.devLog.textContent = `[${time}] ${msg}\n` + this.devLog.textContent;
+            },
+            updatePerfMeter(app) {
+                app.frameCount++;
+                const now = performance.now();
+                if (now - app.lastPerfTime > 1000) {
+                    const fps = Math.round(app.frameCount * 1000 / (now - app.lastPerfTime));
+                    if(!this.perfMeter) {
+                         const meter = document.createElement('div');
+                         meter.id = 'perf-meter';
+                         meter.classList.add('info-readout');
+                         document.getElementById('simulation-area').appendChild(meter);
+                         this.perfMeter = meter;
+                    }
+                    this.perfMeter.textContent = `FPS: ${fps} | Nodes: ${app.graph.nodes.size} | Edges: ${app.graph.edges.length}`;
+                    app.frameCount = 0;
+                    app.lastPerfTime = now;
+                }
+            },
+            runQualityChecks() {
+                const checks = { 'Canvas': App.canvas, 'Graph object': App.graph };
+                let failed = false;
+                for(const [name, obj] of Object.entries(checks)) {
+                    if (!obj) {
+                        this.log(`ERROR: Quality check failed - ${name} is missing.`);
+                        failed = true;
+                    }
+                }
+                if (failed) document.getElementById('quality-check-panel').classList.remove('hidden');
+                else this.log("All quality checks passed.");
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Utils.log("DOM content loaded. Initializing application.");
+            App.init();
+            Utils.runQualityChecks();
+        });
+    </script>
+</body>
+</html>
