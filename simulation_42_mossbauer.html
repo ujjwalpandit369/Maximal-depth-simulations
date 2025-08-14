@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mössbauer Spectroscopy</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #5e35b1; /* A deep purple for nuclear states */
+            --secondary-color: #ffc107; /* Yellow for gamma ray */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #263238;
+            --text-color: #eceff1;
+            --primary-color: #9575cd;
+            --secondary-color: #ffca28;
+            --border-color: #546e7a;
+            --canvas-bg: #37474f;
+            --code-bg: #455a64;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--secondary-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--text-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); width: 100%; aspect-ratio: 2 / 1; }
+        #plotCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; height: 200px; margin-top: 10px; }
+        .button-bar { margin-top: 15px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1.2em; width: 100%; }
+        .button-bar button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mössbauer Spectroscopy</h1>
+            <p class="subtitle">Recoilless gamma-ray emission and resonant absorption.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 150 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>The Mössbauer effect is a Nobel Prize-winning discovery in physics that allows for extremely precise energy measurements. It's based on a clever trick to overcome a fundamental problem: when a free atomic nucleus emits a high-energy gamma ray, it recoils like a rifle, which slightly changes the gamma ray's energy and prevents another nucleus from absorbing it. The Mössbauer effect shows that if the nucleus is embedded in a solid crystal, the recoil is effectively eliminated. This "recoilless" emission allows for perfect "resonant absorption," which this simulation demonstrates. You can then use tiny induced Doppler shifts to probe the incredibly sharp energy resonance.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Recoil Problem and its Solution</h2>
+
+            <h3>Step 1: Resonant Absorption</h3>
+            <p>Atoms and nuclei have discrete energy levels. They can only absorb a photon if that photon has *exactly* the right amount of energy to kick the nucleus from a lower state to a higher one. This is called resonant absorption, and it's like a singer shattering a wine glass by hitting its exact resonant frequency.</p>
+
+            <h3>Step 2: The Recoil Problem</h3>
+            <p>Imagine a nucleus at rest that wants to emit a gamma ray of energy `E`. By conservation of momentum, when the gamma ray is fired in one direction, the nucleus must recoil in the opposite direction. This recoil motion costs energy, which is stolen from the gamma ray. So, the emitted gamma ray has an energy slightly *less* than `E`.
+            <br><br>
+            Now consider a second nucleus trying to absorb this gamma ray. To absorb it, the nucleus must also recoil, which means it needs a gamma ray with an energy slightly *more* than `E`. The emitted gamma ray is too weak, and the required gamma ray is too strong. The energies don't match, and resonance fails. The simulation shows this in the "Free Nucleus" mode.</p>
+
+            <h3>Step 3: The Crystal Solution - The Mössbauer Effect</h3>
+            <p>Now, let's embed our emitting and absorbing nuclei in the rigid structure of a crystal lattice. The nucleus is no longer free; it's tightly bound to all the other atoms in the crystal. When it tries to emit a gamma ray, the recoil momentum is transferred to the **entire crystal**.
+            <br><br>
+            Because the crystal is trillions of times more massive than a single nucleus, the recoil velocity and energy are practically zero. The emission is "recoilless." The gamma ray now emerges with the full, exact transition energy `E`. This recoilless gamma ray can then travel to the absorber crystal and be resonantly absorbed by another nucleus, which also absorbs the momentum with its entire crystal lattice. This is the Mössbauer effect, which you can see in the "Nucleus in Crystal" mode.</p>
+
+            <h3>Step 4: Spectroscopy</h3>
+            <p>The resonance is now so sharp that it can be broken by tiny changes in energy. We can use the Doppler effect to probe it. By moving the source crystal at just a few millimeters per second, we can shift the gamma ray's energy just enough to move it off resonance. The graph of "Absorption vs. Source Velocity" shows this extremely sharp peak, which is what makes Mössbauer spectroscopy such a precise tool.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <canvas id="plotCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                 <div class="control-group">
+                    <label>Mode:</label>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <button id="crystal-btn" class="active">Nucleus in Crystal</button>
+                        <button id="free-btn">Free Nucleus</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Source Velocity (mm/s): <span id="v-value">0.0</span></label>
+                    <input type="range" id="v-slider" min="-10" max="10" step="0.1" value="0.0">
+                </div>
+                 <div class="button-bar" style="grid-template-columns: 1fr;">
+                    <button id="emit-btn">Emit Gamma Ray</button>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory (Click to expand)</button>
+        <div class="content">
+            <h3>Recoil Energy vs. Linewidth</h3>
+            <p>The key to the problem is comparing two energies: the recoil energy `E_R` and the natural linewidth `Γ` of the nuclear transition.</p>
+            <p>The energy lost to recoil for a free nucleus of mass `M` emitting a gamma ray of energy `E_γ` is: <code>E_R = E_γ² / (2Mc²)</code>.</p>
+            <p>The natural linewidth `Γ` is the inherent uncertainty in the energy of the excited state, given by the Heisenberg Uncertainty Principle: `Γ ≈ ħ/τ`, where `τ` is the half-life of the state.</p>
+            <p>For a typical nuclear transition, `E_R` is many orders of magnitude larger than `Γ`. The energy of the emitted photon is `E_γ - E_R`, and the energy required for absorption is `E_γ + E_R`. The emission and absorption lines are shifted by a total of `2E_R`, and since this shift is much larger than the width `Γ` of the lines themselves, their overlap is essentially zero. Resonance is impossible.</p>
+            <h3>The Mössbauer Effect</h3>
+            <p>When the nucleus is in a crystal, the mass `M` in the recoil equation becomes the mass of the entire crystal. Since `M_crystal` is enormous, `E_R` becomes effectively zero. The emission is recoilless, and the emission and absorption lines now perfectly overlap, allowing for resonant absorption.</p>
+            <h3>Doppler Shift</h3>
+            <p>By moving the source at a velocity `v` relative to the absorber, the energy of the gamma ray is shifted due to the Doppler effect:</p>
+            <p><code>E_shifted = E_γ * (1 + v/c)</code></p>
+            <p>This allows us to scan across the resonance. The absorption probability follows a Lorentzian lineshape centered at `v=0`. The extreme sharpness of this resonance peak (the smallness of `Γ`) allows for the measurement of minuscule energy shifts, such as the gravitational redshift predicted by General Relativity, which was first confirmed on Earth by the Pound-Rebka experiment using the Mössbauer effect.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx, plotCanvas, plotCtx;
+    let animationFrameId;
+
+    let config = { v_source: 0.0, mode: 'crystal' };
+
+    let animState = { active: false, progress: 0, absorbed: false };
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+        plotCanvas = document.getElementById('plotCanvas');
+        plotCtx = plotCanvas.getContext('2d');
+
+        setupControls();
+        draw();
+        drawPlot();
+    }
+
+    function emit() {
+        if (animState.active) return;
+
+        const v = config.v_source;
+        // Doppler shift in energy units (arbitrary)
+        const energy_shift = v * 0.1;
+
+        // Lorentzian lineshape for absorption probability
+        const linewidth = 1.0; // Gamma
+        const prob = linewidth**2 / (energy_shift**2 + linewidth**2);
+
+        let absorbed = false;
+        if (config.mode === 'crystal') {
+            if (Math.random() < prob) {
+                absorbed = true;
+            }
+        } // For free nucleus, absorbed is always false
+
+        animState = { active: true, progress: 0, absorbed: absorbed, recoil: config.mode === 'free' };
+        gameLoop();
+    }
+
+    function gameLoop() {
+        if (!animState.active) return;
+        animState.progress += 0.01;
+        draw();
+
+        if (animState.progress >= 1) {
+            animState.active = false;
+            cancelAnimationFrame(animationFrameId);
+        } else {
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        const sourceX = width * 0.2;
+        const absorberX = width * 0.8;
+        const y = height / 2;
+
+        // Draw lattices
+        drawLattice(sourceX, y, config.mode === 'crystal');
+        drawLattice(absorberX, y, true);
+
+        // Draw animation
+        if (animState.active) {
+            const p = animState.progress;
+
+            // Recoil source
+            const sourceRecoil = animState.recoil ? -10 * Math.sin(p * Math.PI) : 0;
+            drawNucleus(sourceX + sourceRecoil, y, true);
+
+            // Gamma ray
+            const gammaX = sourceX + p * (absorberX - sourceX);
+            if (!animState.absorbed || gammaX < absorberX) {
+                drawGamma(gammaX, y);
+            }
+
+            // Excite absorber
+            if (animState.absorbed && p > 0.9) {
+                 drawNucleus(absorberX, y, true);
+            } else {
+                 drawNucleus(absorberX, y, false);
+            }
+        } else {
+             drawNucleus(sourceX, y, true);
+             drawNucleus(absorberX, y, false);
+        }
+    }
+
+    function drawLattice(cx, cy, isCrystal) {
+        if (!isCrystal) return;
+        const r = 50;
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        ctx.lineWidth = 1;
+        for(let i=-1; i<=1; i++) {
+            for(let j=-1; j<=1; j++) {
+                if (i===0 && j===0) continue;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + i*r, cy + j*r);
+                ctx.stroke();
+            }
+        }
+    }
+
+    function drawNucleus(x, y, isExcited) {
+        ctx.fillStyle = isExcited ? getComputedStyle(document.documentElement).getPropertyValue('--primary-color') : getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.beginPath();
+        ctx.arc(x, y, 15, 0, 2*Math.PI);
+        ctx.fill();
+    }
+
+    function drawGamma(x, y) {
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const amp = 5;
+        ctx.moveTo(x, y);
+        for(let i=0; i<10; i++) {
+            ctx.lineTo(x + i*3, y + (i%2===0 ? -amp : amp));
+        }
+        ctx.stroke();
+    }
+
+    function drawPlot() {
+        if (!plotCtx) return;
+        const { width, height } = plotCanvas;
+        plotCtx.clearRect(0, 0, width, height);
+
+        const v_max = 10;
+        const linewidth = 1.0;
+
+        // Draw resonance curve
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        for (let i=0; i<width; i++) {
+            const v = (i/width - 0.5) * 2 * v_max;
+            const energy_shift = v * 0.1;
+            const absorption = linewidth**2 / (energy_shift**2 + linewidth**2);
+            const x = i;
+            const y = height - absorption * (height - 10);
+            if (i === 0) plotCtx.moveTo(x, y);
+            else plotCtx.lineTo(x, y);
+        }
+        plotCtx.stroke();
+
+        // Draw current velocity line
+        const currentX = (config.v_source / (2*v_max) + 0.5) * width;
+        plotCtx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        plotCtx.lineWidth = 2;
+        plotCtx.beginPath();
+        plotCtx.moveTo(currentX, 0);
+        plotCtx.lineTo(currentX, height);
+        plotCtx.stroke();
+
+        // Draw axes
+        plotCtx.font = '12px Arial';
+        plotCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        plotCtx.fillText("Source Velocity (mm/s)", width-120, height-5);
+        plotCtx.fillText("Absorption", 5, 15);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('emit-btn').addEventListener('click', emit);
+        document.getElementById('crystal-btn').addEventListener('click', () => { config.mode = 'crystal'; document.getElementById('crystal-btn').classList.add('active'); document.getElementById('free-btn').classList.remove('active'); });
+        document.getElementById('free-btn').addEventListener('click', () => { config.mode = 'free'; document.getElementById('free-btn').classList.add('active'); document.getElementById('crystal-btn').classList.remove('active'); });
+
+        document.getElementById('v-slider').addEventListener('input', e => {
+            config.v_source = parseFloat(e.target.value);
+            document.getElementById('v-value').textContent = config.v_source.toFixed(1);
+            drawPlot();
+        });
+    }
+
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); draw(); drawPlot(); }
+
+    window.onload = () => {
+        setup();
+    };
+    </script>
+</body>
+</html>
