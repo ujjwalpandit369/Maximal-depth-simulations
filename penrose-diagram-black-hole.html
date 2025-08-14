@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relativity: The Penrose Diagram of a Black Hole</title>
+    <style>
+        /* General Body and Typography */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --text-color: #212529;
+            --bg-color: #f8f9fa;
+            --section-bg: #ffffff;
+            --border-color: #dee2e6;
+            --subtle-bg: #e9ecef;
+            --highlight-color: #00ffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* High Contrast Theme */
+        body.high-contrast {
+            --primary-color: #00ffff;
+            --primary-hover: #00cccc;
+            --text-color: #ffffff;
+            --bg-color: #000000;
+            --section-bg: #111111;
+            --border-color: #555555;
+            --subtle-bg: #333333;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        body.high-contrast .subtitle {
+            color: #bbbbbb;
+        }
+        #metadata-bar {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        body.high-contrast #metadata-bar {
+            color: #bbbbbb;
+        }
+        #metadata-bar span {
+            margin: 0 10px;
+        }
+
+        /* Main Layout */
+        .layout-container {
+            display: flex;
+            flex-wrap: wrap-reverse; /* Reverse wrap to keep sim on top on mobile */
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .sim-column {
+            flex: 1.5; /* Give sim a bit more space */
+            min-width: 450px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+        }
+        .content-column {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 900px) {
+            .sim-column {
+                position: static;
+            }
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--section-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Controls Styling */
+        #controls {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        #controls .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        button, .button {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border: 1px solid var(--primary-color);
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s, color 0.2s, border-color 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        body.high-contrast button, body.high-contrast .button {
+            color: black;
+        }
+        button:hover, .button:hover, button:focus, .button:focus {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            outline: 2px solid var(--primary-hover);
+            outline-offset: 2px;
+        }
+        button:active, .button:active {
+            transform: scale(0.98);
+        }
+        button.active {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        body.high-contrast button.active {
+            color: white;
+        }
+
+        /* Canvas */
+        #simulation-canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--border-color);
+            background-color: var(--section-bg);
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        th {
+            background-color: var(--subtle-bg);
+        }
+        code {
+            font-family: "SF Mono", "Fira Code", "Source Code Pro", monospace;
+            background-color: var(--subtle-bg);
+            padding: .2em .4em;
+            border-radius: 3px;
+            font-size: 85%;
+        }
+
+        /* Suggestion Box */
+        #suggestion-box {
+            background-color: #eef7ff;
+            border: 1px solid var(--primary-color);
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        body.high-contrast #suggestion-box {
+            background-color: #1a1a1a;
+        }
+        #suggestion-box p {
+            margin: 0 0 0.5rem 0;
+        }
+        #suggestion-box .button-group button {
+            background-color: var(--section-bg);
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        #suggestion-box .button-group button.selected {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        body.high-contrast #suggestion-box .button-group button.selected {
+             color: black;
+        }
+
+
+        /* Footer & Dev Console */
+        footer {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        #dev-console {
+            margin-top: 1rem;
+            background: var(--subtle-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-align: left;
+            max-width: 1600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #dev-console-header {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            margin: 0;
+            background: var(--subtle-bg);
+            border-radius: 8px 8px 0 0;
+        }
+        #dev-console-content {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem 1rem;
+            display: none; /* Hidden by default */
+        }
+        #dev-console-content.open {
+            display: block;
+        }
+        #dev-log {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        #dev-log li {
+            padding: 2px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        body.high-contrast #dev-log li {
+            border-bottom-color: #444;
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none;
+        }
+        .equation {
+            background-color: var(--subtle-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-family: "SF Mono", "Fira Code", "Source Code Pro", monospace;
+            text-align: center;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="suggestion-box">
+        <p>Tune this simulation to your liking:</p>
+        <div class="button-group">
+            <button data-pref="audience" data-value="beginner">Audience: Beginner</button>
+            <button data-pref="audience" data-value="intermediate">Audience: Intermediate</button>
+            <button data-pref="audience" data-value="advanced">Audience: Advanced</button>
+        </div>
+    </div>
+
+    <header>
+        <h1>The Penrose Diagram of a Black Hole</h1>
+        <p class="subtitle">An interactive visualization of the causal structure of a Schwarzschild spacetime.</p>
+        <div id="metadata-bar">
+            <span>Est. Runtime: Real-time</span>
+            <span>Recommended Device: Desktop/Tablet</span>
+            <span id="html-size"></span>
+            <button id="theme-toggle-btn" aria-label="Toggle high contrast theme">Toggle Contrast</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="quality-check-panel" style="display: none; background-color: #ffdddd; border: 1px solid #ff0000; padding: 10px; margin-bottom: 15px;">
+            <!-- Quality check errors will be shown here -->
+        </div>
+
+        <div class="layout-container">
+            <div class="sim-column">
+                <section id="interactive-simulation">
+                    <h2>Interactive Diagram</h2>
+                    <canvas id="simulation-canvas" width="600" height="600"></canvas>
+                    <div id="controls">
+                        <div class="button-group" role="group" aria-label="Drawing Mode">
+                            <button id="mode-spaceship" class="active" title="Draw a path for a massive object (slower than light)">Draw Spaceship</button>
+                            <button id="mode-light" title="Draw a path for a light ray (travels at 45 degrees)">Draw Light Ray</button>
+                        </div>
+                        <div class="button-group" role="group" aria-label="Actions">
+                            <button id="clear-path-btn" title="Erase the current path (Shortcut: c)">Clear Path</button>
+                            <button id="export-png-btn" title="Download the current diagram as a PNG image (Shortcut: e)">Export PNG</button>
+                            <button id="export-json-btn" title="Download the current path as a JSON file">Export JSON</button>
+                            <button id="share-btn" title="Copy a shareable link with the current path to the clipboard">Share Path</button>
+                            <button id="perf-mode-btn" title="Toggle performance mode (no-op in this sim)">Perf. Mode</button>
+                        </div>
+                        <div class="button-group" role="group" aria-label="Preset Paths">
+                            <button id="preset-infall-btn" title="Show a spaceship falling into the black hole">Preset: Infall</button>
+                            <button id="preset-observer-btn" title="Show a spaceship that stays safely outside">Preset: Observer</button>
+                            <button id="preset-escape-btn" title="Show a spaceship trying to escape after crossing the event horizon">Preset: Escape Attempt</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <div class="content-column">
+                <section id="overview">
+                    <h2>Overview</h2>
+                    <p>A Penrose diagram is a clever map of spacetime that allows physicists to visualize the complex geometry around objects like black holes. It "squishes" an infinite universe into a finite, diamond-shaped picture, making it easier to understand causality—what parts of the universe can affect other parts. In this diagram, the golden rule is that <strong>all light rays travel at 45-degree angles</strong>. By drawing paths for spaceships (which must travel slower than light), you can explore the inevitable fate of anything that crosses a black hole's event horizon.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner's Guide</h2>
+                    <h3>1. A Map of an Infinite Journey</h3>
+                    <p>Imagine trying to draw a map that shows every single place on Earth. It's hard, but possible. Now imagine trying to draw a map that shows every place in the universe, not just in space, but also in <strong>time</strong>—from the beginning of time to the very end. This is the challenge of mapping spacetime. It's infinitely large and lasts for an infinitely long time.</p>
+                    <p>A <strong>Penrose diagram</strong> is the solution. It's a type of "conformal transformation," a fancy mathematical technique for taking an infinite spacetime and squeezing it into a finite shape, like the diamond you see here. The shapes of small things are preserved, but vast distances are compressed. This allows us to see the entire history and structure of a universe containing a black hole at a single glance.</p>
+
+                    <h3>2. The Golden Rule: 45 Degrees is Law</h3>
+                    <p>On a normal map, the speed limit changes everywhere. On a Penrose diagram, the speed limit is the same everywhere and for everyone: the speed of light. To make this easy to see, the diagram is drawn so that <strong>light rays always travel at perfect 45-degree angles</strong>.
+                    <ul>
+                        <li>A vertical line represents something standing still in space.</li>
+                        <li>A horizontal line represents a single instant in time across all of space.</li>
+                        <li>Anything that moves through space, like a spaceship, must travel on a path that is <strong>more vertical than it is horizontal</strong> (a slope steeper than 45 degrees). This is because nothing can travel faster than light.</li>
+                    </ul>
+                    Try it yourself! Select "Draw Spaceship" and try to draw a path that is more horizontal than vertical. The line won't follow your cursor, because you are trying to break the laws of physics.</p>
+
+                    <h3>3. The Four Regions of Spacetime</h3>
+                    <p>This diagram (for a simple, non-rotating black hole) is divided into four regions:</p>
+                    <ol>
+                        <li><strong>Our Universe (Bottom Quadrant):</strong> This is where we are. You can only start drawing your path here. From here, you can travel to other places in our universe, or you can travel towards the black hole.</li>
+                        <li><strong>The Black Hole (Top Quadrant):</strong> If you cross the boundary—the <strong>Event Horizon</strong>—you enter the black hole region. Notice the top edge of this region is a jagged red line. That is the <strong>Future Singularity</strong>. It's not a place in space, but a moment in time. Once you are in the black hole, every possible future path you can take ends at the singularity. It is as inevitable as "next Monday" is for us.</li>
+                        <li><strong>The White Hole (Left Quadrant):</strong> This is the time-reversed version of a black hole. Nothing can enter it; things can only come out. The jagged red line at its bottom is the <strong>Past Singularity</strong>, a moment in the past from which everything in this region emerged. It's a mathematical curiosity that most physicists believe doesn't exist in our real universe.</li>
+                        <li><strong>Other Universe (Right Quadrant):</strong> The full mathematics of a simple black hole suggest it could be a bridge (an "Einstein-Rosen bridge" or wormhole) to another, separate universe. Like the white hole, this is a mathematical feature that is not expected to be physically real, as it would be incredibly unstable.</li>
+                    </ol>
+                </section>
+
+                <section id="core-theory">
+                    <h2>Core Theory</h2>
+                    <h4>Causal Structure of Spacetime</h4>
+                    <p>The most important feature of a Penrose diagram is that it makes the causal structure of spacetime obvious. Causality is the principle that an effect cannot happen before its cause. On the diagram, this is built into the geometry.</p>
+                    <p class="equation">The Future Light Cone</p>
+                    <p>From any point in the diagram, the set of all points that can be reached is called the "future light cone." On this diagram, the light cone is always a 90-degree wedge pointing upwards. Any path you draw must stay within the confines of this cone.</p>
+                    <ul>
+                        <li><strong>Timelike paths (spaceships):</strong> Stay inside the 45-degree boundaries of the light cone.</li>
+                        <li><strong>Lightlike paths (light rays):</strong> Travel exactly on the 45-degree boundaries of the light cone.</li>
+                        <li><strong>Spacelike paths:</strong> Paths outside the light cone (more horizontal than vertical). These are forbidden, as they would require traveling faster than light.</li>
+                    </ul>
+                    <p>Inside the event horizon, the entire light cone, including all possible future paths, is pointed towards the singularity. This is the geometric representation of "no escape."</p>
+                </section>
+            </div>
+        </div>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>This simulation has two main drawing modes that determine the kind of path you can trace on the diagram.</p>
+            <table>
+                <thead>
+                    <tr><th>Mode</th><th>What it Represents</th><th>Physical Rule</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Draw Spaceship</strong></td>
+                        <td>The worldline of a massive object, like a person, planet, or spaceship.</td>
+                        <td>The path must be "timelike," meaning it travels slower than light. On the diagram, this means its slope must always be <strong>less than 45°</strong> from the vertical.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Draw Light Ray</strong></td>
+                        <td>The worldline of a massless particle, like a photon of light.</td>
+                        <td>The path must be "lightlike" (or null), meaning it travels at exactly the speed of light. On the diagram, this means its slope is <strong>exactly 45°</strong>.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <div class="example-group">
+                <h4>1. Infall to Singularity</h4>
+                <p>This preset shows the path of an object that starts in our universe and decides to travel into the black hole.</p>
+                <p><strong>Observe:</strong> The path starts in the bottom quadrant, moves upward, and crosses the event horizon into the top quadrant (the black hole). Once inside, notice that no matter which way the path wiggles, it is forced to terminate on the future singularity at the top.</p>
+                <button onclick="document.getElementById('preset-infall-btn').click()">Show Infall Path</button>
+            </div>
+            <div class="example-group">
+                <h4>2. Distant Observer</h4>
+                <p>This path shows an object that accelerates to stay at a safe, constant distance from the black hole without ever falling in.</p>
+                <p><strong>Observe:</strong> The worldline is a curve that remains entirely within the "Our Universe" quadrant. It continually moves upward (forward in time) but never crosses the event horizon.</p>
+                <button onclick="document.getElementById('preset-observer-btn').click()">Show Observer Path</button>
+            </div>
+            <div class="example-group">
+                <h4>3. The Escape Attempt</h4>
+                <p>This preset shows a spaceship that crosses the event horizon and then immediately fires its rockets in a desperate attempt to escape.</p>
+                <p><strong>Observe:</strong> Even though the path turns sharply away from the singularity, it is still forced to end there. Because spacetime itself is flowing "inward" faster than light inside the event horizon, escaping is as impossible as traveling back in time.</p>
+                <button onclick="document.getElementById('preset-escape-btn').click()">Show Escape Attempt Path</button>
+            </div>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs</h2>
+            <h4>Journey into the Black Hole</h4>
+            <ol>
+                <li>Select the "Draw Spaceship" mode.</li>
+                <li>Click near the bottom of the "Our Universe" quadrant to start your journey.</li>
+                <li>Drag your cursor upwards and to the right, crossing the dashed line that marks the Event Horizon. You are now inside the black hole.</li>
+                <li>Now, try to move your cursor back out. Drag it to the left, away from the singularity. Notice how the drawn path continues to move upwards, even if you move your mouse downwards? This is because time always moves forward (up the diagram).</li>
+                <li>No matter where you move your cursor inside the top quadrant, your path will inevitably end on the jagged red line at the top. You have reached the singularity.</li>
+            </ol>
+            <h4>Sending a Signal to a Friend</h4>
+            <ol>
+                <li>Click "Clear Path".</li>
+                <li>Select "Draw Spaceship" and draw a path for an "Observer" who stays in the right-hand side of the "Our Universe" quadrant. This is Alice.</li>
+                <li>Now, select "Draw Light Ray". Start a path somewhere to the left of Alice's path, but also in "Our Universe". This is Bob, sending a light signal.</li>
+                <li>Draw the light ray's path at a 45-degree angle upwards and to the right, so that it intersects Alice's path. This shows that Bob can successfully send a message to Alice.</li>
+                <li>What if Alice is inside the black hole? Clear the paths, draw Alice's path so it crosses the event horizon. Now try to draw a light ray from Bob (outside) to Alice (inside). It works!</li>
+                <li>Now try the reverse. Can Alice, once inside the black hole, send a light signal back out to Bob? Try drawing a 45-degree light ray path starting from inside the black hole and aiming back out. It's impossible.</li>
+            </ol>
+        </section>
+
+        <section id="micro-experiments">
+            <h2>Micro-Experiments</h2>
+            <ol>
+                <li>Can you draw a path for a spaceship that visits the "Other Universe"? Why or why not?</li>
+                <li>From our universe, can you send a light signal into the "White Hole"?</li>
+                <li>Draw a path for a spaceship that gets very close to the event horizon and then escapes. What does its path look like?</li>
+                <li>Start a light ray near the bottom left of our universe. Can you make it travel to the top right of our universe?</li>
+                <li>What is the longest possible time an observer can survive inside the black hole before hitting the singularity? (Hint: Trace a path from the moment they cross the horizon to the latest possible point on the singularity).</li>
+                <li>Can a light ray ever stand still in space? (Hint: Can a 45-degree line ever be vertical?).</li>
+                <li>Draw two light rays that start at the same point but go in opposite directions. Where do they end up?</li>
+                <li>Can you draw a path that goes from "Our Universe" to the "White Hole"?</li>
+            </ol>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <h4>What about Real Black Holes?</h4>
+            <p>The diagram shown here is for a <strong>Schwarzschild black hole</strong>, which is the simplest kind: it is eternal, non-rotating, and uncharged. Real-world black holes are formed from collapsing stars, and they rotate.</p>
+            <ul>
+                <li><strong>Collapsing Star:</strong> A Penrose diagram for a black hole formed from a collapsing star would not have the "White Hole" or "Other Universe" regions. The past singularity would be replaced by the diagram of the star itself.</li>
+                <li><strong>Rotating Black Holes (Kerr):</strong> A rotating black hole has a much more complicated Penrose diagram. It has two event horizons and the singularity is not a line, but a ring. In theory, it might be possible to travel through the ring without being destroyed, entering other regions of spacetime. This is an active area of theoretical research.</li>
+            </ul>
+            <h4>Are Wormholes Real?</h4>
+            <p>The "Other Universe" region is connected to ours by an <strong>Einstein-Rosen Bridge</strong>, more popularly known as a wormhole. While it is a valid mathematical solution, physicists have shown that such a wormhole would be incredibly unstable. It would collapse shut the instant even a single photon tried to travel through it, and it would require exotic matter with "negative energy" to hold it open.</p>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h4>1. The Mercator Map of Spacetime (Map Analogy)</h4>
+            <p>A Penrose diagram is to spacetime what a Mercator map is to the Earth. A Mercator map is famous for distorting the size of landmasses (making Greenland look as big as Africa) but has a very useful property: any straight line drawn on the map is a line of constant compass bearing. This made it invaluable for navigation.</p>
+            <ul>
+                <li><strong>Analogy:</strong> A Penrose diagram distorts infinite distances but has a useful property: light rays are always straight 45-degree lines. This makes "causal navigation" easy.</li>
+                <li><strong>Limitation:</strong> Like the Mercator map, it gives a false impression of distances. The singularity is not "close" in space, but it is "soon" in time.</li>
+            </ul>
+            <h4>2. The Compressed Movie Timeline (Visualization Analogy)</h4>
+            <p>Imagine the entire history of the universe is a movie that is trillions of hours long. You want to see the overall plot. You could use a video editor to compress the entire movie into a one-minute clip. You can now see the beginning, middle, and end all at once, but you've lost all sense of the real duration of events.</p>
+            <ul>
+                <li><strong>Analogy:</strong> A Penrose diagram compresses the infinite timeline of the universe into a single, viewable graphic.</li>
+                <li><strong>Limitation:</strong> This analogy captures the time compression well but misses the spatial compression and the geometric rules about light cones.</li>
+            </ul>
+            <h4>3. A Change of Coordinates (Computational Analogy)</h4>
+            <p>In computer graphics or data analysis, it's often useful to change your coordinate system. For example, switching from Cartesian coordinates (x, y) to polar coordinates (radius, angle) can make a problem involving circles much simpler. A Penrose diagram is the result of a very clever change of coordinates for spacetime.</p>
+            <ul>
+                <li><strong>Analogy:</strong> The original coordinates (time `t`, and radial distance `r`) are messy near a black hole. The new coordinates (`u`, `v`, which are combinations of `t` and `r`) result in a much cleaner and more well-behaved picture where light travels in simple straight lines.</li>
+                <li><strong>Limitation:</strong> This is the most technically accurate analogy but also the least intuitive if you're not familiar with coordinate transformations.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why is it diamond-shaped?</dt>
+                <dd>The diamond shape is the result of the mathematical "squishing" process. It's a square rotated by 45 degrees, which is the most convenient shape for ensuring that light rays travel at 45-degree angles on the page.</dd>
+                <dt>2. If I can't escape, can I at least see out of the black hole?</dt>
+                <dd>Yes! Light from the outside universe can still enter the black hole and reach you. Try drawing a light ray starting in "Our Universe" and ending on a spaceship path inside the event horizon. You would be able to see the stars and the rest of the universe, but they would appear increasingly distorted and blueshifted as you approach the singularity.</dd>
+                <dt>3. What *is* the singularity?</dt>
+                <dd>It is a moment in time, not a place in space. It is the end of spacetime as we know it. According to General Relativity, at the singularity, the curvature of spacetime becomes infinite, and the density of matter is infinite. Our current laws of physics break down there.</dd>
+                <dt>4. What is the event horizon?</dt>
+                <dd>The event horizon is not a physical barrier. It is a one-way door in spacetime. It is the precise boundary beyond which the gravitational pull is so strong that the escape velocity exceeds the speed of light. Once you cross it, your future inevitably lies within the black hole.</dd>
+                <dt>5. Why can't I draw a path that is very horizontal?</dt>
+                <dd>A horizontal line represents all of space at a single instant in time. To travel along a horizontal line would mean being in multiple places at once. To travel on a path that is more horizontal than vertical would mean you are traveling faster than light, which is forbidden by the laws of physics.</dd>
+                <dt>6. Can I start my path in the "Other Universe"?</dt>
+                <dd>No. This simulation restricts you to starting in our universe. The "Other Universe" is causally disconnected from ours, meaning you can't travel there through normal space. While the diagram shows a "bridge," it's not a traversable one.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <div id="performance-meter">
+            <!-- Performance stats will go here -->
+        </div>
+        <div id="dev-console" class="collapsible">
+            <h3 id="dev-console-header">Developer Console</h3>
+            <div id="dev-console-content" class="collapsible-content">
+                <ul id="dev-log"></ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sim = {
+            canvas: null, ctx: null, width: 600, height: 600,
+            isDrawing: false,
+            drawMode: 'spaceship', // 'spaceship' or 'light'
+            worldline: [],
+            coords: {
+                map: (p) => {
+                    const centerX = sim.width / 2;
+                    const centerY = sim.height / 2;
+                    const scale = sim.width * 0.45;
+                    return { x: centerX + p.x * scale, y: centerY - p.y * scale };
+                },
+                unmap: (p_canvas) => {
+                    const centerX = sim.width / 2;
+                    const centerY = sim.height / 2;
+                    const scale = sim.width * 0.45;
+                    return { x: (p_canvas.x - centerX) / scale, y: (centerY - p_canvas.y) / scale };
+                },
+                top: { x: 0, y: 1 }, bottom: { x: 0, y: -1 },
+                left: { x: -1, y: 0 }, right: { x: 1, y: 0 },
+            },
+            colors: {
+                bg: '#FFFFFF', line: '#000000', text: '#000000',
+                universe: 'rgba(230, 240, 255, 0.7)',
+                blackHole: 'rgba(50, 50, 50, 0.7)',
+                whiteHole: 'rgba(200, 200, 200, 0.5)',
+                otherUniverse: 'rgba(230, 255, 230, 0.5)',
+                singularity: '#FF0000',
+                worldline: '#d9534f',
+                lightline: '#f0ad4e',
+            },
+            highContrastColors: {
+                bg: '#000000', line: '#FFFFFF', text: '#FFFFFF',
+                universe: 'rgba(0, 0, 100, 0.7)',
+                blackHole: 'rgba(200, 200, 200, 0.7)',
+                whiteHole: 'rgba(120, 120, 120, 0.5)',
+                otherUniverse: 'rgba(0, 100, 0, 0.5)',
+                singularity: '#FF8888',
+                worldline: '#ff8888',
+                lightline: '#ffff00',
+            }
+        };
+
+        const elements = {};
+
+        function init() {
+            getDOMElements();
+            if (!elements.canvas) {
+                logError("Fatal Error: Canvas not found.");
+                return;
+            }
+            sim.canvas = elements.canvas;
+            sim.ctx = sim.canvas.getContext('2d');
+            sim.width = sim.canvas.width;
+            sim.height = sim.canvas.height;
+            addEventListeners();
+            populateMetadata();
+            runQualityChecks();
+            loadPathFromURL();
+            requestAnimationFrame(draw);
+            log("Penrose Diagram simulation initialized.");
+        }
+
+        function getDOMElements() {
+            const ids = [
+                'simulation-canvas', 'mode-spaceship', 'mode-light', 'clear-path-btn',
+                'export-png-btn', 'share-btn', 'preset-infall-btn', 'preset-observer-btn', 'preset-escape-btn',
+                'quality-check-panel', 'html-size', 'theme-toggle-btn',
+                'dev-console-header', 'dev-console-content', 'dev-log', 'performance-meter'
+            ];
+            ids.forEach(id => {
+                const camelCaseId = id.replace(/-./g, x => x[1].toUpperCase());
+                elements[camelCaseId] = document.getElementById(id);
+            });
+            elements.suggestionButtons = document.querySelectorAll('#suggestion-box button');
+        }
+
+        function addEventListeners() {
+            // Canvas drawing
+            sim.canvas.addEventListener('mousedown', startDrawing);
+            sim.canvas.addEventListener('mousemove', drawPath);
+            sim.canvas.addEventListener('mouseup', stopDrawing);
+            sim.canvas.addEventListener('mouseleave', stopDrawing);
+            sim.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); }, { passive: false });
+            sim.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); drawPath(e.touches[0]); }, { passive: false });
+            sim.canvas.addEventListener('touchend', stopDrawing);
+
+            // Controls
+            elements.modeSpaceship.addEventListener('click', () => setDrawMode('spaceship'));
+            elements.modeLight.addEventListener('click', () => setDrawMode('light'));
+            elements.clearPathBtn.addEventListener('click', clearPath);
+            elements.exportPngBtn.addEventListener('click', exportPNG);
+            elements.shareBtn.addEventListener('click', sharePath);
+
+            // Presets
+            elements.presetInfallBtn.addEventListener('click', () => setPreset('infall'));
+            elements.presetObserverBtn.addEventListener('click', () => setPreset('observer'));
+            elements.presetEscapeBtn.addEventListener('click', () => setPreset('escape'));
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'c') clearPath();
+                if (e.key === 'e') exportPNG();
+            });
+        }
+
+        function setDrawMode(mode) {
+            sim.drawMode = mode;
+            elements.modeSpaceship.classList.toggle('active', mode === 'spaceship');
+            elements.modeLight.classList.toggle('active', mode === 'light');
+        }
+
+        function clearPath() {
+            sim.worldline = [];
+        }
+
+        function exportPNG() {
+            const url = sim.canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'penrose_diagram.png';
+            link.href = url;
+            link.click();
+        }
+
+        function sharePath() {
+            if (sim.worldline.length === 0) return;
+            const pathData = sim.worldline.map(p => sim.coords.unmap(p));
+            const encoded = btoa(JSON.stringify(pathData));
+            const url = `${window.location.origin}${window.location.pathname}#path=${encoded}`;
+            navigator.clipboard.writeText(url).then(() => {
+                const originalText = elements.shareBtn.textContent;
+                elements.shareBtn.textContent = 'Copied!';
+                setTimeout(() => { elements.shareBtn.textContent = originalText; }, 2000);
+            });
+        }
+
+        function loadPathFromURL() {
+            if (!window.location.hash.startsWith('#path=')) return;
+            try {
+                const encoded = window.location.hash.substring(6);
+                const decoded = atob(encoded);
+                const pathData = JSON.parse(decoded);
+                sim.worldline = pathData.map(p => sim.coords.map(p));
+            } catch (e) {
+                console.error("Failed to load path from URL:", e);
+            }
+        }
+
+        function setPreset(presetName) {
+            clearPath();
+            const { map } = sim.coords;
+            let path;
+            switch(presetName) {
+                case 'infall':
+                    path = [{x: 0.5, y: -0.8}];
+                    for (let t = -0.7; t < 0.6; t += 0.05) {
+                        path.push({x: 0.5 + 0.1 * Math.sin(t*4), y: t});
+                    }
+                    break;
+                case 'observer':
+                    path = [{x: 0.2, y: -0.9}];
+                    for (let t = -0.8; t < 0.8; t += 0.05) {
+                        path.push({x: 0.2 + 0.05 * Math.sin(t*8), y: t});
+                    }
+                    break;
+                case 'escape':
+                     path = [{x: 0.6, y: -0.2}];
+                     for (let t = -0.1; t < 0.4; t += 0.05) {
+                        path.push({x: 0.6 - (t+0.1)*1.5, y: t});
+                     }
+                    break;
+            }
+            sim.worldline = path.map(p => map(p));
+        }
+
+        function getCanvasPos(evt) {
+            const rect = sim.canvas.getBoundingClientRect();
+            return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+        }
+
+        function startDrawing(evt) {
+            clearPath();
+            const canvasPos = getCanvasPos(evt);
+            const diagramPos = sim.coords.unmap(canvasPos);
+            if (diagramPos.y < -Math.abs(diagramPos.x) && diagramPos.y > -1.0) {
+                sim.isDrawing = true;
+                sim.worldline = [canvasPos];
+            }
+        }
+
+        function drawPath(evt) {
+            if (!sim.isDrawing) return;
+            const lastPoint = sim.worldline[sim.worldline.length - 1];
+            const newPoint = getCanvasPos(evt);
+            const dx = newPoint.x - lastPoint.x;
+            const dy = newPoint.y - lastPoint.y;
+
+            if (dy <= 1) return;
+
+            if (sim.drawMode === 'spaceship') {
+                if (Math.abs(dx) < dy) {
+                    sim.worldline.push(newPoint);
+                }
+            } else {
+                const sign = Math.sign(dx) || 1;
+                const forcedPoint = { x: lastPoint.x + dy * sign, y: newPoint.y };
+                sim.worldline.push(forcedPoint);
+            }
+        }
+
+        function stopDrawing() {
+            sim.isDrawing = false;
+        }
+
+        function drawDiagram(colors) {
+            const { ctx, coords } = sim;
+            const { map } = coords;
+
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = colors.universe;
+            ctx.beginPath(); ctx.moveTo(map({x:0,y:0}).x, map({x:0,y:0}).y); ctx.lineTo(map(coords.bottom).x, map(coords.bottom).y); ctx.lineTo(map(coords.right).x, map(coords.right).y); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = colors.blackHole;
+            ctx.beginPath(); ctx.moveTo(map({x:0,y:0}).x, map({x:0,y:0}).y); ctx.lineTo(map(coords.top).x, map(coords.top).y); ctx.lineTo(map(coords.right).x, map(coords.right).y); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = colors.whiteHole;
+            ctx.beginPath(); ctx.moveTo(map({x:0,y:0}).x, map({x:0,y:0}).y); ctx.lineTo(map(coords.bottom).x, map(coords.bottom).y); ctx.lineTo(map(coords.left).x, map(coords.left).y); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = colors.otherUniverse;
+            ctx.beginPath(); ctx.moveTo(map({x:0,y:0}).x, map({x:0,y:0}).y); ctx.lineTo(map(coords.top).x, map(coords.top).y); ctx.lineTo(map(coords.left).x, map(coords.left).y); ctx.closePath(); ctx.fill();
+            ctx.globalAlpha = 1.0;
+
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(map(coords.top).x, map(coords.top).y); ctx.lineTo(map(coords.right).x, map(coords.right).y); ctx.lineTo(map(coords.bottom).x, map(coords.bottom).y); ctx.lineTo(map(coords.left).x, map(coords.left).y); ctx.closePath(); ctx.stroke();
+
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath(); ctx.moveTo(map(coords.left).x, map(coords.left).y); ctx.lineTo(map(coords.top).x, map(coords.top).y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(map(coords.bottom).x, map(coords.bottom).y); ctx.lineTo(map(coords.right).x, map(coords.right).y); ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = colors.singularity;
+            ctx.beginPath(); ctx.moveTo(map(coords.left).x, map(coords.left).y); ctx.lineTo(map(coords.bottom).x, map(coords.bottom).y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(map(coords.right).x, map(coords.right).y); ctx.lineTo(map(coords.top).x, map(coords.top).y); ctx.stroke();
+
+            ctx.fillStyle = colors.text;
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("Our Universe", map({x: 0.5, y: -0.5}).x, map({x: 0.5, y: -0.5}).y);
+            ctx.fillText("Black Hole", map({x: 0.5, y: 0.5}).x, map({x: 0.5, y: 0.5}).y);
+            ctx.fillText("White Hole", map({x: -0.5, y: -0.5}).x, map({x: -0.5, y: -0.5}).y);
+            ctx.fillText("Other Universe", map({x: -0.5, y: 0.5}).x, map({x: -0.5, y: 0.5}).y);
+            ctx.font = 'italic 16px sans-serif';
+            ctx.fillText("Future Singularity", map(coords.top).x, map(coords.top).y - 20);
+            ctx.fillText("Past Singularity", map(coords.bottom).x, map(coords.bottom).y + 20);
+        }
+
+        function drawWorldline(colors) {
+            if (sim.worldline.length < 2) return;
+            sim.ctx.beginPath();
+            sim.ctx.moveTo(sim.worldline[0].x, sim.worldline[0].y);
+            for (let i = 1; i < sim.worldline.length; i++) {
+                sim.ctx.lineTo(sim.worldline[i].x, sim.worldline[i].y);
+            }
+            sim.ctx.strokeStyle = sim.drawMode === 'spaceship' ? colors.worldline : colors.lightline;
+            sim.ctx.lineWidth = 3;
+            sim.ctx.lineCap = 'round';
+            sim.ctx.lineJoin = 'round';
+            sim.ctx.stroke();
+        }
+
+        function draw() {
+            const startTime = performance.now();
+            const colors = document.body.classList.contains('high-contrast') ? sim.highContrastColors : sim.colors;
+            sim.ctx.clearRect(0, 0, sim.width, sim.height);
+            sim.ctx.fillStyle = colors.bg;
+            sim.ctx.fillRect(0, 0, sim.width, sim.height);
+
+            drawDiagram(colors);
+            drawWorldline(colors);
+
+            const endTime = performance.now();
+            updatePerfMeter(endTime - startTime);
+
+            requestAnimationFrame(draw);
+        }
+
+        // --- Utility & Quality ---
+        function log(message) {
+            if (elements.devLog) {
+                const li = document.createElement('li');
+                li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                elements.devLog.prepend(li);
+            }
+        }
+        function logError(message) {
+            if (elements.devLog) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span style="color: red;">[${new Date().toLocaleTimeString()}] ERROR: ${message}</span>`;
+                elements.devLog.prepend(li);
+            }
+            console.error(message);
+        }
+
+        function populateMetadata() {
+            const htmlSize = new Blob([document.documentElement.outerHTML], {type: 'text/html'}).size;
+            const htmlSizeKB = (htmlSize / 1024).toFixed(1);
+            if (elements.htmlSize) {
+                elements.htmlSize.textContent = `Size: ${htmlSizeKB} KB`;
+            }
+
+            elements.suggestionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pref = button.dataset.pref;
+                    const value = button.dataset.value;
+                    button.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+                    button.classList.add('selected');
+                    log(`User preference selected: ${pref}=${value}. (Note: This is a demo and does not alter the content).`);
+                });
+            });
+        }
+
+        function updatePerfMeter(drawTime) {
+            sim.frameTimeAvg = (sim.frameTimeAvg || 0) * 0.95 + drawTime * 0.05;
+            if (elements.performanceMeter) {
+                elements.performanceMeter.textContent = `Draw Time: ${sim.frameTimeAvg.toFixed(2)}ms`;
+            }
+        }
+
+        function runQualityChecks() {
+            let errors = [];
+            for (const key in elements) {
+                if (elements[key] === null) {
+                    errors.push(`Required element with ID '#${key.replace(/([A-Z])/g, "-$1").toLowerCase()}' not found.`);
+                }
+            }
+            if (errors.length > 0) {
+                elements.qualityCheckPanel.innerHTML = '<strong>Quality Check Failed:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+                elements.qualityCheckPanel.style.display = 'block';
+            } else {
+                log("Quality checks passed.");
+            }
+        }
+
+        init();
+        loadPathFromURL();
+    });
+    </script>
+</body>
+</html>
