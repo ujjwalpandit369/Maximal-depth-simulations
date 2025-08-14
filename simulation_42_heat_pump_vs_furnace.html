@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heat Pump vs. Furnace Efficiency</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #6f42c1; /* A purple for efficiency/tech */
+            --cold-color: #007bff; /* Blue for cold */
+            --hot-color: #dc3545; /* Red for hot */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #a37acc;
+            --cold-color: #58a6ff;
+            --hot-color: #ff7b72;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 500px; display: flex; flex-direction: column; align-items: center; }
+        #mainCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 2 / 1; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Heat Pump vs. Furnace Efficiency</h1>
+            <p class="subtitle">A side-by-side comparison of creating heat vs. moving heat.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>When heating a home, a simple electric furnace and a modern heat pump work on entirely different principles. A furnace creates heat by running electricity through a resistor, like a toaster. A heat pump doesn't create heat—it moves it, acting like an air conditioner in reverse to pump heat from the cold outside air into your warm home. This simulation directly compares the two technologies. You'll see how a heat pump can be dramatically more energy-efficient, but also how its performance drops as the weather gets colder, revealing a "crossover point" where the simple furnace can become competitive.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — Two Ways to Heat a House</h2>
+
+            <h3>The Furnace: Creating Heat (100% Efficient)</h3>
+            <p>An electric resistance furnace is the simplest form of heating. It works just like a space heater or a toaster: electricity flows through a wire (a resistor), and the wire's resistance causes it to get very hot. A fan then blows air past the hot wire and into your home.
+            <br><br>
+            Due to the law of conservation of energy, this process is, at best, <strong>100% efficient</strong>. Every joule of electrical energy you put in is converted into one joule of heat energy. You can't get more heat out than the electricity you put in.</p>
+
+            <h3>The Heat Pump: Moving Heat (>100% Efficient)</h3>
+            <p>A heat pump is a much cleverer device. It works like a refrigerator in reverse. Instead of creating heat, it uses a refrigeration cycle to absorb heat from the cold outside air and release it inside your house.
+            <br><br>
+            Because it's just moving existing heat from one place to another, its "efficiency" can be much greater than 100%. We use a different term for this: the <strong>Coefficient of Performance (COP)</strong>. A COP of 3 means that for every 1 joule of electrical energy used to run the pump, it successfully moves 3 joules of heat into your home. This is possible because the electricity isn't being turned into heat; it's being used to power the machinery that moves heat.</p>
+
+            <h3>The Catch: Performance Depends on Temperature</h3>
+            <p>The heat pump's magic has a limit. It has to find heat in the outside air to pump inside. The colder it gets outside, the less heat there is to find, and the harder the pump has to work. As the outside temperature drops, the heat pump's COP also drops.
+            <br><br>
+            Eventually, on a very cold day, the COP will drop to 1. At this point, the heat pump is no more efficient than a simple furnace—it's using 1 joule of electricity to deliver 1 joule of heat. This simulation lets you find this crossover temperature by adjusting the "Outside Temperature" slider and watching the energy meters.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="temp-slider">Outside Temperature: <span id="temp-value">10</span>°C</label>
+                    <input type="range" id="temp-slider" min="-20" max="15" step="1" value="10">
+                </div>
+                <p><strong>Scenario:</strong> Both systems are trying to deliver <strong>10 kW</strong> of heat to maintain an inside temperature of <strong>20°C</strong>.</p>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — Coefficient of Performance (Click to expand)</button>
+        <div class="content">
+            <h3>Furnace Efficiency</h3>
+            <p>For a resistive furnace, the relationship is simple. The efficiency `η` is 1 (or 100%).</p>
+            <p><code>Heat Delivered = Electrical Energy In</code></p>
+            <h3>Heat Pump Coefficient of Performance (COP)</h3>
+            <p>For a heat pump, the performance is measured by the COP. It is the ratio of the desired effect (heat delivered to the hot reservoir, `Q_H`) to the energy cost (the work `W` done by the compressor).</p>
+            <p><code>COP = Desired Output / Required Input = Q_H / W</code></p>
+            <p>From the First Law of Thermodynamics, we know that the heat delivered `Q_H` is the sum of the heat moved from the cold outside (`Q_C`) plus the work done to move it (`W`). So, `COP = (Q_C + W) / W = 1 + Q_C / W`.</p>
+            <h3>The Ideal (Carnot) Limit for a Heat Pump</h3>
+            <p>The maximum possible COP for any heat pump operating between a cold temperature `T_C` and a hot temperature `T_H` is given by the Carnot COP. Temperatures must be in an absolute scale like Kelvin (K = °C + 273.15).</p>
+            <p><code>COP_Carnot = T_H / (T_H - T_C)</code></p>
+            <p><strong>Example:</strong> Inside temperature `T_H = 20°C = 293.15 K`. Outside temperature `T_C = 10°C = 283.15 K`.
+            <br><code>COP_Carnot = 293.15 / (293.15 - 283.15) = 293.15 / 10 = <strong>29.3</strong></code>
+            <br>Now let's drop the outside temperature to `T_C = -15°C = 258.15 K`.
+            <br><code>COP_Carnot = 293.15 / (293.15 - 258.15) = 293.15 / 35 = <strong>8.38</strong></code>
+            <br>As you can see, the maximum possible performance drops significantly as it gets colder outside. A real heat pump will have a COP that is a fraction of this ideal value (e.g., 40-50% of Carnot), but it follows the same trend.</p>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>Air-Source vs. Ground-Source Heat Pumps</h3>
+            <p>The simulation shows an "air-source" heat pump, which is the most common type. It uses the outside air as its heat source in winter and heat sink in summer. Its main disadvantage is the drop in performance at low ambient temperatures, precisely when heating is most needed.
+            <br><br>
+            A "ground-source" or "geothermal" heat pump avoids this problem. It uses pipes buried deep in the ground, where the temperature is nearly constant year-round (e.g., 10-15°C or 50-60°F). Because it's exchanging heat with this stable, moderate temperature source, a ground-source heat pump maintains a very high COP even on the coldest winter days. While the initial installation cost is much higher due to the need for drilling or excavation, the long-term energy savings can be substantial.
+            </p>
+            <h3>Auxiliary and Emergency Heat</h3>
+            <p>Most air-source heat pumps installed in colder climates include a built-in backup system called "auxiliary heat" or "emergency heat." This is simply a resistive electric furnace. An internal thermostat monitors the system's performance. If the outside temperature drops so low that the heat pump cannot meet the heating demand of the house on its own, it will automatically turn on the auxiliary heating strips to supplement it. This ensures the house stays warm, but it temporarily makes the system operate at the much lower efficiency of a standard furnace.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let animationFrameId;
+
+    let config = { T_outside: 10 }; // Celsius
+    const T_inside = 20; // Celsius
+    const HeatDemand = 10; // kW
+
+    let furnace = { power: 0, heat: 0 };
+    let heatpump = { power: 0, heat: 0, cop: 0 };
+
+    function setup() {
+        canvas = document.getElementById('mainCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        update();
+        draw();
+    }
+
+    function update() {
+        const T_C = config.T_outside + 273.15; // Kelvin
+        const T_H = T_inside + 273.15; // Kelvin
+
+        // Furnace calculation
+        furnace.heat = HeatDemand;
+        furnace.power = HeatDemand; // COP is always 1
+
+        // Heat Pump calculation
+        heatpump.heat = HeatDemand;
+        const cop_carnot = T_H / (T_H - T_C);
+        // Model a "real" COP as a fraction of Carnot, with a floor of 1
+        const real_cop = Math.max(1.0, cop_carnot * 0.4); // Assume 40% of ideal efficiency
+        heatpump.cop = real_cop;
+        heatpump.power = HeatDemand / real_cop;
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw background
+        const tempRatio = (config.T_outside - 15) / (-20 - 15);
+        const coldness = Math.min(1, Math.max(0, tempRatio));
+        const bgColor = `hsl(200, 80%, ${95 - coldness * 30}%)`;
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0,0,width,height);
+
+        // Draw two houses
+        drawHouse(width * 0.25, height * 0.6, "Furnace", furnace);
+        drawHouse(width * 0.75, height * 0.6, "Heat Pump", heatpump);
+    }
+
+    function drawHouse(x, y, label, system) {
+        const w = 180, h = 150;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.beginPath();
+        ctx.moveTo(x - w/2, y);
+        ctx.lineTo(x - w/2, y - h*0.6);
+        ctx.lineTo(x, y - h);
+        ctx.lineTo(x + w/2, y - h*0.6);
+        ctx.lineTo(x + w/2, y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, x, y + 20);
+
+        // Draw Meters
+        drawMeter(x, y + 40, "Electricity Used", system.power, 10, "kW");
+        drawMeter(x, y + 80, "Heat Delivered", system.heat, 10, "kW");
+        if (system.cop) {
+             ctx.fillText(`COP: ${system.cop.toFixed(2)}`, x, y + 120);
+        }
+    }
+
+    function drawMeter(x, y, label, value, max_value, unit) {
+        const barW = 150, barH = 15;
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, x - barW/2, y - 5);
+
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+        ctx.strokeRect(x - barW/2, y, barW, barH);
+        ctx.fillRect(x - barW/2, y, barW, barH);
+
+        const fillW = (value / max_value) * barW;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--hot-color');
+        ctx.fillRect(x - barW/2, y, fillW, barH);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.fillText(`${value.toFixed(1)} ${unit}`, x + barW/2, y + barH + 15);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('temp-slider').addEventListener('input', e => {
+            config.T_outside = parseInt(e.target.value, 10);
+            document.getElementById('temp-value').textContent = config.T_outside;
+            update();
+            draw();
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        setup();
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+    };
+    </script>
+</body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dalton's Law of Partial Pressures</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #343a40; /* Dark grey for the container */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+            --gas1-color: #dc3545;
+            --gas2-color: #007bff;
+            --gas3-color: #28a745;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #adb5bd;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+            --gas1-color: #ff7b72;
+            --gas2-color: #58a6ff;
+            --gas3-color: #20c997;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 2; min-width: 300px; }
+        .canvas-container { flex: 3; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; }
+        .gauges { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 100%; margin-top: 10px; }
+        .gauge { padding: 10px; border-radius: 5px; text-align: center; border: 2px solid; }
+        .gauge h4 { margin: 0 0 5px 0; }
+        .gauge p { margin: 0; font-size: 1.5em; font-weight: bold; }
+        #total-pressure-gauge { grid-column: 1 / -1; margin-bottom: 10px; border-width: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dalton's Law of Partial Pressures</h1>
+            <p class="subtitle">The total pressure of a gas mixture is the sum of its parts.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>What happens when you mix several gases together in a container, like the mixture of nitrogen, oxygen, and other gases in the air we breathe? Dalton's Law provides a beautifully simple answer: the total pressure of the mixture is simply the sum of the individual pressures that each gas would exert if it were all alone in the container. This simulation lets you create your own gas mixture, adjust the amount of each component, and see in real-time how the "partial pressures" of the individual gases always add up to the total pressure.</p>
+        </section>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Sum of the Parts</h2>
+
+            <h3>Step 1: What Causes Gas Pressure?</h3>
+            <p>The pressure a gas exerts on the walls of its container comes from the countless, ceaseless collisions of its individual gas particles with the walls. Each tiny collision imparts a small force. The sum of all these forces over the area of the wall is what we measure as pressure. More collisions, or more forceful collisions, mean higher pressure.</p>
+
+            <h3>Step 2: What is a "Partial Pressure"?</h3>
+            <p>Imagine you have a container filled with a mixture of red and blue gas particles. The total pressure is caused by both red and blue particles hitting the walls. The <strong>partial pressure</strong> of the red gas is the pressure you would measure if you could magically remove all the blue particles, leaving only the red ones in the same container at the same temperature. It's the contribution that the red gas alone makes to the total pressure.</p>
+
+            <h3>Step 3: Dalton's Law</h3>
+            <p>Dalton's Law of Partial Pressures states that the total pressure of a mixture of non-reacting gases is the sum of the partial pressures of the individual gases.
+            <br><br>
+            <code>P_total = P_red + P_blue + P_green + ...</code>
+            <br><br>
+            This simple but powerful law works because of a key assumption we make about "ideal gases": we assume the gas particles themselves have no volume and that they do not interact with each other (no attractive or repulsive forces). A red particle doesn't know or care that blue particles are present; it hits the wall with the same frequency and force regardless. Therefore, each gas component contributes to the total pressure independently, and we can simply add their contributions together.</p>
+
+            <h3>Analogy: People Shouting in a Room</h3>
+            <p>Imagine a large, empty room where you can measure the overall noise level.
+            <ul>
+                <li>First, a group of 5 people comes in and they all start talking at a normal volume. You measure their "partial noise" level.</li>
+                <li>Then, they leave, and a second group of 10 people comes in and talks at the same volume. You measure their "partial noise," which is higher because there are more people.</li>
+                <li>Finally, both groups come into the room together (15 people total). The total noise level you measure will simply be the sum of the noise levels you measured for each group individually. The groups talk independently of each other, and their contributions to the total noise just add up. This is the essence of Dalton's Law.</li>
+            </ul>
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                <div class="gauges">
+                    <div id="total-pressure-gauge" class="gauge">
+                        <h4>Total Pressure</h4>
+                        <p><span id="total-p-value">--</span> kPa</p>
+                    </div>
+                    <div id="gas1-gauge" class="gauge" style="border-color: var(--gas1-color);">
+                        <h4>P_red</h4>
+                        <p><span id="p1-value">--</span></p>
+                    </div>
+                    <div id="gas2-gauge" class="gauge" style="border-color: var(--gas2-color);">
+                        <h4>P_blue</h4>
+                        <p><span id="p2-value">--</span></p>
+                    </div>
+                    <div id="gas3-gauge" class="gauge" style="border-color: var(--gas3-color);">
+                        <h4>P_green</h4>
+                        <p><span id="p3-value">--</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="control-group">
+                    <label for="n1-slider">Red Particles: <span id="n1-value">50</span></label>
+                    <input type="range" id="n1-slider" min="0" max="100" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label for="n2-slider">Blue Particles: <span id="n2-value">50</span></label>
+                    <input type="range" id="n2-slider" min="0" max="100" step="5" value="50">
+                </div>
+                <div class="control-group">
+                    <label for="n3-slider">Green Particles: <span id="n3-value">50</span></label>
+                    <input type="range" id="n3-slider" min="0" max="100" step="5" value="50">
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (K): <span id="temp-value">300</span></label>
+                    <input type="range" id="temp-slider" min="100" max="600" step="10" value="300">
+                </div>
+                <div class="control-group">
+                    <label for="vol-slider">Volume (L): <span id="vol-value">25</span></label>
+                    <input type="range" id="vol-slider" min="5" max="50" step="1" value="25">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — Derivation from the Ideal Gas Law (Click to expand)</button>
+        <div class="content">
+            <h3>The Ideal Gas Law</h3>
+            <p>The relationship between pressure (P), volume (V), number of moles (n), and temperature (T) for an ideal gas is given by the Ideal Gas Law:</p>
+            <p><code>P * V = n * R * T</code></p>
+            <p>Where `R` is the ideal gas constant. We can rearrange this to solve for pressure: `P = n * (RT/V)`.</p>
+            <h3>Applying to a Mixture</h3>
+            <p>For a mixture of gases, the total pressure `P_total` depends on the *total* number of moles of gas, `n_total`.</p>
+            <p><code>P_total = n_total * (RT/V)</code></p>
+            <p>Since the total number of moles is just the sum of the moles of each component gas (`n_total = n₁ + n₂ + n₃ + ...`), we can substitute this in:</p>
+            <p><code>P_total = (n₁ + n₂ + n₃) * (RT/V)</code></p>
+            <p>Distributing the `(RT/V)` term gives:</p>
+            <p><code>P_total = [n₁ * (RT/V)] + [n₂ * (RT/V)] + [n₃ * (RT/V)]</code></p>
+            <p>We can recognize each term in the brackets. The term `n₁ * (RT/V)` is, by definition, the pressure that gas 1 would exert if it were alone in the container—its partial pressure, `P₁`. Therefore:</p>
+            <p><code>P_total = P₁ + P₂ + P₃</code></p>
+            <p>This shows that Dalton's Law is a direct mathematical consequence of the Ideal Gas Law.</p>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>Real Gases and Limitations</h3>
+            <p>Dalton's Law is exact for ideal gases, but it is an approximation for real gases, especially at high pressures and low temperatures where intermolecular forces are significant.
+            <ul>
+                <li><strong>Intermolecular Forces:</strong> Real gas molecules have weak attractive forces (van der Waals forces). The attraction between molecules of different types (e.g., red-blue) might be different from the attraction between molecules of the same type (red-red or blue-blue). This can cause the total pressure to deviate from the simple sum of partial pressures.</li>
+                <li><strong>Molecular Volume:</strong> The ideal gas law assumes particles are points with zero volume. Real molecules have a finite size. At high pressures, the volume occupied by the molecules themselves becomes a significant fraction of the container volume, causing deviations.</li>
+            </ul>
+            For more accurate calculations with real gases, more complex models like Amagat's Law of partial volumes or advanced equations of state (like the van der Waals equation or Peng-Robinson) are used.
+            </p>
+            <h3>Applications in Science</h3>
+            <p>Partial pressures are a critical concept in many fields. In medicine and physiology, gas exchange in the lungs and transport in the blood are governed entirely by the partial pressures of oxygen and carbon dioxide. In chemistry, reaction rates and chemical equilibria for gas-phase reactions depend on the partial pressures of the reactants and products.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let animationFrameId;
+
+    let config = {
+        n1: 50, n2: 50, n3: 50,
+        T: 300, V: 25
+    };
+
+    let particles = [];
+
+    function setup() {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        resetParticles();
+        update();
+        gameLoop();
+    }
+
+    function resetParticles() {
+        particles = [];
+        const speed = Math.sqrt(config.T) / 10;
+
+        const createGroup = (num, color) => {
+            for(let i=0; i<num; i++) {
+                particles.push({
+                    x: Math.random(), y: Math.random(),
+                    vx: (Math.random() - 0.5) * speed,
+                    vy: (Math.random() - 0.5) * speed,
+                    color: color, r: 4
+                });
+            }
+        };
+
+        createGroup(config.n1, getComputedStyle(document.documentElement).getPropertyValue('--gas1-color'));
+        createGroup(config.n2, getComputedStyle(document.documentElement).getPropertyValue('--gas2-color'));
+        createGroup(config.n3, getComputedStyle(document.documentElement).getPropertyValue('--gas3-color'));
+    }
+
+    function update() {
+        // Calculations are based on the Ideal Gas Law
+        const R = 8.314; // Ideal gas constant
+
+        // Use number of particles as a proxy for moles (n)
+        const p1 = config.n1 * R * config.T / config.V;
+        const p2 = config.n2 * R * config.T / config.V;
+        const p3 = config.n3 * R * config.T / config.V;
+        const p_total = p1 + p2 + p3;
+
+        // Update gauges (convert to kPa for display)
+        document.getElementById('p1-value').textContent = (p1 / 1000).toFixed(1);
+        document.getElementById('p2-value').textContent = (p2 / 1000).toFixed(1);
+        document.getElementById('p3-value').textContent = (p3 / 1000).toFixed(1);
+        document.getElementById('total-p-value').textContent = (p_total / 1000).toFixed(1);
+    }
+
+    function simulationStep() {
+        const speed = Math.sqrt(config.T) / 10;
+        const containerScale = Math.sqrt(25 / config.V);
+
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0 || p.x > 1) p.vx *= -1;
+            if (p.y < 0 || p.y > 1) p.vy *= -1;
+        });
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        const containerScale = Math.sqrt(config.V / 25);
+        const boxW = width * containerScale;
+        const boxH = height * containerScale;
+        const boxX = (width - boxW) / 2;
+        const boxY = (height - boxH) / 2;
+
+        // Draw container
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.lineWidth = 4;
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+        // Draw particles
+        particles.forEach(p => {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(boxX + p.x * boxW, boxY + p.y * boxH, p.r, 0, 2*Math.PI);
+            ctx.fill();
+        });
+    }
+
+    function gameLoop() {
+        simulationStep();
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        const sliders = ['n1', 'n2', 'n3', 'temp', 'vol'];
+        sliders.forEach(id => {
+            const slider = document.getElementById(`${id}-slider`);
+            slider.addEventListener('input', e => {
+                let value;
+                if (id.startsWith('n')) {
+                    value = parseInt(e.target.value, 10);
+                } else {
+                    value = parseFloat(e.target.value);
+                }
+
+                const key = id.startsWith('n') ? id : (id === 'temp' ? 'T' : 'V');
+                config[key] = value;
+                document.getElementById(`${id}-value`).textContent = value;
+
+                if (id.startsWith('n')) {
+                    resetParticles();
+                }
+                update();
+            });
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        resetParticles(); // to update colors
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        setup();
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+    };
+    </script>
+</body>
+</html>

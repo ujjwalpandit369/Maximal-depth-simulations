@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Langevin Equation for Brownian Motion</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #8B4513; /* Brown for the particle */
+            --drag-color: #007bff; /* Blue for drag */
+            --random-color: #dc3545; /* Red for random force */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #1c1c1c;
+            --text-color: #e0e0e0;
+            --primary-color: #cd853f; /* Lighter brown */
+            --drag-color: #58a6ff;
+            --random-color: #ff7b72;
+            --border-color: #444;
+            --canvas-bg: #000;
+            --code-bg: #333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 1; min-width: 300px; }
+        .canvas-container { flex: 2; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #simulationCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+        .equation { text-align: center; font-size: 1.5em; font-family: 'Georgia', serif; padding: 20px; background: var(--code-bg); border-radius: 5px; margin: 1em 0; }
+        .equation .drag-f { color: var(--drag-color); }
+        .equation .random-f { color: var(--random-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Langevin Equation for Brownian Motion</h1>
+            <p class="subtitle">A direct model of the forces causing the random walk.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 140 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Instead of simulating billions of tiny water molecules bumping into a large particle, the Langevin equation provides a powerful shortcut. It describes the motion of a particle in a fluid by modeling the net effect of all those collisions as just two forces: a smooth, predictable drag force that tries to slow the particle down, and a noisy, rapidly fluctuating random force that kicks it around. This simulation visualizes these two competing forces as arrows attached to the particle, showing how their interplay gives rise to the characteristic jerky path of Brownian motion.</p>
+        </section>
+
+        <div class="equation">
+            m<span style="font-style:normal;">a</span> = <span class="drag-f">-γv</span> + <span class="random-f">η(t)</span>
+        </div>
+
+        <section id="guide">
+            <h2>Beginner's Guide — The Two Forces of the Fluid</h2>
+
+            <h3>Step 1: A New Perspective on Brownian Motion</h3>
+            <p>In our first Brownian motion simulation, we saw a large particle being jostled by many smaller ones. While intuitive, this is computationally intensive. In 1908, physicist Paul Langevin developed a more direct and powerful way to think about the problem. He realized that the net effect of the fluid on the large particle could be split into two distinct parts.</p>
+
+            <h3>Step 2: The Predictable Part - Drag</h3>
+            <p>The first force is a <strong>systematic drag force</strong>. This is just the friction or viscosity of the fluid. It's a well-behaved, predictable force that always acts to oppose the particle's motion. The faster the particle tries to move, the stronger the drag force that tries to slow it down. In the simulation, this is shown as a <span style="color:var(--drag-color); font-weight:bold;">blue arrow</span> that always points in the opposite direction of the particle's velocity.</p>
+
+            <h3>Step 3: The Unpredictable Part - Random Kicks</h3>
+            <p>The second force is a <strong>random, fluctuating force</strong>. This represents the net effect of the individual, unbalanced collisions from fluid molecules. At any instant, it kicks the particle in a random direction with a random strength. Its average effect over time is zero, but its moment-to-moment effect is what drives the random walk. The magnitude of these kicks is directly related to the temperature of the fluid—a hotter fluid delivers stronger kicks. In the simulation, this is shown as a <span style="color:var(--random-color); font-weight:bold;">red arrow</span> that changes erratically in both length and direction every frame.</p>
+
+            <h3>Step 4: Putting It Together</h3>
+            <p>The particle's motion is simply the result of these two forces combined, as described by Newton's second law (`F_total = ma`). The drag force tries to bring the particle to a stop, while the random force constantly kicks it in new directions. The resulting path is the complex, jerky dance of Brownian motion. By adjusting the sliders, you can change the balance between these two competing forces and see how the particle's path changes.</p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Controls</h3>
+                <div class="button-bar">
+                    <button id="play-pause-btn" aria-label="Play/Pause">Run</button>
+                    <button id="reset-btn" aria-label="Reset">Reset</button>
+                </div>
+                <hr>
+                <div class="control-group">
+                    <label for="temp-slider">Temperature (T): <span id="temp-value">1.0</span></label>
+                    <input type="range" id="temp-slider" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+                <div class="control-group">
+                    <label for="visc-slider">Fluid Viscosity (γ): <span id="visc-value">0.1</span></label>
+                    <input type="range" id="visc-slider" min="0.01" max="0.5" step="0.01" value="0.1">
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Particle Mass (m): <span id="mass-value">1.0</span></label>
+                    <input type="range" id="mass-slider" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — Fluctuation and Dissipation (Click to expand)</button>
+        <div class="content">
+            <h3>The Langevin Equation</h3>
+            <p>The model is a direct implementation of the Langevin equation, a type of stochastic differential equation. In one dimension, it is written as:</p>
+            <p><code>m * d²x/dt² = -γ * (dx/dt) + η(t)</code></p>
+            <p>Where:
+            <ul>
+                <li><code>m</code> is the particle's mass.</li>
+                <li><code>x</code> is the particle's position, so `dx/dt` is velocity and `d²x/dt²` is acceleration.</li>
+                <li><code>-γ * (dx/dt)</code> is the drag force, proportional to velocity. `γ` is the friction coefficient.</li>
+                <li><code>η(t)</code> is the random, fluctuating force, which has specific statistical properties.</li>
+            </ul>
+            </p>
+            <h3>The Fluctuation-Dissipation Theorem</h3>
+            <p>A deep result in statistical physics is that the two forces on the right-hand side are not independent. The friction that "dissipates" the particle's energy and the random force that makes it "fluctuate" both originate from the same underlying source: molecular collisions. The Fluctuation-Dissipation Theorem provides the exact mathematical link between them. It states that the magnitude (or variance) of the random force is directly proportional to both the temperature `T` and the drag coefficient `γ`.</p>
+            <p><code>⟨η(t)η(t')⟩ = 2γkT * δ(t-t')</code></p>
+            <p><strong>Plain English:</strong> This means that a more viscous fluid (higher `γ`) is also a "noisier" fluid—it exerts both a stronger drag force and a stronger random force. You can't have one without the other. This ensures that after a long time, the particle's average kinetic energy will come into thermal equilibrium with the fluid, with `⟨½mv²⟩ = ½kT`.</p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+    let isRunning = false;
+    let animationFrameId;
+
+    let config = {
+        T: 1.0,  // Temperature
+        gamma: 0.1, // Viscosity / drag coefficient
+        m: 1.0   // Particle mass
+    };
+
+    let particle;
+
+    function resetSimulation() {
+        isRunning = false;
+        document.getElementById('play-pause-btn').textContent = 'Run';
+
+        const { width, height } = canvas;
+        particle = {
+            x: width / 2, y: height / 2,
+            vx: 0, vy: 0,
+            r: 20,
+            path: [],
+            dragFx: 0, dragFy: 0,
+            randFx: 0, randFy: 0
+        };
+        particle.path.push({x: particle.x, y: particle.y});
+
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        gameLoop();
+    }
+
+    function simulationStep(dt) {
+        // Langevin Equation: ma = -gamma*v + F_rand
+
+        // 1. Calculate drag force
+        particle.dragFx = -config.gamma * particle.vx;
+        particle.dragFy = -config.gamma * particle.vy;
+
+        // 2. Generate random force
+        // The magnitude is proportional to sqrt(2 * gamma * k * T / dt)
+        // We'll simplify and absorb constants. Strength ~ sqrt(gamma * T)
+        const rand_strength = Math.sqrt(2 * config.gamma * config.T) * 10;
+        particle.randFx = (Math.random() - 0.5) * rand_strength;
+        particle.randFy = (Math.random() - 0.5) * rand_strength;
+
+        // 3. Calculate total force
+        const Fx_total = particle.dragFx + particle.randFx;
+        const Fy_total = particle.dragFy + particle.randFy;
+
+        // 4. Calculate acceleration (a = F/m)
+        const ax = Fx_total / config.m;
+        const ay = Fy_total / config.m;
+
+        // 5. Update velocity
+        particle.vx += ax * dt;
+        particle.vy += ay * dt;
+
+        // 6. Update position
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+
+        // Wall bounce
+        if (particle.x < particle.r || particle.x > canvas.width - particle.r) {
+            particle.vx *= -1;
+            particle.x = Math.max(particle.r, Math.min(canvas.width - particle.r, particle.x));
+        }
+        if (particle.y < particle.r || particle.y > canvas.height - particle.r) {
+            particle.vy *= -1;
+            particle.y = Math.max(particle.r, Math.min(canvas.height - particle.r, particle.y));
+        }
+
+        // Record path
+        if (particle.path.length > 500) particle.path.shift();
+        particle.path.push({x: particle.x, y: particle.y});
+    }
+
+    function gameLoop() {
+        if (isRunning) {
+            simulationStep(1/60 * 10); // Use a larger timestep for visual effect
+        }
+        draw();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function draw() {
+        if (!ctx) return;
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // Draw path
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color') + '80';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if(particle.path.length > 0) {
+            ctx.moveTo(particle.path[0].x, particle.path[0].y);
+            particle.path.forEach(p => ctx.lineTo(p.x, p.y));
+        }
+        ctx.stroke();
+
+        // Draw particle
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.r, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw force vectors
+        // Drag force
+        drawVector(particle.x, particle.y, particle.dragFx, particle.dragFy, getComputedStyle(document.documentElement).getPropertyValue('--drag-color'));
+        // Random force
+        drawVector(particle.x, particle.y, particle.randFx, particle.randFy, getComputedStyle(document.documentElement).getPropertyValue('--random-color'));
+    }
+
+    function drawVector(x, y, fx, fy, color) {
+        const scale = 5;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + fx * scale, y + fy * scale);
+        ctx.stroke();
+
+        // Arrowhead
+        const angle = Math.atan2(fy, fx);
+        ctx.save();
+        ctx.translate(x + fx * scale, y + fy * scale);
+        ctx.rotate(angle);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-10, 5);
+        ctx.lineTo(-10, -5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            isRunning = !isRunning;
+            document.getElementById('play-pause-btn').textContent = isRunning ? 'Pause' : 'Run';
+        });
+        document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+
+        document.getElementById('temp-slider').addEventListener('input', e => {
+            config.T = parseFloat(e.target.value);
+            document.getElementById('temp-value').textContent = config.T.toFixed(1);
+        });
+        document.getElementById('visc-slider').addEventListener('input', e => {
+            config.gamma = parseFloat(e.target.value);
+            document.getElementById('visc-value').textContent = config.gamma.toFixed(2);
+        });
+        document.getElementById('mass-slider').addEventListener('input', e => {
+            config.m = parseFloat(e.target.value);
+            document.getElementById('mass-value').textContent = config.m.toFixed(1);
+            if (particle) particle.mass = config.m;
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        draw();
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        canvas = document.getElementById('simulationCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+
+        resetSimulation();
+    };
+    </script>
+</body>
+</html>

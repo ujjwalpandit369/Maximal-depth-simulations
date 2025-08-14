@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Law of Thermodynamics</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #28a745; /* Green for energy/positive change */
+            --heat-color: #dc3545; /* Red for heat */
+            --work-color: #007bff; /* Blue for work */
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #20c997;
+            --heat-color: #ff7b72;
+            --work-color: #58a6ff;
+            --border-color: #495057;
+            --canvas-bg: #343a40;
+            --code-bg: #495057;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; }
+        h1, h2, h3 { color: var(--primary-color); }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .subtitle { text-align: center; font-style: italic; color: var(--text-color); margin-top: -15px; }
+        .meta-bar { text-align: center; font-size: 0.9em; color: var(--secondary-color); margin-bottom: 20px; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+        .controls { flex: 2; min-width: 300px; }
+        .canvas-container { flex: 3; min-width: 400px; display: flex; flex-direction: column; align-items: center; }
+        #mainCanvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; aspect-ratio: 1 / 1; }
+        .button-bar { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .button-bar button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; }
+        th { background-color: var(--code-bg); }
+        code { background-color: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        .collapsible { background-color: var(--code-bg); cursor: pointer; padding: 10px; width: 100%; border: none; text-align: left; outline: none; font-size: 1.1em; margin-top: 10px; }
+        .content { padding: 0 18px; display: none; overflow: hidden; background-color: var(--bg-color); border: 1px solid var(--border-color); border-top: none; }
+        .equation { text-align: center; font-size: 2em; font-family: 'Georgia', serif; padding: 20px; background: var(--code-bg); border-radius: 5px; margin: 1em 0; }
+        .equation .delta-u { color: var(--primary-color); }
+        .equation .heat-q { color: var(--heat-color); }
+        .equation .work-w { color: var(--work-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The First Law of Thermodynamics</h1>
+            <p class="subtitle">An interactive energy balance for a gas in a cylinder.</p>
+            <p class="meta-bar">
+                Estimated Runtime: Interactive | Recommended Device: Desktop | Approx. HTML Size: 130 KB
+                <button onclick="toggleDarkMode()" style="float: right;">Toggle Dark Mode</button>
+            </p>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>The First Law of Thermodynamics is one of the most fundamental rules in all of science. It's a statement of the conservation of energy: energy cannot be created or destroyed, only changed in form. This interactive dashboard demonstrates the law for a simple system—a gas trapped in a cylinder with a piston. You can add or remove heat (`Q`) and do work on the gas or let the gas do work (`W`). The simulation shows how these two actions combine to change the gas's internal energy (`ΔU`), which you can see as a change in its temperature.</p>
+        </section>
+
+        <div class="equation">
+            <span class="delta-u">ΔU</span> = <span class="heat-q">Q</span> - <span class="work-w">W</span>
+        </div>
+
+        <section id="guide">
+            <h2>Beginner's Guide — Energy Bookkeeping</h2>
+
+            <h3>The System: A Gas in a Cylinder</h3>
+            <p>Our system is a gas made of many tiny particles, all whizzing around inside a cylinder. The cylinder is sealed with a movable piston. We can interact with this gas in two ways: by adding/removing heat, and by moving the piston.</p>
+
+            <h3>The Terms of the Equation</h3>
+            <ul>
+                <li><strong style="color:var(--primary-color)">Internal Energy (U):</strong> This is the total energy of all the gas particles. Think of it as their "thermal energy." A higher internal energy means the particles are moving faster, which we measure as a higher temperature. `ΔU` is the *change* in this energy.</li>
+                <li><strong style="color:var(--heat-color)">Heat (Q):</strong> This is energy transferred due to a temperature difference. `Q` is <strong>positive</strong> if we add heat to the gas (e.g., with a flame). `Q` is <strong>negative</strong> if we remove heat (e.g., with an ice pack).</li>
+                <li><strong style="color:var(--work-color)">Work (W):</strong> This is energy transferred by mechanical means. `W` is <strong>positive</strong> if the gas does work on its surroundings (it expands and pushes the piston up). `W` is <strong>negative</strong> if the surroundings do work on the gas (an external force pushes the piston down, compressing the gas).</li>
+            </ul>
+
+            <h3>The Analogy: Your Bank Account</h3>
+            <p>The First Law is just like balancing a checkbook.
+            <ul>
+                <li><strong>Internal Energy `U`</strong> is your current bank account balance. `ΔU` is the change in your balance.</li>
+                <li><strong>Heat `Q`</strong> is a deposit, like your paycheck. It's money you add to your account.</li>
+                <li><strong>Work `W`</strong> is a withdrawal, like paying rent. It's money you spend from your account.</li>
+            </ul>
+            The change in your balance is simply your deposits minus your withdrawals: <strong>`ΔBalance = Paycheck - Rent`</strong>.
+            <br>
+            The First Law is exactly the same: <strong>`ΔU = Q - W`</strong>. It's a fundamental accounting principle for energy.
+            </p>
+        </section>
+
+        <section class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="mainCanvas"></canvas>
+            </div>
+            <div class="controls">
+                <h3>Energy Balance Dashboard</h3>
+                <div class="control-group">
+                    <label for="heat-slider">Heat Added (Q): <span id="heat-value">0</span> J</label>
+                    <input type="range" id="heat-slider" min="-100" max="100" step="1" value="0">
+                </div>
+                <div class="control-group">
+                    <label for="work-slider">Work Done by Gas (W): <span id="work-value">0</span> J</label>
+                    <input type="range" id="work-slider" min="-100" max="100" step="1" value="0">
+                </div>
+                <div class="button-bar">
+                    <button id="reset-btn">Reset</button>
+                </div>
+            </div>
+        </section>
+
+        <button class="collapsible">Core Theory — Special Processes (Click to expand)</button>
+        <div class="content">
+            <p>The First Law can be simplified for several important thermodynamic processes:</p>
+            <dl>
+                <dt><strong>Isochoric (Constant Volume) Process</strong></dt>
+                <dd>If the volume of the container does not change, the piston doesn't move, and the gas does no work. So, `W = 0`. The First Law becomes:
+                <br><code>ΔU = Q</code>
+                <br>In this case, any heat you add goes directly into increasing the internal energy and temperature of the gas.</dd>
+
+                <dt><strong>Isothermal (Constant Temperature) Process</strong></dt>
+                <dd>If the temperature of an ideal gas is kept constant, its internal energy does not change. So, `ΔU = 0`. The First Law becomes:
+                <br><code>Q = W</code>
+                <br>This means any heat you add to the gas must be immediately used by the gas to do an equivalent amount of work (by expanding) to prevent its temperature from rising.</dd>
+
+                <dt><strong>Adiabatic (No Heat Exchange) Process</strong></dt>
+                <dd>If the process happens in a perfectly insulated container or so quickly that there is no time for heat to be transferred, then `Q = 0`. The First Law becomes:
+                <br><code>ΔU = -W</code>
+                <br>This means if you compress a gas adiabatically (`W` is negative), its internal energy must increase (`ΔU` is positive), and it gets hotter. This is why a bicycle pump gets hot when you use it.</dd>
+            </dl>
+        </div>
+
+        <button class="collapsible">Advanced Notes (Click to expand)</button>
+        <div class="content">
+            <h3>State Functions vs. Path Functions</h3>
+            <p>A crucial concept in thermodynamics is the difference between state functions and path functions.
+                <ul>
+                    <li>A <strong>State Function</strong> is a property of a system that depends only on its current state (its temperature, pressure, volume), not on how it got there. <strong>Internal Energy (U)</strong> is a state function. If you start at 20°C and end at 50°C, the change in internal energy `ΔU` is always the same, no matter how you heated or compressed the gas to get there.</li>
+                    <li>A <strong>Path Function</strong> is a quantity that *does* depend on the specific process or "path" taken between two states. <strong>Heat (Q)</strong> and <strong>Work (W)</strong> are path functions. You can get from 20°C to 50°C by adding a lot of heat with a lot of work, or a little heat with a little work. The final `ΔU` is the same, but the `Q` and `W` values depend on the path.</li>
+                </ul>
+            The analogy is climbing a mountain. Your final altitude (a state function) is fixed. But the distance you walked (a path function) depends on whether you took the steep, direct path or the long, winding path.
+            </p>
+        </div>
+    </div>
+
+    <script>
+    // --- Simulation Core ---
+    let canvas, ctx;
+
+    let config = { Q: 0, W: 0, deltaU: 0 };
+    let particles = [];
+    const numParticles = 50;
+
+    function setup() {
+        canvas = document.getElementById('mainCanvas');
+        ctx = canvas.getContext('2d');
+
+        setupControls();
+        createParticles();
+        draw();
+    }
+
+    function createParticles() {
+        particles = [];
+        for (let i = 0; i < numParticles; i++) {
+            particles.push({
+                x: Math.random(), y: Math.random(),
+                vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
+            });
+        }
+    }
+
+    function update() {
+        config.deltaU = config.Q - config.W;
+
+        // Update particle speeds based on internal energy
+        const speedMultiplier = 1 + config.deltaU / 200;
+        particles.forEach(p => {
+            const currentSpeed = Math.sqrt(p.vx**2 + p.vy**2);
+            if (currentSpeed > 0) {
+                p.vx = (p.vx / currentSpeed) * speedMultiplier;
+                p.vy = (p.vy / currentSpeed) * speedMultiplier;
+            }
+            p.x += p.vx * 0.01;
+            p.y += p.vy * 0.01;
+
+            // Bounce logic is handled in draw() for simplicity
+        });
+    }
+
+    function draw() {
+        if (!ctx) return;
+        update();
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        // --- Draw Dashboard ---
+        const barW = 50;
+        const barMaxH = height * 0.4;
+        const baseY = height * 0.5;
+
+        // Q Bar
+        const qH = (config.Q / 100) * barMaxH;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--heat-color');
+        ctx.fillRect(width * 0.2 - barW/2, baseY - Math.max(0, qH), barW, Math.abs(qH));
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-color');
+        ctx.textAlign = 'center';
+        ctx.font = '20px Arial';
+        ctx.fillText("Q", width*0.2, baseY + 30);
+
+        // W Bar
+        const wH = (config.W / 100) * barMaxH;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--work-color');
+        ctx.fillRect(width * 0.8 - barW/2, baseY - Math.max(0, wH), barW, Math.abs(wH));
+        ctx.fillText("W", width*0.8, baseY + 30);
+
+        // U Bar
+        const uH = (config.deltaU / 100) * barMaxH;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--primary-color');
+        ctx.fillRect(width * 0.5 - barW/2, baseY - Math.max(0, uH), barW, Math.abs(uH));
+        ctx.fillText("ΔU", width*0.5, baseY + 30);
+
+        // --- Draw Cylinder ---
+        const cylBottom = height - 50;
+        const cylWidth = 150;
+        const pistonHeight = 20;
+        const pistonY = cylBottom - 100 - (config.deltaU / 2) - (config.W / 2);
+
+        // Gas particles
+        const tempColor = 50 + config.deltaU / 2; // 0 to 100
+        ctx.fillStyle = `hsl(0, 80%, ${tempColor}%)`;
+        particles.forEach(p => {
+            const pX = width/2 - cylWidth/2 + 10 + p.x * (cylWidth - 20);
+            const pY = pistonY + 10 + p.y * (cylBottom - pistonY - 20);
+            if (p.x < 0 || p.x > 1) p.vx *= -1;
+            if (p.y < 0 || p.y > 1) p.vy *= -1;
+            ctx.beginPath();
+            ctx.arc(pX, pY, 4, 0, 2*Math.PI);
+            ctx.fill();
+        });
+
+        // Cylinder
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(width/2 - cylWidth/2, height*0.6);
+        ctx.lineTo(width/2 - cylWidth/2, cylBottom);
+        ctx.lineTo(width/2 + cylWidth/2, cylBottom);
+        ctx.lineTo(width/2 + cylWidth/2, height*0.6);
+        ctx.stroke();
+
+        // Piston
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--secondary-color');
+        ctx.fillRect(width/2 - cylWidth/2 - 10, pistonY - pistonHeight, cylWidth + 20, pistonHeight);
+
+        // Heat/Work arrows
+        ctx.font = '30px Arial';
+        if (config.Q > 0) {
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--heat-color');
+            ctx.fillText("🔥", width/2 - cylWidth/2 - 30, cylBottom - 50);
+        } else if (config.Q < 0) {
+            ctx.fillStyle = '#00f';
+            ctx.fillText("❄️", width/2 - cylWidth/2 - 30, cylBottom - 50);
+        }
+
+        if (config.W !== 0) {
+             ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--work-color');
+             const arrow = config.W > 0 ? '↑' : '↓';
+             ctx.fillText(arrow, width/2, pistonY - pistonHeight - 10);
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    // --- UI and Controls ---
+    function setupControls() {
+        const heatSlider = document.getElementById('heat-slider');
+        const workSlider = document.getElementById('work-slider');
+
+        heatSlider.addEventListener('input', e => {
+            config.Q = parseInt(e.target.value, 10);
+            document.getElementById('heat-value').textContent = `${config.Q} J`;
+        });
+        workSlider.addEventListener('input', e => {
+            config.W = parseInt(e.target.value, 10);
+            document.getElementById('work-value').textContent = `${config.W} J`;
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            heatSlider.value = 0;
+            workSlider.value = 0;
+            config.Q = 0;
+            config.W = 0;
+            document.getElementById('heat-value').textContent = `0 J`;
+            document.getElementById('work-value').textContent = `0 J`;
+        });
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+    }
+
+    // --- Initialisation ---
+    window.onload = () => {
+        setup();
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            });
+        });
+    };
+    </script>
+</body>
+</html>
