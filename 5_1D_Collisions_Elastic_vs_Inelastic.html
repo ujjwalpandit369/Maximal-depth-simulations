@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1D Collisions: Elastic vs. Inelastic</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #8e44ad;
+            --accent-color-dark: #732d91;
+            --code-bg: #e2e8f0;
+            --table-border: #e2e8f0;
+            --obj1-color: #c0392b;
+            --obj2-color: #2980b9;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #9b59b6;
+            --accent-color-dark: #8e44ad;
+            --code-bg: #2d3748;
+            --table-border: #4a5568;
+            --obj1-color: #e74c3c;
+            --obj2-color: #5dade2;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 3; min-width: 400px; }
+        #controls-area { flex: 2; min-width: 320px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 5/1;
+        }
+
+        .data-tables { display: flex; gap: 1rem; justify-content: space-between; font-size: 0.9rem; }
+        .data-tables table { margin: 0; }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+        th, td { border: 1px solid var(--table-border); padding: 8px; text-align: right; }
+        th { background-color: var(--code-bg); text-align: center; }
+        td:first-child { font-weight: bold; text-align: left; }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--accent-color);
+            border-radius: 5px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container, .data-tables { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>1D Collisions: Elastic vs. Inelastic</h1>
+            <p class="subtitle">Exploring conservation of momentum and kinetic energy in one-dimensional collisions.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 230 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>When two objects collide, what happens? The outcome depends on two fundamental principles: conservation of momentum and conservation of energy. This interactive simulation lets you crash two objects together on a one-dimensional track to see how these principles work. You can control the mass and initial velocity of each object, as well as the "elasticity" of the collision—from a perfectly "bouncy" elastic collision to a "sticky" inelastic one. By observing the objects' motion and the detailed data tables, you will discover that total momentum is *always* conserved, but kinetic energy is only conserved in perfectly elastic collisions. This is a key concept for understanding everything from billiard ball physics to car crashes.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Physics of Crashing</h2>
+
+            <h3>Step 1: Two Conservation Laws</h3>
+            <p>To understand collisions, we need two key concepts:
+            <ul>
+                <li><strong>Momentum (p):</strong> A measure of an object's "mass in motion," calculated as <code>p = mass &times; velocity</code>. It is a vector, meaning it has a direction. In a closed system, the **total momentum is always conserved**—the total amount before the collision is the same as the total amount after.</li>
+                <li><strong>Kinetic Energy (KE):</strong> The energy of motion, calculated as <code>KE = &frac12; &times; mass &times; velocity²</code>. Unlike momentum, kinetic energy is **not always conserved**. In most real-world collisions, some of it is converted into other forms, like heat and sound.</li>
+            </ul>
+            </p>
+
+            <h3>Step 2: Elastic vs. Inelastic Collisions</h3>
+            <p>The "Coefficient of Restitution" (e) slider lets you control the "bounciness" of the collision.
+            <ul>
+                <li><strong>Perfectly Elastic (e=1):</strong> A perfectly bouncy collision, like two ideal billiard balls hitting. In this special case, both momentum and kinetic energy are conserved.</li>
+                <li><strong>Perfectly Inelastic (e=0):</strong> A perfectly "sticky" collision. The two objects stick together after they collide and move as a single mass. In this case, momentum is still conserved, but the maximum possible amount of kinetic energy is lost.</li>
+                <li><strong>Inelastic (0 < e < 1):</strong> This represents all real-world collisions. The objects bounce off each other, but not perfectly. Some kinetic energy is lost.</li>
+            </ul>
+            </p>
+
+            <h3>Step 3: Running Experiments</h3>
+            <p>Use the sliders to set up different scenarios and observe the results in the data tables.
+            <ul>
+                <li><strong>Experiment 1 (Elastic):</strong> Set <code>e=1</code>. Make both masses equal and give Object 2 a velocity of 0. Fire Object 1 at it. You'll see they perfectly trade velocities! Check the tables to confirm that both total momentum and total KE are conserved.</li>
+                <li><strong>Experiment 2 (Inelastic):</strong> Set <code>e=0</code>. Use the same masses and velocities. Now when they collide, they stick together. Look at the tables: total momentum is the same before and after, but the total kinetic energy has decreased significantly.</li>
+                <li><strong>Experiment 3 (The "Big Guy"):</strong> Make Object 1 very heavy and Object 2 very light. Fire the heavy object at the light, stationary one. The heavy object barely slows down, while the light one shoots off at high speed.</li>
+            </ul>
+            </p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="800" height="160" aria-label="1D Collision Animation"></canvas>
+                <div class="data-tables">
+                    <table id="before-table">
+                        <caption>Before Collision</caption>
+                        <thead><tr><th></th><th>m (kg)</th><th>v (m/s)</th><th>p (kg·m/s)</th><th>KE (J)</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <table id="after-table">
+                         <caption>After Collision</caption>
+                        <thead><tr><th></th><th>m (kg)</th><th>v (m/s)</th><th>p (kg·m/s)</th><th>KE (J)</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="run-btn">Start / Run</button>
+                    <button id="reset-btn" style="background-color:#7f8c8d">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="m1-slider">Mass 1: <span id="m1-label">5</span> kg</label>
+                    <input type="range" id="m1-slider" min="1" max="20" value="5" step="1">
+                    <label for="v1-slider">Velocity 1: <span id="v1-label">10</span> m/s</label>
+                    <input type="range" id="v1-slider" min="-50" max="50" value="10" step="1">
+                </div>
+                 <div class="control-group">
+                    <label for="m2-slider">Mass 2: <span id="m2-label">5</span> kg</label>
+                    <input type="range" id="m2-slider" min="1" max="20" value="5" step="1">
+                    <label for="v2-slider">Velocity 2: <span id="v2-label">-10</span> m/s</label>
+                    <input type="range" id="v2-slider" min="-50" max="50" value="-10" step="1">
+                </div>
+                 <div class="control-group">
+                    <label for="e-slider">Elasticity (e): <span id="e-label">1.0</span></label>
+                    <input type="range" id="e-slider" min="0" max="1" value="1" step="0.01">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Solving the Collision</h2>
+            <p>To find the final velocities (v₁' and v₂'), we must solve a system of two equations with two unknowns.</p>
+
+            <h3>1. Conservation of Momentum</h3>
+            <p>The total momentum before the collision must equal the total momentum after.</p>
+            <p><code>m₁v₁ + m₂v₂ = m₁v₁' + m₂v₂'</code></p>
+
+            <h3>2. Coefficient of Restitution (e)</h3>
+            <p>This equation relates the relative speed of separation to the relative speed of approach.</p>
+            <p><code>e = (v₂' - v₁') / (v₁ - v₂)</code></p>
+            <p>Rearranging this gives a second equation: <code>e(v₁ - v₂) = v₂' - v₁'</code></p>
+
+            <h3>3. The Solution</h3>
+            <p>By solving these two equations simultaneously for v₁' and v₂', we get the final velocities, which the simulation uses to calculate the outcome of the collision instantly:</p>
+            <p><code>v₁' = (m₁v₁ + m₂v₂ - m₂e(v₁ - v₂)) / (m₁ + m₂)</code></p>
+            <p><code>v₂' = (m₁v₁ + m₂v₂ + m₁e(v₁ - v₂)) / (m₁ + m₂)</code></p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const m1Slider = document.getElementById('m1-slider');
+        const v1Slider = document.getElementById('v1-slider');
+        const m2Slider = document.getElementById('m2-slider');
+        const v2Slider = document.getElementById('v2-slider');
+        const eSlider = document.getElementById('e-slider');
+        const m1Label = document.getElementById('m1-label');
+        const v1Label = document.getElementById('v1-label');
+        const m2Label = document.getElementById('m2-label');
+        const v2Label = document.getElementById('v2-label');
+        const eLabel = document.getElementById('e-label');
+        const runBtn = document.getElementById('run-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const beforeTable = document.getElementById('before-table').getElementsByTagName('tbody')[0];
+        const afterTable = document.getElementById('after-table').getElementsByTagName('tbody')[0];
+
+        // --- Simulation State ---
+        let simState = { isPlaying: false, collided: false };
+        let o1 = {}, o2 = {};
+
+        function setup() {
+            simState.isPlaying = false;
+            simState.collided = false;
+            runBtn.textContent = 'Start / Run';
+
+            o1 = {
+                m: parseFloat(m1Slider.value),
+                v: parseFloat(v1Slider.value),
+                x: canvas.width * 0.25,
+                radius: 10 + parseFloat(m1Slider.value)
+            };
+            o2 = {
+                m: parseFloat(m2Slider.value),
+                v: parseFloat(v2Slider.value),
+                x: canvas.width * 0.75,
+                radius: 10 + parseFloat(m2Slider.value)
+            };
+
+            updateLabels();
+            updateTable(beforeTable, o1, o2);
+            updateTable(afterTable, {}, {});
+        }
+
+        function updateLabels() {
+            m1Label.textContent = m1Slider.value;
+            v1Label.textContent = v1Slider.value;
+            m2Label.textContent = m2Slider.value;
+            v2Label.textContent = v2Slider.value;
+            eLabel.textContent = parseFloat(eSlider.value).toFixed(2);
+        }
+
+        function updateTable(table, p1, p2) {
+            table.innerHTML = '';
+            const addRow = (name, m, v) => {
+                const p = m*v;
+                const ke = 0.5*m*v*v;
+                const row = table.insertRow();
+                row.innerHTML = `<td>${name}</td><td>${m.toFixed(1)}</td><td>${v.toFixed(1)}</td><td>${p.toFixed(1)}</td><td>${ke.toFixed(1)}</td>`;
+            };
+
+            if(p1.m === undefined) { // Empty table
+                 addRow('Obj 1', 0, 0); addRow('Obj 2', 0, 0); addRow('Total', 0, 0);
+                 return;
+            }
+
+            addRow('Obj 1', p1.m, p1.v);
+            addRow('Obj 2', p2.m, p2.v);
+
+            const m_tot = p1.m + p2.m;
+            const p_tot = p1.m*p1.v + p2.m*p2.v;
+            const ke_tot = 0.5*p1.m*p1.v*p1.v + 0.5*p2.m*p2.v*p2.v;
+            const row = table.insertRow();
+            row.innerHTML = `<td>Total</td><td>${m_tot.toFixed(1)}</td><td>-</td><td>${p_tot.toFixed(1)}</td><td>${ke_tot.toFixed(1)}</td>`;
+        }
+
+        function update() {
+            if (!simState.isPlaying) return;
+            const dt = 0.1;
+            o1.x += o1.v * dt;
+            o2.x += o2.v * dt;
+
+            // Collision check
+            if (!simState.collided && Math.abs(o1.x - o2.x) < o1.radius + o2.radius) {
+                const e = parseFloat(eSlider.value);
+                const m1=o1.m, v1=o1.v, m2=o2.m, v2=o2.v;
+                const v1_f = (m1*v1 + m2*v2 - m2*e*(v1-v2)) / (m1+m2);
+                const v2_f = (m1*v1 + m2*v2 + m1*e*(v1-v2)) / (m1+m2);
+                o1.v = v1_f;
+                o2.v = v2_f;
+                simState.collided = true;
+                updateTable(afterTable, o1, o2);
+            }
+
+            // Boundary check
+            if(o1.x < o1.radius || o1.x > canvas.width - o1.radius) o1.v *= -1;
+            if(o2.x < o2.radius || o2.x > canvas.width - o2.radius) o2.v *= -1;
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const y_pos = canvas.height / 2;
+
+            // Draw objects
+            ctx.fillStyle = 'var(--obj1-color)';
+            ctx.beginPath(); ctx.arc(o1.x, y_pos, o1.radius, 0, 2*Math.PI); ctx.fill();
+            ctx.fillStyle = 'var(--obj2-color)';
+            ctx.beginPath(); ctx.arc(o2.x, y_pos, o2.radius, 0, 2*Math.PI); ctx.fill();
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        runBtn.addEventListener('click', () => {
+            if(!simState.isPlaying) {
+                if(simState.collided) setup();
+                simState.isPlaying = true;
+                runBtn.textContent = 'Pause';
+            } else {
+                simState.isPlaying = false;
+                runBtn.textContent = 'Resume';
+            }
+        });
+        resetBtn.addEventListener('click', setup);
+
+        [m1Slider, v1Slider, m2Slider, v2Slider, eSlider].forEach(s => s.addEventListener('input', () => {
+            if(!simState.isPlaying) setup();
+            updateLabels();
+        }));
+
+        // --- Init ---
+        setup();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

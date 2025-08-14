@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Atwood Machine Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #e74c3c;
+            --accent-color-dark: #c0392b;
+            --code-bg: #e2e8f0;
+            --mass-color: #34495e;
+            --pulley-color: #7f8c8d;
+            --gravity-vec-color: #2980b9;
+            --tension-vec-color: #27ae60;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #e74c3c;
+            --accent-color-dark: #c0392b;
+            --code-bg: #2d3748;
+            --mass-color: #95a5a6;
+            --pulley-color: #bdc3c7;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; display: flex; justify-content: center; align-items: center; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+        }
+
+        #readout {
+            background-color: var(--control-bg);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 1rem;
+            font-family: "Courier New", monospace;
+        }
+
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: calc(50% - 5px);
+            padding: 10px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .control-group button.primary { background-color: var(--accent-color); color: white; }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Atwood Machine Simulator</h1>
+            <p class="subtitle">Exploring Newton's Second Law with two masses, a pulley, and a string.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop/Mobile</span>
+                <span><strong>Approx. HTML Size:</strong> 210 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>The Atwood machine is a classic physics experiment that provides a simple and clear demonstration of Newton's laws of motion. It consists of two masses connected by a string that passes over a pulley. If the masses are unequal, the heavier mass will pull the lighter one up, causing the whole system to accelerate. This simulation lets you be the experimenter. You can set the values for the two masses and see how the system behaves. Real-time displays show the resulting acceleration and the tension in the string, and you can even view the forces acting on each block, making it easy to see how the fundamental principle of F=ma governs the motion.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: A Simple Tug-of-War</h2>
+
+            <h3>Step 1: The Setup</h3>
+            <p>The machine consists of three simple parts, which we assume to be "ideal" to start:
+            <ul>
+                <li>Two blocks, <span style="color:var(--mass-color)">Mass 1 (m₁)</span> and <span style="color:var(--mass-color)">Mass 2 (m₂)</span>.</li>
+                <li>A string connecting them, which we assume is massless and doesn't stretch.</li>
+                <li>A pulley, which we assume is massless and frictionless.</li>
+            </ul>
+            Gravity pulls down on both masses. The string transmits this force, pulling up on each mass with a force called **Tension (T)**.</p>
+
+            <h3>Step 2: The Forces at Play</h3>
+            <p>Let's analyze the forces acting on each mass. You can see these by checking the "Show Free Body Diagrams" box.
+            <ul>
+                <li><strong>On m₁:</strong> Gravity pulls down with a force of <code>F<sub>g1</sub> = m₁g</code>. The string pulls up with a tension force <code>T</code>.</li>
+                <li><strong>On m₂:</strong> Gravity pulls down with a force of <code>F<sub>g2</sub> = m₂g</code>. The string pulls up with the same tension force <code>T</code>.</li>
+            </ul>
+            The **net force** on each mass is the difference between these two forces. This net force is what causes the mass to accelerate according to Newton's Second Law, F<sub>net</sub> = ma.</p>
+
+            <h3>Step 3: The Three Scenarios</h3>
+            <p>You can explore three different situations with the mass sliders:
+            <ol>
+                <li><strong>m₁ = m₂:</strong> If the masses are equal, the gravitational pulls are perfectly balanced. The net force on the system is zero. As you can see in the simulation, the acceleration is zero and the system does not move.</li>
+                <li><strong>m₂ > m₁:</strong> If m₂ is heavier, its gravitational pull is stronger. This creates a net force that accelerates the whole system, causing m₂ to move down and m₁ to move up. Notice that the acceleration is less than `g` (9.8 m/s²), because m₁ is "holding back" m₂.</li>
+                <li><strong>m₁ > m₂:</strong> The reverse happens. The system accelerates in the opposite direction.</li>
+            </ol>
+            </p>
+
+            <h3>Step 4: Understanding Tension</h3>
+            <p>A common mistake is to think the tension in the string is just the average of the two weights. But look at the Tension readout. If m₂ > m₁, the tension `T` is greater than the weight of m₁ (<code>m₁g</code>) but less than the weight of m₂ (<code>m₂g</code>). This has to be true! For m₁ to accelerate upwards, the upward force `T` must be stronger than the downward force `m₁g`. For m₂ to accelerate downwards, the downward force `m₂g` must be stronger than the upward force `T`.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="512" height="512" aria-label="Animation of an Atwood Machine"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <button id="run-pause-btn" class="primary">Run</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+                <div class="control-group">
+                    <label for="m1-slider">Mass 1 (m₁): <span id="m1-label">10</span> kg</label>
+                    <input type="range" id="m1-slider" min="1" max="50" value="10" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="m2-slider">Mass 2 (m₂): <span id="m2-label">12</span> kg</label>
+                    <input type="range" id="m2-slider" min="1" max="50" value="12" step="1">
+                </div>
+                <div id="readout">
+                    <h4>System Properties</h4>
+                    <p>Acceleration (a): <span id="accel-val">0.00</span> m/s²</p>
+                    <p>Tension (T): <span id="tension-val">0.0</span> N</p>
+                </div>
+                <div class="control-group" style="margin-top: 2rem;">
+                    <label><input type="checkbox" id="fbd-toggle"> Show Free Body Diagrams</label>
+                </div>
+                <div class="control-group">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <input type="checkbox" id="dark-mode-toggle">
+                </div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Newton's Second Law</h2>
+            <p>We can find the acceleration and tension by applying F=ma to each mass. Let's assume m₂ > m₁ and that "up" is the positive direction for m₁ and "down" is positive for m₂.</p>
+
+            <p>For Mass 1: The net force is Tension (up) minus gravity (down).<br>
+            <code>&Sigma;F₁ = T - m₁g = m₁a</code> &nbsp;&nbsp;&nbsp; (Equation 1)</p>
+
+            <p>For Mass 2: The net force is Gravity (down) minus Tension (up).<br>
+            <code>&Sigma;F₂ = m₂g - T = m₂a</code> &nbsp;&nbsp;&nbsp; (Equation 2)</p>
+
+            <p>We have a system of two equations with two unknowns (a and T). We can solve for <strong>acceleration (a)</strong> by adding the two equations together, which cancels out T:</p>
+            <p><code>(T - m₁g) + (m₂g - T) = m₁a + m₂a</code><br>
+            <code>g(m₂ - m₁) = a(m₁ + m₂)</code><br>
+            <code><strong>a = g * (m₂ - m₁) / (m₁ + m₂)</strong></code></p>
+
+            <p>We can then substitute this value of <code>a</code> back into Equation 1 to solve for <strong>Tension (T)</strong>:</p>
+            <p><code>T = m₁a + m₁g = m₁(a+g)</code><br>
+            <code><strong>T = 2g * (m₁m₂) / (m₁ + m₂)</strong></code></p>
+            <p>The simulation uses these exact formulas to calculate the values in the readout panel.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const m1Slider = document.getElementById('m1-slider');
+        const m1Label = document.getElementById('m1-label');
+        const m2Slider = document.getElementById('m2-slider');
+        const m2Label = document.getElementById('m2-label');
+        const runPauseBtn = document.getElementById('run-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const fbdToggle = document.getElementById('fbd-toggle');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const accelVal = document.getElementById('accel-val');
+        const tensionVal = document.getElementById('tension-val');
+
+        // --- Simulation State ---
+        let simParams = { m1: 10, m2: 12, g: 9.8 };
+        let state = { y: 0, v: 0, a: 0, T: 0, isPlaying: false };
+        const startY = -100;
+
+        function calculateSystem() {
+            const { m1, m2, g } = simParams;
+            if (m1 + m2 === 0) {
+                state.a = 0;
+                state.T = 0;
+            } else {
+                state.a = g * (m2 - m1) / (m1 + m2);
+                state.T = 2 * g * m1 * m2 / (m1 + m2);
+            }
+            accelVal.textContent = state.a.toFixed(2);
+            tensionVal.textContent = state.T.toFixed(1);
+        }
+
+        function reset() {
+            state.isPlaying = false;
+            runPauseBtn.textContent = 'Run';
+            simParams.m1 = parseFloat(m1Slider.value);
+            simParams.m2 = parseFloat(m2Slider.value);
+            m1Label.textContent = simParams.m1;
+            m2Label.textContent = simParams.m2;
+            state.y = 0;
+            state.v = 0;
+            calculateSystem();
+        }
+
+        function update() {
+            if (!state.isPlaying) return;
+            const dt = 0.1;
+            state.v += state.a * dt;
+            state.y += state.v * dt;
+
+            const maxY = canvas.height/2 - 100;
+            if (Math.abs(state.y) > maxY) {
+                state.y = Math.sign(state.y) * maxY;
+                state.v = 0;
+                state.isPlaying = false;
+                runPauseBtn.textContent = 'Run';
+            }
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width/2;
+            const pulleyY = 50, pulleyR = 30;
+            const massW = 50, massH = 50;
+
+            // Draw pulley and support
+            ctx.strokeStyle = isDark ? '#bdc3c7' : '#7f8c8d';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(centerX - 50, pulleyY - pulleyR);
+            ctx.lineTo(centerX, pulleyY);
+            ctx.lineTo(centerX + 50, pulleyY - pulleyR);
+            ctx.stroke();
+            ctx.fillStyle = isDark ? '#bdc3c7' : '#7f8c8d';
+            ctx.beginPath();
+            ctx.arc(centerX, pulleyY, pulleyR, 0, 2*Math.PI);
+            ctx.fill();
+
+            // Mass positions
+            const y1 = canvas.height/2 + startY - state.y;
+            const y2 = canvas.height/2 + startY + state.y;
+            const x1 = centerX - pulleyR - massW/2;
+            const x2 = centerX + pulleyR + massW/2;
+
+            // Draw strings
+            ctx.strokeStyle = isDark ? '#a0aec0' : '#2c3e50';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x1 + massW/2, y1);
+            ctx.lineTo(x1 + massW/2, pulleyY);
+            ctx.arc(centerX, pulleyY, pulleyR, -Math.PI, 0);
+            ctx.lineTo(x2 + massW/2, y2);
+            ctx.stroke();
+
+            // Draw masses
+            ctx.fillStyle = isDark ? '#95a5a6' : '#34495e';
+            ctx.fillRect(x1, y1, massW, massH);
+            ctx.fillRect(x2, y2, massW, massH);
+            ctx.fillStyle = isDark ? '#ecf0f1' : '#ffffff';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("m₁", x1 + massW/2, y1 + massH/1.5);
+            ctx.fillText("m₂", x2 + massW/2, y2 + massH/1.5);
+
+            // Draw FBDs
+            if(fbdToggle.checked) {
+                const scale = 2;
+                // m1
+                drawArrow(x1-20, y1+massH/2, 0, simParams.m1*simParams.g*scale, '#2980b9', 'm₁g');
+                drawArrow(x1-20, y1+massH/2, 0, -state.T*scale, '#27ae60', 'T');
+                // m2
+                drawArrow(x2+massW+20, y2+massH/2, 0, simParams.m2*simParams.g*scale, '#2980b9', 'm₂g');
+                drawArrow(x2+massW+20, y2+massH/2, 0, -state.T*scale, '#27ae60', 'T');
+            }
+        }
+
+        function drawArrow(x, y, dx, dy, color, label) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + dx, y + dy);
+            ctx.stroke();
+            // Arrowhead
+            ctx.save();
+            ctx.translate(x+dx, y+dy);
+            ctx.rotate(Math.atan2(dy, dx));
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0,0); ctx.lineTo(-10, 5); ctx.lineTo(-10, -5); ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = color;
+            ctx.fillText(label, x+dx+15, y+dy+5);
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        runPauseBtn.addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            runPauseBtn.textContent = state.isPlaying ? 'Pause' : 'Run';
+        });
+        resetBtn.addEventListener('click', reset);
+
+        m1Slider.addEventListener('input', () => {
+            simParams.m1 = parseFloat(m1Slider.value);
+            m1Label.textContent = simParams.m1;
+            calculateSystem();
+        });
+        m2Slider.addEventListener('input', () => {
+            simParams.m2 = parseFloat(m2Slider.value);
+            m2Label.textContent = simParams.m2;
+            calculateSystem();
+        });
+        darkModeToggle.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        });
+
+        // --- Init ---
+        reset();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>

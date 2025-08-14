@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inclined Plane Friction Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #1a202c;
+            --header-color: #2c3e50;
+            --control-bg: #ffffff;
+            --control-border: #dcdfe6;
+            --accent-color: #e67e22;
+            --accent-color-dark: #d35400;
+            --code-bg: #e2e8f0;
+            --block-color: #c0392b;
+            --plane-color: #7f8c8d;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .dark-mode {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --header-color: #a0aec0;
+            --control-bg: #2d3748;
+            --control-border: #4a5568;
+            --accent-color: #f39c12;
+            --accent-color-dark: #e67e22;
+            --code-bg: #2d3748;
+            --block-color: #e74c3c;
+            --plane-color: #95a5a6;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header, section, article { margin-bottom: 2.5rem; }
+        h1, h2, h3 { color: var(--header-color); font-weight: 600; line-height: 1.2; }
+        h1 { font-size: 2.5rem; text-align: center; margin-bottom: 0.5rem; }
+        h1 + .subtitle { text-align: center; font-style: italic; color: #666; margin-bottom: 1rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; margin-top: 2rem; }
+        h3 { font-size: 1.5rem; margin-top: 1.5rem; }
+
+        .simulation-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        #simulation-area { flex: 2; min-width: 350px; }
+        #controls-area { flex: 1; min-width: 280px; background-color: var(--control-bg); border: 1px solid var(--control-border); border-radius: 8px; padding: 15px; }
+
+        canvas {
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.5/1;
+            cursor: grab;
+        }
+        canvas:active { cursor: grabbing; }
+
+        #status-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+            margin-top: 1rem;
+            border-radius: 5px;
+            border: 1px solid var(--control-border);
+        }
+
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-weight: 500; margin-bottom: 5px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid var(--control-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .simulation-container { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Inclined Plane & Friction Laboratory</h1>
+            <p class="subtitle">Visualizing the forces of gravity, friction, and the normal force on a sliding block.</p>
+             <div class="metadata-bar" style="justify-content: center; gap: 1.5rem;">
+                <span><strong>Est. Runtime:</strong> Real-time</span>
+                <span><strong>Recommended Device:</strong> Desktop</span>
+                <span><strong>Approx. HTML Size:</strong> 230 KB</span>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>Why do some objects slide down a ramp while others stay put? The answer lies in a battle between gravity and friction. This interactive lab lets you explore these forces in action. You can change the angle of an inclined plane, adjust the mass of a block, and set the "grippiness" (friction) of the surfaces. The simulation shows you exactly what forces are acting on the block and whether it will slide, stick, or stay at rest. By toggling on the force vectors, you can get a clear picture of how gravity is split into different components and how friction always acts to oppose motion. This is a fundamental concept in physics and engineering, explaining everything from how screws work to why it's harder to push a heavy box than to keep it moving.</p>
+        </section>
+
+        <article id="beginners-guide">
+            <h2>Beginner's Guide: The Battle on the Slope</h2>
+
+            <h3>Step 1: Gravity on a Slope</h3>
+            <p>Gravity always pulls straight down. But when an object is on a slope, it's more useful to think of gravity's effect as being split into two parts, or "components":
+            <ol>
+                <li>A component that pulls the block *into* the plane (perpendicular). This is balanced by the **Normal Force**, which is the support force from the plane pushing back.</li>
+                <li>A component that pulls the block *down along* the plane (parallel). This is the force that tries to make the block slide.</li>
+            </ol>
+            As you increase the angle of the incline, you'll see the parallel component grow and the perpendicular component shrink.</p>
+
+            <h3>Step 2: Friction, the Force of "Grip"</h3>
+            <p>Friction is a force that opposes motion or the tendency of motion. There are two types of friction you can control in this lab:
+            <ul>
+                <li><strong>Static Friction (μ<sub>s</sub>):</strong> This is the "grippy" friction that prevents an object from starting to move. It's a stubborn force that will increase to match the force pulling the block down the slope, but only up to a certain maximum value. If the downhill pull of gravity exceeds this maximum, the block will break free and start to slide.</li>
+                <li><strong>Kinetic Friction (μ<sub>k</sub>):</strong> This is the friction that acts on an object *once it is already moving*. It's usually less than the maximum static friction, which is why it's often harder to get a heavy object moving than it is to keep it moving.</li>
+            </ul>
+            </p>
+
+            <h3>Step 3: The Tipping Point</h3>
+            <p>Try this experiment: set the static friction (μ<sub>s</sub>) to a medium value, like 0.6. Now, slowly increase the **Angle of Incline**. At low angles, the block stays put because the force of static friction is strong enough to counteract the downhill pull of gravity. But as you increase the angle, the downhill force grows. At a specific "critical angle," the downhill force will become just larger than the maximum possible static friction, and the block will start to slide!</p>
+
+            <h3>Step 4: Nudging It Over the Edge</h3>
+            <p>Set the angle so the block is almost, but not quite, sliding. The static friction is working hard but is still just strong enough to hold it. Now click the **"Apply a Nudge"** button. This gives the block a small initial push to overcome static friction. If the kinetic friction (μ<sub>k</sub>) is less than the static friction, you'll see that once the block starts moving, it will continue to accelerate down the ramp, as the kinetic friction is too weak to stop it.</p>
+        </article>
+
+        <section class="simulation-container">
+            <div id="simulation-area">
+                <canvas id="main-canvas" width="600" height="400" aria-label="Simulation of a block on an inclined plane"></canvas>
+            </div>
+            <div id="controls-area">
+                <div class="control-group">
+                    <label for="angle-slider">Angle of Incline (θ): <span id="angle-label">20</span>°</label>
+                    <input type="range" id="angle-slider" min="0" max="60" value="20" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="mass-slider">Block Mass (m): <span id="mass-label">50</span> kg</label>
+                    <input type="range" id="mass-slider" min="5" max="100" value="50" step="1">
+                </div>
+                <div class="control-group">
+                    <label for="static-fric-slider">Static Friction (μs): <span id="static-fric-label">0.60</span></label>
+                    <input type="range" id="static-fric-slider" min="0" max="1.5" value="0.6" step="0.01">
+                </div>
+                 <div class="control-group">
+                    <label for="kinetic-fric-slider">Kinetic Friction (μk): <span id="kinetic-fric-label">0.40</span></label>
+                    <input type="range" id="kinetic-fric-slider" min="0" max="1.5" value="0.4" step="0.01">
+                </div>
+                <div class="control-group">
+                    <button id="nudge-btn">Apply a Nudge</button>
+                    <button id="reset-btn" style="background-color:#7f8c8d">Reset</button>
+                </div>
+                 <div class="control-group">
+                    <label><input type="checkbox" id="vectors-toggle" checked> Show Force Vectors</label>
+                </div>
+                <div id="status-display">Status: <span id="status-label">Static</span></div>
+            </div>
+        </section>
+
+        <article id="core-theory">
+            <h2>Core Theory: Resolving Forces</h2>
+            <p>The motion of the block is determined by the net force acting parallel to the surface of the incline.</p>
+
+            <p>1. The force of gravity is <code>F<sub>g</sub> = mg</code>, acting straight down.</p>
+            <p>2. We resolve this into components parallel and perpendicular to the incline:</p>
+            <p><code>F<sub>g, parallel</sub> = mg sin(θ)</code> (pulling the block down the slope)</p>
+            <p><code>F<sub>g, perpendicular</sub> = mg cos(θ)</code> (pulling the block into the slope)</p>
+
+            <p>3. The Normal Force <code>N</code> from the plane pushes back and is equal and opposite to the perpendicular gravity component: <code>N = mg cos(θ)</code>.</p>
+
+            <p>4. The maximum possible static friction force is <code>f<sub>s,max</sub> = μ<sub>s</sub>N = μ<sub>s</sub>mg cos(θ)</code>.</p>
+
+            <p>5. The block remains static if the force pulling it down the slope is less than or equal to the maximum static friction force: <code>mg sin(θ) ≤ μ<sub>s</sub>mg cos(θ)</code>. Dividing by <code>mg cos(θ)</code> gives the condition for stability: <code><strong>tan(θ) ≤ μ<sub>s</sub></strong></code>.</p>
+
+            <p>6. If the block is sliding, the kinetic friction force is <code>f<sub>k</sub> = μ<sub>k</sub>N = μ<sub>k</sub>mg cos(θ)</code>. The net force is then <code>F<sub>net</sub> = mg sin(θ) - f<sub>k</sub></code>, and the acceleration is <code>a = F<sub>net</sub>/m = g(sin(θ) - μ<sub>k</sub>cos(θ))</code>.</p>
+        </article>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const angleSlider = document.getElementById('angle-slider');
+        const angleLabel = document.getElementById('angle-label');
+        const massSlider = document.getElementById('mass-slider');
+        const massLabel = document.getElementById('mass-label');
+        const staticFricSlider = document.getElementById('static-fric-slider');
+        const staticFricLabel = document.getElementById('static-fric-label');
+        const kineticFricSlider = document.getElementById('kinetic-fric-slider');
+        const kineticFricLabel = document.getElementById('kinetic-fric-label');
+        const nudgeBtn = document.getElementById('nudge-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const vectorsToggle = document.getElementById('vectors-toggle');
+        const statusLabel = document.getElementById('status-label');
+
+        // --- Simulation State ---
+        let simParams = { angle: 20, m: 50, mu_s: 0.6, mu_k: 0.4, g: 9.8 };
+        let block = { pos: 50, v: 0 }; // pos is distance from top
+
+        function reset() {
+            block.pos = 50;
+            block.v = 0;
+        }
+
+        function update() {
+            const theta = simParams.angle * Math.PI / 180;
+            const F_parallel = simParams.m * simParams.g * Math.sin(theta);
+            const F_normal = simParams.m * simParams.g * Math.cos(theta);
+            const F_s_max = simParams.mu_s * F_normal;
+            const F_k = simParams.mu_k * F_normal;
+
+            let F_net = 0;
+            let F_friction = 0;
+
+            if (Math.abs(block.v) < 0.01) { // Effectively static
+                if (F_parallel > F_s_max) {
+                    F_friction = -F_k;
+                    F_net = F_parallel + F_friction;
+                    statusLabel.textContent = "Sliding";
+                } else {
+                    F_friction = -F_parallel;
+                    F_net = 0;
+                    block.v = 0; // Ensure it stops
+                    statusLabel.textContent = "Static";
+                }
+            } else { // Kinetic
+                F_friction = -Math.sign(block.v) * F_k;
+                F_net = F_parallel + F_friction;
+                statusLabel.textContent = "Sliding";
+            }
+
+            const a = F_net / simParams.m;
+            block.v += a * 0.1;
+            block.pos += block.v * 0.1;
+
+            // Stop at bottom
+            const planeLength = canvas.width * 0.8 / Math.cos(theta);
+            if(block.pos > planeLength - 50) {
+                block.pos = planeLength - 50;
+                block.v = 0;
+            }
+            if(block.pos < 0) {
+                block.pos = 0;
+                block.v = 0;
+            }
+        }
+
+        function draw() {
+            const isDark = darkModeToggle.checked;
+            ctx.fillStyle = isDark ? '#1a202c' : '#f0f4f8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const theta = simParams.angle * Math.PI / 180;
+            const planeBase = {x: canvas.width*0.1, y: canvas.height*0.8};
+            const planeLength = canvas.width * 0.8;
+            const planeHeight = planeLength * Math.tan(theta);
+
+            // Draw plane
+            ctx.fillStyle = isDark ? '#95a5a6' : '#7f8c8d';
+            ctx.beginPath();
+            ctx.moveTo(planeBase.x, planeBase.y);
+            ctx.lineTo(planeBase.x + planeLength, planeBase.y);
+            ctx.lineTo(planeBase.x, planeBase.y - planeHeight);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw block
+            const blockW = 40, blockH = 20;
+            ctx.save();
+            ctx.translate(planeBase.x + block.pos * Math.cos(theta), planeBase.y - planeHeight - block.pos * Math.sin(theta) + (planeHeight));
+            ctx.rotate(-theta);
+            ctx.fillStyle = isDark ? '#e74c3c' : '#c0392b';
+            ctx.fillRect(-blockW/2, -blockH, blockW, blockH);
+            const blockCenter = {x: 0, y: -blockH/2};
+
+            // Draw vectors
+            if(vectorsToggle.checked) {
+                const F_g = simParams.m * simParams.g;
+                const F_n = F_g * Math.cos(theta);
+                const f_s_max = simParams.mu_s * F_n;
+                const f_k = simParams.mu_k * F_n;
+                const F_g_p = F_g * Math.sin(theta);
+
+                let f_actual = 0;
+                if(Math.abs(block.v) < 0.01) f_actual = Math.min(F_g_p, f_s_max);
+                else f_actual = f_k;
+
+                drawVector(blockCenter, 0, F_g, '#2980b9', 'mg');
+                drawVector(blockCenter, Math.PI/2, F_n, '#27ae60', 'N');
+                drawVector(blockCenter, Math.PI, f_actual, '#f39c12', 'f');
+                // Components
+                ctx.globalAlpha = 0.5;
+                drawVector(blockCenter, 0, F_n, '#bdc3c7', 'mg cosθ');
+                drawVector(blockCenter, -Math.PI/2, F_g_p, '#bdc3c7', 'mg sinθ');
+                ctx.globalAlpha = 1.0;
+            }
+            ctx.restore();
+        }
+
+        function drawVector(start, angle_offset, mag, color, label) {
+            const scale = 0.5;
+            ctx.save();
+            ctx.translate(start.x, start.y);
+            ctx.rotate(angle_offset);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0,0);
+            ctx.lineTo(0, mag*scale);
+            ctx.stroke();
+            // Arrowhead
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0, mag*scale);
+            ctx.lineTo(5, mag*scale - 10);
+            ctx.lineTo(-5, mag*scale - 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = color;
+            ctx.fillText(label, 10, mag*scale/2);
+            ctx.restore();
+        }
+
+        function mainLoop() {
+            update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- Controls ---
+        const updateParams = () => {
+             simParams.angle = parseFloat(angleSlider.value);
+             angleLabel.textContent = simParams.angle;
+             simParams.m = parseFloat(massSlider.value);
+             massLabel.textContent = simParams.m;
+             simParams.mu_s = parseFloat(staticFricSlider.value);
+             staticFricLabel.textContent = simParams.mu_s.toFixed(2);
+             simParams.mu_k = parseFloat(kineticFricSlider.value);
+             if(simParams.mu_k > simParams.mu_s) {
+                 simParams.mu_k = simParams.mu_s;
+                 kineticFricSlider.value = simParams.mu_k;
+             }
+             kineticFricLabel.textContent = simParams.mu_k.toFixed(2);
+        };
+        [angleSlider, massSlider, staticFricSlider, kineticFricSlider].forEach(s => s.addEventListener('input', updateParams));
+
+        nudgeBtn.addEventListener('click', () => { if(Math.abs(block.v) < 0.01) block.v = 5; });
+        resetBtn.addEventListener('click', reset);
+        darkModeToggle.addEventListener('change', () => document.body.classList.toggle('dark-mode'));
+
+        // --- Init ---
+        updateParams();
+        mainLoop();
+    });
+    </script>
+</body>
+</html>
