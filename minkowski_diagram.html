@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spacetime Diagram Explorer</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #34568B;
+            --secondary-color: #88B04B;
+            --border-color: #ddd;
+            --canvas-bg: #fff;
+            --lightcone-color: #ffc107;
+            --event-color: #d9534f;
+        }
+        .dark-mode {
+            --bg-color: #1e2a38;
+            --text-color: #f5f5f5;
+            --primary-color: #88B04B;
+            --secondary-color: #5B92E5;
+            --border-color: #4a5568;
+            --canvas-bg: #2d3748;
+            --lightcone-color: #ffc107;
+            --event-color: #e57373;
+        }
+        body {
+            font-family: 'Calibri', 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            align-items: center;
+        }
+        .control-group { display: flex; align-items: center; gap: 10px; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover, button.active { background-color: var(--secondary-color); }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+        .info-box {
+            padding: 1rem;
+            background: var(--code-bg);
+            border-radius: 5px;
+            border-left: 5px solid var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Spacetime Diagram (Minkowski Diagram) Explorer</h1>
+            <p>An interactive tool for exploring the geometry of spacetime.</p>
+            <div style="text-align:center; margin-top: 1rem;">
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                A spacetime diagram is a fundamental tool in special relativity. It's a graph that plots time on one axis and space on another, allowing us to visualize the motion of objects as paths, called "worldlines," through a unified "spacetime." This interactive explorer lets you create events (points in spacetime) and draw worldlines for objects. The most important feature is the "Boost Velocity" slider, which allows you to see how the diagram—and the very concepts of space and time—transform from the perspective of a moving observer. You'll see the axes of space and time pivot and "scissor" together, visually demonstrating the core effects of relativity like the relativity of simultaneity.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="600" height="600"></canvas>
+            <div class="controls-area">
+                <div class="control-group">
+                    <label for="boost-slider"><strong>Boost Velocity (v):</strong></label>
+                    <input type="range" id="boost-slider" min="-0.95" max="0.95" step="0.01" value="0">
+                    <span id="boost-value">0.00</span> c
+                </div>
+                <div class="control-group">
+                    <strong>Tool:</strong>
+                    <button id="event-tool-btn" class="active">Plot Event</button>
+                    <button id="worldline-tool-btn">Draw Worldline</button>
+                </div>
+                <button id="clear-btn">Clear All</button>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Spacetime Diagrams</h2>
+            <h3>1. Reading the Diagram</h3>
+            <p>The diagram plots time (as <code>ct</code>, where c is the speed of light) on the vertical axis and one dimension of space (<code>x</code>) on the horizontal axis.</p>
+            <ul>
+                <li>An <strong>Event</strong> is a single point on the diagram, representing something happening at a specific place and a specific time. Use the "Plot Event" tool to create them.</li>
+                <li>A <strong>Worldline</strong> is the path of an object through spacetime. A stationary object has a vertical worldline (its position x doesn't change as time t increases). A moving object has a tilted worldline. Use the "Draw Worldline" tool to create one.</li>
+                <li>The <strong>Light Cone</strong> (the yellow X) represents the path of light starting at the origin. Its lines are at 45 degrees because we plot <code>ct</code> vs <code>x</code>. Since nothing can travel faster than light, no worldline can ever have a slope flatter than the light cone.</li>
+            </ul>
+
+            <h3>2. The Boost Slider: Changing Your Point of View</h3>
+            <p>
+                The "Boost Velocity" slider is the most important control. It simulates changing your reference frame to one that is moving with velocity <code>v</code> relative to the original frame. As you move the slider, you'll see the new axes, <code>x'</code> and <code>ct'</code>, appear.
+            </p>
+            <p>
+                Notice how they "scissor" together. This is the geometric representation of the Lorentz transformations. From the perspective of the moving frame, the <code>x'</code> axis is their "space at a single moment in time," and the <code>ct'</code> axis is their "time at a single location."
+            </p>
+
+            <h3>3. Visualizing Relativity</h3>
+            <p>You can use this tool to see the concepts from the previous simulations in a new way:</p>
+            <ul>
+                <li><strong>Relativity of Simultaneity:</strong> Create two events with the same vertical (<code>ct</code>) coordinate. They are simultaneous in the stationary frame. Now, use the boost slider. You will see that the two events do *not* lie on a single line of constant <code>t'</code> (a line parallel to the new <code>x'</code> axis). They are no longer simultaneous.</li>
+                <li><strong>Time Dilation:</strong> Draw a vertical worldline for a stationary clock. Its "ticks" are regular intervals along the <code>ct</code> axis. In the boosted frame, that worldline is now tilted. To measure the time between the same two ticks in the new frame, you have to project them onto the new <code>ct'</code> axis. You will find that the time interval is longer.</li>
+                <li><strong>Length Contraction:</strong> This is harder to see, but it's related to how the worldlines of the front and back of a moving object are represented in the diagram.</li>
+            </ul>
+        </section>
+
+        <section id="theory">
+            <h2>The Geometry of Lorentz Transformations</h2>
+            <p>The "scissoring" of the axes is a direct result of the Lorentz transformation equations:</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                x' = &gamma;(x - &beta;ct)<br>
+                ct' = &gamma;(ct - &beta;x)
+            </p>
+            <p>Where <code>&beta; = v/c</code> and <code>&gamma; = 1/&radic;(1-&beta;<sup>2</sup>)</code>.
+            <ul>
+                <li>The <strong>x' axis</strong> is defined as the set of all points where <code>t' = 0</code>. Plugging this into the second equation gives <code>ct = &beta;x</code>. This is the equation of a line with slope <code>&beta;</code>, which is exactly the tilted x' axis you see.</li>
+                <li>The <strong>ct' axis</strong> is defined as the set of all points where <code>x' = 0</code>. Plugging this into the first equation gives <code>x = &beta;ct</code>, or <code>ct = x/&beta;</code>. This is the equation of a line with slope <code>1/&beta;</code>, which is the other tilted axis.</li>
+            </ul>
+            Notice that as <code>v &rarr; c</code>, <code>&beta; &rarr; 1</code>, and the two axes close in on the 45-degree light cone line, which is an invariant.
+            </p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const boostSlider = document.getElementById('boost-slider');
+        const boostValue = document.getElementById('boost-value');
+        const eventToolBtn = document.getElementById('event-tool-btn');
+        const worldlineToolBtn = document.getElementById('worldline-tool-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let v = 0;
+        let tool = 'event';
+        let events = [];
+        let worldlines = [];
+        let currentWorldline = null;
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#2d3748' : '#fff',
+            grid: document.body.classList.contains('dark-mode') ? '#4a5568' : '#ddd',
+            text: document.body.classList.contains('dark-mode') ? '#f5f5f5' : '#333',
+            lightcone: document.body.classList.contains('dark-mode') ? '#ffc107' : '#ffc10788',
+            axes: document.body.classList.contains('dark-mode') ? '#f5f5f5' : '#333',
+            prime_axes: document.body.classList.contains('dark-mode') ? '#88B04B' : '#5B92E5',
+            event: document.body.classList.contains('dark-mode') ? '#e57373' : '#d9534f',
+            worldline: document.body.classList.contains('dark-mode') ? '#5B92E5' : '#34568B',
+        });
+
+        // --- Coordinate Transforms ---
+        const toCanvas = (p) => ({ x: p.x + canvas.width/2, y: -p.y + canvas.height/2 });
+        const fromCanvas = (p) => ({ x: p.x - canvas.width/2, y: -(p.y - canvas.height/2) });
+
+        // --- Drawing ---
+        function draw() {
+            const colors = getColors();
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid and lightcone
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            for(let i=-300; i<=300; i+=50) {
+                const p1 = toCanvas({x:i, y:300}); const p2 = toCanvas({x:i, y:-300});
+                ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                const p3 = toCanvas({x:300, y:i}); const p4 = toCanvas({x:-300, y:i});
+                ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = colors.lightcone;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const lc1 = toCanvas({x:-300, y:-300}); const lc2 = toCanvas({x:300, y:300});
+            ctx.moveTo(lc1.x, lc1.y); ctx.lineTo(lc2.x, lc2.y);
+            const lc3 = toCanvas({x:-300, y:300}); const lc4 = toCanvas({x:300, y:-300});
+            ctx.moveTo(lc3.x, lc3.y); ctx.lineTo(lc4.x, lc4.y);
+            ctx.stroke();
+
+            // Draw stationary axes
+            ctx.strokeStyle = colors.axes;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const y1 = toCanvas({x:0, y:300}); const y2 = toCanvas({x:0, y:-300});
+            ctx.moveTo(y1.x, y1.y); ctx.lineTo(y2.x, y2.y);
+            const x1 = toCanvas({x:300, y:0}); const x2 = toCanvas({x:-300, y:0});
+            ctx.moveTo(x1.x, x1.y); ctx.lineTo(x2.x, x2.y);
+            ctx.stroke();
+            ctx.fillStyle = colors.text;
+            ctx.fillText("ct", y1.x + 5, y1.y + 15);
+            ctx.fillText("x", x1.x - 15, x1.y - 5);
+
+            // Draw boosted axes
+            if (v !== 0) {
+                ctx.strokeStyle = colors.prime_axes;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                // ct' axis: x = v*ct
+                const ct_p1 = toCanvas({x: v*300, y:300}); const ct_p2 = toCanvas({x: v*-300, y:-300});
+                ctx.moveTo(ct_p1.x, ct_p1.y); ctx.lineTo(ct_p2.x, ct_p2.y);
+                // x' axis: ct = v*x
+                const x_p1 = toCanvas({x:300, y:v*300}); const x_p2 = toCanvas({x:-300, y:v*-300});
+                ctx.moveTo(x_p1.x, x_p1.y); ctx.lineTo(x_p2.x, x_p2.y);
+                ctx.stroke();
+                ctx.fillStyle = colors.prime_axes;
+                ctx.fillText("ct'", ct_p1.x + 5, ct_p1.y + 15);
+                ctx.fillText("x'", x_p1.x - 15, x_p1.y - 5);
+            }
+
+            // Draw events and worldlines
+            events.forEach(e => {
+                ctx.fillStyle = colors.event;
+                const p = toCanvas(e);
+                ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 2*Math.PI); ctx.fill();
+            });
+            worldlines.forEach(line => {
+                ctx.strokeStyle = colors.worldline;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for(let i=0; i<line.length; i++) {
+                    const p = toCanvas(line[i]);
+                    if (i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            });
+        }
+
+        // --- Interaction ---
+        canvas.addEventListener('mousedown', e => {
+            if (tool === 'event') {
+                const rect = canvas.getBoundingClientRect();
+                const p = fromCanvas({x: e.clientX-rect.left, y: e.clientY-rect.top});
+                events.push(p);
+            } else if (tool === 'worldline') {
+                currentWorldline = [];
+                const rect = canvas.getBoundingClientRect();
+                const p = fromCanvas({x: e.clientX-rect.left, y: e.clientY-rect.top});
+                currentWorldline.push(p);
+            }
+            draw();
+        });
+        canvas.addEventListener('mousemove', e => {
+            if (tool === 'worldline' && currentWorldline) {
+                const rect = canvas.getBoundingClientRect();
+                const p = fromCanvas({x: e.clientX-rect.left, y: e.clientY-rect.top});
+                const lastP = currentWorldline[currentWorldline.length - 1];
+                // Enforce speed limit
+                const dx = Math.abs(p.x - lastP.x);
+                const dct = Math.abs(p.y - lastP.y);
+                if (dx > dct) {
+                    // faster than light, snap to light speed
+                    const signX = Math.sign(p.x - lastP.x);
+                    p.x = lastP.x + signX * dct;
+                }
+                currentWorldline.push(p);
+                draw();
+                // Draw current line temporarily
+                ctx.strokeStyle = getColors().worldline + "88";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                 for(let i=0; i<currentWorldline.length; i++) {
+                    const pt = toCanvas(currentWorldline[i]);
+                    if (i===0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+            }
+        });
+        window.addEventListener('mouseup', e => {
+            if (tool === 'worldline' && currentWorldline) {
+                if (currentWorldline.length > 1) {
+                    worldlines.push(currentWorldline);
+                }
+                currentWorldline = null;
+                draw();
+            }
+        });
+
+        boostSlider.addEventListener('input', e => {
+            v = parseFloat(e.target.value);
+            boostValue.textContent = v.toFixed(2);
+            draw();
+        });
+
+        eventToolBtn.addEventListener('click', () => {
+            tool = 'event';
+            eventToolBtn.classList.add('active');
+            worldlineToolBtn.classList.remove('active');
+        });
+        worldlineToolBtn.addEventListener('click', () => {
+            tool = 'worldline';
+            worldlineToolBtn.classList.add('active');
+            eventToolBtn.classList.remove('active');
+        });
+        clearBtn.addEventListener('click', () => {
+            events = [];
+            worldlines = [];
+            draw();
+        });
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+        });
+
+        draw();
+    });
+    </script>
+</body>
+</html>

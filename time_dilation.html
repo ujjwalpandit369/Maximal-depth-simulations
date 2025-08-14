@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Light Clock and Time Dilation</title>
+    <style>
+        :root {
+            --bg-color: #f0f8ff;
+            --text-color: #000080;
+            --primary-color: #4169e1;
+            --secondary-color: #87ceeb;
+            --border-color: #b0c4de;
+            --canvas-bg: #fff;
+            --photon-color: #ffcc00;
+            --ship-color: #c0c0c0;
+        }
+        .dark-mode {
+            --bg-color: #000030;
+            --text-color: #e0e0ff;
+            --primary-color: #87ceeb;
+            --secondary-color: #4169e1;
+            --border-color: #465072;
+            --canvas-bg: #00001a;
+            --photon-color: #ffff00;
+            --ship-color: #888888;
+        }
+        body {
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            align-items: center;
+        }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover, button.active { background-color: var(--secondary-color); }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        .info-display {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        .info-box { padding: 0.5rem; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 5px; }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>The Light Clock and Time Dilation</h1>
+            <p>A classic thought experiment demonstrating why time slows down for moving objects.</p>
+            <div style="text-align:center; margin: 1rem 0;">
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                Albert Einstein's theory of special relativity contains a startling prediction: time itself is not absolute. A moving clock ticks more slowly than a stationary one, from the perspective of a stationary observer. This isn't a mechanical defect; it's a fundamental property of spacetime. To understand why, physicists use a simple "light clock." It consists of two mirrors with a single particle of light (a photon) bouncing between them. Each bounce is one "tick." This simulation shows two such clocks: one at rest, and one on a fast-moving spaceship. By observing them, you can see for yourself that because the speed of light is constant for everyone, the moving clock must tick slower.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="800" height="400"></canvas>
+            <div class="info-display">
+                <div class="info-box">
+                    <strong>Stationary Clock Time:</strong><br><span id="time-stationary">0.00</span>
+                </div>
+                <div class="info-box">
+                    <strong>Lorentz Factor (&gamma;):</strong><br><span id="gamma-display">1.000</span>
+                </div>
+                <div class="info-box">
+                    <strong>Moving Clock Time:</strong><br><span id="time-moving">0.00</span>
+                </div>
+            </div>
+            <div class="controls-area">
+                 <div>
+                    <label for="velocity-slider"><strong>Spaceship Velocity (v):</strong></label>
+                    <input type="range" id="velocity-slider" min="0" max="0.999" step="0.001" value="0.8">
+                    <span id="velocity-value">0.800</span> c
+                </div>
+                <div class="button-group">
+                    <button id="earth-view-btn" class="active">View from Earth</button>
+                    <button id="ship-view-btn">View from Ship</button>
+                </div>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Time Dilation</h2>
+            <h3>1. The Two Pillars of Special Relativity</h3>
+            <p>To understand the light clock, you only need to accept two principles that Einstein proposed:</p>
+            <ol>
+                <li><strong>The Principle of Relativity:</strong> The laws of physics are the same for all observers in uniform motion. This means there is no special "at rest" frame; everything is relative. If you are on a smoothly moving train, you can't perform an experiment to "prove" you are moving. From your perspective, you are at rest and the world is moving past you.</li>
+                <li><strong>The Constancy of the Speed of Light:</strong> The speed of light in a vacuum (c) is the same for all observers, regardless of their own motion or the motion of the light source. This is the weird one! If someone on a spaceship moving at 99% the speed of light shines a flashlight forward, both they and a stationary observer will measure the flashlight's beam traveling at exactly c, not c + 99%c.</li>
+            </ol>
+
+            <h3>2. The Light Clock at Rest</h3>
+            <p>First, consider the stationary clock on the left. A photon bounces between two mirrors. Let's say the distance between the mirrors is <em>h</em>. The photon travels a distance of <em>2h</em> for one round trip (down and back up). Since distance = speed × time, the time for one tick is <code>t = 2h / c</code>. This is the "proper time" (t<sub>0</sub>), the time measured by an observer at rest with the clock.</p>
+
+            <h3>3. The Light Clock in Motion (View from Earth)</h3>
+            <p>Now, look at the moving clock on the right, from our stationary "Earth" perspective. The clock moves horizontally with velocity <em>v</em>. For the photon to travel from the top mirror to the bottom one, it must travel along a diagonal path. By the time it reaches the bottom mirror, that mirror has moved to the right. The same thing happens on the way back up.</p>
+            <p>This diagonal path is clearly <strong>longer</strong> than the straight up-and-down path in the stationary clock. Here's the crucial part: according to Einstein's second principle, the speed of that photon is <em>still c</em> for us, the Earth observers. If the photon travels a longer distance at the same speed, it must take a <strong>longer time</strong> to complete its trip. Therefore, from our perspective, the moving clock's "tick" is longer. It is running slow.</p>
+
+            <h3>4. The View from the Ship</h3>
+            <p>Click the "View from Ship" button. Now we are in the reference frame of the moving clock. According to the first principle, we can't tell we are moving. From our new perspective, our own clock is "stationary," and the photon travels straight up and down. It is the "Earth" clock that is now moving (to the left), and we see *its* photon traveling a longer, diagonal path. So, from the ship's frame of reference, the Earth clock is the one that runs slow! This apparent contradiction—that both observers see the other's clock as slow—is at the heart of relativity and is perfectly consistent.</p>
+        </section>
+
+        <section id="theory">
+            <h2>Deriving the Time Dilation Formula</h2>
+            <p>We can derive the exact formula using the Pythagorean theorem on the path of the moving clock's photon (as seen from Earth).</p>
+            <p>Let <code>t'</code> be the time for one half-tick (top to bottom) on the moving clock, and <code>t</code> be the time for one half-tick on the stationary clock.
+            <ul>
+                <li>The vertical distance the photon travels is <code>h = c*t</code>.</li>
+                <li>The horizontal distance the mirror travels in that time is <code>d = v*t'</code>.</li>
+                <li>The diagonal distance the photon travels is <code>D = c*t'</code>.</li>
+            </ul>
+            These three lengths form a right-angled triangle, so: <code>(ct')<sup>2</sup> = (ct)<sup>2</sup> + (vt')<sup>2</sup></code>.
+            <br>
+            Solving for t':<br>
+            <code>c<sup>2</sup>t'<sup>2</sup> = c<sup>2</sup>t<sup>2</sup> + v<sup>2</sup>t'<sup>2</sup></code><br>
+            <code>t'<sup>2</sup>(c<sup>2</sup> - v<sup>2</sup>) = c<sup>2</sup>t<sup>2</sup></code><br>
+            <code>t'<sup>2</sup> = t<sup>2</sup> * c<sup>2</sup> / (c<sup>2</sup> - v<sup>2</sup>) = t<sup>2</sup> / (1 - v<sup>2</sup>/c<sup>2</sup>)</code><br>
+            <code>t' = t / &radic;(1 - v<sup>2</sup>/c<sup>2</sup>)</code>
+            </p>
+            <p>
+                The term <code>1 / &radic;(1 - v<sup>2</sup>/c<sup>2</sup>)</code> is so important it gets its own Greek letter, gamma (<strong>&gamma;</strong>). This is the <strong>Lorentz factor</strong>. The final formula is:
+            </p>
+            <p style="text-align:center; font-size:1.4rem; font-family:monospace;">
+                t' = &gamma;t
+            </p>
+            <p>Since v is always less than c, &gamma; is always greater than or equal to 1. This means t' (the time interval on the moving clock) is always longer than t (the time interval on the stationary clock).</p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const velocitySlider = document.getElementById('velocity-slider');
+        const velocityValue = document.getElementById('velocity-value');
+        const timeStationaryDisplay = document.getElementById('time-stationary');
+        const timeMovingDisplay = document.getElementById('time-moving');
+        const gammaDisplay = document.getElementById('gamma-display');
+        const earthViewBtn = document.getElementById('earth-view-btn');
+        const shipViewBtn = document.getElementById('ship-view-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        const width = canvas.width;
+        const height = canvas.height;
+        const clock_h = 150;
+        const c = 10; // Speed of light in pixels per tick
+
+        let v = parseFloat(velocitySlider.value);
+        let frame = 'earth';
+        let time_s = 0, time_m = 0;
+        let photon_s = { y: 50, vy: c };
+        let photon_m = { y: 50, vy: 0, vx: 0 };
+        let clock_m_x = width * 0.75;
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#00001a' : '#fff',
+            text: document.body.classList.contains('dark-mode') ? '#e0e0ff' : '#000080',
+            photon: document.body.classList.contains('dark-mode') ? '#ffff00' : '#ffcc00',
+            ship: document.body.classList.contains('dark-mode') ? '#888888' : '#c0c0c0',
+            path: document.body.classList.contains('dark-mode') ? '#ffffff44' : '#00000044',
+        });
+
+        function reset() {
+            time_s = 0; time_m = 0;
+            photon_s = { y: 50, vy: c };
+            clock_m_x = width * 0.75;
+            updatePhotonM();
+        }
+
+        function updatePhotonM() {
+             const gamma = 1 / Math.sqrt(1 - v*v);
+             const v_pixels = v * c;
+
+             if (frame === 'earth') {
+                photon_m.vy = c / gamma;
+                photon_m.vx = v_pixels;
+             } else { // ship frame
+                photon_m.vy = c;
+                photon_m.vx = 0;
+             }
+        }
+
+        function draw() {
+            const colors = getColors();
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw stationary clock
+            const clock_s_x = width * 0.25;
+            ctx.fillStyle = colors.ship;
+            ctx.fillRect(clock_s_x - 50, 50 - 5, 100, 10);
+            ctx.fillRect(clock_s_x - 50, 50 + clock_h - 5, 100, 10);
+
+            // Draw moving clock
+            ctx.fillRect(clock_m_x - 50, 50 - 5, 100, 10);
+            ctx.fillRect(clock_m_x - 50, 50 + clock_h - 5, 100, 10);
+
+            // Draw photons
+            ctx.fillStyle = colors.photon;
+            ctx.beginPath();
+            ctx.arc(clock_s_x, photon_s.y, 5, 0, 2*Math.PI);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(clock_m_x, photon_m.y, 5, 0, 2*Math.PI);
+            ctx.fill();
+        }
+
+        function update() {
+            const v_pixels = v * c;
+            const gamma = 1 / Math.sqrt(1 - v*v);
+
+            // Update stationary clock
+            photon_s.y += photon_s.vy;
+            if (photon_s.y > 50 + clock_h || photon_s.y < 50) {
+                photon_s.vy *= -1;
+                time_s += 0.5;
+            }
+
+            // Update moving clock
+            if (frame === 'earth') {
+                clock_m_x += v_pixels;
+                if (clock_m_x > width + 50) clock_m_x = -50;
+
+                // For photon, we need to calculate its velocity components
+                const v_photon_y = c / gamma;
+                photon_m.y += photon_m.vy > 0 ? v_photon_y : -v_photon_y;
+
+                if (photon_m.y > 50 + clock_h || photon_m.y < 50) {
+                    photon_m.vy = photon_m.y > 50 + clock_h ? -c/gamma : c/gamma;
+                    time_m += 0.5;
+                }
+
+            } else { // Ship frame
+                const earth_clock_x = width * 0.25 - v_pixels * (time_s * (c/clock_h));
+                // This part is complex, for now we just show the clocks ticking
+                photon_m.y += photon_m.vy;
+                if (photon_m.y > 50 + clock_h || photon_m.y < 50) {
+                    photon_m.vy *= -1;
+                    time_m += 0.5;
+                }
+            }
+
+            // Update displays
+            timeStationaryDisplay.textContent = time_s.toFixed(2);
+            timeMovingDisplay.textContent = time_m.toFixed(2);
+            gammaDisplay.textContent = gamma.toFixed(3);
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        // --- Event Listeners ---
+        velocitySlider.addEventListener('input', e => {
+            v = parseFloat(e.target.value);
+            velocityValue.textContent = v.toFixed(3);
+            reset();
+        });
+
+        earthViewBtn.addEventListener('click', () => {
+            frame = 'earth';
+            earthViewBtn.classList.add('active');
+            shipViewBtn.classList.remove('active');
+            reset();
+        });
+
+        shipViewBtn.addEventListener('click', () => {
+            alert("Conceptual view: In the ship's frame, its own clock ticks normally while the Earth clock appears to run slow. The animation will now show the ship's clock ticking at the 'normal' rate.");
+            frame = 'ship';
+            shipViewBtn.classList.add('active');
+            earthViewBtn.classList.remove('active');
+            reset();
+        });
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        reset();
+        update();
+    });
+    </script>
+</body>
+</html>

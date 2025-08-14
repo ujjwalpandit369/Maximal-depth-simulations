@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Relativity of Simultaneity</title>
+    <style>
+        :root {
+            --bg-color: #fefae0;
+            --text-color: #606c38;
+            --primary-color: #bc6c25;
+            --secondary-color: #dda15e;
+            --border-color: #faedcd;
+            --canvas-bg: #fff;
+            --train-color: #283618;
+            --lightning-color: #fefae0;
+        }
+        .dark-mode {
+            --bg-color: #283618;
+            --text-color: #fefae0;
+            --primary-color: #dda15e;
+            --secondary-color: #bc6c25;
+            --border-color: #606c38;
+            --canvas-bg: #1a220f;
+            --train-color: #faedcd;
+            --lightning-color: #ffff00;
+        }
+        body {
+            font-family: 'Bookman Old Style', 'Garamond', serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            align-items: center;
+        }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover, button.active { background-color: var(--secondary-color); }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        .event-log-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .event-log {
+            width: 45%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            height: 100px;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+        }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>The Relativity of Simultaneity</h1>
+            <p>The train and lightning thought experiment.</p>
+            <div style="text-align:center; margin: 1rem 0;">
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                We usually think of "simultaneous" as an absolute concept: either two things happen at the same time, or they don't. However, Einstein's special relativity reveals that the answer depends on who you ask! This simulation shows his famous thought experiment: a person on a train and a person on a platform observe two lightning strikes that hit the front and back of the train. From the platform, the strikes look simultaneous. But because the person on the train is moving, they will see the light from the front strike before the light from the back strike, and conclude that the events were <em>not</em> simultaneous. This simulation lets you see the experiment unfold from both points of view to understand how two observers can be equally correct yet disagree on the timing of events.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="800" height="300"></canvas>
+            <div class="event-log-container">
+                <div class="event-log">
+                    <h3>Platform Observer Log</h3>
+                    <div id="platform-log"></div>
+                </div>
+                <div class="event-log">
+                    <h3>Train Observer Log</h3>
+                    <div id="train-log"></div>
+                </div>
+            </div>
+            <div class="controls-area">
+                 <div>
+                    <label for="velocity-slider"><strong>Train Velocity (v):</strong></label>
+                    <input type="range" id="velocity-slider" min="0" max="0.8" step="0.01" value="0.5">
+                    <span id="velocity-value">0.50</span> c
+                </div>
+                <div class="button-group">
+                    <button id="platform-view-btn" class="active">View from Platform</button>
+                    <button id="train-view-btn">View from Train</button>
+                </div>
+                <button id="animate-btn">Run Experiment</button>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Setup</h3>
+            <p>
+                We have a train moving along a track. There is an observer (T) in the exact middle of the train car and another observer (P) on the platform, who is also at the midpoint of the train's length *at the moment the lightning strikes*. Two lightning bolts strike the very front and very back of the train car.
+            </p>
+            <h3>2. The View from the Platform</h3>
+            <p>
+                Select the <strong>"View from Platform"</strong>. This is the default view. When you click "Run Experiment," you see two lightning bolts strike the ends of the moving train at the same time. Light from each strike travels inwards towards Observer P. Since Observer P is exactly in the middle and is not moving, the two light pulses travel the same distance and reach them at the exact same time. Observer P rightfully concludes: "I saw both flashes at once, so the lightning strikes must have been simultaneous."
+            </p>
+            <p>
+                But what does Observer P see happening to Observer T on the train? Observer T is moving <em>towards</em> the light flash from the front of the train and <em>away</em> from the flash from the back. Therefore, the light from the front has a shorter distance to travel to reach Observer T than the light from the back. Observer P sees the front flash reach Observer T first, followed by the back flash.
+            </p>
+            <h3>3. The View from the Train</h3>
+            <p>
+                Now, select the <strong>"View from Train"</strong>. According to the principle of relativity, Observer T is justified in considering themself to be at rest. From their perspective, the train is stationary and the platform is moving backwards. In their frame, the speed of light is still constant. Since they *observed* the front flash first, they must conclude that the lightning strike at the front of the train *actually happened* before the strike at the back.
+            </p>
+            <p>
+                Click "Run Experiment" in this view. The animation now shows the events from the train's perspective. You will see the front lightning strike happen first, and then a short time later, the back lightning strike happens. This is the only way for the physics to be consistent. Both observers' conclusions are correct within their own frame of reference.
+            </p>
+            <h3>4. The Conclusion: Simultaneity is Relative</h3>
+            <p>
+                There is no universal "now" across all of space. Whether two events are simultaneous depends on your state of motion. This is one of the most profound consequences of the two postulates of special relativity and resolves countless apparent paradoxes, including the "spaceship in the tunnel" problem from the previous simulation.
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>The Lorentz Transformation for Time</h2>
+            <p>The relativity of simultaneity is a direct mathematical consequence of the Lorentz transformations. The transformation for the time coordinate is:</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                t' = &gamma; ( t - vx/c<sup>2</sup> )
+            </p>
+            <p>
+                Let's analyze this. In the platform frame (the unprimed frame), we have two events:
+                <ul>
+                    <li>Back strike: (x<sub>1</sub>, t<sub>1</sub>)</li>
+                    <li>Front strike: (x<sub>2</sub>, t<sub>1</sub>)</li>
+                </ul>
+                Notice they happen at the same time <code>t<sub>1</sub></code>, but at different locations <code>x<sub>1</sub></code> and <code>x<sub>2</sub></code>.
+            </p>
+            <p>
+                Now let's find the times of these events in the train's frame (the primed frame):
+                <br>
+                <code>t'<sub>1</sub> = &gamma;(t<sub>1</sub> - vx<sub>1</sub>/c<sup>2</sup>)</code>
+                <br>
+                <code>t'<sub>2</sub> = &gamma;(t<sub>1</sub> - vx<sub>2</sub>/c<sup>2</sup>)</code>
+            </p>
+            <p>
+                Since <code>x<sub>1</sub> &ne; x<sub>2</sub></code>, it is clear that <code>t'<sub>1</sub> &ne; t'<sub>2</sub></code>. The events are <strong>not simultaneous</strong> in the train's frame. The term <code>-vx/c<sup>2</sup></code> is the mathematical embodiment of the relativity of simultaneity.
+            </p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const velocitySlider = document.getElementById('velocity-slider');
+        const velocityValue = document.getElementById('velocity-value');
+        const platformLog = document.getElementById('platform-log');
+        const trainLog = document.getElementById('train-log');
+        const platformViewBtn = document.getElementById('platform-view-btn');
+        const trainViewBtn = document.getElementById('train-view-btn');
+        const animateBtn = document.getElementById('animate-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let v = 0.5; // velocity as fraction of c
+        let frame = 'platform'; // 'platform' or 'train'
+        let animationId;
+        let time = 0;
+
+        const L0 = 300; // Proper length of the train
+        const c = 5;    // speed of light in pixels/frame
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#1a220f' : '#fff',
+            text: document.body.classList.contains('dark-mode') ? '#fefae0' : '#606c38',
+            train: document.body.classList.contains('dark-mode') ? '#faedcd' : '#283618',
+            lightning: document.body.classList.contains('dark-mode') ? '#ffff00' : '#ffbf00',
+        });
+
+        function reset() {
+            cancelAnimationFrame(animationId);
+            time = 0;
+            platformLog.innerHTML = '';
+            trainLog.innerHTML = '';
+            draw();
+        }
+
+        function draw() {
+            const colors = getColors();
+            const width = canvas.width;
+            const height = canvas.height;
+            const gamma = 1 / Math.sqrt(1 - v*v);
+
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw track
+            ctx.strokeStyle = colors.text;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.5 + 30);
+            ctx.lineTo(width, height * 0.5 + 30);
+            ctx.stroke();
+
+            let train_len = L0;
+            let platform_pos_x = width/2;
+            let train_pos_x = width/2;
+
+            if (frame === 'platform') {
+                train_len = L0 / gamma;
+                train_pos_x = width/2 + v * c * time;
+                if (train_pos_x > width + train_len/2) time = -(width + train_len/2)/(v*c);
+            } else { // train frame
+                platform_pos_x = width/2 - v * c * time;
+                if (platform_pos_x < -width/2) time = (width*1.5)/(v*c);
+            }
+
+            // Draw train
+            ctx.fillStyle = colors.train;
+            ctx.fillRect(train_pos_x - train_len/2, height*0.5 - 30, train_len, 60);
+
+            // Draw observers
+            ctx.fillStyle = colors.text;
+            ctx.beginPath();
+            ctx.arc(platform_pos_x, height*0.5 + 50, 5, 0, 2*Math.PI); // Platform observer
+            ctx.fillText("P", platform_pos_x - 5, height*0.5 + 70);
+            ctx.arc(train_pos_x, height*0.5, 5, 0, 2*Math.PI); // Train observer
+            ctx.fillText("T", train_pos_x - 5, height*0.5 - 15);
+            ctx.fill();
+
+            // Animate lightning and light pulses
+            if (time > 0) {
+                let strike_back_x, strike_front_x;
+                let strike_back_time = 0, strike_front_time = 0;
+
+                if (frame === 'platform') {
+                    strike_back_x = train_pos_x - train_len/2;
+                    strike_front_x = train_pos_x + train_len/2;
+                } else { // train frame
+                    strike_back_x = train_pos_x - train_len/2;
+                    strike_front_x = train_pos_x + train_len/2;
+                    // In train frame, front strike happens first
+                    const delta_t_prime = gamma * v * L0 / (c*c);
+                    strike_front_time = 0;
+                    strike_back_time = delta_t_prime * 20; // scale for animation
+                }
+
+                // Draw strikes and pulses
+                ctx.strokeStyle = colors.lightning;
+                ctx.lineWidth = 3;
+                if (time > strike_back_time) {
+                    const pulse_radius = (time - strike_back_time) * c;
+                    ctx.beginPath();
+                    ctx.arc(strike_back_x, height*0.5, pulse_radius, 0, 2*Math.PI);
+                    ctx.stroke();
+                }
+                if (time > strike_front_time) {
+                    const pulse_radius = (time - strike_front_time) * c;
+                    ctx.beginPath();
+                    ctx.arc(strike_front_x, height*0.5, pulse_radius, 0, 2*Math.PI);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function animate() {
+            reset();
+            let startTime = null;
+
+            const frameLoop = (t) => {
+                if (!startTime) startTime = t;
+                time = (t - startTime) / 50; // slow down animation
+
+                draw();
+                checkEvents();
+
+                if (time < 30) {
+                    animationId = requestAnimationFrame(frameLoop);
+                }
+            };
+            animationId = requestAnimationFrame(frameLoop);
+        }
+
+        let eventsFired = {};
+        function checkEvents() {
+            const gamma = 1 / Math.sqrt(1 - v*v);
+            const train_len_contracted = L0 / gamma;
+
+            // Platform observer checks
+            const dist_to_p = train_len_contracted / 2;
+            const time_to_p = dist_to_p / c;
+            if (time >= time_to_p && !eventsFired.p_sees_both) {
+                platformLog.innerHTML += `t=${time.toFixed(1)}: Sees both flashes<br>`;
+                eventsFired.p_sees_both = true;
+            }
+
+            // Train observer checks
+            const dist_to_front = (train_len_contracted/2) / (1+v);
+            const time_to_front = dist_to_front / c;
+             if (time >= time_to_front && !eventsFired.t_sees_front) {
+                trainLog.innerHTML += `t=${time.toFixed(1)}: Sees FRONT flash<br>`;
+                eventsFired.t_sees_front = true;
+            }
+            const dist_to_back = (train_len_contracted/2) / (1-v);
+            const time_to_back = dist_to_back / c;
+             if (time >= time_to_back && !eventsFired.t_sees_back) {
+                trainLog.innerHTML += `t=${time.toFixed(1)}: Sees BACK flash<br>`;
+                eventsFired.t_sees_back = true;
+            }
+        }
+
+        // --- Event Listeners ---
+        velocitySlider.addEventListener('input', e => {
+            v = parseFloat(e.target.value);
+            velocityValue.textContent = v.toFixed(2);
+            reset();
+        });
+
+        platformViewBtn.addEventListener('click', () => {
+            frame = 'platform';
+            platformViewBtn.classList.add('active');
+            trainViewBtn.classList.remove('active');
+            reset();
+        });
+
+        trainViewBtn.addEventListener('click', () => {
+            frame = 'train';
+            trainViewBtn.classList.add('active');
+            platformViewBtn.classList.remove('active');
+            reset();
+        });
+
+        animateBtn.addEventListener('click', () => {
+            eventsFired = {};
+            animate();
+        });
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+        });
+
+        reset();
+    });
+    </script>
+</body>
+</html>

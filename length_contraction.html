@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Length Contraction Explorer</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #8e44ad;
+            --secondary-color: #2980b9;
+            --border-color: #ddd;
+            --canvas-bg: #fff;
+            --ship-color: #c0392b;
+            --tunnel-color: #2c3e50;
+        }
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #f5f5f5;
+            --primary-color: #9b59b6;
+            --secondary-color: #3498db;
+            --border-color: #555;
+            --canvas-bg: #34495e;
+            --ship-color: #e74c3c;
+            --tunnel-color: #ecf0f1;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            align-items: center;
+        }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover, button.active { background-color: var(--secondary-color); }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        .info-display {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        .info-box { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px; }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Length Contraction Explorer</h1>
+            <p>Visualizing the paradox of the fast-moving spaceship and the tunnel.</p>
+            <div style="text-align:center; margin: 1rem 0;">
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                Special relativity doesn't just affect time; it also affects space. An object moving at a very high speed appears shorter in its direction of motion to a stationary observer. This is called <strong>length contraction</strong>. This simulation explores this idea with a classic paradox: a long spaceship is flying towards a shorter tunnel. From the perspective of someone standing by the tunnel, if the ship moves fast enough, it will shrink and, for a brief moment, fit entirely inside the tunnel. But from the pilot's perspective, the spaceship is stationary and the *tunnel* is rushing towards them. To the pilot, the tunnel appears even shorter, making it seem impossible for the ship to ever be fully contained. Who is right? This simulation lets you see both viewpoints and understand the resolution to the paradox.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="800" height="300"></canvas>
+            <div class="info-display">
+                <div class="info-box">
+                    <strong>Ship Length:</strong><br><span id="ship-length-display">100</span> m
+                </div>
+                <div class="info-box">
+                    <strong>Tunnel Length:</strong><br><span id="tunnel-length-display">80</span> m
+                </div>
+                <div class="info-box">
+                    <strong>Event Log:</strong><br><span id="event-log"></span>
+                </div>
+            </div>
+            <div class="controls-area">
+                 <div>
+                    <label for="velocity-slider"><strong>Spaceship Velocity (v):</strong></label>
+                    <input type="range" id="velocity-slider" min="0" max="0.999" step="0.001" value="0.6">
+                    <span id="velocity-value">0.600</span> c
+                </div>
+                <div class="button-group">
+                    <button id="tunnel-view-btn" class="active">View from Tunnel</button>
+                    <button id="ship-view-btn">View from Ship</button>
+                </div>
+                <button id="animate-btn">Animate</button>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Setup: A Paradox</h3>
+            <p>
+                We have a spaceship whose length, when measured at rest (its "proper length"), is 100 meters. We also have a tunnel whose proper length is 80 meters. Clearly, the ship is longer than the tunnel. The paradox arises when the ship starts moving at relativistic speeds.
+            </p>
+            <h3>2. The View from the Tunnel</h3>
+            <p>
+                Click the <strong>"View from Tunnel"</strong> button. In this reference frame, you are stationary, and the tunnel is 80 meters long. The spaceship is flying towards you. As you increase its velocity with the slider, you'll see its length shrink according to the formula <code>L = L₀ / &gamma;</code>. At a velocity of 0.6c (60% the speed of light), the Lorentz factor &gamma; is 1.25, so the ship's apparent length becomes 100m / 1.25 = 80m. At this speed, it's exactly the same length as the tunnel! If you increase the speed further, the ship becomes even shorter.
+            </p>
+            <p>
+                Press "Animate." At v=0.6c, you will see a moment where the back of the ship enters the tunnel at the exact same instant the front of the ship exits. From this viewpoint, the ship "fits."
+            </p>
+            <h3>3. The View from the Spaceship</h3>
+            <p>
+                Now for the paradox. Click the <strong>"View from Spaceship"</strong> button. From the pilot's perspective, the ship is at rest and has its proper length of 100m. It is the *tunnel* that is rushing towards them. Therefore, the tunnel's length gets contracted. At v=0.6c, the tunnel's apparent length becomes 80m / 1.25 = 64m. From this viewpoint, the tunnel is now ridiculously short! How could the 100m ship possibly fit inside a 64m tunnel?
+            </p>
+            <p>Press "Animate." You will see that the ship does *not* fit. The front of the ship exits the tunnel long before the back of the ship enters it.</p>
+            <h3>4. The Resolution: The Relativity of Simultaneity</h3>
+            <p>
+                So, who is right? <strong>Both observers are right, from their own perspectives.</strong> The paradox is resolved because they disagree on the timing of events. The concept of "fitting" requires two events—the back of the ship being at the tunnel entrance, and the front of the ship being at the tunnel exit—to happen <strong>at the same time</strong>.
+            </p>
+            <p>
+                But as Einstein showed, simultaneity is relative!
+                <ul>
+                    <li>In the <strong>Tunnel's Frame</strong>, these two events *are* simultaneous (at v=0.6c). The ship fits.</li>
+                    <li>In the <strong>Spaceship's Frame</strong>, these two events are *not* simultaneous. The front of the ship exits the tunnel first, and only later does the back of the ship enter. The ship is never fully inside the tunnel.</li>
+                </ul>
+                The event log in the simulation will record the times of these two key events in each frame, clearly showing that observers in relative motion will disagree on whether events happen at the same time. There is no paradox, just a universe that is stranger than our everyday intuition suggests.
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>The Lorentz Transformations</h2>
+            <p>The physics behind this is described by the Lorentz transformations, which relate the coordinates of an event in one frame (x, t) to another frame (x', t') moving at a velocity v.</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                x' = &gamma;(x - vt)<br>
+                t' = &gamma;(t - vx/c<sup>2</sup>)
+            </p>
+            <p>The key is the time transformation. Notice how the new time t' depends not only on the old time t but also on the old position x. Two events that are simultaneous in the first frame (have the same t) but happen at different locations (different x) will have <strong>different times</strong> in the new frame. This is the mathematical root of the relativity of simultaneity.</p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const velocitySlider = document.getElementById('velocity-slider');
+        const velocityValue = document.getElementById('velocity-value');
+        const shipLengthDisplay = document.getElementById('ship-length-display');
+        const tunnelLengthDisplay = document.getElementById('tunnel-length-display');
+        const eventLog = document.getElementById('event-log');
+        const tunnelViewBtn = document.getElementById('tunnel-view-btn');
+        const shipViewBtn = document.getElementById('ship-view-btn');
+        const animateBtn = document.getElementById('animate-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let v = 0.6;
+        let frame = 'tunnel'; // 'tunnel' or 'ship'
+        let animationId;
+        let ship_pos_x = -200;
+
+        const proper_len_ship = 100;
+        const proper_len_tunnel = 80;
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#34495e' : '#fff',
+            text: document.body.classList.contains('dark-mode') ? '#f5f5f5' : '#333',
+            ship: document.body.classList.contains('dark-mode') ? '#e74c3c' : '#c0392b',
+            tunnel: document.body.classList.contains('dark-mode') ? '#ecf0f1' : '#2c3e50',
+        });
+
+        function updateUI() {
+            const gamma = 1 / Math.sqrt(1 - v*v);
+            let ship_len, tunnel_len;
+
+            if (frame === 'tunnel') {
+                ship_len = proper_len_ship / gamma;
+                tunnel_len = proper_len_tunnel;
+                shipLengthDisplay.textContent = `${ship_len.toFixed(1)} m (contracted)`;
+                tunnelLengthDisplay.textContent = `${tunnel_len.toFixed(1)} m (proper)`;
+            } else { // ship frame
+                ship_len = proper_len_ship;
+                tunnel_len = proper_len_tunnel / gamma;
+                shipLengthDisplay.textContent = `${ship_len.toFixed(1)} m (proper)`;
+                tunnelLengthDisplay.textContent = `${tunnel_len.toFixed(1)} m (contracted)`;
+            }
+            velocityValue.textContent = v.toFixed(3);
+            eventLog.textContent = 'Awaiting Animation...';
+            draw();
+        }
+
+        function draw() {
+            const colors = getColors();
+            const width = canvas.width;
+            const height = canvas.height;
+            const scale = 2; // pixels per meter
+            const y_ship = height * 0.5;
+            const y_tunnel = height * 0.5;
+
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, width, height);
+
+            const gamma = 1 / Math.sqrt(1 - v*v);
+            let ship_len_current, tunnel_len_current;
+            let ship_x, tunnel_x;
+
+            if (frame === 'tunnel') {
+                ship_len_current = proper_len_ship / gamma * scale;
+                tunnel_len_current = proper_len_tunnel * scale;
+                ship_x = ship_pos_x;
+                tunnel_x = (width - tunnel_len_current) / 2;
+            } else { // ship frame
+                ship_len_current = proper_len_ship * scale;
+                tunnel_len_current = proper_len_tunnel / gamma * scale;
+                ship_x = (width - ship_len_current) / 2;
+                tunnel_x = ship_pos_x;
+            }
+
+            // Draw Tunnel
+            ctx.fillStyle = colors.tunnel;
+            const tunnel_h = 50;
+            ctx.fillRect(tunnel_x, y_tunnel - tunnel_h, tunnel_len_current, 10);
+            ctx.fillRect(tunnel_x, y_tunnel + tunnel_h - 10, tunnel_len_current, 10);
+
+            // Draw Ship
+            ctx.fillStyle = colors.ship;
+            const ship_h = 40;
+            ctx.fillRect(ship_x, y_ship - ship_h/2, ship_len_current, ship_h);
+            ctx.fillStyle = '#ffffff88';
+            ctx.fillRect(ship_x + 10, y_ship - ship_h/4, 15, ship_h/2);
+        }
+
+        function animate() {
+            cancelAnimationFrame(animationId);
+            ship_pos_x = -200;
+            let startTime = null;
+
+            const frameLoop = (time) => {
+                if (!startTime) startTime = time;
+                const elapsed = time - startTime;
+
+                if(frame === 'tunnel') {
+                    ship_pos_x = -200 + elapsed * v * 0.5;
+                } else {
+                    ship_pos_x = canvas.width + 100 - elapsed * v * 0.5;
+                }
+
+                draw();
+                updateEventLog();
+
+                let end_condition;
+                if(frame === 'tunnel') end_condition = ship_pos_x > canvas.width + 100;
+                else end_condition = ship_pos_x < -200;
+
+                if (!end_condition) {
+                    animationId = requestAnimationFrame(frameLoop);
+                }
+            };
+            animationId = requestAnimationFrame(frameLoop);
+        }
+
+        function updateEventLog() {
+            const gamma = 1 / Math.sqrt(1 - v*v);
+            let ship_len_current, tunnel_len_current;
+            let ship_start_x, tunnel_start_x;
+
+            if (frame === 'tunnel') {
+                ship_len_current = proper_len_ship / gamma;
+                tunnel_len_current = proper_len_tunnel;
+                ship_start_x = ship_pos_x / 2; // scale back to meters
+                tunnel_start_x = (canvas.width/2 - tunnel_len_current) / 2;
+
+                const nose_enters_time = (tunnel_start_x - ship_start_x) / v;
+                const tail_enters_time = (tunnel_start_x - (ship_start_x + ship_len_current)) / v;
+
+                const nose_exits_time = (tunnel_start_x + tunnel_len_current - ship_start_x) / v;
+                const tail_exits_time = (tunnel_start_x + tunnel_len_current - (ship_start_x + ship_len_current)) / v;
+
+                if (tail_exits_time > 0 && nose_enters_time < 0) {
+                     eventLog.textContent = "Ship is inside tunnel";
+                } else if (nose_exits_time > 0 && tail_enters_time < 0) {
+                     eventLog.textContent = "Passing through...";
+                } else {
+                     eventLog.textContent = "Outside";
+                }
+
+            } else { // ship frame
+                ship_len_current = proper_len_ship;
+                tunnel_len_current = proper_len_tunnel / gamma;
+                tunnel_start_x = ship_pos_x / 2;
+                ship_start_x = (canvas.width/2 - ship_len_current) / 2;
+
+                if (tunnel_start_x < ship_start_x + ship_len_current && (tunnel_start_x + tunnel_len_current) > ship_start_x) {
+                    eventLog.textContent = "Tunnel is passing by";
+                } else {
+                    eventLog.textContent = "Outside";
+                }
+            }
+        }
+
+        // --- Event Listeners ---
+        velocitySlider.addEventListener('input', e => {
+            v = parseFloat(e.target.value);
+            cancelAnimationFrame(animationId);
+            updateUI();
+        });
+
+        tunnelViewBtn.addEventListener('click', () => {
+            frame = 'tunnel';
+            tunnelViewBtn.classList.add('active');
+            shipViewBtn.classList.remove('active');
+            cancelAnimationFrame(animationId);
+            updateUI();
+        });
+
+        shipViewBtn.addEventListener('click', () => {
+            frame = 'ship';
+            shipViewBtn.classList.add('active');
+            tunnelViewBtn.classList.remove('active');
+            cancelAnimationFrame(animationId);
+            updateUI();
+        });
+
+        animateBtn.addEventListener('click', animate);
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+        });
+
+        updateUI();
+    });
+    </script>
+</body>
+</html>

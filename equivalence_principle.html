@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Equivalence Principle</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --primary-color: #6a0dad;
+            --secondary-color: #9370db;
+            --border-color: #dcdcdc;
+            --canvas-bg: #fff;
+            --elevator-color: #c0c0c0;
+            --ball-color: #ff4500;
+            --laser-color: #00ff00;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #f4f4f4;
+            --primary-color: #9370db;
+            --secondary-color: #b19cd9;
+            --border-color: #444;
+            --canvas-bg: #2a2a2a;
+            --elevator-color: #888;
+            --ball-color: #ff6347;
+            --laser-color: #32cd32;
+        }
+        body {
+            font-family: 'Constantia', 'Lucida Bright', Lucidabright, 'Lucida Serif', Lucida, 'DejaVu Serif', 'Bitstream Vera Serif', 'Liberation Serif', Georgia, serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+        .control-panel { text-align: center; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 0.5rem; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover, button.active { background-color: var(--secondary-color); }
+        canvas { background-color: var(--canvas-bg); border: 1px solid var(--border-color); max-width: 100%; }
+        code { background-color: var(--border-color); padding: 0.2em 0.4em; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>The Equivalence Principle: Gravity vs. Acceleration</h1>
+            <p>Einstein's "happiest thought" visualized in an elevator.</p>
+            <div style="text-align:center; margin: 1rem 0;">
+                <button id="theme-toggle" style="padding:2px 5px;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                Albert Einstein called the core idea behind general relativity his "happiest thought." It was the realization that the effects of gravity are completely indistinguishable from the effects of acceleration. This is the <strong>Equivalence Principle</strong>. This simulation lets you test this idea inside a sealed elevator. You can switch between two scenarios: the elevator sitting on Earth under the influence of gravity, or the elevator floating in deep space and accelerating upwards. By dropping a ball or firing a laser inside the elevator in both scenarios, you can see for yourself that if the acceleration `a` is equal to the gravitational field strength `g`, the observer inside the elevator can perform no experiment to tell which situation they are in.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <canvas id="main-canvas" width="400" height="500"></canvas>
+            <div class="controls-area">
+                <div class="control-panel">
+                    <h3>Scenario</h3>
+                    <div class="button-group">
+                        <button id="gravity-btn" class="active">On Earth (Gravity)</button>
+                        <button id="accel-btn">In Space (Acceleration)</button>
+                    </div>
+                </div>
+                <div class="control-panel">
+                    <h3>Parameters</h3>
+                    <div id="gravity-controls">
+                        <label for="g-slider">Gravity (g): <span id="g-value">9.8</span> m/s²</label><br>
+                        <input type="range" id="g-slider" min="1" max="20" step="0.1" value="9.8">
+                    </div>
+                    <div id="accel-controls" style="display:none;">
+                        <label for="a-slider">Acceleration (a): <span id="a-value">9.8</span> m/s²</label><br>
+                        <input type="range" id="a-slider" min="1" max="20" step="0.1" value="9.8">
+                    </div>
+                </div>
+                <div class="control-panel">
+                    <h3>Experiments</h3>
+                    <div class="button-group">
+                        <button id="drop-btn">Drop Ball</button>
+                        <button id="laser-btn">Fire Laser</button>
+                        <button id="reset-btn">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. The Two Scenarios</h3>
+            <p>The simulation allows you to switch between two situations that seem completely different:</p>
+            <ul>
+                <li><strong>On Earth (Gravity):</strong> The elevator car is sitting still on the surface of the Earth. Everything inside is pulled "down" by the familiar force of gravity. We can change how strong this gravity is with the `g` slider.</li>
+                <li><strong>In Space (Acceleration):</strong> The elevator car is in deep space, far from any planets or stars. There is no gravity. Instead, a powerful rocket is attached to the bottom, pushing the elevator "up" with a constant acceleration. We can control this acceleration with the `a` slider.</li>
+            </ul>
+            <p>The key idea is to set `g` and `a` to the same value (e.g., Earth's 9.8 m/s²) and compare the experiments.</p>
+
+            <h3>2. Experiment 1: Dropping a Ball</h3>
+            <p>
+                Select a scenario and press "Drop Ball." A ball is released from near the ceiling.
+                <ul>
+                    <li><strong>In the Gravity scenario:</strong> This is familiar. Gravity pulls the ball, and it accelerates towards the floor. Its path is a straight line down.</li>
+                    <li><strong>In the Acceleration scenario:</strong> This is more subtle. From an outside perspective, the moment the ball is released, it stops accelerating and just floats in space. However, the *floor of the elevator continues to accelerate upwards*, rushing up to meet the ball. To the observer sealed inside the elevator, this looks identical to the ball accelerating downwards towards the floor.</li>
+                </ul>
+                When `g = a`, the time it takes for the ball to hit the floor is exactly the same in both cases.
+            </p>
+            <h3>3. Experiment 2: Firing a Laser</h3>
+            <p>
+                Select a scenario and press "Fire Laser." A laser beam is fired horizontally from one side of the elevator to the other.
+                <ul>
+                    <li><strong>In the Gravity scenario:</strong> General relativity predicts that gravity bends spacetime itself, and light must follow this curvature. Therefore, the laser beam will follow a slightly curved path downwards. (This effect is enormously exaggerated in the simulation for visibility).</li>
+                    <li><strong>In the Acceleration scenario:</strong> From an outside view, the light travels in a perfect straight line. But during the tiny fraction of a second it takes the light to cross the elevator, the elevator itself has accelerated upwards. The point where the laser hits the far wall is slightly higher than where it started. To the observer inside, this makes the light's path appear to be curved downwards.</li>
+                </ul>
+                Once again, when `g = a`, the amount the laser beam "bends" is identical in both scenarios. An observer inside the elevator is fundamentally unable to tell whether they are at rest in a gravitational field or accelerating in empty space. This is the Equivalence Principle.
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>The Mathematics of Equivalence</h2>
+            <h3>The Dropped Ball</h3>
+            <p>In the gravity case, the position of the ball <code>y(t)</code> is given by standard kinematics: <code>y(t) = h - &frac12;gt²</code>, where <code>h</code> is the initial height. The time to hit the floor (y=0) is <code>t = &radic;(2h/g)</code>.</p>
+            <p>In the acceleration case, from an outside view, the ball's position is constant (<code>y<sub>ball</sub>(t) = h</code>) while the floor's position is <code>y<sub>floor</sub>(t) = &frac12;at²</code>. The time to collision is when they meet: <code>h = &frac12;at²</code>, which gives <code>t = &radic;(2h/a)</code>. If <code>g = a</code>, the times are identical.</p>
+
+            <h3>The Bending of Light</h3>
+            <p>In the acceleration case, let the width of the elevator be <code>L</code>. The time it takes for light to cross is <code>t = L/c</code>. In this time, the elevator has moved upwards a distance <code>d</code> given by kinematics:</p>
+            <p style="text-align:center; font-size:1.2rem; font-family:monospace;">
+                d = &frac12;at² = &frac12;a(L/c)²
+            </p>
+            <p>The Equivalence Principle makes the powerful claim that since this bending `d` happens in the accelerating frame, it must also happen in a gravitational field `g`. Therefore, gravity must bend light by the same amount. This was a stunning prediction that was later confirmed by observing the light from distant stars bending as it passed by the Sun during a solar eclipse.</p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        const gSlider = document.getElementById('g-slider');
+        const aSlider = document.getElementById('a-slider');
+        const gValue = document.getElementById('g-value');
+        const aValue = document.getElementById('a-value');
+        const gravityControls = document.getElementById('gravity-controls');
+        const accelControls = document.getElementById('accel-controls');
+
+        const gravityBtn = document.getElementById('gravity-btn');
+        const accelBtn = document.getElementById('accel-btn');
+        const dropBtn = document.getElementById('drop-btn');
+        const laserBtn = document.getElementById('laser-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let scenario = 'gravity';
+        let g = 9.8, a = 9.8;
+        let animationId;
+        let particles = [];
+        let time = 0;
+
+        const getColors = () => ({
+            bg: document.body.classList.contains('dark-mode') ? '#2a2a2a' : '#fff',
+            elevator: document.body.classList.contains('dark-mode') ? '#888' : '#c0c0c0',
+            ball: document.body.classList.contains('dark-mode') ? '#ff6347' : '#ff4500',
+            laser: document.body.classList.contains('dark-mode') ? '#32cd32' : '#00ff00',
+        });
+
+        function drawElevator() {
+            const colors = getColors();
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            ctx.strokeStyle = colors.elevator;
+            ctx.lineWidth = 5;
+            ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
+        }
+
+        function draw() {
+            drawElevator();
+            particles.forEach(p => {
+                ctx.fillStyle = (p.type === 'ball') ? getColors().ball : getColors().laser;
+                p.path.forEach(pos => {
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, p.type === 'ball' ? 5 : 2, 0, 2*Math.PI);
+                    ctx.fill();
+                });
+            });
+        }
+
+        function update() {
+            let allDone = true;
+            particles.forEach(p => {
+                if (p.done) return;
+                allDone = false;
+
+                let current_accel = (scenario === 'gravity') ? g : a;
+
+                if (p.type === 'ball') {
+                    p.vy += current_accel * 0.01;
+                    p.y += p.vy;
+                    p.path.push({x: p.x, y: p.y});
+                    if (p.y >= canvas.height - 75) p.done = true;
+                } else if (p.type === 'laser') {
+                    p.x += p.vx;
+                    // Bending is d = 0.5 * a * t^2
+                    const t = (p.x - p.startX) / p.vx;
+                    const dy = 0.5 * current_accel * t * t * 50; // 50 is a fudge factor for visibility
+                    p.y = p.startY + dy;
+                    p.path.push({x: p.x, y: p.y});
+                    if (p.x >= canvas.width - 75) p.done = true;
+                }
+            });
+
+            draw();
+
+            if (!allDone) {
+                animationId = requestAnimationFrame(update);
+            }
+        }
+
+        function reset() {
+            cancelAnimationFrame(animationId);
+            particles = [];
+            drawElevator();
+        }
+
+        // --- Event Listeners ---
+        gSlider.addEventListener('input', e => { g = parseFloat(e.target.value); gValue.textContent = g.toFixed(1); });
+        aSlider.addEventListener('input', e => { a = parseFloat(e.target.value); aValue.textContent = a.toFixed(1); });
+
+        gravityBtn.addEventListener('click', () => {
+            scenario = 'gravity';
+            gravityBtn.classList.add('active');
+            accelBtn.classList.remove('active');
+            gravityControls.style.display = 'block';
+            accelControls.style.display = 'none';
+            reset();
+        });
+        accelBtn.addEventListener('click', () => {
+            scenario = 'acceleration';
+            accelBtn.classList.add('active');
+            gravityBtn.classList.remove('active');
+            accelControls.style.display = 'block';
+            gravityControls.style.display = 'none';
+            reset();
+        });
+
+        dropBtn.addEventListener('click', () => {
+            reset();
+            particles.push({
+                type: 'ball', x: canvas.width/2, y: 75, vx: 0, vy: 0, path: [], done: false
+            });
+            update();
+        });
+        laserBtn.addEventListener('click', () => {
+            reset();
+            const startY = canvas.height/2;
+            particles.push({
+                type: 'laser', x: 75, y: startY, vx: 15, vy: 0, startX: 75, startY: startY, path: [], done: false
+            });
+            update();
+        });
+        resetBtn.addEventListener('click', reset);
+
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+        });
+
+        reset();
+    });
+    </script>
+</body>
+</html>
