@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condensed Matter: Fermi Surface in k-space</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --primary-color: #d9534f; /* A reddish color for this theme */
+            --primary-hover-color: #c9302c;
+            --secondary-bg-color: #f9f9f9;
+            --header-bg-color: #f5f5f5;
+            --border-color: #dddddd;
+            --code-bg-color: #f0f0f0;
+        }
+
+        body {
+            font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header, section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: var(--secondary-bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        header {
+             background-color: var(--header-bg-color);
+             border: none;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+            border-bottom: none;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+        }
+
+        #canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        #main-canvas {
+            border: 2px solid var(--border-color);
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background: var(--header-bg-color);
+            border-radius: 8px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button, select {
+            padding: 10px 15px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Fermi Surface in k-space</h1>
+            <p class="subtitle">Visualizing the boundary of occupied electron states in a metal.</p>
+        </header>
+
+        <main>
+            <section id="overview">
+                <h2>Overview</h2>
+                <p>
+                    In a metal, electrons are not stationary; they occupy a range of energy and momentum states. The **Fermi surface** is the crucial boundary in momentum space (or "k-space") that separates occupied electron states from unoccupied ones at absolute zero temperature. Its shape is fundamental to a material's electronic properties, such as whether it is a metal, insulator, or semiconductor. This simulation visualizes the Fermi surface for electrons in a 2D crystal, showing how it begins as a simple circle for free electrons and becomes beautifully distorted by the periodic potential of the crystal lattice.
+                </p>
+            </section>
+
+            <section id="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <div id="canvas-container">
+                    <canvas id="main-canvas" width="600" height="600"></canvas>
+                </div>
+                <div id="controls">
+                    <div class="control-group">
+                        <label for="density-slider">Electron Density</label>
+                        <input type="range" id="density-slider" min="0.1" max="1.5" step="0.05" value="0.5" aria-label="Adjust electron density">
+                    </div>
+                    <div class="toggle-switch">
+                        <label for="potential-toggle">Crystal Potential</label>
+                        <button id="potential-toggle" role="switch" aria-checked="false" title="Toggle the effect of the crystal lattice potential">OFF</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner's Guide: A Map of Electron States</h2>
+                <h3>Step 1: The Sea of Electrons</h3>
+                <p>Imagine a metal as a box filled with a "sea" of electrons that are free to move around. These electrons don't all have the same energy or momentum; they occupy a vast number of different states. The Pauli Exclusion Principle in quantum mechanics states that no two electrons can occupy the exact same state. As a result, electrons fill up the available states from the lowest energy upwards, like water filling a bucket.</p>
+
+                <h3>Step 2: Welcome to k-space</h3>
+                <p>Instead of thinking about the position of electrons, it's often more useful in solid-state physics to think about their <strong>momentum</strong>. The canvas you see represents "k-space," which is essentially a map of all possible momentum states. The center of the square, (0,0), represents zero momentum. Points further from the center represent states with higher momentum.</p>
+
+                <h3>Step 3: The Free Electron Model</h3>
+                <p>Let's first imagine the electrons are truly free, with no crystal lattice to interact with. As we add electrons to our box, they fill up the lowest energy states first, which are the states with the lowest momentum near the center of k-space. Because energy depends only on the distance from the center, the filled states form a perfect circle.
+                <ul>
+                    <li>The filled blue area is called the <strong>Fermi sea</strong>.</li>
+                    <li>The boundary of this circle is the <strong>Fermi surface</strong>.</li>
+                </ul>
+                Use the <strong>"Electron Density"</strong> slider. As you add more electrons, the sea fills up and the circular Fermi surface expands outwards.</p>
+
+                <h3>Step 4: Adding the Crystal</h3>
+                <p>Now, let's consider that these electrons are not in an empty box, but inside a crystal lattice made of a regular grid of atoms. This periodic grid of atoms creates a **periodic potential**. The electrons are no longer completely free; their movement is affected by the lattice.</p>
+                <p>Click the <strong>"Crystal Potential"</strong> toggle to "ON". Notice how the Fermi surface is no longer a perfect circle! It becomes distorted, bulging out in some directions and getting pushed in in others. This distortion happens most strongly near the edges of the dashed square, which is known as the **Brillouin Zone**.</p>
+
+                <h3>Step 5: Why the Shape Matters</h3>
+                <p>The shape of the Fermi surface is critically important. In a metal, the Fermi surface is a continuous shape. This means there are empty, available energy states right next to the filled ones. If you apply a voltage, electrons can easily jump into these empty states and move, creating an electric current. However, if an increase in electron density caused the Fermi surface to perfectly fill the Brillouin zone, a large energy gap could open up, making it very difficult for electrons to find an available state to jump to. This is the difference between a **metal** (easy to conduct) and an **insulator** (hard to conduct).</p>
+            </section>
+
+            <section id="parameters-summary">
+                <h2>Parameters & Controls</h2>
+                <table>
+                    <thead><tr><th>Control</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>Electron Density</td>
+                            <td>Controls the number of electrons in the system. Higher density means more states are filled, and the Fermi surface expands.</td>
+                        </tr>
+                        <tr>
+                            <td>Crystal Potential</td>
+                            <td>Toggles the effect of the periodic crystal lattice. When OFF, electrons are treated as free particles, resulting in a circular Fermi surface. When ON, the lattice potential distorts the surface.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory</h2>
+                <h3>Free Electron Model</h3>
+                <p>In the free electron model, the energy of an electron with wavevector <code>k = (kx, ky)</code> is given by:
+                <br><code>E(k) = (ħ² * k²) / 2m</code> where <code>k² = kx² + ky²</code>.
+                <br>Lines of constant energy (including the Fermi surface) are circles.</p>
+
+                <h3>Nearly-Free Electron Model</h3>
+                <p>When a weak periodic potential is introduced, the energy is modified. A common approximation for a 2D square lattice (the "tight-binding" model) gives an energy dispersion of:
+                <br><code>E(kx, ky) = -2t * (cos(kx*a) + cos(ky*a))</code>
+                <br>Where <code>t</code> is the "hopping" parameter and <code>a</code> is the lattice spacing. This simulation uses <code>t=1</code> and <code>a=1</code> for simplicity. The cosine terms introduce the periodicity of the lattice, causing the energy contours to deviate from perfect circles, especially near the Brillouin zone boundaries (at kx, ky = ±π).</p>
+            </section>
+
+            <section id="faq">
+                <h2>FAQ & Troubleshooting</h2>
+                <dl>
+                    <dt>What exactly is k-space?</dt>
+                    <dd>Instead of describing a particle by its position (x,y), we can describe it by its momentum (px, py). K-space, or reciprocal space, is essentially momentum space. Each point (kx, ky) represents a unique momentum state an electron can have. It's a powerful concept in solid-state physics because interactions with a periodic crystal lattice are much easier to analyze in k-space.</dd>
+
+                    <dt>What is the Brillouin Zone?</dt>
+                    <dd>The Brillouin zone is the "unit cell" of k-space. Because the crystal lattice is periodic in real space, this creates a periodic structure in k-space as well. We only need to analyze what happens in one of these unit cells—the first Brillouin zone—to understand the physics of the entire crystal. For a 2D square lattice, this zone is a square.</dd>
+
+                    <dt>What determines if a material is a metal or an insulator?</dt>
+                    <dd>It's all about the Fermi surface and the Brillouin zone! In a metal, the Fermi surface is a continuous closed loop, meaning there are always unoccupied energy states immediately available next to the occupied ones. This allows electrons to easily move and conduct electricity. In an insulator, the occupied states completely fill a Brillouin zone, and there is a large energy gap before the next available empty state. Electrons are "stuck" and cannot easily move to conduct electricity.</dd>
+
+                    <dt>Why does the circle get distorted?</dt>
+                    <dd>In the free electron model, there's nothing to stop the electrons, so the energy depends only on the magnitude of the momentum, resulting in a circular surface of constant energy. The crystal lattice potential, however, is stronger in some directions (towards the atoms) than others. Electrons with momentum near the Brillouin zone boundary can be "diffracted" by the lattice. This interaction alters their energy, pushing some energy levels up and others down, distorting the surface from a simple circle.</dd>
+                </dl>
+            </section>
+            <section id="export">
+                <h2>Export & Share</h2>
+                <div class="controls">
+                    <button id="export-png" aria-label="Save current view as a PNG image">Export PNG</button>
+                    <button id="share-preset" aria-label="Copy a shareable URL to your clipboard">Share Preset</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const App = {
+        canvas: null,
+        ctx: null,
+        width: 600,
+        height: 600,
+
+        // k-space parameters
+        bz_size: 400, // Brillouin zone size in pixels
+
+        params: {
+            electronDensity: 0.5, // A value from 0 to 1, representing filling
+            kF: 0, // Fermi wavevector (radius of the circle)
+            potentialOn: false,
+        },
+
+        init() {
+            this.canvas = document.getElementById('main-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.addEventListeners();
+            this.applyPresetFromURL(); // Check for URL preset first
+            this.update(); // Initial calculation
+            this.draw();
+        },
+
+        addEventListeners() {
+            document.getElementById('density-slider').addEventListener('input', (e) => {
+                this.params.electronDensity = parseFloat(e.target.value);
+                this.update();
+                this.draw();
+            });
+            document.getElementById('potential-toggle').addEventListener('click', (e) => {
+                this.params.potentialOn = !this.params.potentialOn;
+                e.target.textContent = this.params.potentialOn ? 'ON' : 'OFF';
+                e.target.setAttribute('aria-checked', this.params.potentialOn);
+                this.update();
+                this.draw();
+            });
+
+            // Export listeners
+            document.getElementById('export-png').addEventListener('click', () => this.exportPNG());
+            document.getElementById('share-preset').addEventListener('click', () => this.sharePreset());
+        },
+
+        update() {
+            const n = this.params.electronDensity;
+            this.params.kF = Math.sqrt(n) * Math.PI;
+
+            if (this.params.potentialOn) {
+                // Determine the Fermi Energy EF numerically
+                const resolution = 100; // Use a 100x100 grid for calculation
+                const energies = [];
+                for (let i = 0; i < resolution; i++) {
+                    for (let j = 0; j < resolution; j++) {
+                        const kx = -Math.PI + (2 * Math.PI * j) / resolution;
+                        const ky = -Math.PI + (2 * Math.PI * i) / resolution;
+                        if (kx*kx + ky*ky < (2*Math.PI)**2) { // crude circle check
+                             energies.push(this.energy(kx, ky));
+                        }
+                    }
+                }
+                energies.sort((a, b) => a - b);
+
+                // The number of states to fill is proportional to the area of the free electron circle
+                const freeElectronArea = Math.PI * this.params.kF * this.params.kF;
+                const bzArea = (2 * Math.PI) * (2 * Math.PI);
+                const fillFactor = freeElectronArea / bzArea;
+
+                const ef_index = Math.min(energies.length - 1, Math.floor(energies.length * fillFactor));
+                this.params.EF = energies[ef_index];
+            }
+        },
+
+        energy(kx, ky) {
+            // Tight-binding model for a 2D square lattice
+            const t = 1; // Hopping parameter
+            return -2 * t * (Math.cos(kx) + Math.cos(ky));
+        },
+
+        // Maps k-space coordinates to canvas coordinates
+        kToPixel(kx, ky) {
+            const scale = this.bz_size / (2 * Math.PI);
+            return {
+                x: this.width / 2 + kx * scale,
+                y: this.height / 2 - ky * scale // Invert y-axis
+            };
+        },
+
+        drawBrillouinZone() {
+            this.ctx.strokeStyle = '#aaaaaa';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([5, 5]);
+
+            const half_bz = this.bz_size / 2;
+            this.ctx.strokeRect(this.width / 2 - half_bz, this.height / 2 - half_bz, this.bz_size, this.bz_size);
+            this.ctx.setLineDash([]);
+
+            // Draw axes
+            this.ctx.strokeStyle = '#cccccc';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, this.height / 2);
+            this.ctx.lineTo(this.width, this.height / 2);
+            this.ctx.moveTo(this.width / 2, 0);
+            this.ctx.lineTo(this.width / 2, this.height);
+            this.ctx.stroke();
+
+            this.ctx.fillStyle = '#888888';
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText('kx', this.width - 20, this.height/2 - 10);
+            this.ctx.fillText('ky', this.width/2 + 10, 20);
+        },
+
+        draw() {
+            this.ctx.clearRect(0, 0, this.width, this.height);
+            this.drawBrillouinZone();
+
+            if (this.params.potentialOn) {
+                this.drawNearlyFreeSurface();
+            } else {
+                this.drawFreeElectronSurface();
+            }
+        },
+
+        drawNearlyFreeSurface() {
+            const imageData = this.ctx.createImageData(this.width, this.height);
+            const data = imageData.data;
+            const resolution = 2; // Calculate every 2 pixels for performance
+
+            for (let py = 0; py < this.height; py += resolution) {
+                for (let px = 0; px < this.width; px += resolution) {
+                    const kx = (px - this.width / 2) * (2 * Math.PI / this.bz_size);
+                    const ky = -(py - this.height / 2) * (2 * Math.PI / this.bz_size);
+
+                    const E = this.energy(kx, ky);
+
+                    if (E <= this.params.EF) {
+                        for(let y_res = 0; y_res < resolution; y_res++) {
+                            for(let x_res = 0; x_res < resolution; x_res++) {
+                                const index = ((py + y_res) * this.width + (px + x_res)) * 4;
+                                data[index] = 217;     // R
+                                data[index + 1] = 83;  // G
+                                data[index + 2] = 79;  // B
+                                data[index + 3] = 77;  // Alpha (30%)
+                            }
+                        }
+                    }
+                }
+            }
+            this.ctx.putImageData(imageData, 0, 0);
+        },
+
+        drawFreeElectronSurface() {
+            const kF_pixels = this.params.kF * (this.bz_size / (2 * Math.PI));
+
+            // Draw Fermi Sea
+            this.ctx.fillStyle = 'rgba(217, 83, 79, 0.3)';
+            this.ctx.beginPath();
+            this.ctx.arc(this.width / 2, this.height / 2, kF_pixels, 0, 2 * Math.PI);
+            this.ctx.fill();
+
+            // Draw Fermi Surface
+            this.ctx.strokeStyle = 'rgba(217, 83, 79, 1.0)';
+            this.ctx.lineWidth = 3;
+            this.ctx.stroke();
+        },
+
+        exportPNG() {
+            const link = document.createElement('a');
+            link.download = 'fermi-surface.png';
+            link.href = this.canvas.toDataURL('image/png');
+            link.click();
+        },
+
+        sharePreset() {
+            const state = {
+                d: this.params.electronDensity.toFixed(2),
+                p: this.params.potentialOn
+            };
+            const jsonString = JSON.stringify(state);
+            const base64String = btoa(jsonString);
+            const url = `${window.location.href.split('#')[0]}#preset=${base64String}`;
+            navigator.clipboard.writeText(url).then(() => alert("Shareable URL copied to clipboard!"), () => alert("Failed to copy URL."));
+        },
+
+        applyPresetFromURL() {
+            if (window.location.hash.startsWith('#preset=')) {
+                try {
+                    const base64String = window.location.hash.substring(8);
+                    const jsonString = atob(base64String);
+                    const state = JSON.parse(jsonString);
+
+                    if (state.d) {
+                        this.params.electronDensity = parseFloat(state.d);
+                        document.getElementById('density-slider').value = this.params.electronDensity;
+                    }
+                    if (state.p) {
+                        this.params.potentialOn = state.p;
+                        const btn = document.getElementById('potential-toggle');
+                        btn.textContent = this.params.potentialOn ? 'ON' : 'OFF';
+                        btn.setAttribute('aria-checked', this.params.potentialOn);
+                    }
+                    this.update();
+                    this.draw();
+                } catch (e) {
+                    alert("Could not load the preset from the URL.");
+                }
+            }
+        }
+    };
+
+    App.init();
+    window.FermiApp = App; // For debugging
+});
+    </script>
+</body>
+</html>
