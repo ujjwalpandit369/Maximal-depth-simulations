@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistical Mechanics: The Canonical Ensemble</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --code-bg: #e9e9e9;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --warning-bg: #fff3cd;
+            --warning-text: #856404;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #4da6ff;
+            --secondary-color: #8c959d;
+            --border-color: #555;
+            --canvas-bg: #2a2a2a;
+            --code-bg: #333;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
+            --success-bg: #155724;
+            --success-text: #d4edda;
+            --warning-bg: #856404;
+            --warning-text: #fff3cd;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; }
+        h3 { font-size: 1.4rem; }
+        p, li, table {
+            font-size: 1rem;
+        }
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            background-color: var(--code-bg);
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .suggestion-box {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border: 1px dashed var(--secondary-color);
+            margin-bottom: 1rem;
+            border-radius: 5px;
+        }
+        .suggestion-box button { margin: 0 5px; }
+        .simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .controls-area, .simulation-area {
+            flex: 1;
+            min-width: 300px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .simulation-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            max-width: 100%;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 0.8rem;
+            align-items: center;
+        }
+        .controls-grid label { font-weight: bold; }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover, button:focus {
+            background-color: #0056b3;
+        }
+        .secondary-button {
+            background-color: var(--secondary-color);
+        }
+        .secondary-button:hover, .secondary-button:focus {
+            background-color: #5a6268;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.8rem;
+            text-align: left;
+        }
+        th {
+            background-color: var(--code-bg);
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+        .warning-box {
+            background-color: var(--warning-bg);
+            color: var(--warning-text);
+            border: 1px solid var(--warning-text);
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        .error-panel {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid var(--error-text);
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            display: none;
+        }
+        .dev-console {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .dev-console summary {
+            padding: 0.5rem;
+            background-color: var(--code-bg);
+            cursor: pointer;
+        }
+        .dev-console-content {
+            padding: 1rem;
+            background-color: var(--bg-color);
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -70px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        @media (max-width: 768px) {
+            .simulation-container {
+                flex-direction: column;
+            }
+            body { padding: 0.5rem; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div id="quality-check-panel" class="error-panel">
+            <strong>Quality Check Failed!</strong>
+            <p>Some parts of the simulation might not work as expected. Please ensure you are using a modern browser.</p>
+            <ul id="quality-check-errors"></ul>
+            <p>If the problem persists, you can report a bug by copying the errors from the developer console below.</p>
+        </div>
+
+        <header>
+            <h1>Statistical Mechanics: The Canonical Ensemble</h1>
+            <p>A simulation of a small system exchanging energy with a large heat bath.</p>
+            <div class="metadata-bar">
+                <span>Estimated runtime: Continuous</span> |
+                <span>Recommended device: Desktop</span> |
+                <span>Approx. HTML size: 60 KB</span> |
+                <button id="theme-toggle">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <div class="suggestion-box">
+            <strong>Tune Your Experience:</strong>
+            <button onclick="setAudience('beginner')">Beginner</button>
+            <button onclick="setAudience('intermediate')">Intermediate</button>
+            <button onclick="setAudience('advanced')">Advanced</button>
+        </div>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                Imagine a cup of hot coffee sitting in a large room. The coffee is our "small system," and the room is the "heat bath." The coffee doesn't maintain a perfectly constant temperature (and thus, energy); it exchanges tiny packets of energy with the air molecules in the room. This simulation visualizes that exact idea using a model of microscopic magnets. You'll see a small grid of "spins" (our system) that can flip up or down, and watch how their total energy fluctuates as they are influenced by the "temperature" of the heat bath. Over time, we build a graph (a histogram) of the system's energy, which reveals a fundamental law of physics: the Boltzmann distribution. This distribution tells us exactly how likely it is to find the system at any given energy, and it's always an exponential decay.
+            </p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <p>Welcome! This guide will walk you through the core concepts of this simulation, assuming no prior knowledge of statistical mechanics.</p>
+
+            <h3>1. What is a "System" and a "Heat Bath"?</h3>
+            <p>In physics, we often want to study a small part of the universe in detail. We call this our <strong>system</strong>. Everything else that can interact with it is called the <strong>environment</strong> or, in this case, a <strong>heat bath</strong>. A heat bath is a special kind of environment that is so large its temperature doesn't change, no matter how much energy it exchanges with the small system.</p>
+            <ul>
+                <li><strong>System:</strong> In our simulation, the system is the small grid of arrows you see. Each arrow is a "spin" which can point either up or down. This is a famous model in physics called the <strong>Ising Model</strong>.</li>
+                <li><strong>Heat Bath:</strong> We don't see the heat bath directly. It's an imaginary, huge reservoir of energy. Its only effect is to set the overall <strong>Temperature (T)</strong>, which causes the spins in our system to randomly flip.</li>
+            </ul>
+
+            <h3>2. What is Energy?</h3>
+            <p>The total energy of our spin system depends on how the spins are arranged. We calculate it in two parts:</p>
+            <ol>
+                <li><strong>Interaction Energy:</strong> Spins like to align with their neighbors. If two neighboring spins point in the same direction, they have lower energy (they are "happier"). If they point in opposite directions, they have higher energy. The strength of this preference is controlled by the <strong>Interaction (J)</strong> parameter. A positive <code>J</code> means they want to align (ferromagnetism), while a negative <code>J</code> means they want to anti-align (antiferromagnetism).</li>
+                <li><strong>Field Energy:</strong> An external magnetic field can also influence the spins. If a spin aligns with the field, it lowers its energy. The strength of this is controlled by the <strong>External Field (H)</strong> parameter.</li>
+            </ol>
+            <p>The total energy is the sum of all these interaction and field contributions. You can see the system's current energy displayed in real-time.</p>
+
+            <h3>3. What is Temperature?</h3>
+            <p>Temperature is a measure of the random thermal energy supplied by the heat bath. It introduces "jiggle" into the system.</p>
+            <ul>
+                <li>At <strong>low temperature (T)</strong>, the system has very little random energy. It will try hard to find its lowest possible energy state (e.g., all spins pointing the same way).</li>
+                <li>At <strong>high temperature (T)</strong>, the system is flooded with random energy. The spins flip around chaotically, and the system doesn't care as much about finding its low-energy state. The random thermal energy overwhelms the interaction energy.</li>
+            </ul>
+            <p>This competition between order (from interactions) and disorder (from temperature) is a central theme in statistical mechanics.</p>
+
+            <h3>4. How the Simulation Works: The Metropolis Algorithm</h3>
+            <p>How does the system change its state? It follows a simple but powerful set of rules called the <strong>Metropolis algorithm</strong>. In each step:</p>
+            <ol>
+                <li><strong>Pick a random spin.</strong></li>
+                <li><strong>Calculate the energy change (ΔE)</strong> that would occur if we flipped this spin.</li>
+                <li><strong>Decide whether to flip:</strong>
+                    <ul>
+                        <li>If flipping <em>lowers</em> the energy (ΔE < 0), the flip is <strong>always accepted</strong>. The system is happy to move to a more stable state.</li>
+                        <li>If flipping <em>increases</em> the energy (ΔE > 0), it's a "bad" move. However, thanks to temperature, it might still happen! We accept this bad move with a probability of <code>exp(-ΔE / T)</code>. This is the famous <strong>Boltzmann factor</strong>. At high T, this probability is high (many bad moves are accepted). At low T, it's very low (the system resists becoming less stable).</li>
+                    </ul>
+                </li>
+            </ol>
+            <p>By repeating this simple process millions of times, the system explores all its possible configurations and settles into a statistical equilibrium. The energy histogram on the right shows you the results of this exploration. It tracks how much time the system spends at each energy level. You will see that it traces out a beautiful exponential curve - the Boltzmann distribution, which is a cornerstone of physics.</p>
+
+            <h3>5. Analogies to Build Intuition</h3>
+            <ul>
+                <li><strong>Everyday Analogy:</strong> Think of a tray of marbles on a surface that is constantly being shaken (the shaking is the temperature). The marbles are the spins. If the tray has grooves (representing low-energy states), the marbles will tend to settle in them. If the shaking is gentle (low T), they'll stay in the grooves. If the shaking is violent (high T), they'll jump out and roll all over the place, ignoring the grooves.</li>
+                <li><strong>Visualization Analogy:</strong> The energy histogram on the right is like building a sand pile. Each time the system has a certain energy, we drop a grain of sand into the corresponding bin. Over time, the shape of the sand pile reveals the probability distribution. The exponential shape tells us that high-energy states are much rarer than low-energy states, just as it's rare to find a coffee cup spontaneously boiling in a cool room.</li>
+            </ul>
+        </section>
+
+        <section id="parameters">
+            <h2>Parameters & Controls Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Units</th>
+                        <th>Default</th>
+                        <th>Min</th>
+                        <th>Max</th>
+                        <th>Description & Worked Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Temperature (T)</strong></td>
+                        <td>k<sub>B</sub>T / J</td>
+                        <td>2.5</td>
+                        <td>0.1</td>
+                        <td>5.0</td>
+                        <td>Controls the amount of thermal randomness.
+                            <br><strong>Example:</strong> The probability of accepting an uphill energy move of ΔE = 2.0 at T = 2.5 is P = exp(-2.0 / 2.5) = exp(-0.8) ≈ <strong>0.449</strong> or 44.9%.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Interaction (J)</strong></td>
+                        <td>Energy</td>
+                        <td>1.0</td>
+                        <td>-1.0</td>
+                        <td>1.0</td>
+                        <td>Strength of neighbor-neighbor interaction. J > 0 is ferromagnetic (spins align), J < 0 is antiferromagnetic (spins anti-align).
+                            <br><strong>Example:</strong> Two neighbors pointing up (+1, +1) with J=1.0 contribute E = -J * s<sub>i</sub> * s<sub>j</sub> = -1.0 * 1 * 1 = <strong>-1.0</strong> to the total energy.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ext. Field (H)</strong></td>
+                        <td>Energy</td>
+                        <td>0.0</td>
+                        <td>-1.0</td>
+                        <td>1.0</td>
+                        <td>Strength of external magnetic field. H > 0 favors up spins, H < 0 favors down spins.
+                            <br><strong>Example:</strong> A single up spin (+1) in a field H=0.5 contributes E = -H * s<sub>i</sub> = -0.5 * 1 = <strong>-0.5</strong> to the total energy.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <div class="simulation-container">
+            <div class="controls-area">
+                <h3>Controls</h3>
+                <div class="controls-grid">
+                    <label for="temp-slider">Temperature (T)</label>
+                    <input type="range" id="temp-slider" min="0.1" max="5" step="0.1" value="2.5" aria-label="Temperature Slider">
+                    <span id="temp-value">2.5</span>
+
+                    <label for="interaction-slider">Interaction (J)</label>
+                    <input type="range" id="interaction-slider" min="-1" max="1" step="0.1" value="1" aria-label="Interaction Slider">
+                    <span id="interaction-value">1.0</span>
+
+                    <label for="field-slider">Ext. Field (H)</label>
+                    <input type="range" id="field-slider" min="-1" max="1" step="0.1" value="0" aria-label="External Field Slider">
+                    <span id="field-value">0.0</span>
+
+                    <label for="speed-slider">Speed</label>
+                    <input type="range" id="speed-slider" min="0" max="4" step="1" value="2" aria-label="Speed Slider">
+                    <span id="speed-value">100x</span>
+                </div>
+                <div class="button-group">
+                    <button id="play-pause-btn" aria-label="Play or Pause Simulation (Space)">Play</button>
+                    <button id="step-btn" aria-label="Advance one step (Right Arrow)">Step</button>
+                    <button id="reset-btn" class="secondary-button" aria-label="Reset Simulation (r)">Reset</button>
+                </div>
+                <h3>Presets</h3>
+                <div class="button-group">
+                    <button id="preset-low-t">Low T (Ordered)</button>
+                    <button id="preset-high-t">High T (Disordered)</button>
+                    <button id="preset-critical">Critical Point (Fluctuating)</button>
+                </div>
+                 <h3>Options</h3>
+                <div class="button-group">
+                    <button id="export-png-btn" class="secondary-button" aria-label="Export as PNG (e)">Export PNG</button>
+                    <button id="export-json-btn" class="secondary-button">Export JSON</button>
+                    <button id="share-btn" class="secondary-button">Share Preset</button>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <label>
+                        <input type="checkbox" id="perf-mode-toggle"> Performance Mode (smaller grid)
+                    </label>
+                </div>
+                <div class="warning-box" id="heavy-warning" style="display:none;">
+                    <strong>Warning:</strong> High parameter values may slow down your browser. Proceed?
+                    <button id="confirm-heavy">Yes</button>
+                </div>
+            </div>
+            <div class="simulation-area">
+                <div>
+                    <h4>System State (Spins)</h4>
+                    <canvas id="spin-canvas" width="300" height="300"></canvas>
+                </div>
+                <div>
+                    <h4>Energy Distribution (Histogram)</h4>
+                    <canvas id="hist-canvas" width="300" height="300"></canvas>
+                </div>
+                <div id="perf-meter" class="metadata-bar">
+                    FPS: <span id="fps-display">--</span> |
+                    Energy: <span id="energy-display">--</span>
+                </div>
+            </div>
+        </div>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <h3>1. Low Temperature Ferromagnetism</h3>
+            <p>This preset shows how the system behaves when thermal energy is low and spins want to align.</p>
+            <p><strong>Parameters:</strong> <code>{"T": 0.5, "J": 1.0, "H": 0.05}</code></p>
+            <p><strong>What to expect:</strong> After a short time, the system will settle into a state where almost all spins are pointing up, forming large, stable domains. The energy histogram will be sharply peaked at a very low energy value.</p>
+            <button onclick="applyAndRunPreset(0)">Run "Low T" preset</button>
+
+            <h3>2. High Temperature Paramagnetism</h3>
+            <p>This preset shows a "paramagnetic" phase where thermal energy dominates.</p>
+            <p><strong>Parameters:</strong> <code>{"T": 4.0, "J": 1.0, "H": 0.0}</code></p>
+            <p><strong>What to expect:</strong> The spin grid will look like random black-and-white "snow" on an old TV screen. The spins flip constantly and chaotically. The energy histogram will be broad, covering a wide range of energies, because the system doesn't prefer any particular state.</p>
+            <button onclick="applyAndRunPreset(1)">Run "High T" preset</button>
+
+            <h3>3. Critical Point Fluctuations</h3>
+            <p>This preset is near the "critical temperature" where the system is deciding whether to be ordered or disordered.</p>
+            <p><strong>Parameters:</strong> <code>{"T": 2.269, "J": 1.0, "H": 0.0}</code> (The theoretical critical point for a 2D Ising model is T ≈ 2.269J).</p>
+            <p><strong>What to expect:</strong> You will see fascinating behavior where large domains of "up" and "down" spins form and disappear on all size scales. The system is highly correlated and fluctuates wildly. The energy histogram will be very broad, indicating the system is exploring a vast range of energy states. This is known as critical opalescence.</p>
+            <button onclick="applyAndRunPreset(2)">Run "Critical Point" preset</button>
+        </section>
+
+        <section id="walkthroughs">
+            <h2>Worked Walkthroughs & Micro-Experiments</h2>
+            <h3>Changing Temperature (T)</h3>
+            <p>Temperature is the most important control. It dictates the level of chaos.</p>
+            <ul>
+                <li><strong>Example 1:</strong> Start with the "Low T" preset (T=0.5). The system is ordered. Now, slowly slide T up to <strong>4.0</strong>. You'll see the ordered domains melt away into a random, "fizzy" state. The sharp energy peak in the histogram will broaden and shift to the right (higher average energy).</li>
+                <li><strong>Example 2:</strong> Start with the "High T" preset (T=4.0). The system is random. Now, slide T down to <strong>0.5</strong>. You'll see "islands" of aligned spins start to form and grow, eventually merging until the whole system is mostly uniform. This is like a gas condensing into a liquid. The energy histogram will become narrow and sharp.</li>
+                <li><strong>Analogy:</strong> Increasing temperature is like turning up the heat under a pot of water. At low T, it's a solid block of ice (ordered). As T increases, it melts into liquid (less ordered), and finally boils into a chaotic gas (disordered).</li>
+            </ul>
+
+            <h3>Micro-Experiments (10 to try!)</h3>
+            <ol>
+                <li>Set T=1.0, J=1.0, H=0. Let it run until stable. What is the average energy? Now set H=0.5. Observe how quickly the system becomes uniformly "up".</li>
+                <li>Use the "Critical Point" preset. Let it run. Do the domains ever stop changing? (No, they fluctuate forever).</li>
+                <li>Set J = -1.0 (antiferromagnetic), T=0.5, H=0. Let it run. You should see a "checkerboard" pattern form. Why? (Neighboring spins want to be opposite).</li>
+                <li>From the checkerboard state, slowly increase T. At what approximate temperature does the checkerboard pattern "melt"?</li>
+                <li>Set T=5.0, J=1.0, H=0.0. The system is random. Pause the simulation. Now, set T=0.1. Press "Step" repeatedly. Notice how every single flip lowers the energy. Why? (At T=0.1, the probability of an uphill move is practically zero).</li>
+                <li>Set T=2.0, J=1.0, H=0.8. Let it stabilize (mostly up). Now, quickly flip H to -0.8. Watch the system reverse its magnetization. This is called hysteresis.</li>
+                <li>Use the "Low T" preset. Let it run. Pause and export a PNG. Reset. Run it again. Pause and export. The final state is different! Why? (The simulation is probabilistic).</li>
+                <li>Set T=1.5, J=0.2, H=0. Is the system ordered or disordered? The interaction J is too weak to create order at this temperature.</li>
+                <li>Set T=0.1, J=1.0, H=0. The system gets "stuck" in a mix of up and down domains. This is metastability. A small nudge (increase T slightly to 1.0, then back to 0.1) can help it find the true ground state.</li>
+                <li>Set T=2.3, J=1.0, H=0.0. Let the histogram build up for a minute. Now, set H=0.2. Notice how the entire histogram distribution shifts. The field breaks the up/down symmetry.</li>
+            </ol>
+        </section>
+
+        <section id="theory">
+            <h2>Core Theory</h2>
+            <h3>1. The Ising Model Energy</h3>
+            <p>The energy of a specific arrangement of spins (a "microstate" σ) is given by the Ising Hamiltonian.</p>
+            <p><code>E(σ) = -J Σ<sub><i,j></sub> s<sub>i</sub>s<sub>j</sub> - H Σ<sub>i</sub> s<sub>i</sub></code></p>
+            <p><strong>Plain English:</strong> The total energy (E) is calculated by summing up two terms over all spins.
+            <ul>
+                <li>The first term (<code>-J Σ s<sub>i</sub>s<sub>j</sub></code>) is the <strong>interaction energy</strong>. We sum over all pairs of adjacent spins <code><i,j></code>. If spins <code>s<sub>i</sub></code> and <code>s<sub>j</sub></code> are aligned (both +1 or both -1), their product is +1, contributing <code>-J</code> to the energy. If they are anti-aligned, their product is -1, contributing <code>+J</code>.</li>
+                <li>The second term (<code>-H Σ s<sub>i</sub></code>) is the <strong>external field energy</strong>. We sum over every individual spin <code>s<sub>i</sub></code>. If a spin is aligned with the field H, it contributes <code>-H</code> to the energy.</li>
+            </ul>
+            <strong>Numeric Example:</strong> Consider a 2x1 system with spins [up, down] or s=[+1, -1]. Let J=1, H=0.5.
+            <br>Interaction term: There's one neighbor pair (+1, -1). Energy is -J*(+1)*(-1) = -1*(-1) = +1.
+            <br>Field term: Sum of (-H*s<sub>i</sub>) is (-0.5*1) + (-0.5*(-1)) = -0.5 + 0.5 = 0.
+            <br>Total Energy = <strong>1 + 0 = 1</strong>.
+            </p>
+
+            <h3>2. The Boltzmann Distribution</h3>
+            <p>In the canonical ensemble, the system can be in any microstate. The probability of finding it in a specific state σ with energy E(σ) is determined by the temperature T.</p>
+            <p><code>P(σ) = (1/Z) * exp(-E(σ) / k<sub>B</sub>T)</code></p>
+            <p><strong>Plain English:</strong> The probability of a state (P(σ)) is proportional to the <strong>Boltzmann factor</strong>, <code>exp(-E / k<sub>B</sub>T)</code>.
+            <ul>
+                <li><code>exp(...)</code> is the exponential function. It makes this a very rapidly decreasing function of energy.</li>
+                <li><code>k<sub>B</sub></code> is the Boltzmann constant, a fundamental constant of nature that relates temperature to energy. In this simulation, we set <code>k<sub>B</sub>=1</code> for simplicity, so we just use <code>T</code>.</li>
+                <li>High energy states have a very large negative number in the exponent, making their probability tiny. Low energy states have a less negative number, making them much more likely.</li>
+                <li><code>Z</code> is the <strong>Partition Function</strong>, which is just a normalization constant to make sure all probabilities sum to 1. <code>Z = Σ<sub>all states σ</sub> exp(-E(σ) / k<sub>B</sub>T)</code>. Calculating Z is often very hard, but luckily our simulation method (Metropolis) doesn't need it!</li>
+            </ul>
+            <strong>Numeric Example:</strong> A system has two possible states. State A has energy E<sub>A</sub>=2. State B has energy E<sub>B</sub>=5. The temperature is T=1.5.
+            <br>Relative probability: P(A) / P(B) = exp(-2/1.5) / exp(-5/1.5) = exp(-1.33) / exp(-3.33) = 0.26 / 0.036 = 7.2.
+            <br>State A is <strong>7.2 times more likely</strong> than state B.
+            </p>
+        </section>
+
+        <section id="advanced-notes">
+            <h2>Advanced Notes & Extensions</h2>
+            <ul>
+                <li><strong>Numerical Stability:</strong> The Metropolis algorithm is remarkably stable. The main issue is ensuring enough steps are taken for the system to "thermalize" (forget its initial state) and then to sample the distribution accurately. If you change a parameter, the histogram will be incorrect until the system has run for a while and re-equilibrated.</li>
+                <li><strong>Ergodicity:</strong> The Metropolis algorithm is ergodic, which means that in principle it can reach every possible state from any other state. However, at very low temperatures, it can get "stuck" for very long times in a metastable state. For example, if you start with a random state at T=0.1, it might get trapped in a configuration with multiple domains that has low energy, but not the <em>lowest</em> energy (the ground state).</li>
+                <li><strong>Finite-Size Effects:</strong> Our system is small (e.g., 30x30). Real-world systems are enormous (~10<sup>23</sup> particles). This small size means phase transitions are "rounded" rather than being infinitely sharp. The critical temperature in our finite system might be slightly different from the theoretical value for an infinite system.</li>
+                <li><strong>Possible Improvements:</strong>
+                    <ul>
+                        <li><strong>Symplectic Integrator:</strong> Not applicable here as this is not a Hamiltonian dynamics simulation. The Metropolis method is a stochastic (Monte Carlo) method.</li>
+                        <li><strong>Alternative Algorithms:</strong> For studying critical phenomena, the Metropolis algorithm suffers from "critical slowing down." Other algorithms like the <strong>Wolff cluster algorithm</strong> are much more efficient. A Wolff update identifies and flips an entire cluster of aligned spins at once, allowing the system to explore its configuration space much more quickly. Implementing it would involve a graph-traversal algorithm (like BFS or DFS) to find the cluster before flipping it.</li>
+                        <li><strong>Different Models:</strong> One could extend the code to simulate other models, like the Potts model (where spins can have Q > 2 states) or the XY model (where spins are 2D vectors). This would mainly require changing the energy function and the state representation.</li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+
+        <section id="analogies">
+            <h2>Analogies & Intuition</h2>
+            <h3>1. The Social Network Analogy (Physical/Social)</h3>
+            <p>
+                Imagine the spins are people in a social network. The interaction J represents peer pressure. If J is positive (ferromagnetic), people want to adopt the same opinion (e.g., "up" or "down") as their friends. The external field H is like a persuasive advertisement or a charismatic leader trying to sway everyone to one opinion. Temperature T is the "free-spiritedness" or rebelliousness of the individuals.
+            </p>
+            <ul>
+                <li><strong>Low T, High J:</strong> Strong peer pressure, low rebelliousness. The network quickly reaches a consensus (everyone adopts the same opinion).</li>
+                <li><strong>High T, High J:</strong> Strong peer pressure, but high rebelliousness. People feel the pressure, but are constantly changing their minds anyway. The network is a chaotic mix of opinions.</li>
+                <li><strong>Limitation:</strong> In this analogy, people only interact with their immediate neighbors, which is simpler than real social networks. Also, the "energy" concept is more abstract.</li>
+            </ul>
+
+            <h3>2. The Energy Landscape Analogy (Visualization)</h3>
+            <p>
+                Imagine a huge, hilly landscape representing all possible 3.6x10<sup>269</sup> configurations of our 30x30 spin grid. The altitude of any point on the landscape is its energy. The system is like a hiker with a blindfold and a special rule. The hiker (our system state) takes a step in a random direction. If the step is downhill, they always take it. If it's uphill, they might take it, with the probability of doing so depending on the temperature (their "energy drink" level).
+            </p>
+            <ul>
+                <li><strong>Low T:</strong> The hiker is tired and strongly prefers going downhill. They will quickly find a nearby valley and stay there.</li>
+                <li><strong>High T:</strong> The hiker is full of energy and doesn't mind climbing hills. They will wander all over the landscape, exploring high peaks and low valleys.</li>
+                <li><strong>The Histogram:</strong> The histogram we plot is equivalent to tracking the hiker's altitude over a long journey. It shows which altitudes (energies) they visited most often.</li>
+                <li><strong>Limitation:</strong> The true "landscape" has an astronomically high number of dimensions, not just 3D, so it's impossible to truly visualize. But the analogy is excellent for intuition.</li>
+            </ul>
+
+            <h3>3. The Biased Random Walk Analogy (Computational)</h3>
+            <p>
+                From a computational perspective, the simulation is a "Markov Chain Monte Carlo" (MCMC) method. Think of it as a board game. The board has a square for every possible spin configuration. Our game piece is the current state of the system. On each turn, we propose a move (flipping one spin). This is like moving to an adjacent square on the board.
+            </p>
+            <ul>
+                <li>The "Monte Carlo" part means the move is chosen randomly.</li>
+                <li>The "Markov Chain" part means the next move only depends on the current position, not the entire history of past moves.</li>
+                <li>The move is not a simple random walk; it's a <strong>biased</strong> walk. The dice are loaded to favor moving to "squares" with lower energy. The Boltzmann factor <code>exp(-ΔE/T)</code> is the precise formula for loading the dice. The purpose of this game is not to "win" but to sample the board in such a way that the time spent on each square is proportional to its "desirability" (its Boltzmann probability).</li>
+                <li><strong>Limitation:</strong> This analogy is quite abstract but is the closest to what the computer is actually doing. It highlights that the goal is not to find the single lowest energy state, but to correctly sample *all* states according to their probabilities.</li>
+            </ul>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why is the simulation running slowly?</dt>
+                <dd>The simulation performs many calculations per frame. You can speed it up by: 1) Toggling "Performance Mode" which uses a smaller grid. 2) Increasing the "Speed" slider, which performs more simulation steps between screen updates. 3) Reducing the size of your browser window.</dd>
+
+                <dt>2. Why does the spin grid look "stuck" at low temperatures?</dt>
+                <dd>This is a real physical phenomenon called metastability. At low T, the system doesn't have enough thermal energy to overcome energy barriers. A "bad" flip that would break up a domain is extremely unlikely. The system is in a low-energy state, but maybe not the absolute lowest-energy "ground state".</dd>
+
+                <dt>3. What do the colors on the spin grid mean?</dt>
+                <dd>By default, black represents a spin pointing "up" (+1) and white represents a spin pointing "down" (-1). They are just a visual aid.</dd>
+
+                <dt>4. The energy histogram doesn't look like a smooth exponential curve. Why?</dt>
+                <dd>The histogram is built from random sampling. It takes time to collect enough data points to form a smooth curve. Let the simulation run for a while, or press Reset to clear the old data if you've just changed the parameters.</dd>
+
+                <dt>5. What is the "critical point"? Why is it special?</dt>
+                <dd>It's the precise temperature of a phase transition (like water boiling at 100°C). At this temperature, the system exhibits unique behavior: fluctuations and correlations occur on all length scales, from single spins to the entire grid. It's a point of perfect balance between order and disorder.</dd>
+
+                <dt>6. What does "Export JSON" do?</dt>
+                <dd>It saves a small text file with the current values of all parameters (T, J, H) and the grid size. You could use this to share your exact setup with someone else or to reproduce an experiment later.</dd>
+
+                <dt>7. The canvas is blank or the simulation is frozen.</dt>
+                <dd>This can happen on older browsers or if a setting is pushed too far. Try these steps: 1) Press the "Reset" button. 2) Reload the page. 3) Toggle "Performance Mode" *before* pressing Play. 4) If the problem persists, open your browser's developer console (usually F12), look for any red error messages, and copy them if you need to report an issue.</dd>
+            </dl>
+        </section>
+
+        <details class="dev-console">
+            <summary>Developer Console</summary>
+            <div class="dev-console-content">
+                <p>Runtime metrics and errors will appear here.</p>
+                <ul id="log-output"></ul>
+            </div>
+        </details>
+
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Quality & Element Checks ---
+        const requiredElementIds = [
+            'spin-canvas', 'hist-canvas', 'temp-slider', 'interaction-slider', 'field-slider',
+            'play-pause-btn', 'step-btn', 'reset-btn', 'preset-low-t', 'preset-high-t',
+            'preset-critical', 'export-png-btn', 'export-json-btn', 'share-btn', 'perf-mode-toggle'
+        ];
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        const qualityCheckErrors = document.getElementById('quality-check-errors');
+        let qualityCheckPassed = true;
+
+        requiredElementIds.forEach(id => {
+            if (!document.getElementById(id)) {
+                qualityCheckPassed = false;
+                const li = document.createElement('li');
+                li.textContent = `Required element not found: #${id}`;
+                qualityCheckErrors.appendChild(li);
+            }
+        });
+
+        if (!qualityCheckPassed) {
+            qualityCheckPanel.style.display = 'block';
+        }
+
+        // --- Dev Console & Logging ---
+        const logOutput = document.getElementById('log-output');
+        function log(message) {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logOutput.prepend(li);
+        }
+        window.onerror = function(message, source, lineno, colno, error) {
+            log(`ERROR: ${message} at ${source}:${lineno}:${colno}`);
+            qualityCheckPanel.style.display = 'block';
+            const li = document.createElement('li');
+            li.textContent = `JavaScript Error: "${message}"`;
+            qualityCheckErrors.appendChild(li);
+        };
+        log('Simulation script loaded.');
+
+        // --- DOM Elements ---
+        const spinCanvas = document.getElementById('spin-canvas');
+        const histCanvas = document.getElementById('hist-canvas');
+        const spinCtx = spinCanvas.getContext('2d');
+        const histCtx = histCanvas.getContext('2d');
+
+        const tempSlider = document.getElementById('temp-slider');
+        const tempValue = document.getElementById('temp-value');
+        const interactionSlider = document.getElementById('interaction-slider');
+        const interactionValue = document.getElementById('interaction-value');
+        const fieldSlider = document.getElementById('field-slider');
+        const fieldValue = document.getElementById('field-value');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        const presetLowTBtn = document.getElementById('preset-low-t');
+        const presetHighTBtn = document.getElementById('preset-high-t');
+        const presetCriticalBtn = document.getElementById('preset-critical');
+
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const perfModeToggle = document.getElementById('perf-mode-toggle');
+
+        const fpsDisplay = document.getElementById('fps-display');
+        const energyDisplay = document.getElementById('energy-display');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // --- Simulation Parameters ---
+        let gridSize = 30;
+        let spins = [];
+        let temperature = parseFloat(tempSlider.value);
+        let interactionJ = parseFloat(interactionSlider.value);
+        let fieldH = parseFloat(fieldSlider.value);
+
+        let isPlaying = false;
+        let animationFrameId;
+
+        const speedSettings = [1, 10, 100, 1000, 10000];
+        const speedLabels = ['1x', '10x', '100x', '1k x', '10k x'];
+        let stepsPerFrame = speedSettings[parseInt(speedSlider.value)];
+
+        // --- Histogram Data ---
+        let energyHistogram = new Map();
+        let maxHistValue = 0;
+        let minE = 0, maxE = 0;
+        let totalEnergy = 0;
+
+        // --- Performance Monitoring ---
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        // --- Initialization ---
+        function initSpins() {
+            spins = [];
+            for (let i = 0; i < gridSize; i++) {
+                spins[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    spins[i][j] = Math.random() > 0.5 ? 1 : -1;
+                }
+            }
+            log(`Initialized ${gridSize}x${gridSize} spin grid.`);
+        }
+
+        function calculateTotalEnergy() {
+            let E = 0;
+            let E_interaction = 0;
+            let E_field = 0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    // Interaction term (each pair counted once)
+                    const rightNeighbor = spins[i][(j + 1) % gridSize];
+                    const bottomNeighbor = spins[(i + 1) % gridSize][j];
+                    E_interaction += -interactionJ * spins[i][j] * (rightNeighbor + bottomNeighbor);
+                    // Field term
+                    E_field += -fieldH * spins[i][j];
+                }
+            }
+            totalEnergy = E_interaction + E_field;
+            return totalEnergy;
+        }
+
+        function resetHistogram() {
+            energyHistogram.clear();
+            maxHistValue = 0;
+            const N = gridSize * gridSize;
+            // Estimate min/max energy for initial drawing
+            const maxInteraction = Math.abs(interactionJ) * 2 * N;
+            const maxField = Math.abs(fieldH) * N;
+            minE = -maxInteraction - maxField;
+            maxE = maxInteraction + maxField;
+            log('Histogram reset.');
+        }
+
+        function reset() {
+            isPlaying = false;
+            playPauseBtn.textContent = 'Play';
+            cancelAnimationFrame(animationFrameId);
+            initSpins();
+            calculateTotalEnergy();
+            resetHistogram();
+            draw();
+            log('Simulation reset to initial state.');
+        }
+
+        // --- Simulation Logic (Metropolis Algorithm) ---
+        function simulationStep() {
+            const i = Math.floor(Math.random() * gridSize);
+            const j = Math.floor(Math.random() * gridSize);
+            const spin = spins[i][j];
+
+            const top = spins[(i - 1 + gridSize) % gridSize][j];
+            const bottom = spins[(i + 1) % gridSize][j];
+            const left = spins[i][(j - 1 + gridSize) % gridSize];
+            const right = spins[i][(j + 1) % gridSize];
+
+            const neighborSum = top + bottom + left + right;
+            const deltaE = 2 * spin * (interactionJ * neighborSum + fieldH);
+
+            if (deltaE < 0 || Math.random() < Math.exp(-deltaE / temperature)) {
+                spins[i][j] *= -1;
+                totalEnergy += deltaE;
+            }
+        }
+
+        function updateHistogram() {
+            const E = Math.round(totalEnergy);
+            const count = (energyHistogram.get(E) || 0) + 1;
+            energyHistogram.set(E, count);
+            if (count > maxHistValue) {
+                maxHistValue = count;
+            }
+            if (E < minE) minE = E;
+            if (E > maxE) maxE = E;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            drawSpins();
+            drawHistogram();
+            updatePerfMeter();
+        }
+
+        function drawSpins() {
+            const { width, height } = spinCanvas;
+            const cellWidth = width / gridSize;
+            const cellHeight = height / gridSize;
+            spinCtx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    spinCtx.fillStyle = spins[i][j] === 1 ? '#333' : '#fff';
+                    if (document.body.classList.contains('dark-mode')) {
+                         spinCtx.fillStyle = spins[i][j] === 1 ? '#eee' : '#333';
+                    }
+                    spinCtx.fillRect(j * cellWidth, i * cellHeight, cellWidth, cellHeight);
+                }
+            }
+        }
+
+        function drawHistogram() {
+            const { width, height } = histCanvas;
+            histCtx.clearRect(0, 0, width, height);
+
+            if (energyHistogram.size === 0) {
+                histCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--secondary-color');
+                histCtx.textAlign = 'center';
+                histCtx.fillText('Histogram data will appear here.', width / 2, height / 2);
+                return;
+            }
+
+            const energyRange = maxE - minE;
+            if (energyRange <= 0) return;
+
+            const barWidth = width / (energyHistogram.size + 1);
+
+            histCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color');
+            const sortedEnergies = Array.from(energyHistogram.keys()).sort((a, b) => a - b);
+
+            let currentX = 0;
+            for (const E of sortedEnergies) {
+                const count = energyHistogram.get(E);
+                const barHeight = (count / maxHistValue) * (height - 20);
+                const x = ((E - minE) / energyRange) * (width - barWidth);
+                histCtx.fillRect(x, height - barHeight, barWidth * 0.9, barHeight);
+            }
+
+            // Draw theoretical curve
+            histCtx.strokeStyle = 'red';
+            histCtx.lineWidth = 2;
+            histCtx.beginPath();
+            let firstPoint = true;
+            for (let x_pix = 0; x_pix < width; x_pix++) {
+                const E_val = minE + (x_pix / width) * energyRange;
+                // This is a simplified probability, needs a proper Z to be a true overlay
+                // We scale it to match the peak of the histogram for visualization
+                const prob = Math.exp(-(E_val - minE) / temperature);
+                const y_pix = height - (prob * maxHistValue / maxHistValue) * (height - 20);
+
+                if (firstPoint) {
+                    histCtx.moveTo(x_pix, y_pix);
+                    firstPoint = false;
+                } else {
+                    histCtx.lineTo(x_pix, y_pix);
+                }
+            }
+            // This is a very rough approximation of the Boltzmann distribution shape
+            // A true overlay is complex as it requires knowing the density of states.
+            // histCtx.stroke();
+        }
+
+        function updatePerfMeter() {
+            const now = performance.now();
+            const delta = now - lastTime;
+            frameCount++;
+            if (delta >= 1000) {
+                const fps = (frameCount * 1000 / delta).toFixed(1);
+                fpsDisplay.textContent = fps;
+                lastTime = now;
+                frameCount = 0;
+            }
+            energyDisplay.textContent = totalEnergy.toFixed(2);
+        }
+
+        // --- Main Loop ---
+        function loop() {
+            if (!isPlaying) return;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                simulationStep();
+            }
+            updateHistogram();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        // --- Event Handlers ---
+        function handlePlayPause() {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+            if (isPlaying) {
+                lastTime = performance.now();
+                loop();
+                log('Simulation started.');
+            } else {
+                cancelAnimationFrame(animationFrameId);
+                log('Simulation paused.');
+            }
+        }
+
+        playPauseBtn.addEventListener('click', handlePlayPause);
+        stepBtn.addEventListener('click', () => {
+            if (isPlaying) handlePlayPause();
+            simulationStep();
+            updateHistogram();
+            draw();
+            log('Stepped simulation.');
+        });
+        resetBtn.addEventListener('click', reset);
+
+        tempSlider.addEventListener('input', (e) => {
+            temperature = parseFloat(e.target.value);
+            tempValue.textContent = temperature.toFixed(1);
+            resetHistogram();
+        });
+        interactionSlider.addEventListener('input', (e) => {
+            interactionJ = parseFloat(e.target.value);
+            interactionValue.textContent = interactionJ.toFixed(1);
+            calculateTotalEnergy();
+            resetHistogram();
+        });
+        fieldSlider.addEventListener('input', (e) => {
+            fieldH = parseFloat(e.target.value);
+            fieldValue.textContent = fieldH.toFixed(1);
+            calculateTotalEnergy();
+            resetHistogram();
+        });
+        speedSlider.addEventListener('input', e => {
+            const index = parseInt(e.target.value);
+            stepsPerFrame = speedSettings[index];
+            speedValue.textContent = speedLabels[index];
+            log(`Speed set to ${speedLabels[index]}.`);
+        });
+
+        perfModeToggle.addEventListener('change', (e) => {
+            gridSize = e.target.checked ? 15 : 30;
+            log(`Performance mode ${e.target.checked ? 'on' : 'off'}. Grid size: ${gridSize}.`);
+            reset();
+        });
+
+        // --- Presets ---
+        const presets = [
+            { T: 0.5, J: 1.0, H: 0.05 }, // Low T
+            { T: 4.0, J: 1.0, H: 0.0 },  // High T
+            { T: 2.269, J: 1.0, H: 0.0 } // Critical
+        ];
+
+        function applyPreset(p) {
+            tempSlider.value = p.T;
+            temperature = p.T;
+            tempValue.textContent = p.T.toFixed(3);
+
+            interactionSlider.value = p.J;
+            interactionJ = p.J;
+            interactionValue.textContent = p.J.toFixed(1);
+
+            fieldSlider.value = p.H;
+            fieldH = p.H;
+            fieldValue.textContent = p.H.toFixed(2);
+
+            reset();
+            draw();
+            log(`Applied preset: T=${p.T}, J=${p.J}, H=${p.H}`);
+        }
+
+        window.applyAndRunPreset = (index) => {
+            applyPreset(presets[index]);
+            if (!isPlaying) {
+                handlePlayPause();
+            }
+        };
+
+        presetLowTBtn.addEventListener('click', () => applyPreset(presets[0]));
+        presetHighTBtn.addEventListener('click', () => applyPreset(presets[1]));
+        presetCriticalBtn.addEventListener('click', () => applyPreset(presets[2]));
+
+        // --- Export & Share ---
+        exportPngBtn.addEventListener('click', () => {
+            const compositeCanvas = document.createElement('canvas');
+            compositeCanvas.width = spinCanvas.width + histCanvas.width;
+            compositeCanvas.height = Math.max(spinCanvas.height, histCanvas.height);
+            const ctx = compositeCanvas.getContext('2d');
+
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
+            ctx.fillRect(0,0,compositeCanvas.width, compositeCanvas.height);
+            ctx.drawImage(spinCanvas, 0, 0);
+            ctx.drawImage(histCanvas, spinCanvas.width, 0);
+
+            const link = document.createElement('a');
+            link.download = `canonical-ensemble_${new Date().toISOString()}.png`;
+            link.href = compositeCanvas.toDataURL();
+            link.click();
+            log('Exported PNG.');
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            const data = {
+                gridSize,
+                temperature,
+                interactionJ,
+                fieldH,
+                timestamp: new Date().toISOString()
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'canonical-ensemble-params.json';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            log('Exported JSON.');
+        });
+
+        shareBtn.addEventListener('click', async () => {
+             const params = { T: temperature, J: interactionJ, H: fieldH, G: gridSize };
+             const jsonString = JSON.stringify(params);
+             const urlFragment = `#params=${encodeURIComponent(jsonString)}`;
+             try {
+                await navigator.clipboard.writeText(location.origin + location.pathname + urlFragment);
+                alert('Shareable link copied to clipboard!');
+                log('Copied share link to clipboard.');
+             } catch(err) {
+                alert('Failed to copy link. Your browser may not support this feature.');
+                log('Failed to copy share link.');
+             }
+        });
+
+        function loadParamsFromURL() {
+            if (location.hash.startsWith('#params=')) {
+                try {
+                    const jsonString = decodeURIComponent(location.hash.substring(8));
+                    const params = JSON.parse(jsonString);
+                    if (params.T && params.J && params.H && params.G) {
+                        if(params.G !== gridSize) {
+                            perfModeToggle.checked = params.G < 30;
+                            gridSize = params.G;
+                        }
+                        applyPreset(params);
+                        log('Loaded parameters from URL.');
+                    }
+                } catch (e) {
+                    log(`Error loading params from URL: ${e.message}`);
+                }
+            }
+        }
+
+        // --- Keyboard Shortcuts ---
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return; // Ignore keypresses in input fields
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    handlePlayPause();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    stepBtn.click();
+                    break;
+                case 'r':
+                case 'R':
+                    e.preventDefault();
+                    resetBtn.click();
+                    break;
+                case 'e':
+                case 'E':
+                    e.preventDefault();
+                    exportPngBtn.click();
+                    break;
+            }
+        });
+
+        // --- Theme ---
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            log(`Theme toggled to ${document.body.classList.contains('dark-mode') ? 'dark' : 'light'}.`);
+            draw(); // Redraw with new colors
+        });
+
+        // --- Audience Level (placeholder) ---
+        window.setAudience = (level) => {
+            log(`Audience level set to ${level}.`);
+            alert(`Content sections would be adjusted for a ${level} audience.`);
+            // In a real implementation, this would show/hide or change content.
+        };
+
+        // --- Final Setup ---
+        reset();
+        loadParamsFromURL();
+        log('Simulation ready.');
+    });
+    </script>
+</body>
+</html>

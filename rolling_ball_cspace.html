@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Space for a Rolling Ball</title>
+    <style>
+        :root {
+            --bg-color: #fdfdfd;
+            --text-color: #333;
+            --primary-color: #d35400;
+            --secondary-color: #2c3e50;
+            --border-color: #ccc;
+            --canvas-bg: #ecf0f1;
+            --code-bg: #f4f4f4;
+        }
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #e67e22;
+            --secondary-color: #bdc3c7;
+            --border-color: #555;
+            --canvas-bg: #34495e;
+            --code-bg: #283747;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 1000px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-super-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        .sim-panel {
+            flex: 1;
+            min-width: 350px;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--secondary-color);
+            max-width: 100%;
+            height: auto;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: bold;
+        }
+        button:hover, button:focus {
+            background-color: #af4400;
+        }
+        .secondary-button {
+            background-color: var(--secondary-color);
+        }
+        .secondary-button:hover, .secondary-button:focus {
+             background-color: #1a252f;
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+        .math { font-style: italic; }
+        .vector { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Configuration Space for a Rolling Ball</h1>
+            <p>Visualizing the 5D configuration space of a ball rolling on a 2D plane.</p>
+             <div class="metadata-bar" style="font-size:0.8rem; color: var(--secondary-color); text-align:center;">
+                <span>Recommended device: Desktop</span> | <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                Imagine a bowling ball rolling on the floor. Its "configuration" isn't just its position (where it is), but also its orientation (how it's rotated). To describe its position, we need two numbers (e.g., x and y coordinates). But to describe its 3D rotation, we need another three numbers! This means the ball's complete state is described by five numbers, placing it in a 5-dimensional "Configuration Space" or C-Space. This simulation shows both the ball rolling on a 2D table (the "Workspace") and a 3D "slice" of its true 5D C-Space. You'll see how a simple, straight roll in our world creates a beautiful, helical (corkscrew) path in this higher-dimensional abstract space.
+            </p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. Workspace vs. Configuration Space</h3>
+            <p>These two concepts are key to understanding robotics, mechanics, and computer graphics.</p>
+            <ul>
+                <li><strong>Workspace:</strong> This is the familiar world where the object moves. For our ball, it's the 2D tabletop. It's easy to visualize. We only care about the ball's <em>position</em> (x, y) here.</li>
+                <li><strong>Configuration Space (C-Space):</strong> This is an abstract mathematical space where every single point represents one unique <em>configuration</em> of the object. A configuration includes both <strong>position and orientation</strong>.</li>
+            </ul>
+            <p>
+                A single point in C-space gives you all the information needed to perfectly describe the ball's state. Since our ball's state is <code>(x, y, rotation)</code>, and 3D rotation itself requires 3 parameters (like yaw, pitch, roll), the C-Space is 5-dimensional: C = (x, y, r1, r2, r3). A path in the workspace (the ball rolling from A to B) corresponds to a path in C-space.
+            </p>
+
+            <h3>2. The "No-Slip" Condition</h3>
+            <p>A crucial rule for a rolling ball is that it doesn't slip. This creates a direct link between its movement (translation) and its rotation. When the ball moves forward by a certain distance, its surface must rotate by a corresponding amount.
+            <br>
+            Specifically, the distance traveled is equal to the ball's radius times the angle (in radians) it has rotated: <code>distance = radius × angle</code>.
+            <br>
+            This constraint is what makes the C-space path interesting. The ball can't just be at (x, y) with any random rotation; its rotation is tied to the path it took to get there.
+            </p>
+
+            <h3>3. Visualizing the Impossible (5D Space)</h3>
+            <p>We cannot draw a 5D space. So, how does the right-hand panel work? We take a <strong>3D slice</strong> or <strong>projection</strong> of the 5D space. The C-space visualization shows a 3D graph with axes:
+            <ul>
+                <li><strong>X-axis:</strong> The ball's x-position in the workspace.</li>
+                <li><strong>Y-axis:</strong> The ball's y-position in the workspace.</li>
+                <li><strong>Z-axis (Vertical):</strong> One of the rotation angles. Specifically, it's the angle of rotation around the axis perpendicular to the direction of motion.</li>
+            </ul>
+            When the ball rolls in a straight line along the x-axis in the workspace, its x-position increases. Because of the no-slip condition, its rotation angle also increases steadily. The result in our 3D C-space slice is a path that goes along X and also up along the rotation (Z) axis, forming a helix. This visualization makes the hidden dimensions of motion visible!
+            </p>
+            <p><strong>Analogy:</strong> Imagine you are walking up a spiral staircase. Your shadow on the flat ground below moves in a circle (that's the workspace path). But your true path is a helix in 3D space (that's the C-space path). You have a position (on the ground) and a height (the "hidden" dimension). Our ball is similar, but with more dimensions of rotation.</p>
+        </section>
+
+        <div class="simulation-super-container">
+            <div class="sim-panel">
+                <h3>Workspace (The "Real" World)</h3>
+                <canvas id="workspace-canvas" width="400" height="400"></canvas>
+            </div>
+            <div class="sim-panel">
+                <h3>C-Space Projection (x, y, rotation)</h3>
+                <canvas id="cspace-canvas" width="400" height="400"></canvas>
+            </div>
+        </div>
+        <div class="controls-area">
+            <div class="button-group">
+                <button id="roll-straight-btn">Animate: Roll Straight</button>
+                <button id="roll-circle-btn">Animate: Roll in Circle</button>
+                <button id="reset-btn" class="secondary-button">Reset</button>
+            </div>
+        </div>
+
+        <section id="theory">
+            <h2>Core Theory</h2>
+            <h3>1. Configuration of a Rigid Body</h3>
+            <p>The configuration of a rigid body in 3D space is an element of the special Euclidean group SE(3). A configuration <span class="math">q</span> can be represented as a pair:</p>
+            <p><code>q = (<span class="vector">p</span>, R)</code></p>
+            <p><strong>Plain English:</strong> A configuration <code>q</code> consists of:
+            <ul>
+                <li><span class="vector">p</span>: A 3D vector <code>(x, y, z)</code> representing the position of the body's center of mass. In our case, the ball is on a plane, so <span class="vector">p</span> is just <code>(x, y)</code>.</li>
+                <li>R: A 3x3 rotation matrix representing the orientation of the body. Rotation matrices have special properties (they are orthogonal and have a determinant of +1). A 3D rotation has 3 degrees of freedom.</li>
+            </ul>
+            Thus, the C-space for a ball on a plane has 2 (position) + 3 (orientation) = <strong>5 dimensions</strong>.
+            </p>
+
+            <h3>2. The Rolling Constraint</h3>
+            <p>For a ball of radius <span class="math">r</span> rolling without slipping, the velocity of the center of mass <span class="vector">v</span> is related to the angular velocity <span class="vector">ω</span> by:</p>
+            <p><code><span class="vector">v</span> = r (<span class="vector">ω</span> × <span class="vector">ẑ</span>)</code></p>
+            <p><strong>Plain English:</strong> This is the mathematical "no-slip" condition. It means the velocity of the center of the ball (<span class="vector">v</span>) is determined by its angular velocity (<span class="vector">ω</span>) and radius (<span class="math">r</span>). The <span class="vector">ẑ</span> is a unit vector pointing straight up, and the '×' is the cross product. This constraint reduces the number of ways the ball can move. It cannot slide sideways (skid) or move without rotating. This coupling is what makes the C-space path a smooth, predictable curve rather than a random scribble.</p>
+            <p>When rolling straight along the x-axis, <span class="vector">v</span> = (v<sub>x</sub>, 0, 0). The equation implies that the angular velocity <span class="vector">ω</span> must be around the y-axis. The total angle rotated <span class="math">θ</span> after traveling a distance <span class="math">d</span> is simply:
+            <br><code>θ = d / r</code>
+            <br>This linear relationship between distance and rotation angle is what creates the helical path in our projected C-space.
+            </p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What am I looking at in the right-hand panel?</dt>
+                <dd>You are looking at a 3D graph that plots the ball's (x, y) position on the floor, and a third axis representing its rotation. It's a simplified view of the true 5D C-space. The red line is the path of the ball's complete configuration over time.</dd>
+
+                <dt>2. Why is a straight roll a helix in C-space?</dt>
+                <dd>Because as the ball's x-position increases (moves along the X-axis of the graph), its rotation angle also increases steadily due to the no-slip rolling condition (moves up the Z-axis of the graph). Moving along one axis while also moving along another creates a helix.</dd>
+
+                <dt>3. What does the "Roll in Circle" animation show?</dt>
+                <dd>It shows a more complex path. In the workspace (left panel), the ball rolls in a circle. In the C-space (right panel), this creates a path that is itself circular on the (x,y) plane, but also continuously winds upwards in the rotation dimension, creating a path that looks like it's drawn on the surface of a torus or donut.</dd>
+
+                <dt>4. What do the grid lines on the ball help with?</dt>
+                <dd>They make the rotation visible. A plain, single-color ball would appear to just slide across the surface. The grid lines, like the lines on a basketball, allow you to see it rotating and appreciate the orientation component of its configuration.</dd>
+
+                <dt>5. Is the C-space visualization to scale?</dt>
+                <dd>Conceptually, yes. The x and y axes correspond to the workspace. The vertical axis represents the rotation angle. The C-space view is rotated so you can see the 3D structure of the path. You can think of the vertical axis as "unwrapping" the rotation of the ball over time.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Theme ---
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            // No need to redraw static elements, but if colors were dynamic, we would.
+        });
+
+        // --- Workspace Canvas ---
+        const wsCanvas = document.getElementById('workspace-canvas');
+        const wsCtx = wsCanvas.getContext('2d');
+        const wsSize = wsCanvas.width;
+
+        // --- C-Space Canvas ---
+        const csCanvas = document.getElementById('cspace-canvas');
+        const csCtx = csCanvas.getContext('2d');
+        const csSize = csCanvas.width;
+
+        // --- Simulation State ---
+        let ball = {
+            x: wsSize / 2,
+            y: wsSize / 2,
+            radius: 30,
+            rotationAngle: 0, // Total angle rotated
+            // For drawing texture
+            orientation: { x: 0, y: 0, z: 0, w: 1 } // Quaternion for orientation
+        };
+        let cspacePath = [];
+        let animationId;
+
+        // --- Fake 3D C-Space Camera ---
+        let cameraAngleX = 0.5;
+        let cameraAngleY = -0.8;
+
+        // --- Quaternion helpers for ball texture ---
+        function multiplyQuaternions(q1, q2) {
+            const x = q1.x * q2.w + q1.y * q2.z - q1.z * q2.y + q1.w * q2.x;
+            const y = -q1.x * q2.z + q1.y * q2.w + q1.z * q2.x + q1.w * q2.y;
+            const z = q1.x * q2.y - q1.y * q2.x + q1.z * q2.w + q1.w * q2.z;
+            const w = -q1.x * q2.x - q1.y * q2.y - q1.z * q2.z + q1.w * q2.w;
+            return { x, y, z, w };
+        }
+
+        function rotateVectorByQuaternion(v, q) {
+            const ix = q.w * v.x + q.y * v.z - q.z * v.y;
+            const iy = q.w * v.y + q.z * v.x - q.x * v.z;
+            const iz = q.w * v.z + q.x * v.y - q.y * v.x;
+            const iw = -q.x * v.x - q.y * v.y - q.z * v.z;
+            const x = ix * q.w + iw * -q.x + iy * -q.z - iz * -q.y;
+            const y = iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z;
+            const z = iz * q.w + iw * -q.z + ix * -q.y - iy * -q.x;
+            return { x, y, z };
+        }
+
+        // --- Drawing Functions ---
+        function drawWorkspace() {
+            wsCtx.fillStyle = document.body.classList.contains('dark-mode') ? '#34495e' : '#ecf0f1';
+            wsCtx.fillRect(0, 0, wsSize, wsSize);
+
+            // Draw ball
+            wsCtx.save();
+            wsCtx.translate(ball.x, ball.y);
+
+            // Draw ball body
+            const gradient = wsCtx.createRadialGradient(-10, -10, 5, 0, 0, ball.radius);
+            gradient.addColorStop(0, '#fff');
+            gradient.addColorStop(1, '#bbb');
+            wsCtx.fillStyle = gradient;
+            wsCtx.beginPath();
+            wsCtx.arc(0, 0, ball.radius, 0, 2 * Math.PI);
+            wsCtx.fill();
+
+            // Draw texture lines based on orientation
+            wsCtx.strokeStyle = 'rgba(211, 84, 0, 0.8)';
+            wsCtx.lineWidth = 2;
+            for (let i = 0; i < 12; i++) {
+                const angle = i * Math.PI / 6;
+                let p1 = { x: 0, y: 0, z: 0 };
+                let p2 = { x: Math.cos(angle) * ball.radius, y: Math.sin(angle) * ball.radius, z: 0 };
+
+                let r_p1 = rotateVectorByQuaternion(p1, ball.orientation);
+                let r_p2 = rotateVectorByQuaternion(p2, ball.orientation);
+
+                if (r_p2.z > 0) { // Only draw lines on the visible hemisphere
+                    wsCtx.beginPath();
+                    wsCtx.moveTo(r_p1.x, r_p1.y);
+                    wsCtx.lineTo(r_p2.x, r_p2.y);
+                    wsCtx.stroke();
+                }
+            }
+            wsCtx.restore();
+        }
+
+        function project3D(p) {
+            // Simple 3D projection for C-space
+            const scale = csSize / 2;
+            let { x, y, z } = p;
+
+            x = (x - wsSize / 2) / (wsSize / 2);
+            y = (y - wsSize / 2) / (wsSize / 2);
+            z = z / (Math.PI * 4); // Normalize rotation
+
+            // Rotate camera
+            const rotX = Math.cos(cameraAngleX) * y - Math.sin(cameraAngleX) * z;
+            const rotZ = Math.sin(cameraAngleX) * y + Math.cos(cameraAngleX) * z;
+            const rotY = Math.cos(cameraAngleY) * x + Math.sin(cameraAngleY) * rotZ;
+
+            const perspective = 1.5 / (1.5 - rotZ);
+            return {
+                x: rotY * perspective * scale + csSize / 2,
+                y: rotX * perspective * scale + csSize / 2
+            };
+        }
+
+        function drawCSpace() {
+            csCtx.fillStyle = document.body.classList.contains('dark-mode') ? '#34495e' : '#ecf0f1';
+            csCtx.fillRect(0, 0, csSize, csSize);
+
+            // Draw axes
+            const origin = {x: wsSize/2, y: wsSize/2, z:0};
+            const xAxis = {x: wsSize, y: wsSize/2, z:0};
+            const yAxis = {x: wsSize/2, y: wsSize, z:0};
+            const zAxis = {x: wsSize/2, y: wsSize/2, z: Math.PI * 4};
+
+            const o_p = project3D(origin);
+            const x_p = project3D(xAxis);
+            const y_p = project3D(yAxis);
+            const z_p = project3D(zAxis);
+
+            csCtx.strokeStyle = document.body.classList.contains('dark-mode') ? '#ecf0f1' : '#2c3e50';
+            csCtx.lineWidth = 1;
+            csCtx.beginPath();
+            csCtx.moveTo(o_p.x, o_p.y);
+            csCtx.lineTo(x_p.x, x_p.y);
+            csCtx.stroke();
+            csCtx.fillText("X", x_p.x, x_p.y);
+
+            csCtx.beginPath();
+            csCtx.moveTo(o_p.x, o_p.y);
+            csCtx.lineTo(y_p.x, y_p.y);
+            csCtx.stroke();
+            csCtx.fillText("Y", y_p.x, y_p.y);
+
+            csCtx.beginPath();
+            csCtx.moveTo(o_p.x, o_p.y);
+            csCtx.lineTo(z_p.x, z_p.y);
+            csCtx.stroke();
+            csCtx.fillText("Rot", z_p.x, z_p.y);
+
+            // Draw path
+            if (cspacePath.length < 2) return;
+            csCtx.strokeStyle = '#d35400';
+            csCtx.lineWidth = 3;
+            csCtx.beginPath();
+
+            const firstPoint = project3D(cspacePath[0]);
+            csCtx.moveTo(firstPoint.x, firstPoint.y);
+
+            for (let i = 1; i < cspacePath.length; i++) {
+                const p = project3D(cspacePath[i]);
+                csCtx.lineTo(p.x, p.y);
+            }
+            csCtx.stroke();
+        }
+
+        function drawAll() {
+            drawWorkspace();
+            drawCSpace();
+        }
+
+        // --- Animation Logic ---
+        function resetState() {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+            ball = {
+                x: wsSize / 2,
+                y: wsSize / 2,
+                radius: 30,
+                rotationAngle: 0,
+                orientation: { x: 0, y: 0, z: 0, w: 1 }
+            };
+            cspacePath = [{ x: ball.x, y: ball.y, z: ball.rotationAngle }];
+            drawAll();
+        }
+
+        function animate(rollFunction) {
+            resetState();
+            let step = 0;
+            const totalSteps = 400;
+
+            function loop() {
+                if (step > totalSteps) {
+                    animationId = null;
+                    return;
+                }
+                rollFunction(step);
+                cspacePath.push({ x: ball.x, y: ball.y, z: ball.rotationAngle });
+                drawAll();
+                step++;
+                animationId = requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        function rollStraight(step) {
+            const speed = 0.8;
+            const deltaX = speed;
+            const deltaRot = deltaX / ball.radius;
+
+            ball.x += deltaX;
+            ball.rotationAngle += deltaRot;
+
+            // Update orientation (rotation around Y axis)
+            const rot_q = {
+                x: 0,
+                y: Math.sin(deltaRot / 2),
+                z: 0,
+                w: Math.cos(deltaRot / 2)
+            };
+            ball.orientation = multiplyQuaternions(rot_q, ball.orientation);
+        }
+
+        function rollCircle(step) {
+            const angle = step * 0.015;
+            const circleRadius = wsSize / 4;
+            const speed = 1.2;
+
+            const prevX = ball.x;
+            const prevY = ball.y;
+
+            ball.x = wsSize / 2 + circleRadius * Math.cos(angle);
+            ball.y = wsSize / 2 + circleRadius * Math.sin(angle);
+
+            const dx = ball.x - prevX;
+            const dy = ball.y - prevY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const deltaRot = dist / ball.radius;
+            ball.rotationAngle += deltaRot;
+
+            // Rotation axis is perpendicular to motion direction
+            const rotAxis = { x: -dy, y: dx, z: 0 };
+            const axisLen = Math.sqrt(rotAxis.x*rotAxis.x + rotAxis.y*rotAxis.y);
+            if(axisLen > 0) {
+                rotAxis.x /= axisLen;
+                rotAxis.y /= axisLen;
+            }
+
+            const halfAngle = deltaRot / 2;
+            const rot_q = {
+                x: rotAxis.x * Math.sin(halfAngle),
+                y: rotAxis.y * Math.sin(halfAngle),
+                z: 0,
+                w: Math.cos(halfAngle)
+            };
+            ball.orientation = multiplyQuaternions(rot_q, ball.orientation);
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('reset-btn').addEventListener('click', resetState);
+        document.getElementById('roll-straight-btn').addEventListener('click', () => animate(rollStraight));
+        document.getElementById('roll-circle-btn').addEventListener('click', () => animate(rollCircle));
+
+        // C-space camera controls
+        let mouseDown = false;
+        let lastMouseX = 0, lastMouseY = 0;
+        csCanvas.addEventListener('mousedown', e => {
+            mouseDown = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+        document.addEventListener('mouseup', () => { mouseDown = false; });
+        document.addEventListener('mousemove', e => {
+            if (!mouseDown) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+
+            cameraAngleY += dx * 0.01;
+            cameraAngleX += dy * 0.01;
+            if(!animationId) drawCSpace();
+        });
+
+
+        // --- Initial Call ---
+        resetState();
+    });
+    </script>
+</body>
+</html>

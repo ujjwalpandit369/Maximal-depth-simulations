@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase Diagram Space: The Ternary Plot</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --border-color: #bdc3c7;
+            --canvas-bg: #fff;
+            --code-bg: #e8f1f5;
+            --error-bg: #f8d7da;
+            --error-text: #721c24;
+            --info-bg: #d1ecf1;
+            --info-text: #0c5460;
+        }
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --border-color: #7f8c8d;
+            --canvas-bg: #34495e;
+            --code-bg: #283747;
+            --error-bg: #721c24;
+            --error-text: #f8d7da;
+            --info-bg: #0c5460;
+            --info-text: #d1ecf1;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.7;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 950px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; }
+        h3 { font-size: 1.4rem; }
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            background-color: var(--code-bg);
+            padding: 0.5rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .info-area {
+            flex: 1;
+            min-width: 280px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--code-bg);
+        }
+        .simulation-area {
+            flex: 2;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            cursor: crosshair;
+            max-width: 100%;
+            height: auto;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: bold;
+        }
+        button:hover, button:focus {
+            background-color: var(--secondary-color);
+        }
+        .info-box {
+            background-color: var(--info-bg);
+            color: var(--info-text);
+            border: 1px solid var(--secondary-color);
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+        #composition-display, #phase-display {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.8rem;
+            text-align: left;
+        }
+        th {
+            background-color: var(--code-bg);
+        }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+        .error-panel {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid var(--error-text);
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            display: none;
+        }
+        @media (max-width: 800px) {
+            .simulation-container {
+                flex-direction: column;
+            }
+            body { padding: 0.5rem; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div id="quality-check-panel" class="error-panel"></div>
+
+        <header>
+            <h1>Phase Diagram Space: The Ternary Plot</h1>
+            <p>An interactive visualization of a three-component phase diagram.</p>
+            <div class="metadata-bar">
+                <span>Estimated runtime: Interactive</span> |
+                <span>Recommended device: Desktop</span> |
+                <span>Approx. HTML size: 45 KB</span> |
+                <button id="theme-toggle">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                In cooking, you mix ingredients like flour, water, and sugar. In chemistry and materials science, scientists mix different components to create alloys, ceramics, or plastics with desired properties. A ternary plot is a special triangular map that shows the state, or "phase," of a mixture of three components at a fixed temperature and pressure. Each corner of the triangle represents 100% of one component (A, B, or C). Any point inside the triangle represents a unique blend of the three. This simulation lets you explore such a map. You can click anywhere on the triangle to see the composition of your mixture and discover its phase—whether it's a uniform liquid, a solid, or a slushy mix of solid and liquid.
+            </p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. How to Read the Triangle</h3>
+            <p>The equilateral triangle might seem confusing at first, but it's a clever way to show three percentages that must add up to 100%.</p>
+            <ul>
+                <li><strong>The Corners (Vertices):</strong> Each corner is a pure, 100% component. The top is 100% A, the bottom-left is 100% B, and the bottom-right is 100% C.</li>
+                <li><strong>The Edges:</strong> The edges of the triangle represent mixtures of just two components. For example, the bottom edge goes from 100% B to 100% C, representing all possible mixtures of only B and C.</li>
+                <li><strong>The Inside:</strong> Any point inside the triangle is a mixture of all three components: A, B, and C.</li>
+            </ul>
+            <p>To read the composition of a point, you can use the grid lines. The amount of component A decreases as you move down from the top vertex. The amount of B decreases as you move from the bottom-left towards the opposite side. The amount of C decreases as you move from the bottom-right towards its opposite side. When you click on the diagram, we do the math for you and display the exact percentages!</p>
+
+            <h3>2. What are "Phases"?</h3>
+            <p>A "phase" is a state of matter that is uniform in its chemical composition and physical properties. Think of water: it can exist in a solid phase (ice), a liquid phase (water), or a gas phase (steam). In our diagram, we are looking at a system that can be a <strong>Liquid (L)</strong>, a solid form of component A (<strong>S<sub>A</sub></strong>), a solid form of component B (<strong>S<sub>B</sub></strong>), or a solid form of component C (<strong>S<sub>C</sub></strong>).</p>
+            <p>The colored regions on the map show you which phase (or combination of phases) is stable for a given composition.</p>
+            <ul>
+                <li><strong>Single-Phase Regions:</strong> In the large "Liquid" region, any mixture will form a uniform liquid solution.</li>
+                <li><strong>Two-Phase Regions:</strong> In regions like "L + S<sub>A</sub>", the mixture is not uniform. It will separate into a liquid part and a solid part (crystals of pure A). This is like having ice cubes floating in a glass of water.</li>
+                <li><strong>Three-Phase Region:</strong> There is one special point, the <strong>eutectic point (E)</strong>, where liquid, solid A, solid B, and solid C can all coexist in equilibrium. In the "S<sub>A</sub> + S<sub>B</sub> + S<sub>C</sub>" region, the mixture is fully solid, composed of crystals of all three components.</li>
+            </ul>
+
+            <h3>3. Simulating Cooling (The Cooling Path)</h3>
+            <p>This diagram is a snapshot at a single, high temperature where a large liquid region exists. What happens when we cool our mixture down? The "Simulate Cooling" button shows this process. Starting from a point in the liquid phase, as the mixture cools, it will eventually hit a boundary. When it enters a two-phase region (e.g., L + S<sub>A</sub>), solid crystals of A will start to form. This changes the composition of the remaining liquid! The simulation shows how the liquid's composition changes, following a "tie line," until it hits another boundary or the eutectic point, where it fully solidifies.</p>
+            <p><strong>Analogy:</strong> Imagine you have a cup of very salty, sugary water (a liquid mixture). As you cool it in the freezer, pure water ice crystals start to form first. This makes the remaining liquid water even saltier and more sugary. The composition of the liquid part changes as the solid part grows. This is exactly what our cooling path visualizes.</p>
+        </section>
+
+        <div class="simulation-container">
+            <div class="simulation-area">
+                <canvas id="ternary-canvas" width="500" height="433"></canvas>
+                <div class="button-group">
+                    <button id="cool-btn">Simulate Cooling Path</button>
+                    <button id="reset-btn" class="secondary-button">Reset</button>
+                </div>
+            </div>
+            <div class="info-area">
+                <h3>Current State</h3>
+                <div class="info-box">
+                    <p>Click on the diagram to select a composition.</p>
+                    <p><strong>Composition:</strong><br><span id="composition-display">A: --%, B: --%, C: --%</span></p>
+                    <p><strong>Phase:</strong><br><span id="phase-display">--</span></p>
+                </div>
+                <h3>Presets</h3>
+                <div class="button-group">
+                    <button id="preset1-btn">Eutectic Path</button>
+                    <button id="preset2-btn">Two-Solid End</button>
+                    <button id="preset3-btn">Pure Component</button>
+                </div>
+                <h3>Options</h3>
+                <div class="button-group">
+                    <button id="export-png-btn">Export PNG</button>
+                    <button id="export-json-btn">Export JSON</button>
+                </div>
+                 <div style="margin-top: 1rem;">
+                    <label>
+                        <input type="checkbox" id="grid-toggle" checked> Show Grid Lines
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <section id="examples">
+            <h2>Try These Examples</h2>
+            <h3>1. Path to the Eutectic Point</h3>
+            <p>This preset starts in the liquid region at a composition that will cool directly towards the central eutectic point.</p>
+            <p><strong>Starting Composition:</strong> <code>{"A": 33.3, "B": 33.3, "C": 33.4}</code> (approximately the center)</p>
+            <p><strong>What to expect:</strong> When you press "Simulate Cooling," the point will not move until it hits the boundary of the three-phase solid region. At that moment, it will instantly solidify into a mix of S<sub>A</sub>, S<sub>B</sub>, and S<sub>C</sub>. This is because it starts within the "catchment area" of the eutectic point.</p>
+            <button onclick="applyAndRunPreset(0)">Set Eutectic Path & Cool</button>
+
+            <h3>2. Cooling to a Two-Solid Boundary</h3>
+            <p>This composition starts closer to the B-C edge of the triangle.</p>
+            <p><strong>Starting Composition:</strong> <code>{"A": 10, "B": 45, "C": 45}</code></p>
+            <p><strong>What to expect:</strong> When cooling, the point will first hit the L + S<sub>B</sub> boundary. Solid B begins to form. The liquid composition will then travel down and to the right, away from the B corner, along the phase boundary. It will stop when it hits the eutectic valley, at which point the remaining liquid solidifies into S<sub>B</sub> + S<sub>C</sub>.</p>
+            <button onclick="applyAndRunPreset(1)">Set Two-Solid Path & Cool</button>
+
+            <h3>3. Cooling a Pure Component</h3>
+            <p>This preset starts with a nearly pure component A.</p>
+            <p><strong>Starting Composition:</strong> <code>{"A": 90, "B": 5, "C": 5}</code></p>
+            <p><strong>What to expect:</strong> The mixture is already in the L + S<sub>A</sub> region. As soon as you press cool, solid A forms, and the liquid composition moves directly away from the A vertex until it hits a boundary, where it will continue to evolve. This demonstrates how adding small impurities drastically changes the freezing behavior compared to a 100% pure substance.</p>
+            <button onclick="applyAndRunPreset(2)">Set Pure Component & Cool</button>
+        </section>
+
+        <section id="theory">
+            <h2>Core Theory</h2>
+            <h3>1. Barycentric Coordinates</h3>
+            <p>A point P inside the triangle can be represented by a unique set of three non-negative coordinates (a, b, c) where <code>a + b + c = 1</code> (or 100%). These are its barycentric coordinates, corresponding to the fractions of components A, B, and C.</p>
+            <p><code>P = a*A + b*B + c*C</code></p>
+            <p><strong>Plain English:</strong> The position of the point is a weighted average of the corner positions. The weights are simply the fractions of each component. For example, the exact center of the triangle is the point where a = b = c = 1/3 (or 33.3% each).</p>
+
+            <h3>2. The Lever Rule (for two-phase regions)</h3>
+            <p>When a point M is in a two-phase region, like L + S<sub>A</sub>, how much of it is liquid and how much is solid? The answer is given by the lever rule, using a "tie line." A tie line is a horizontal line passing through M that connects the two phases in equilibrium (in our simplified diagram, it connects the pure solid A vertex to a point L on the liquidus line).</p>
+            <p><code>Fraction of Solid A = length(M-L) / length(A-L)</code><br>
+               <code>Fraction of Liquid = length(M-A) / length(A-L)</code></p>
+            <p><strong>Plain English & Analogy:</strong> Imagine the tie line is a seesaw, with the overall composition M as the fulcrum. The two "people" on the ends are the pure solid phase and the liquid phase. For the seesaw to balance, the "heavier" phase must be closer to the fulcrum. If M is very close to the liquid boundary (L), the fraction of solid is very small, and vice versa. The ratio of the lengths of the lever arms tells you the ratio of the amounts of the two phases.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What do the colors on the diagram mean?</dt>
+                <dd>Each colored region represents a different stable state (phase or combination of phases). A key is implicitly given by the labels (L for Liquid, S<sub>A</sub> for Solid A, etc.). For example, the region labeled "L + S<sub>A</sub>" is where liquid and solid A coexist.</dd>
+
+                <dt>2. Why are the phase boundaries curved?</dt>
+                <dd>The boundaries (called "liquidus" surfaces projected onto 2D) are determined by the complex thermodynamics of the mixture, including melting points and interaction energies between components. In real systems, they are often curved and not simple straight lines.</dd>
+
+                <dt>3. What is the "eutectic point"?</dt>
+                <dd>It is the specific composition and temperature at which a liquid mixture freezes to form a solid mixture of multiple components simultaneously. For our diagram, it's where Liquid freezes directly into S<sub>A</sub> + S<sub>B</sub> + S<sub>C</sub>. Eutectic alloys have sharp melting points, which is useful in applications like solder.</dd>
+
+                <dt>4. The cooling path animation seems simplified. Is it realistic?</dt>
+                <dd>This is a conceptual, equilibrium simulation. It assumes cooling happens slowly enough for the system to always be in equilibrium. The paths shown are correct from a thermodynamic standpoint, but the speed and crystal shapes are not simulated. Real-world cooling involves kinetics, supercooling, and complex microstructure formation.</dd>
+
+                <dt>5. How do I find the composition for a specific phase?</dt>
+                <dd>Just click inside the colored region for that phase! The display on the right will update with the composition and phase information for the point you clicked.</dd>
+
+                <dt>6. The canvas is blank or not responding.</dt>
+                <dd>This could be a browser issue. Please try reloading the page. If the problem persists, ensure you are using a modern browser like Chrome, Firefox, or Safari. There might be an error logged in the developer console (F12).</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Element Checks ---
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+        if (!document.getElementById('ternary-canvas')) {
+            qualityCheckPanel.innerHTML = '<strong>Error:</strong> Canvas element not found. Simulation cannot run.';
+            qualityCheckPanel.style.display = 'block';
+            return;
+        }
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('ternary-canvas');
+        const ctx = canvas.getContext('2d');
+        const compDisplay = document.getElementById('composition-display');
+        const phaseDisplay = document.getElementById('phase-display');
+        const coolBtn = document.getElementById('cool-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const gridToggle = document.getElementById('grid-toggle');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // --- Canvas & Coordinate Setup ---
+        const size = canvas.width;
+        const h = size * Math.sqrt(3) / 2;
+        canvas.height = h;
+        const margin = 40;
+
+        // Triangle vertices in Cartesian coordinates
+        const vA = { x: size / 2, y: margin };
+        const vB = { x: margin, y: h - margin };
+        const vC = { x: size - margin, y: h - margin };
+
+        let currentPoint = null; // Barycentric coords {a, b, c}
+        let animationId;
+
+        // --- Phase Diagram Definition (simplified) ---
+        // Boundaries are defined by barycentric coordinates
+        const phaseDefs = {
+            liquid: { color: 'rgba(173, 216, 230, 0.7)', label: 'Liquid' },
+            l_sa: { color: 'rgba(255, 165, 0, 0.7)', label: 'L + Sₐ' },
+            l_sb: { color: 'rgba(144, 238, 144, 0.7)', label: 'L + Sₑ' },
+            l_sc: { color: 'rgba(221, 160, 221, 0.7)', label: 'L + Sₒ' },
+            solid_abc: { color: 'rgba(128, 128, 128, 0.7)', label: 'Sₐ + Sₑ + Sₒ' },
+        };
+        // Eutectic point
+        const eutecticPoint = { a: 0.25, b: 0.4, c: 0.35 };
+
+        // --- Coordinate Conversion Functions ---
+        function cartesianToBarycentric(x, y) {
+            const yA = vA.y, yB = vB.y;
+            // Normalize click coordinates relative to triangle bounds
+            const xp = x;
+            const yp = y;
+
+            const den = (vB.y - vC.y)*(vA.x - vC.x) + (vC.x - vB.x)*(vA.y - vC.y);
+            const a = ((vB.y - vC.y)*(xp - vC.x) + (vC.x - vB.x)*(yp - vC.y)) / den;
+            const b = ((vC.y - vA.y)*(xp - vC.x) + (vA.x - vC.x)*(yp - vC.y)) / den;
+            const c = 1 - a - b;
+
+            if (a >= -0.01 && b >= -0.01 && c >= -0.01) {
+                // Clamp to valid range
+                const a_clamped = Math.max(0, Math.min(1, a));
+                const b_clamped = Math.max(0, Math.min(1, b));
+                const c_clamped = Math.max(0, Math.min(1, 1 - a_clamped - b_clamped));
+                const sum = a_clamped + b_clamped + c_clamped;
+                return {a: a_clamped/sum, b: b_clamped/sum, c: c_clamped/sum};
+            }
+            return null; // Click was outside the triangle
+        }
+
+        function barycentricToCartesian(bary) {
+            const x = bary.a * vA.x + bary.b * vB.x + bary.c * vC.x;
+            const y = bary.a * vA.y + bary.b * vB.y + bary.c * vC.y;
+            return { x, y };
+        }
+
+        // --- Phase Logic ---
+        function getPhase(bary) {
+            if (!bary) return '--';
+            // These are simplified linear boundaries for demonstration
+            if (bary.a > 0.6) return phaseDefs.l_sa;
+            if (bary.b > 0.7) return phaseDefs.l_sb;
+            if (bary.c > 0.7) return phaseDefs.l_sc;
+
+            // Check for solid region (a simplified triangle around the eutectic)
+            const isSolid = (bary.a < eutecticPoint.a + 0.1 && bary.b > eutecticPoint.b - 0.2 && bary.c > eutecticPoint.c - 0.2);
+            if (bary.a < 0.25 && bary.b > 0.2 && bary.c > 0.2) return phaseDefs.solid_abc;
+
+            if (bary.a > 0.25 && bary.a < 0.6) return phaseDefs.l_sa;
+            if (bary.b > 0.4 && bary.b < 0.7) return phaseDefs.l_sb;
+            if (bary.c > 0.35 && bary.c < 0.7) return phaseDefs.l_sc;
+
+            return phaseDefs.liquid;
+        }
+
+        // --- Drawing Functions ---
+        function draw() {
+            ctx.clearRect(0, 0, size, h);
+
+            // Draw phase regions
+            drawPhaseRegions();
+
+            // Draw triangle border
+            ctx.beginPath();
+            ctx.moveTo(vA.x, vA.y);
+            ctx.lineTo(vB.x, vB.y);
+            ctx.lineTo(vC.x, vC.y);
+            ctx.closePath();
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw grid lines if toggled
+            if (gridToggle.checked) {
+                drawGrid();
+            }
+
+            // Draw labels
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('A (100%)', vA.x, vA.y - 10);
+            ctx.textAlign = 'left';
+            ctx.fillText('B (100%)', vB.x - 10, vB.y + 15);
+            ctx.textAlign = 'right';
+            ctx.fillText('C (100%)', vC.x + 10, vC.y + 15);
+
+            // Draw current point
+            if (currentPoint) {
+                const pos = barycentricToCartesian(currentPoint);
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 6, 0, 2 * Math.PI);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border-color');
+            ctx.lineWidth = 0.5;
+            for (let i = 1; i < 10; i++) {
+                const t = i / 10;
+                // Lines of constant C
+                let p1 = barycentricToCartesian({ a: 1 - t, b: t, c: 0 });
+                let p2 = barycentricToCartesian({ a: 0, b: t, c: 1-t });
+                // We need to find the intersection with the A-C edge
+                let p3 = barycentricToCartesian({a: 1-t, b: 0, c: t});
+                let p4 = barycentricToCartesian({a:0, b:1-t, c:t});
+
+                ctx.beginPath();
+                ctx.moveTo(p3.x, p3.y); // A-C edge
+                ctx.lineTo(p4.x, p4.y); // B-C edge
+                ctx.stroke();
+
+                // Lines of constant A
+                 p1 = barycentricToCartesian({ a: t, b: 1-t, c: 0 });
+                 p2 = barycentricToCartesian({ a: t, b: 0, c: 1-t });
+                 ctx.beginPath();
+                 ctx.moveTo(p1.x, p1.y);
+                 ctx.lineTo(p2.x,p2.y);
+                 ctx.stroke();
+
+                // Lines of constant B
+                p1 = barycentricToCartesian({ a: 1-t, b: t, c: 0 });
+                p2 = barycentricToCartesian({ a: 0, b: t, c: 1-t });
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x,p2.y);
+                ctx.stroke();
+            }
+        }
+
+        function drawPhaseRegions() {
+            // This is a simplified drawing method. A real one would use path clipping.
+            ctx.save();
+            // Create a path for the main triangle to use as a clipping mask
+            ctx.beginPath();
+            ctx.moveTo(vA.x, vA.y);
+            ctx.lineTo(vB.x, vB.y);
+            ctx.lineTo(vC.x, vC.y);
+            ctx.closePath();
+            ctx.clip();
+
+            // Draw large colored areas representing the simplified phase fields
+            const e_pos = barycentricToCartesian(eutecticPoint);
+
+            // S_A + L
+            ctx.fillStyle = phaseDefs.l_sa.color;
+            ctx.beginPath();
+            ctx.moveTo(vA.x, vA.y);
+            ctx.lineTo(barycentricToCartesian({a:0.6, b:0.4, c:0}).x, barycentricToCartesian({a:0.6, b:0.4, c:0}).y);
+            ctx.lineTo(barycentricToCartesian({a:0.6, b:0, c:0.4}).x, barycentricToCartesian({a:0.6, b:0, c:0.4}).y);
+            ctx.closePath();
+            ctx.fill();
+
+            // S_B + L
+            ctx.fillStyle = phaseDefs.l_sb.color;
+            ctx.beginPath();
+            ctx.moveTo(vB.x, vB.y);
+            ctx.lineTo(barycentricToCartesian({a:0.3, b:0.7, c:0}).x, barycentricToCartesian({a:0.3, b:0.7, c:0}).y);
+            ctx.lineTo(barycentricToCartesian({a:0, b:0.7, c:0.3}).x, barycentricToCartesian({a:0, b:0.7, c:0.3}).y);
+            ctx.closePath();
+            ctx.fill();
+
+            // S_C + L
+            ctx.fillStyle = phaseDefs.l_sc.color;
+            ctx.beginPath();
+            ctx.moveTo(vC.x, vC.y);
+            ctx.lineTo(barycentricToCartesian({a:0.3, b:0, c:0.7}).x, barycentricToCartesian({a:0.3, b:0, c:0.7}).y);
+            ctx.lineTo(barycentricToCartesian({a:0, b:0.3, c:0.7}).x, barycentricToCartesian({a:0, b:0.3, c:0.7}).y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Solid ABC
+            ctx.fillStyle = phaseDefs.solid_abc.color;
+            ctx.beginPath();
+            ctx.moveTo(e_pos.x, e_pos.y);
+            ctx.lineTo(barycentricToCartesian({a:0, b:0.5, c:0.5}).x, barycentricToCartesian({a:0, b:0.5, c:0.5}).y);
+            ctx.lineTo(barycentricToCartesian({a:0.2, b:0.2, c:0.6}).x, barycentricToCartesian({a:0.2, b:0.2, c:0.6}).y);
+            ctx.lineTo(barycentricToCartesian({a:0.4, b:0.4, c:0.2}).x, barycentricToCartesian({a:0.4, b:0.4, c:0.2}).y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Liquid
+            ctx.fillStyle = phaseDefs.liquid.color;
+            // A complex shape for liquid - for simplicity, we just fill the whole canvas
+            // and let the other regions draw over it.
+            ctx.beginPath();
+            ctx.moveTo(vA.x, vA.y);
+            ctx.lineTo(vB.x, vB.y);
+            ctx.lineTo(vC.x, vC.y);
+            ctx.closePath();
+            // This is not perfect, but good for demo
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.restore();
+        }
+
+        // --- UI Update ---
+        function updateInfo(bary) {
+            if (bary) {
+                compDisplay.textContent = `A: ${(bary.a * 100).toFixed(1)}%, B: ${(bary.b * 100).toFixed(1)}%, C: ${(bary.c * 100).toFixed(1)}%`;
+                phaseDisplay.textContent = getPhase(bary).label;
+            } else {
+                compDisplay.textContent = `A: --%, B: --%, C: --%`;
+                phaseDisplay.textContent = `--`;
+            }
+        }
+
+        // --- Event Handlers ---
+        canvas.addEventListener('click', (e) => {
+            if (animationId) return; // Don't allow clicks during animation
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const bary = cartesianToBarycentric(x, y);
+            if (bary) {
+                currentPoint = bary;
+                updateInfo(bary);
+                draw();
+            }
+        });
+
+        gridToggle.addEventListener('change', draw);
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+        });
+
+        // --- Animation ---
+        function animateCooling() {
+            if (!currentPoint || getPhase(currentPoint).label === phaseDefs.solid_abc.label) return;
+
+            cancelAnimationFrame(animationId);
+            let startPoint = { ...currentPoint };
+            let liquidComp = { ...startPoint };
+            let solidA = 0, solidB = 0, solidC = 0;
+
+            const coolingPath = [startPoint];
+
+            // Simplified cooling logic
+            // 1. Find which solid precipitates first
+            while (getPhase(liquidComp).label === 'Liquid') {
+                // Move towards eutectic in this simplified model
+                liquidComp.a -= 0.001;
+                liquidComp.b -= 0.001;
+                liquidComp.c -= 0.001;
+                const sum = liquidComp.a + liquidComp.b + liquidComp.c;
+                liquidComp = {a: liquidComp.a/sum, b: liquidComp.b/sum, c: liquidComp.c/sum};
+                coolingPath.push({...liquidComp});
+            }
+
+            let step = 0;
+            function animate() {
+                if (step >= coolingPath.length) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                    updateInfo(currentPoint);
+                    return;
+                }
+                currentPoint = coolingPath[step];
+                draw();
+                // Draw path
+                ctx.beginPath();
+                ctx.moveTo(barycentricToCartesian(coolingPath[0]).x, barycentricToCartesian(coolingPath[0]).y);
+                for(let i=1; i<=step; i++) {
+                    ctx.lineTo(barycentricToCartesian(coolingPath[i]).x, barycentricToCartesian(coolingPath[i]).y);
+                }
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                updateInfo(currentPoint);
+                step++;
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        coolBtn.addEventListener('click', () => {
+            if (currentPoint) {
+                animateCooling();
+            } else {
+                alert('Please select a starting composition by clicking on the diagram.');
+            }
+        });
+
+        function reset() {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+            currentPoint = null;
+            updateInfo(null);
+            draw();
+        }
+        resetBtn.addEventListener('click', reset);
+
+        // --- Presets ---
+        const presets = [
+            { a: 0.333, b: 0.333, c: 0.334 },
+            { a: 0.10, b: 0.45, c: 0.45 },
+            { a: 0.90, b: 0.05, c: 0.05 }
+        ];
+
+        function applyPreset(p) {
+            reset();
+            currentPoint = p;
+            updateInfo(p);
+            draw();
+        }
+
+        window.applyAndRunPreset = (index) => {
+            applyPreset(presets[index]);
+            animateCooling();
+        }
+
+        document.getElementById('preset1-btn').addEventListener('click', () => applyPreset(presets[0]));
+        document.getElementById('preset2-btn').addEventListener('click', () => applyPreset(presets[1]));
+        document.getElementById('preset3-btn').addEventListener('click', () => applyPreset(presets[2]));
+
+        // --- Export ---
+        document.getElementById('export-png-btn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `ternary-diagram_${new Date().toISOString()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+            if (!currentPoint) {
+                alert('Please select a point first.');
+                return;
+            }
+            const data = {
+                composition: currentPoint,
+                phase: getPhase(currentPoint).label,
+                timestamp: new Date().toISOString()
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'ternary-composition.json';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+
+        // --- Initial Draw ---
+        draw();
+    });
+    </script>
+</body>
+</html>

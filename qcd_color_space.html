@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Space (QCD)</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --red-color: #dc3545;
+            --green-color: #28a745;
+            --blue-color: #007bff;
+            --antired-color: #00ffff; /* Cyan */
+            --antigreen-color: #ff00ff; /* Magenta */
+            --antiblue-color: #ffff00; /* Yellow */
+        }
+        .dark-mode {
+            --bg-color: #212529;
+            --text-color: #f8f9fa;
+            --primary-color: #58a6ff;
+            --secondary-color: #8b949e;
+            --border-color: #444c56;
+            --canvas-bg: #0d1117;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 1.5rem 0;
+        }
+        .controls-panel {
+            flex: 1;
+            min-width: 300px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .visualization-panel {
+            flex: 1.5;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+        }
+        .status-box {
+            width: 100%;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid;
+        }
+        .status-valid {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #155724;
+        }
+        .status-invalid {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #721c24;
+        }
+        .dark-mode .status-valid { background-color: #155724; color: #d4edda; }
+        .dark-mode .status-invalid { background-color: #721c24; color: #f8d7da; }
+
+        .quark-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .quark-buttons h3 { margin-bottom: 0.5rem; border: none; }
+        .button-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        button {
+            border: none;
+            padding: 0.75rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        #clear-btn { background-color: var(--secondary-color); margin-top: 1rem; }
+        #red-btn { background-color: var(--red-color); }
+        #green-btn { background-color: var(--green-color); }
+        #blue-btn { background-color: var(--blue-color); }
+        #antired-btn { background-color: var(--antired-color); color: #333; }
+        #antigreen-btn { background-color: var(--antigreen-color); color: #333; }
+        #antiblue-btn { background-color: var(--antiblue-color); color: #333; }
+
+        .hadron-contents {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            min-height: 50px;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .quark-pill {
+            padding: 0.3rem 0.8rem;
+            border-radius: 1rem;
+            font-weight: bold;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>Conceptual Visualization of Color Space (QCD)</h1>
+            <p>Understanding how quarks combine to form color-neutral particles.</p>
+            <div class="metadata-bar" style="font-size:0.8rem; color: var(--secondary-color); text-align:center;">
+                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                In the subatomic world, the particles that make up protons and neutrons, called <strong>quarks</strong>, are bound together by the strongest force in nature. The "charge" for this force is not positive or negative, but a property physicists whimsically named <strong>"color."</strong> There are three colors: red, green, and blue. A fundamental rule of nature, called <strong>color confinement</strong>, states that quarks can't exist by themselves; they must bundle up in groups that are "color neutral," or "white." This simulation lets you be a particle physicist: you can add quarks and their anti-matter counterparts (antiquarks) to a particle, and a color wheel will show you if your combination is color neutral, forming a valid real-world particle.
+            </p>
+        </section>
+
+        <div class="container">
+            <div class="controls-panel">
+                <h2>Build a Hadron</h2>
+                <p>Click the buttons to add quarks and antiquarks to your particle (a "hadron").</p>
+                <div class="quark-buttons">
+                    <div class="button-group">
+                        <h3>Quarks</h3>
+                        <button id="red-btn">Add Red</button>
+                        <button id="green-btn">Add Green</button>
+                        <button id="blue-btn">Add Blue</button>
+                    </div>
+                    <div class="button-group">
+                        <h3>Antiquarks</h3>
+                        <button id="antired-btn">Add Anti-Red</button>
+                        <button id="antigreen-btn">Add Anti-Green</button>
+                        <button id="antiblue-btn">Add Anti-Blue</button>
+                    </div>
+                </div>
+                <h3>Current Hadron Contents:</h3>
+                <div id="hadron-contents" class="hadron-contents"></div>
+                <button id="clear-btn" style="width:100%;">Clear Hadron</button>
+            </div>
+            <div class="visualization-panel">
+                <h3>Color Charge Vector Sum</h3>
+                <canvas id="color-canvas" width="350" height="350"></canvas>
+                <div id="status-box" class="status-box status-invalid">
+                    <p id="status-text">Empty Hadron</p>
+                </div>
+            </div>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. What is Color Charge?</h3>
+            <p>
+                "Color charge" has nothing to do with the colors we see. It's just a catchy name for the type of charge associated with the strong nuclear force, much like "positive" and "negative" are names for the types of electric charge. Instead of two types, color charge has three: <strong>red, green,</strong> and <strong>blue</strong>.
+            </p>
+            <p>
+                Additionally, for every quark color, there is an "anti-color" for its corresponding antiquark. These are <strong>anti-red (cyan), anti-green (magenta),</strong> and <strong>anti-blue (yellow)</strong>.
+            </p>
+            <h3>2. The Rule of "Color Neutrality"</h3>
+            <p>
+                The most important rule in this subatomic world is that any particle you could actually observe in an experiment must have no net color charge. It must be <strong>"color neutral"</strong> or <strong>"white."</strong> This is why single quarks are never found freely in nature. They are always "confined" inside composite particles called <strong>hadrons</strong>.
+            </p>
+            <h3>3. How to Make a "White" Particle</h3>
+            <p>There are two main recipes for making a color-neutral hadron:</p>
+            <ol>
+                <li>
+                    <strong>Baryons (The "Three-Quark" Recipe):</strong>
+                    <br>Combine one red quark, one green quark, and one blue quark.
+                    <br><code>Red + Green + Blue = White</code>
+                    <br>This is analogous to how additive color mixing with light works. Protons and neutrons are famous examples of baryons. <strong>Try building this combination!</strong>
+                </li>
+                <li>
+                    <strong>Mesons (The "Quark-Antiquark" Recipe):</strong>
+                    <br>Combine a quark of one color with an antiquark of its corresponding anti-color.
+                    <br><code>Red + Anti-Red = White</code> (and the same for Green/Anti-Green and Blue/Anti-Blue).
+                    <br>This is like mixing a color with its opposite on a color wheel to get grey or white. Pions are a common type of meson. <strong>Try building this combination!</strong>
+                </li>
+            </ol>
+
+            <h3>4. Using the Color Wheel Visualization</h3>
+            <p>
+                The color wheel on the right helps visualize these rules. We represent each color as a vector (an arrow pointing from the center).
+                <ul>
+                    <li>The three quark colors (R, G, B) are represented by three vectors pointing outwards, 120 degrees apart.</li>
+                    <li>The three antiquark colors are vectors of the same length pointing in the exact opposite directions.</li>
+                    <li>When you add a quark, we add its vector to the total. The <strong>thick black arrow</strong> shows the resulting "net color" of your particle.</li>
+                </ul>
+                Your goal is to add quarks such that the final sum vector is zero—meaning the tip of the black arrow is right back at the center of the circle. When you succeed, the status box will turn green and tell you that you've formed a valid hadron!
+            </p>
+        </section>
+
+        <section id="theory">
+            <h2>A Glimpse of the Theory: SU(3)</h2>
+            <p>
+                The theory of color charge is mathematically described by a group theory called <strong>SU(3)</strong>, which stands for Special Unitary group in 3 dimensions. While the details are complex, our visualization captures its essence.
+            </p>
+            <p>
+                In SU(3), the three color "charges" (red, green, blue) can be represented as basis vectors in a 3D complex vector space. The requirement that hadrons be "colorless" corresponds to constructing "singlet" states under SU(3) transformations. A singlet is an object that remains unchanged when you apply any SU(3) transformation, which is the mathematical way of saying it has no net color charge.
+            </p>
+            <p>
+                The two simplest ways to build such a singlet are:
+                <ul>
+                    <li>Combining a representation with its dual representation (a quark and an antiquark): <strong>3 ⊗ 3̄ = 1 ⊕ 8</strong>. The '1' here is the color singlet state, which corresponds to our meson.</li>
+                    <li>Combining three fundamental representations (three quarks): <strong>3 ⊗ 3 ⊗ 3 = 1 ⊕ 8 ⊕ 8 ⊕ 10</strong>. Again, the '1' is the color singlet, which corresponds to our baryon.</li>
+                </ul>
+                Our vector addition diagram is a simple 2D projection of these rules. The fact that Red + Green + Blue vectors sum to zero in our diagram is a visual representation of how the three basis vectors can be combined to form the singlet state in SU(3).
+            </p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            draw();
+        });
+
+        const canvas = document.getElementById('color-canvas');
+        const ctx = canvas.getContext('2d');
+        const size = canvas.width;
+        const center = { x: size / 2, y: size / 2 };
+        const radius = size / 2 - 30;
+
+        const statusBox = document.getElementById('status-box');
+        const statusText = document.getElementById('status-text');
+        const hadronContentsDiv = document.getElementById('hadron-contents');
+
+        let hadron = [];
+
+        // Color vectors
+        const vectors = {
+            'red': { x: 0, y: -radius },
+            'green': { x: radius * Math.cos(Math.PI / 6), y: radius * Math.sin(Math.PI / 6) },
+            'blue': { x: -radius * Math.cos(Math.PI / 6), y: radius * Math.sin(Math.PI / 6) },
+        };
+        vectors['antired'] = { x: -vectors.red.x, y: -vectors.red.y };
+        vectors['antigreen'] = { x: -vectors.green.x, y: -vectors.green.y };
+        vectors['antiblue'] = { x: -vectors.blue.x, y: -vectors.blue.y };
+
+        const colors = {
+            'red': '#dc3545', 'green': '#28a745', 'blue': '#007bff',
+            'antired': '#00ffff', 'antigreen': '#ff00ff', 'antiblue': '#ffff00'
+        };
+
+        function draw() {
+            ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#0d1117' : '#fff';
+            ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#8b949e' : '#6c757d';
+            ctx.fillRect(0, 0, size, size);
+
+            // Draw circle
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw color vectors
+            ctx.font = "bold 14px sans-serif";
+            for (const [name, vec] of Object.entries(vectors)) {
+                ctx.beginPath();
+                ctx.moveTo(center.x, center.y);
+                ctx.lineTo(center.x + vec.x, center.y + vec.y);
+                ctx.strokeStyle = colors[name];
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = colors[name];
+                ctx.fillText(name.charAt(0).toUpperCase() + name.slice(1), center.x + vec.x * 1.1 - 20, center.y + vec.y * 1.1);
+            }
+
+            // Draw sum vector
+            const sum = hadron.reduce((acc, q) => ({ x: acc.x + vectors[q].x, y: acc.y + vectors[q].y }), {x: 0, y: 0});
+            ctx.beginPath();
+            ctx.moveTo(center.x, center.y);
+            ctx.lineTo(center.x + sum.x, center.y + sum.y);
+            ctx.strokeStyle = document.body.classList.contains('dark-mode') ? 'white' : 'black';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+
+            // Draw arrowhead
+            const angle = Math.atan2(sum.y, sum.x);
+            ctx.beginPath();
+            ctx.moveTo(center.x + sum.x, center.y + sum.y);
+            ctx.lineTo(center.x + sum.x - 10 * Math.cos(angle - Math.PI / 6), center.y + sum.y - 10 * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(center.x + sum.x - 10 * Math.cos(angle + Math.PI / 6), center.y + sum.y - 10 * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fillStyle = document.body.classList.contains('dark-mode') ? 'white' : 'black';
+            ctx.fill();
+        }
+
+        function updateStatus() {
+            const sum = hadron.reduce((acc, q) => ({ x: acc.x + vectors[q].x, y: acc.y + vectors[q].y }), {x: 0, y: 0});
+            const isNeutral = Math.sqrt(sum.x * sum.x + sum.y * sum.y) < 1;
+
+            let message = "Invalid Combination";
+            statusBox.className = 'status-box status-invalid';
+
+            if (isNeutral) {
+                const quarkCount = hadron.filter(q => !q.startsWith('anti')).length;
+                const antiquarkCount = hadron.length - quarkCount;
+
+                if (quarkCount === 3 && antiquarkCount === 0) {
+                     const hasR = hadron.includes('red');
+                     const hasG = hadron.includes('green');
+                     const hasB = hadron.includes('blue');
+                     if(hasR && hasG && hasB) {
+                        message = "Valid Baryon (e.g., Proton, Neutron)";
+                        statusBox.className = 'status-box status-valid';
+                     }
+                } else if (quarkCount === 1 && antiquarkCount === 1) {
+                    const q = hadron.find(q => !q.startsWith('anti'));
+                    const aq = hadron.find(q => q.startsWith('anti'));
+                    if (q && aq && `anti${q}` === aq) {
+                        message = "Valid Meson (e.g., Pion)";
+                        statusBox.className = 'status-box status-valid';
+                    }
+                } else if (hadron.length === 0) {
+                     message = "Empty Hadron";
+                } else {
+                     message = "Color Neutral, but not a valid Baryon or Meson!";
+                }
+            }
+            statusText.textContent = message;
+
+            // Update hadron contents display
+            hadronContentsDiv.innerHTML = '';
+            hadron.forEach(q => {
+                const pill = document.createElement('span');
+                pill.className = 'quark-pill';
+                pill.textContent = q;
+                pill.style.backgroundColor = colors[q];
+                if(q.startsWith('anti')) pill.style.color = '#333';
+                hadronContentsDiv.appendChild(pill);
+            });
+        }
+
+        function addQuark(color) {
+            hadron.push(color);
+            draw();
+            updateStatus();
+        }
+
+        function clearHadron() {
+            hadron = [];
+            draw();
+            updateStatus();
+        }
+
+        document.getElementById('red-btn').addEventListener('click', () => addQuark('red'));
+        document.getElementById('green-btn').addEventListener('click', () => addQuark('green'));
+        document.getElementById('blue-btn').addEventListener('click', () => addQuark('blue'));
+        document.getElementById('antired-btn').addEventListener('click', () => addQuark('antired'));
+        document.getElementById('antigreen-btn').addEventListener('click', () => addQuark('antigreen'));
+        document.getElementById('antiblue-btn').addEventListener('click', () => addQuark('antiblue'));
+        document.getElementById('clear-btn').addEventListener('click', clearHadron);
+
+        clearHadron();
+    });
+    </script>
+</body>
+</html>
