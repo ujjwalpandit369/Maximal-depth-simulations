@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>State Space of a 1D Cellular Automaton</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #333;
+            --primary-color: #3d3d3d;
+            --secondary-color: #5a5a5a;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --cell-on-color: #000;
+        }
+        .dark-mode {
+            --bg-color: #1c1c1e;
+            --text-color: #f0f2f5;
+            --primary-color: #e0e0e0;
+            --secondary-color: #aaaaaa;
+            --border-color: #444;
+            --canvas-bg: #000;
+            --cell-on-color: #fff;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        main {
+            max-width: 900px;
+            width: 100%;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .controls-area {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+            border: 1px solid var(--secondary-color);
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        button:hover, button:focus {
+            background-color: var(--secondary-color);
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            color: var(--text-color);
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        canvas {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            width: 100%;
+            image-rendering: pixelated; /* Ensures crisp pixels */
+        }
+        .rule-display {
+            font-family: monospace;
+            font-size: 1.2rem;
+            background: var(--canvas-bg);
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.8rem;
+            text-align: center;
+            font-family: monospace;
+        }
+        th {
+            background-color: var(--code-bg);
+        }
+        .arrow { font-size: 1.5rem; line-height: 1; }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <h1>State Space of a 1D Cellular Automaton</h1>
+            <p>An interactive explorer for the state space of elementary cellular automata.</p>
+            <div style="text-align:center; margin: 1rem 0;">
+                <button id="theme-toggle" style="padding:2px 5px; font-weight:normal;">Toggle Dark Mode</button>
+            </div>
+        </header>
+
+        <section id="overview">
+            <h2>Plain-Language Overview</h2>
+            <p>
+                Imagine a row of lights, where each light can be either on or off. Now, imagine a simple set of rules that determines whether a light will be on or off in the next moment, based only on its own state and the state of its immediate left and right neighbors. This is a <strong>Cellular Automaton</strong>. Even with the simplest rules, these systems can produce patterns of astonishing complexity. Some rules create simple, ordered patterns, while others, like the famous "Rule 30," generate chaos that seems truly random. This simulation lets you enter a rule number (from 0 to 255), set an initial row of cells, and watch the pattern unfold, revealing a glimpse into the vast and beautiful "state space" of possible computations.
+            </p>
+        </section>
+
+        <div class="simulation-container">
+            <div class="controls-area">
+                <div class="control-group">
+                    <label for="rule-input"><strong>Rule Number (0-255)</strong></label>
+                    <input type="number" id="rule-input" value="30" min="0" max="255">
+                </div>
+                <div class="control-group">
+                    <h3>Rule Visualization</h3>
+                    <div id="rule-display" class="rule-display"></div>
+                </div>
+                <div class="control-group">
+                    <h3>Initial State</h3>
+                    <div class="button-group">
+                        <button id="init-single-btn">Single 'On' Cell</button>
+                        <button id="init-random-btn">Random</button>
+                    </div>
+                </div>
+                 <div class="control-group">
+                    <h3>Simulation</h3>
+                    <div class="button-group">
+                        <button id="play-pause-btn">Play</button>
+                        <button id="step-btn">Step</button>
+                        <button id="reset-btn">Reset</button>
+                    </div>
+                </div>
+            </div>
+            <canvas id="ca-canvas" width="601" height="400"></canvas>
+        </div>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide</h2>
+            <h3>1. What is a Cellular Automaton?</h3>
+            <p>At its heart, a cellular automaton (CA) is a very simple "universe" with three key ingredients:</p>
+            <ol>
+                <li><strong>Cells:</strong> A grid of cells. In our case, it's just a single 1D row of cells.</li>
+                <li><strong>States:</strong> Each cell can be in a finite number of states. Here, there are only two: "on" (black) or "off" (white).</li>
+                <li><strong>Rules:</strong> A set of rules that determines a cell's state in the next time step. The new state depends only on the cell's current state and the states of its neighbors.</li>
+            </ol>
+            <p>In this simulation, we are looking at <strong>Elementary Cellular Automata</strong>. "Elementary" means that the rule for a cell only looks at its immediate left neighbor, itself, and its immediate right neighbor—a trio of three cells.</p>
+
+            <h3>2. Understanding the Rule Number</h3>
+            <p>How can a single number from 0 to 255 define an entire rule set? It's a clever binary trick developed by Stephen Wolfram.</p>
+            <p>There are exactly 8 possible patterns for a 3-cell neighborhood (where 1 is 'on' and 0 is 'off'):</p>
+            <p style="text-align:center; font-family:monospace; font-size:1.2rem;">
+                111, 110, 101, 100, 011, 010, 001, 000
+            </p>
+            <p>A rule simply has to specify what the center cell should become for each of these 8 cases. This gives us 8 "on" or "off" outputs. For example, for Rule 30:</p>
+            <table>
+                <thead>
+                    <tr><th>Current Neighborhood</th><td>111</td><td>110</td><td>101</td><td>100</td><td>011</td><td>010</td><td>001</td><td>000</td></tr>
+                </thead>
+                <tbody>
+                    <tr><th>New State for Center Cell</th><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td></tr>
+                </tbody>
+            </table>
+            <p>The sequence of outputs is <code>00011110</code>. If you convert this binary number to decimal, you get <strong>30</strong>. That's it! Every number from 0 to 255 corresponds to a unique 8-bit binary number, which defines one of the 256 possible elementary rules. The visualization in the controls area shows you this exact mapping for the rule you select.</p>
+
+            <h3>3. Exploring Different Rules</h3>
+            <p>The magic happens when you try different rules. Start with a "Single 'On' Cell" and press "Play" or "Step".</p>
+            <ul>
+                <li><strong>Rule 90:</strong> Produces a beautiful, perfectly nested, self-similar pattern called the Sierpinski triangle. This is an example of ordered complexity.</li>
+                <li><strong>Rule 30:</strong> Produces a pattern that appears completely random and chaotic on its left side. This rule is so good at generating randomness that it's been used in software for generating random numbers.</li>
+                <li><strong>Rule 110:</strong> Looks like a chaotic mess of interacting particles or waves. It was proven that Rule 110 is "Turing complete," meaning it can, in principle, compute anything a universal computer can. This simple rule contains the power of universal computation!</li>
+                <li><strong>Rule 4, 108, etc.:</strong> Many rules quickly die out or produce simple, repetitive block patterns.</li>
+            </ul>
+            <p>By exploring these rules, you are exploring the "state space" of possible computations. You're seeing how the simplest possible ingredients—local rules acting on binary states—can give rise to the entire spectrum of behavior, from order to chaos to universal computation.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. What do the black and white squares mean?</dt>
+                <dd>They represent the two possible states of a cell. In our simulation, black is "on" (state 1) and white is "off" (state 0).</dd>
+
+                <dt>2. What happens at the edges of the row?</dt>
+                <dd>The simulation uses "wrapped" boundary conditions. This means the rightmost cell's right neighbor is the leftmost cell, and the leftmost cell's left neighbor is the rightmost cell. The row is treated like a circle.</dd>
+
+                <dt>3. Why does the simulation stop?</dt>
+                <dd>The simulation stops when the pattern reaches the bottom of the canvas. You can press "Reset" to clear it and start over, perhaps with a different rule or initial condition.</dd>
+
+                <dt>4. What does the rule visualization in the controls mean?</dt>
+                <dd>It's a direct visual representation of the rule table (like the one for Rule 30 in the guide). It shows each of the 8 possible 3-cell neighborhoods on the top row, and the resulting state for the center cell on the bottom row. It's the "code" the automaton is running.</dd>
+
+                <dt>5. Some rules produce very boring patterns. Is that normal?</dt>
+                <dd>Yes, absolutely. Most of the 256 elementary rules produce simple, repetitive, or quickly vanishing patterns. The emergence of profound complexity from rules like 30, 90, and 110 is what makes them so special and interesting to study.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            drawCurrentGeneration();
+            drawRule();
+        });
+
+        const canvas = document.getElementById('ca-canvas');
+        const ctx = canvas.getContext('2d');
+        const ruleInput = document.getElementById('rule-input');
+        const ruleDisplay = document.getElementById('rule-display');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const initSingleBtn = document.getElementById('init-single-btn');
+        const initRandomBtn = document.getElementById('init-random-btn');
+
+        const width = canvas.width;
+        const height = canvas.height;
+        let cells = new Array(width).fill(0);
+        let generation = 0;
+        let rule = parseInt(ruleInput.value, 10);
+        let isPlaying = false;
+        let animationFrameId;
+
+        function getRuleSet(ruleNumber) {
+            const binary = ruleNumber.toString(2).padStart(8, '0');
+            return binary.split('').map(Number).reverse();
+        }
+
+        let ruleSet = getRuleSet(rule);
+
+        function drawRule() {
+            const ruleSetToDraw = getRuleSet(parseInt(ruleInput.value, 10));
+            let html = '<table><tr>';
+            for (let i = 7; i >= 0; i--) {
+                const binary = i.toString(2).padStart(3, '0');
+                html += `<td>${binary.replaceAll('0','□').replaceAll('1','■')}</td>`;
+            }
+            html += '</tr><tr>';
+            for (let i = 7; i >= 0; i--) {
+                 html += `<td><span class="arrow">↓</span></td>`;
+            }
+            html += '</tr><tr>';
+            for (let i = 7; i >= 0; i--) {
+                const output = ruleSetToDraw[i] === 1 ? '■' : '□';
+                html += `<td>${output}</td>`;
+            }
+            html += '</tr></table>';
+            ruleDisplay.innerHTML = html;
+        }
+
+        function reset() {
+            isPlaying = false;
+            playPauseBtn.textContent = "Play";
+            cancelAnimationFrame(animationFrameId);
+
+            generation = 0;
+            ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#000' : '#fff';
+            ctx.fillRect(0, 0, width, height);
+
+            cells.fill(0);
+            yieldInitialization();
+        }
+
+        function yieldInitialization() {
+            // This is to allow the UI to update before a potentially slow init
+            setTimeout(initialize, 10);
+        }
+
+        function initialize(type = 'single') {
+            cells.fill(0);
+            if (type === 'single') {
+                cells[Math.floor(width / 2)] = 1;
+            } else if (type === 'random') {
+                for (let i = 0; i < width; i++) {
+                    cells[i] = Math.random() > 0.5 ? 1 : 0;
+                }
+            }
+            generation = 0;
+            ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#000' : '#fff';
+            ctx.fillRect(0, 0, width, height);
+            drawCurrentGeneration();
+        }
+
+        function drawCurrentGeneration() {
+            const onColor = document.body.classList.contains('dark-mode') ? '#fff' : '#000';
+            const offColor = document.body.classList.contains('dark-mode') ? '#000' : '#fff';
+            for (let i = 0; i < width; i++) {
+                ctx.fillStyle = cells[i] === 1 ? onColor : offColor;
+                ctx.fillRect(i, generation, 1, 1);
+            }
+        }
+
+        function computeNextGeneration() {
+            const nextCells = new Array(width);
+            for (let i = 0; i < width; i++) {
+                const left = cells[(i - 1 + width) % width];
+                const center = cells[i];
+                const right = cells[(i + 1) % width];
+                const neighborhood = `${left}${center}${right}`;
+                const value = parseInt(neighborhood, 2);
+                nextCells[i] = ruleSet[value];
+            }
+            cells = nextCells;
+            generation++;
+        }
+
+        function step() {
+            if (generation >= height) {
+                isPlaying = false;
+                playPauseBtn.textContent = "Play";
+                return;
+            };
+            computeNextGeneration();
+            drawCurrentGeneration();
+        }
+
+        function loop() {
+            if (!isPlaying) return;
+            step();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function handlePlayPause() {
+            isPlaying = !isPlaying;
+            playPauseBtn.textContent = isPlaying ? "Pause" : "Play";
+            if (isPlaying) {
+                loop();
+            } else {
+                cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        playPauseBtn.addEventListener('click', handlePlayPause);
+        stepBtn.addEventListener('click', () => {
+            if (isPlaying) handlePlayPause();
+            step();
+        });
+        resetBtn.addEventListener('click', reset);
+
+        initSingleBtn.addEventListener('click', () => {
+            reset();
+            initialize('single');
+        });
+        initRandomBtn.addEventListener('click', () => {
+            reset();
+            initialize('random');
+        });
+
+        ruleInput.addEventListener('change', () => {
+            let val = parseInt(ruleInput.value, 10);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 255) val = 255;
+            ruleInput.value = val;
+            rule = val;
+            ruleSet = getRuleSet(rule);
+            drawRule();
+            reset();
+        });
+
+        // Initial setup
+        drawRule();
+        initialize('single');
+    });
+    </script>
+</body>
+</html>
