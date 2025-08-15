@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Space for Identical Particles</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #009688; /* Teal for quantum/stat-mech */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --p1-color: #f44336;
+            --p2-color: #2196f3;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+        @media (min-width: 768px) {
+            .sim-layout { grid-template-columns: 2fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        #box-canvas { aspect-ratio: 8/1; }
+        .controls { padding: 1rem; }
+        fieldset { border: 1px solid var(--border-color); border-radius: 5px; padding: 1rem; }
+        legend { color: var(--primary-color); font-weight: bold; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Configuration Space for Identical Particles</h1>
+            <p class="subtitle">Visualizing the difference between bosons and fermions.</p>
+        </header>
+
+        <section>
+            <div class="sim-layout">
+                <div class="canvas-container">
+                    <canvas id="c-space-canvas"></canvas>
+                </div>
+                <div class="controls">
+                    <h3>Controls</h3>
+                    <fieldset>
+                        <legend>Particle Type</legend>
+                        <div>
+                            <input type="radio" id="dist-radio" name="particle-type" value="distinguishable" checked>
+                            <label for="dist-radio">Distinguishable</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="boson-radio" name="particle-type" value="bosons">
+                            <label for="boson-radio">Bosons (Symmetric)</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="fermion-radio" name="particle-type" value="fermions">
+                            <label for="fermion-radio">Fermions (Antisymmetric)</label>
+                        </div>
+                    </fieldset>
+                    <button id="reset-btn">Reset Particles</button>
+                </div>
+            </div>
+             <div class="canvas-container" id="box-canvas" style="margin-top: 1rem;"></div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: A Space of All Possibilities</h2>
+            <h3>What is Configuration Space?</h3>
+            <p>Imagine you have a system of two particles moving in a 1D box (shown at the bottom). To completely describe the state of this system, you need to know the position of both particles: `x₁` and `x₂`. The <strong>configuration space</strong> (or C-space) is an abstract graph where every single point represents one possible arrangement of the entire system. For our two particles, the C-space is 2D, with `x₁` on the horizontal axis and `x₂` on the vertical axis. As the particles move in their 1D box, the point representing the system's state traces a path in the 2D C-space.</p>
+            <h3>How Identical Particles Change the Rules</h3>
+            <ul>
+                <li><strong>Distinguishable:</strong> If the particles are different (e.g., one red, one blue), then the state `(x₁=A, x₂=B)` is different from `(x₁=B, x₂=A)`. The C-space is the full square.</li>
+                <li><strong>Bosons (Symmetric):</strong> If the particles are identical bosons (like photons), the state `(A, B)` is physically indistinguishable from `(B, A)`. The universe can't tell the difference. This means we have overcounted! The true C-space is only half of the square—a triangle. The simulation shows this by "folding" the space along the `x₁=x₂` diagonal. The shaded region is just a mirror of the unshaded region.</li>
+                <li><strong>Fermions (Antisymmetric):</strong> If the particles are identical fermions (like electrons), they obey the <strong>Pauli Exclusion Principle</strong>: two identical fermions cannot occupy the same quantum state. In this context, it means they cannot be at the same position, so `x₁` can never equal `x₂`. This removes the diagonal line from the C-space, effectively creating a "wall" that the system's state cannot cross. Watch the simulation: when the particles get close, they "bounce" off each other, which corresponds to the C-space point bouncing off the diagonal. This is a topological representation of the Pauli exclusion principle!</li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const cSpaceCanvas = document.getElementById('c-space-canvas');
+        const cCtx = cSpaceCanvas.getContext('2d');
+        const boxCanvas = document.getElementById('box-canvas');
+        const bCtx = boxCanvas.getContext('2d');
+        const radios = document.querySelectorAll('input[name="particle-type"]');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let particles = {
+            p1: { x: 0.3, v: 0.005 },
+            p2: { x: 0.7, v: -0.008 }
+        };
+        let cSpacePath = [];
+        let particleType = 'distinguishable';
+
+        function update() {
+            // Move particles in 1D box
+            particles.p1.x += particles.p1.v;
+            particles.p2.x += particles.p2.v;
+
+            // Wall collisions
+            if (particles.p1.x > 1 || particles.p1.x < 0) particles.p1.v *= -1;
+            if (particles.p2.x > 1 || particles.p2.x < 0) particles.p2.v *= -1;
+
+            // Particle-particle collision (only for fermions)
+            if (particleType === 'fermions') {
+                if (Math.abs(particles.p1.x - particles.p2.x) < 0.02) {
+                    if (Math.sign(particles.p1.x - particles.p2.x) === Math.sign(particles.p1.v - particles.p2.v)) {
+                         [particles.p1.v, particles.p2.v] = [particles.p2.v, particles.p1.v];
+                    }
+                }
+            }
+
+            cSpacePath.push({x1: particles.p1.x, x2: particles.p2.x});
+            if (cSpacePath.length > 300) cSpacePath.shift();
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            drawCSpace();
+            drawBox();
+        }
+
+        function drawCSpace() {
+            const w = cSpaceCanvas.width, h = cSpaceCanvas.height;
+            cCtx.clearRect(0,0,w,h);
+
+            // Draw background based on type
+            if (particleType === 'bosons') {
+                cCtx.fillStyle = '#f0f0f0';
+                cCtx.beginPath();
+                cCtx.moveTo(0,0); cCtx.lineTo(w,0); cCtx.lineTo(w,h); cCtx.closePath();
+                cCtx.fill();
+            }
+
+            // Draw axes and borders
+            cCtx.strokeStyle = '#ccc'; cCtx.lineWidth = 1;
+            cCtx.strokeRect(0,0,w,h);
+            cCtx.fillStyle = '#333'; cCtx.font = "14px sans-serif";
+            cCtx.fillText("x₁", w/2, h - 5);
+            cCtx.fillText("x₂", 5, h/2);
+
+            // Draw diagonal
+            cCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+            cCtx.setLineDash([5,5]);
+            cCtx.beginPath(); cCtx.moveTo(0,0); cCtx.lineTo(w,h); cCtx.stroke();
+            cCtx.setLineDash([]);
+            if (particleType === 'fermions') {
+                cCtx.strokeStyle = 'red'; cCtx.lineWidth = 3;
+                cCtx.beginPath(); cCtx.moveTo(0,0); cCtx.lineTo(w,h); cCtx.stroke();
+            }
+
+            // Draw path
+            if (cSpacePath.length > 1) {
+                cCtx.strokeStyle = 'rgba(0,0,200,0.3)'; cCtx.lineWidth = 1;
+                cCtx.beginPath();
+                cCtx.moveTo(cSpacePath[0].x1*w, cSpacePath[0].x2*h);
+                for(let i=1; i<cSpacePath.length; i++) {
+                    cCtx.lineTo(cSpacePath[i].x1*w, cSpacePath[i].x2*h);
+                }
+                cCtx.stroke();
+            }
+
+            // Draw current point
+            const currentX = particles.p1.x * w;
+            const currentY = particles.p2.x * h;
+            cCtx.fillStyle = 'var(--primary-color)';
+            cCtx.beginPath(); cCtx.arc(currentX, currentY, 8, 0, 2*Math.PI); cCtx.fill();
+
+            if (particleType === 'bosons') {
+                 cCtx.fillStyle = 'rgba(128,128,128,0.5)';
+                 cCtx.beginPath(); cCtx.arc(currentY, currentX, 8, 0, 2*Math.PI); cCtx.fill();
+            }
+        }
+
+        function drawBox() {
+            const w = boxCanvas.width, h = boxCanvas.height;
+            bCtx.clearRect(0,0,w,h);
+            bCtx.strokeStyle = '#333'; bCtx.lineWidth = 2;
+            bCtx.strokeRect(0,0,w,h);
+
+            // Particle 1
+            bCtx.fillStyle = 'var(--p1-color)';
+            bCtx.beginPath();
+            bCtx.arc(particles.p1.x * w, h/2, 8, 0, 2*Math.PI);
+            bCtx.fill();
+
+            // Particle 2
+            bCtx.fillStyle = particleType === 'distinguishable' ? 'var(--p2-color)' : 'var(--p1-color)';
+            bCtx.beginPath();
+            bCtx.arc(particles.p2.x * w, h/2, 8, 0, 2*Math.PI);
+            bCtx.fill();
+        }
+
+        function reset() {
+            particleType = document.querySelector('input[name="particle-type"]:checked').value;
+            particles = {
+                p1: { x: 0.3, v: 0.005 + (Math.random()-0.5)*0.002 },
+                p2: { x: 0.7, v: -0.008 + (Math.random()-0.5)*0.002 }
+            };
+            cSpacePath = [];
+        }
+
+        radios.forEach(radio => radio.addEventListener('change', reset));
+        resetBtn.addEventListener('click', reset);
+
+        function init() {
+            cSpaceCanvas.width = cSpaceCanvas.offsetWidth;
+            cSpaceCanvas.height = cSpaceCanvas.offsetWidth;
+            boxCanvas.width = boxCanvas.parentElement.offsetWidth;
+            boxCanvas.height = boxCanvas.parentElement.offsetWidth / 8;
+            reset();
+            update();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

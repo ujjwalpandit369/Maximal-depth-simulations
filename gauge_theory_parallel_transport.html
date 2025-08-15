@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gauge Theory: Parallel Transport</title>
+    <style>
+        :root {
+            --bg-color: #f3e5f5;
+            --text-color: #333;
+            --primary-color: #7b1fa2; /* Deep purple for gauge theory */
+            --secondary-color: #455a64;
+            --border-color: #ce93d8;
+            --canvas-bg: #fff;
+            --path-color: #00acc1;
+            --vector-color: #fbc02d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #f3e5f5; padding: 1rem; border-radius: 5px; }
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 3fr 1fr; }
+        }
+        #main-canvas {
+            width: 100%; height: auto; aspect-ratio: 1.5 / 1;
+            border: 1px solid var(--border-color); border-radius: 5px; cursor: crosshair;
+        }
+        #fibre-canvas {
+            width: 100%; max-width: 200px; margin: 0 auto; height: auto; aspect-ratio: 1 / 1;
+            border: 1px solid var(--border-color); border-radius: 50%;
+        }
+        .controls { margin-top: 1rem; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+        .info-panel {
+            margin-top: 1rem; padding: 1rem; background-color: #f3e5f5;
+            border-radius: 5px; text-align: center; font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gauge Theory: The Space of Connections on a Bundle</h1>
+            <p class="subtitle">A simulation of parallel transport around a loop in a U(1) gauge field.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div>
+                    <h3>Base Manifold (2D Space with a Field)</h3>
+                    <canvas id="main-canvas"></canvas>
+                </div>
+                <div style="text-align:center;">
+                    <h3>Fibre (Internal U(1) Phase Space)</h3>
+                    <canvas id="fibre-canvas"></canvas>
+                </div>
+            </div>
+            <div class="controls" style="text-align:center;">
+                <button id="animate-btn">Animate Transport</button>
+                <button id="clear-btn">Clear Path</button>
+                <div class="slider-container">
+                    <label for="b-slider">Field Strength (B): <span id="b-val">0.5</span></label>
+                    <input type="range" id="b-slider" min="0" max="2.0" value="0.5" step="0.1">
+                </div>
+            </div>
+            <div class="info-panel">
+                Final Phase Rotation (Holonomy): <strong id="holonomy-val">0.0°</strong>
+                <br>Expected from Flux (B * Area): <strong id="flux-val">0.0°</strong>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Rolling Without Slipping</h2>
+            <h3>The Rolling Cylinder Analogy</h3>
+            <p>Imagine the main view on the left is a flat table (the "base space"). At every point on this table, imagine a tiny, independent circle is attached (the "fibre," representing the internal phase of a particle). A <strong>gauge field</strong> is a rule that "connects" adjacent circles. It tells you how to relate the phase of a particle at one point to its phase at a neighboring point.</p>
+            <p>A good analogy is to imagine rolling a cylinder on the table without it slipping. The direction the cylinder points on the table is its position in the base space. An arrow drawn on the circular face of the cylinder represents its internal state (the fibre). If you roll the cylinder along a path on the table, the arrow on its face will rotate. If you roll it around a closed loop and return to the start, the arrow will be pointing in a new direction! The amount of rotation depends on the path taken. This final rotation is the <strong>holonomy</strong>.</p>
+            <h3>What the Simulation Shows</h3>
+            <ol>
+                <li><strong>Draw a Loop:</strong> Click and drag on the left canvas to draw a closed path for a particle to travel.</li>
+                <li><strong>Parallel Transport:</strong> Click "Animate Transport." A particle will travel along your path. As it moves, its internal phase vector (the arrow on the right) is "parallel transported" according to the gauge field connection.</li>
+                <li><strong>Holonomy:</strong> When the particle returns to its starting point, observe the final angle of the phase vector. It has rotated! This rotation is the holonomy, and it is a direct measure of the total "flux" or field strength enclosed by your loop. The simulation calculates this expected value and compares it to the result of the transport.</li>
+            </ol>
+        </section>
+
+        <section id="core-theory">
+            <h2>The Aharonov-Bohm Effect in Geometric Language</h2>
+            <p>This simulation is a geometric interpretation of the Aharonov-Bohm effect in electromagnetism. The U(1) gauge field is the electromagnetic vector potential, `A`, and the field strength is the magnetic field, `B = ∇ × A`.</p>
+            <h3>The Connection</h3>
+            <p>The rule for parallel transport dictates that as a charged particle moves by an infinitesimal distance `dl`, its quantum phase `θ` changes by `dθ = q * A · dl`, where `q` is the charge (we'll set `q=1`). This is the "connection" that links the phase (the fibre) at different points in space (the base manifold).</p>
+            <h3>Holonomy and Flux</h3>
+            <p>When a particle is transported around a closed loop `C`, the total phase change (the holonomy) is the integral of these small changes:</p>
+            <pre>Δθ = ∮_C A · dl</pre>
+            <p>By Stokes' theorem, this line integral is equal to the flux of the curl of `A` through the surface `S` enclosed by the loop:</p>
+            <pre>∮_C A · dl = ∫_S (∇ × A) · dS = ∫_S B · dS</pre>
+            <p>For the uniform field `B` in this simulation, this simplifies to `Δθ = B * Area(S)`. The final phase rotation is directly proportional to the magnetic flux enclosed by the path, even if the particle never travels through a region where the magnetic field is non-zero (a key feature of the Aharonov-Bohm effect).</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mainCanvas = document.getElementById('main-canvas');
+        const mCtx = mainCanvas.getContext('2d');
+        const fibreCanvas = document.getElementById('fibre-canvas');
+        const fCtx = fibreCanvas.getContext('2d');
+        const animateBtn = document.getElementById('animate-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const bSlider = document.getElementById('b-slider');
+        const bVal = document.getElementById('b-val');
+        const holonomyVal = document.getElementById('holonomy-val');
+        const fluxVal = document.getElementById('flux-val');
+
+        let isDrawing = false;
+        let path = [];
+        let animationState = { t: 0, phase: 0, isRunning: false };
+
+        const gaugeField = { B: 0.5 };
+        const A = (x, y) => ({
+            x: -gaugeField.B * y * 0.001,
+            y: gaugeField.B * x * 0.001
+        });
+
+        function drawMain() {
+            const w = mainCanvas.width, h = mainCanvas.height;
+            mCtx.clearRect(0,0,w,h);
+
+            // Draw path
+            if (path.length > 1) {
+                mCtx.strokeStyle = 'var(--path-color)';
+                mCtx.lineWidth = 2;
+                mCtx.beginPath();
+                mCtx.moveTo(path[0].x, path[0].y);
+                for(let i=1; i<path.length; i++) mCtx.lineTo(path[i].x, path[i].y);
+                mCtx.stroke();
+            }
+
+            // Draw particle
+            if (animationState.isRunning && path.length > 1) {
+                const p = getPointOnPath(animationState.t);
+                mCtx.fillStyle = 'var(--primary-color)';
+                mCtx.beginPath();
+                mCtx.arc(p.x, p.y, 8, 0, 2*Math.PI);
+                mCtx.fill();
+            }
+        }
+
+        function drawFibre() {
+            const w = fibreCanvas.width, h = fibreCanvas.height;
+            fCtx.clearRect(0,0,w,h);
+
+            // Circle
+            fCtx.strokeStyle = '#ccc';
+            fCtx.lineWidth = 1;
+            fCtx.beginPath();
+            fCtx.arc(w/2, h/2, w/2 - 10, 0, 2*Math.PI);
+            fCtx.stroke();
+
+            // Vector
+            const angle = animationState.phase;
+            fCtx.strokeStyle = 'var(--vector-color)';
+            fCtx.lineWidth = 4;
+            fCtx.beginPath();
+            fCtx.moveTo(w/2, h/2);
+            fCtx.lineTo(w/2 + (w/2-10)*Math.cos(angle), h/2 + (w/2-10)*Math.sin(angle));
+            fCtx.stroke();
+        }
+
+        function getPointOnPath(t) {
+            const totalLength = path.length - 1;
+            const index = Math.floor(t * totalLength);
+            const local_t = t * totalLength - index;
+            if (index >= path.length - 1) return path[path.length - 1];
+            const p1 = path[index];
+            const p2 = path[index+1];
+            return {
+                x: (1-local_t)*p1.x + local_t*p2.x,
+                y: (1-local_t)*p1.y + local_t*p2.y,
+            };
+        }
+
+        function animate() {
+            if (!animationState.isRunning) return;
+
+            const old_p = getPointOnPath(animationState.t);
+            animationState.t += 0.005;
+            if (animationState.t > 1) {
+                animationState.t = 1;
+                animationState.isRunning = false;
+                animateBtn.textContent = "Animate Transport";
+                updateResults();
+            }
+            const new_p = getPointOnPath(animationState.t);
+
+            // Parallel transport
+            const dx = new_p.x - old_p.x;
+            const dy = new_p.y - old_p.y;
+            const avg_x = (old_p.x + new_p.x)/2 - mainCanvas.width/2;
+            const avg_y = (old_p.y + new_p.y)/2 - mainCanvas.height/2;
+            const A_vec = A(avg_x, avg_y);
+            const dPhase = A_vec.x * dx + A_vec.y * dy;
+            animationState.phase += dPhase;
+
+            drawMain();
+            drawFibre();
+            requestAnimationFrame(animate);
+        }
+
+        function calculatePathArea() {
+            if (path.length < 3) return 0;
+            let area = 0;
+            for (let i = 0; i < path.length; i++) {
+                const p1 = path[i];
+                const p2 = path[(i + 1) % path.length];
+                area += (p1.x * p2.y - p2.x * p1.y);
+            }
+            return area / 2;
+        }
+
+        function updateResults() {
+            const area = calculatePathArea();
+            const expectedHolonomy = gaugeField.B * area * 0.001; // Scale factor from A
+            holonomyVal.textContent = (animationState.phase * 180 / Math.PI).toFixed(1) + '°';
+            fluxVal.textContent = (expectedHolonomy * 180 / Math.PI).toFixed(1) + '°';
+        }
+
+        mainCanvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            path = [getMousePos(e)];
+        });
+        mainCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            path.push(getMousePos(e));
+            drawMain();
+        });
+        mainCanvas.addEventListener('mouseup', () => {
+            if (isDrawing) {
+                path.push(path[0]); // Close loop
+                isDrawing = false;
+                drawMain();
+            }
+        });
+        function getMousePos(e) {
+            const rect = mainCanvas.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+
+        animateBtn.addEventListener('click', () => {
+            if (path.length > 2 && !animationState.isRunning) {
+                animationState = { t: 0, phase: 0, isRunning: true };
+                animateBtn.textContent = "Animating...";
+                animate();
+            }
+        });
+        clearBtn.addEventListener('click', () => {
+            animationState.isRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            path = [];
+            holonomyVal.textContent = "0.0°";
+            fluxVal.textContent = "0.0°";
+            drawMain();
+            drawFibre();
+        });
+        bSlider.addEventListener('input', (e) => {
+            gaugeField.B = parseFloat(e.target.value);
+            bVal.textContent = gaugeField.B.toFixed(1);
+            if(path.length > 2) updateResults();
+        });
+
+        function init() {
+            ['main-canvas', 'fibre-canvas'].forEach(id => {
+                const c = document.getElementById(id);
+                c.width = c.offsetWidth;
+                c.height = c.offsetHeight;
+            });
+            gaugeField.B = parseFloat(bSlider.value);
+            bVal.textContent = gaugeField.B.toFixed(1);
+            drawMain();
+            drawFibre();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

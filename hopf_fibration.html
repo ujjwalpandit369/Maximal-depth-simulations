@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hopf Fibration</title>
+    <style>
+        :root {
+            --bg-color: #f7f2ff;
+            --text-color: #333;
+            --primary-color: #673ab7;
+            --secondary-color: #5e35b1;
+            --border-color: #d1c4e9;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header, section {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 2fr; }
+        }
+        #fibre-canvas {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px; cursor: move;
+        }
+        #base-canvas {
+            width: 100%; max-width: 250px; margin: 0 auto; height: auto; aspect-ratio: 1/1;
+            border: 1px solid var(--border-color);
+            border-radius: 50%; cursor: pointer;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Hopf Fibration</h1>
+            <p class="subtitle">A visualization of the decomposition of the 3-sphere into circles.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div style="text-align:center;">
+                    <h3>Base Space (S²)</h3>
+                    <p>Click a point on this sphere...</p>
+                    <canvas id="base-canvas"></canvas>
+                </div>
+                <div style="text-align:center;">
+                    <h3>Total Space (S³ projected to R³)</h3>
+                    <p>...to see the corresponding Fibre (S¹) here.</p>
+                    <canvas id="fibre-canvas"></canvas>
+                </div>
+            </div>
+             <div style="text-align: center; margin-top: 1rem;">
+                <button id="animate-btn">Animate Fibration</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: A Hairy Ball of Circles</h2>
+            <h3>What is a Fibre Bundle?</h3>
+            <p>A fibre bundle is a mathematical object that is locally "a product of two spaces," but may have a different global structure. A simple analogy is a hairbrush: the handle can be considered the "base space." At every point on the handle, a bristle sticks out—this is the "fibre." The entire hairbrush is the "total space."</p>
+            <h3>The Hopf Fibration: A Special Kind of Bundle</h3>
+            <p>The Hopf Fibration is one of the most beautiful and important examples of a fibre bundle. In this case:
+            <ul>
+                <li>The <strong>Total Space</strong> is the <strong>3-sphere (S³)</strong>, which is a sphere living in 4-dimensional space. We can't see it directly, so we view its projection into our 3D world.</li>
+                <li>The <strong>Base Space</strong> is the familiar <strong>2-sphere (S²)</strong>, like the surface of a globe. This is shown on the left.</li>
+                <li>The <strong>Fibre</strong> is a <strong>circle (S¹)</strong>.</li>
+            </ul>
+            What this means is that the 3-sphere can be thought of as being "made of" circles. There is one unique circle fibre corresponding to every single point on the surface of the 2-sphere base.
+            </p>
+            <h3>How to Use the Simulation</h3>
+            <p>Click on a point on the Base Space sphere (left). The simulation will then calculate and draw the corresponding circular fibre in the 3D view on the right. Notice how different points on the sphere give rise to different circles in space. The North and South poles correspond to special fibres (a circle of infinite radius, i.e., a straight line, and a unit circle around the origin). Press "Animate Fibration" to sweep through all the points on the base sphere and see how the circular fibres are all interlinked, filling up all of space and forming the 3-sphere.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const fibreCanvas = document.getElementById('fibre-canvas');
+        const fCtx = fibreCanvas.getContext('2d');
+        const baseCanvas = document.getElementById('base-canvas');
+        const bCtx = baseCanvas.getContext('2d');
+        const animateBtn = document.getElementById('animate-btn');
+
+        const scene = { angleX: 0.3, angleY: 0.3, zoom: 150 };
+        let basePoint = { phi: Math.PI / 2, theta: 0 }; // lat, lon
+        let animationState = { isRunning: false, t: 0 };
+
+        // --- 3D Projection for Fibre Space ---
+        function project(p3d) {
+            let { x, y, z } = p3d;
+            const rotX = Math.cos(scene.angleX) * y - Math.sin(scene.angleX) * z;
+            const rotZ_ = Math.sin(scene.angleX) * y + Math.cos(scene.angleX) * z;
+            y = rotX; z = rotZ_;
+            const rotY = Math.cos(scene.angleY) * x + Math.sin(scene.angleY) * z;
+            z = -Math.sin(scene.angleY) * x + Math.cos(scene.angleY) * z;
+            x = rotY;
+            const w = fibreCanvas.width, h = fibreCanvas.height;
+            return { x: w / 2 + x * scene.zoom, y: h / 2 - y * scene.zoom };
+        }
+
+        // --- Drawing ---
+        function draw() {
+            drawBaseSphere();
+            drawFibres();
+        }
+
+        function drawBaseSphere() {
+            const w = baseCanvas.width, h = baseCanvas.height;
+            bCtx.clearRect(0,0,w,h);
+            bCtx.fillStyle = '#f0f0f0';
+            bCtx.fillRect(0,0,w,h);
+
+            // Draw sphere
+            const gradient = bCtx.createRadialGradient(w*0.4, h*0.4, 5, w/2, h/2, w/2);
+            gradient.addColorStop(0, '#fff');
+            gradient.addColorStop(1, '#aaa');
+            bCtx.fillStyle = gradient;
+            bCtx.beginPath();
+            bCtx.arc(w/2, h/2, w/2 - 2, 0, 2*Math.PI);
+            bCtx.fill();
+
+            // Draw selected point
+            const x = w/2 + (w/2 - 5) * Math.cos(basePoint.phi) * Math.sin(basePoint.theta);
+            const y = h/2 - (h/2 - 5) * Math.sin(basePoint.phi);
+            bCtx.fillStyle = 'var(--primary-color)';
+            bCtx.beginPath();
+            bCtx.arc(x, y, 5, 0, 2*Math.PI);
+            bCtx.fill();
+        }
+
+        function drawFibres() {
+            const w = fibreCanvas.width, h = fibreCanvas.height;
+            fCtx.clearRect(0,0,w,h);
+            fCtx.fillStyle = 'var(--canvas-bg)';
+            fCtx.fillRect(0,0,w,h);
+
+            const numFibres = animationState.isRunning ? 20 : 1;
+            const baseT = animationState.isRunning ? animationState.t : 0;
+
+            for(let i=0; i<numFibres; i++) {
+                 const t = (baseT + i / numFibres) % 1;
+                 const hue = (t * 360);
+
+                 let bp; // Base point for this fibre
+                 if (animationState.isRunning) {
+                     // Animate through a path on the sphere
+                     const phi = Math.PI/2 + Math.sin(t * 4 * Math.PI) * 0.4;
+                     const theta = t * 4 * Math.PI;
+                     bp = {phi, theta};
+                 } else {
+                     bp = basePoint;
+                 }
+
+                 const p = Math.cos(bp.phi); // Point on S^2 z-axis
+                 const c = Math.sin(bp.phi); // Radius of torus
+                 const R = Math.abs(p / c); // Torus major radius
+                 const r = 1/Math.abs(c); // Torus minor radius
+
+                 fCtx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.7)`;
+                 fCtx.lineWidth = 2;
+                 fCtx.beginPath();
+
+                 if (Math.abs(c) < 1e-3) { // North/South poles -> straight line
+                     const p1 = project({x:0, y:0, z:-5});
+                     const p2 = project({x:0, y:0, z:5});
+                     fCtx.moveTo(p1.x, p1.y);
+                     fCtx.lineTo(p2.x, p2.y);
+                 } else {
+                     for (let angle = 0; angle <= 2 * Math.PI; angle += 0.1) {
+                         // Parametric equations for a Villarceau circle (projected fibre)
+                         const u = (R + r * Math.cos(angle)) * Math.cos(bp.theta);
+                         const v = (R + r * Math.cos(angle)) * Math.sin(bp.theta);
+                         const w_ = r * Math.sin(angle);
+                         const x = (u * c + w_ * p) / (1 - v * c);
+                         const y = (v * p - w_) / (1 - v * c);
+                         const z = (u * p - w_ * c) / (1 - v * c);
+                         const scr = project({x,y,z});
+                         if (angle === 0) fCtx.moveTo(scr.x, scr.y);
+                         else fCtx.lineTo(scr.x, scr.y);
+                     }
+                 }
+                 fCtx.stroke();
+            }
+        }
+
+        function loop() {
+            if(!animationState.isRunning) return;
+            animationState.t = (animationState.t + 0.002) % 1;
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        animateBtn.addEventListener('click', () => {
+            animationState.isRunning = !animationState.isRunning;
+            animateBtn.textContent = animationState.isRunning ? "Stop Animation" : "Animate Fibration";
+            if(animationState.isRunning) loop();
+        });
+
+        baseCanvas.addEventListener('click', e => {
+            const rect = baseCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left - baseCanvas.width/2;
+            const y = e.clientY - rect.top - baseCanvas.height/2;
+            const r = Math.hypot(x,y);
+            if (r < baseCanvas.width/2) {
+                basePoint.phi = Math.asin(-y / (baseCanvas.height/2 - 5));
+                basePoint.theta = Math.atan2(x, 1); // Simplified
+                if (animationState.isRunning) {
+                     animationState.isRunning = false;
+                     animateBtn.textContent = "Animate Fibration";
+                }
+                draw();
+            }
+        });
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        fibreCanvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        fibreCanvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            scene.angleY += dx * 0.01;
+            scene.angleX -= dy * 0.01;
+            lastMouseX = e.clientX; lastMouseY = e.clientY;
+            if (!animationState.isRunning) draw();
+        });
+        fibreCanvas.addEventListener('mouseup', () => { isDragging = false; });
+        fibreCanvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function init() {
+            [fibreCanvas, baseCanvas].forEach(c => {
+                c.width = c.offsetWidth;
+                c.height = c.offsetHeight;
+            });
+            draw();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Space of All Possible Metrics (GR)</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #3f51b5; /* GR Indigo */
+            --secondary-color: #424242;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #e8eaf6; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Space of All Possible Metrics</h1>
+            <p class="subtitle">A conceptual simulation of how spacetime curvature arises from the metric tensor.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Interactive Spacetime</h2>
+            <p>Click and drag on the grid to "paint" a perturbation onto the metric. This deforms the grid and generates curvature, which is shown by the color overlay.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div>
+                <button id="reset-btn">Reset to Flat Space</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Spacetime as a Dynamic Field</h2>
+            <h3>The Metric Tensor: A Dynamic Ruler</h3>
+            <p>In classical physics, space and time form a fixed, unchanging background—a stage on which events unfold. In Einstein's General Relativity, this is no longer true. Spacetime itself is a dynamic object, a field that can be stretched, bent, and warped. The object that describes this geometry is the <strong>metric tensor</strong>, `g_μν`.</p>
+            <p>Think of the metric as a set of rules for measuring distance and time at every point. In flat space, this is just the Pythagorean theorem. In curved space, the metric itself changes from point to point. The grid in the simulation is a visual representation of the metric. Initially, it's a uniform grid representing flat spacetime. When you "paint" on it, you are directly changing the components of the metric, causing the grid to stretch and deform.</p>
+
+            <h3>Curvature from the Metric</h3>
+            <p>The core idea of General Relativity is that <strong>curvature of spacetime is what we perceive as gravity</strong>. But where does this curvature come from? It arises from the non-uniform stretching of the metric.</p>
+            <p>The simulation calculates the <strong>Ricci curvature</strong> (represented by the color overlay) from the metric grid you create. Notice that curvature only appears where the grid is changing non-linearly. A uniformly stretched grid is still flat! It is the *change in the change* of the metric that creates curvature.
+            <ul>
+                <li><strong>Red regions:</strong> Positive curvature (like the surface of a sphere).</li>
+                <li><strong>Blue regions:</strong> Negative curvature (like the surface of a saddle).</li>
+                <li><strong>No color:</strong> Zero curvature (flat).</li>
+            </ul>
+            This simulation demonstrates one half of Einstein's theory: <strong>Metric → Curvature</strong>. The full theory completes the loop: the presence of mass and energy determines the metric.
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('reset-btn');
+
+        const N = 64; // Grid size
+        let metric = {
+            g_xx: new Float32Array(N * N),
+            g_yy: new Float32Array(N * N),
+            g_xy: new Float32Array(N * N)
+        };
+        let curvature = new Float32Array(N * N);
+
+        function reset() {
+            for (let i = 0; i < N * N; i++) {
+                metric.g_xx[i] = 1.0;
+                metric.g_yy[i] = 1.0;
+                metric.g_xy[i] = 0.0;
+                curvature[i] = 0.0;
+            }
+            draw();
+        }
+
+        function calculateCurvature() {
+            // This is a simplified proxy for Ricci curvature: the Laplacian of the trace of the metric.
+            // R ~ ∇²(g_xx + g_yy). This captures the second-derivative nature of curvature.
+            for (let j = 1; j < N - 1; j++) {
+                for (let i = 1; i < N - 1; i++) {
+                    const idx = j * N + i;
+                    const g_trace = metric.g_xx[idx] + metric.g_yy[idx];
+
+                    const g_N = metric.g_xx[(j+1)*N + i] + metric.g_yy[(j+1)*N + i];
+                    const g_S = metric.g_xx[(j-1)*N + i] + metric.g_yy[(j-1)*N + i];
+                    const g_E = metric.g_xx[j*N + i+1] + metric.g_yy[j*N + i+1];
+                    const g_W = metric.g_xx[j*N + i-1] + metric.g_yy[j*N + i-1];
+
+                    const laplacian = (g_N + g_S + g_E + g_W - 4 * g_trace);
+                    curvature[idx] = laplacian;
+                }
+            }
+        }
+
+        function draw() {
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,w,h);
+
+            // Draw curvature as color map
+            const maxCurv = 0.1;
+            for (let j = 0; j < N; j++) {
+                for (let i = 0; i < N; i++) {
+                    const idx = j * N + i;
+                    const curv = curvature[idx];
+                    const alpha = Math.min(1, Math.abs(curv) / maxCurv);
+                    if (alpha < 0.1) continue;
+
+                    ctx.fillStyle = curv > 0 ? `rgba(255, 0, 0, ${alpha})` : `rgba(0, 0, 255, ${alpha})`;
+                    ctx.fillRect(i * (w/N), j * (h/N), (w/N), (h/N));
+                }
+            }
+
+            // Draw distorted grid
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 1;
+            const step = 4;
+            for (let j = 0; j < N; j += step) {
+                ctx.beginPath();
+                for (let i = 0; i < N; i++) {
+                    const idx = j*N + i;
+                    const x = i * (w/N) * Math.sqrt(metric.g_xx[idx]);
+                    const y = j * (h/N) * Math.sqrt(metric.g_yy[idx]);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+             for (let i = 0; i < N; i += step) {
+                ctx.beginPath();
+                for (let j = 0; j < N; j++) {
+                    const idx = j*N + i;
+                    const x = i * (w/N) * Math.sqrt(metric.g_xx[idx]);
+                    const y = j * (h/N) * Math.sqrt(metric.g_yy[idx]);
+                    if (j === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        let isPainting = false;
+        function handlePaint(e) {
+            if (!isPainting) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const i = Math.floor(x / canvas.width * N);
+            const j = Math.floor(y / canvas.height * N);
+
+            const brushSize = 5;
+            for (let dj = -brushSize; dj <= brushSize; dj++) {
+                for (let di = -brushSize; di <= brushSize; di++) {
+                    const pi = i + di;
+                    const pj = j + dj;
+                    if (pi >= 0 && pi < N && pj >= 0 && pj < N) {
+                        const dist = Math.sqrt(di*di + dj*dj);
+                        if (dist < brushSize) {
+                            const idx = pj * N + pi;
+                            const strength = 0.05 * (1 - dist/brushSize);
+                            metric.g_xx[idx] += strength;
+                            metric.g_yy[idx] += strength;
+                        }
+                    }
+                }
+            }
+            calculateCurvature();
+            draw();
+        }
+
+        canvas.addEventListener('mousedown', (e) => { isPainting = true; handlePaint(e); });
+        canvas.addEventListener('mousemove', handlePaint);
+        canvas.addEventListener('mouseup', () => { isPainting = false; });
+        canvas.addEventListener('mouseleave', () => { isPainting = false; });
+        resetBtn.addEventListener('click', reset);
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

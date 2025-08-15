@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Moduli Space of Instantons (QFT)</title>
+    <style>
+        :root {
+            --bg-color: #f5f3f7;
+            --text-color: #333;
+            --primary-color: #5e35b1; /* Deep purple for QFT */
+            --secondary-color: #4527a0;
+            --border-color: #d1c4e9;
+            --canvas-bg: #fff;
+            --potential-color: #7e57c2;
+            --instanton-color: #ffc107;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #ede7f6; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Moduli Space of Instantons (QFT)</h1>
+            <p class="subtitle">A conceptual visualization of tunneling between vacuum states.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Gauge Theory Potential Landscape</h2>
+            <p>A quantum system sits in one of many stable vacuum states. Classically, it's stuck. Quantum mechanically, it can tunnel.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div>
+                <button id="tunnel-btn">Show Instanton Path</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Tunneling Through Nothingness</h2>
+            <h3>Multiple Universes? Degenerate Vacua</h3>
+            <p>In Quantum Field Theory (QFT), the "state" of the universe is described by the values of various quantum fields. These fields have a potential energy, which this simulation visualizes as a landscape. A stable state for the universe corresponds to a valley in this landscape, called a <strong>vacuum state</strong>.</p>
+            <p>Many important theories, including those that describe the strong nuclear force, have a potential with multiple, identical valleys. This means there are many different, equally stable vacuum states the universe could be in. A system in one vacuum (like the ball in the simulation) is classically trapped; it doesn't have the energy to roll over the hill to get to the next valley.</p>
+
+            <h3>The Instanton: A Path in Imaginary Time</h3>
+            <p>Quantum mechanics, however, allows for a phenomenon called <strong>quantum tunneling</strong>. The system can "leak" or "tunnel" through the potential barrier to an adjacent vacuum state. An <strong>instanton</strong> is the mathematical solution in QFT that describes this tunneling process.</p>
+            <p>Crucially, an instanton is not a path that a particle takes in real time. It is a solution to the equations of motion in <strong>Euclidean spacetime</strong>, where time is treated as an imaginary number (`τ = it`). It's a mathematical construct that lives for an "instant" and connects the two vacuum states. Its existence tells us that tunneling is possible, and its properties can be used to calculate the probability of that tunneling event occurring.</p>
+            <p>When you click the button, the simulation shows this "instanton path." It's a representation of the system evolving in imaginary time to tunnel from one vacuum to the next, a feat impossible in classical physics.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const tunnelBtn = document.getElementById('tunnel-btn');
+
+        const state = {
+            isTunneling: false,
+            tunnelProgress: 0,
+            path: []
+        };
+
+        // Potential V(x) = A(1 - cos(x))
+        const V = x => 0.5 * (1 - Math.cos(x));
+        const world = { xMin: -4 * Math.PI, xMax: 4 * Math.PI, yMin: -0.5, yMax: 1.5 };
+
+        function toScreen(p) {
+            return {
+                x: (p.x - world.xMin) / (world.xMax - world.xMin) * canvas.width,
+                y: canvas.height - (p.y - world.yMin) / (world.yMax - world.yMin) * canvas.height
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw potential
+            ctx.strokeStyle = 'var(--potential-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for(let x = world.xMin; x <= world.xMax; x += 0.1) {
+                const p = toScreen({x, y: V(x)});
+                if(x === world.xMin) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+
+            // Draw vacuum states
+            for(let x = -4 * Math.PI; x <= 4 * Math.PI; x += 2*Math.PI) {
+                 const p = toScreen({x, y: V(x)});
+                 ctx.fillStyle = '#333';
+                 ctx.beginPath();
+                 ctx.arc(p.x, p.y, 6, 0, 2*Math.PI);
+                 ctx.fill();
+            }
+
+            // Draw particle
+            if (!state.isTunneling) {
+                 const p = toScreen({x: 0, y: V(0)});
+                 ctx.fillStyle = '#d81b60';
+                 ctx.beginPath();
+                 ctx.arc(p.x, p.y, 10, 0, 2*Math.PI);
+                 ctx.fill();
+            } else {
+                // Draw instanton path
+                ctx.strokeStyle = 'var(--instanton-color)';
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+
+                const segmentLength = state.path.length * state.tunnelProgress;
+                ctx.beginPath();
+                ctx.moveTo(state.path[0].x, state.path[0].y);
+                for(let i=1; i<segmentLength; i++) {
+                    ctx.lineTo(state.path[i].x, state.path[i].y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function generateInstantonPath() {
+            state.path = [];
+            const startX_w = 0;
+            const endX_w = 2 * Math.PI;
+            const steps = 100;
+            for(let i=0; i<=steps; i++) {
+                const t = i / steps;
+                // Path is a simple parabola for conceptual clarity
+                const x_w = startX_w + (endX_w - startX_w) * t;
+                const y_w = V(startX_w) - 4 * 0.3 * t * (1-t); // "under" the barrier
+                state.path.push(toScreen({x: x_w, y: y_w}));
+            }
+        }
+
+        let animationFrameId;
+        function animate() {
+            if (!state.isTunneling) return;
+            state.tunnelProgress += 0.01;
+            draw();
+            if (state.tunnelProgress >= 1.0) {
+                state.isTunneling = false;
+                tunnelBtn.disabled = false;
+                tunnelBtn.textContent = "Show Instanton Path";
+            } else {
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        }
+
+        tunnelBtn.addEventListener('click', () => {
+            if (state.isTunneling) return;
+            state.isTunneling = true;
+            state.tunnelProgress = 0;
+            tunnelBtn.disabled = true;
+            tunnelBtn.textContent = "Tunneling...";
+            generateInstantonPath();
+            animate();
+        });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            draw();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
