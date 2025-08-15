@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tent Map</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A chaos red */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --map-color: #3498db;
+            --trajectory-color: #f5a623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-wrap: wrap; gap: 1.5rem; min-width: 400px; justify-content: space-around;}
+
+        .viz-box { flex: 1; min-width: 300px; text-align: center; }
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color);}
+        #cobweb-canvas { cursor: crosshair; }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Tent Map</h1>
+        <p>A simulation of a simple piecewise-linear chaotic map.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>The <strong>tent map</strong> is a classic example of how very simple, deterministic rules can lead to chaos. It is a "piecewise-linear" map, meaning its graph is composed of straight line segments, which makes it even simpler to analyze than the famous logistic map. This simulation allows you to explore its dynamics through a "cobweb plot," which visualizes the trajectory of a starting point. A second plot directly demonstrates the hallmark of chaos: <strong>sensitive dependence on initial conditions</strong>, where two starting points that are almost identical rapidly diverge from each other as the map is applied.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to the Tent Map</h2>
+
+            <h4>Step 1: The Map and the Cobweb Plot</h4>
+            <p>The left canvas shows a "cobweb plot" for the tent map. The <strong style="color:var(--map-color)">blue lines</strong> form the graph of the tent map function itself. The gray diagonal line is the `y=x` line.</p>
+            <p>A cobweb plot is a graphical way to see what happens to a point when we apply the map over and over again. Click on the horizontal axis to choose a starting point, `x₀`.</p>
+            <ol>
+                <li>The <strong style="color:var(--trajectory-color)">orange line</strong> goes from `(x₀, 0)` up to the blue tent map. The height of this point is the next value, `x₁`.</li>
+                <li>The line then goes horizontally to the `y=x` line. This step cleverly transfers the value `x₁` from the vertical axis back to the horizontal axis.</li>
+                <li>From `(x₁, x₁)`, the line goes vertically to the map again to find `x₂`.</li>
+                <li>This process repeats, tracing the full trajectory of the initial point.</li>
+            </ol>
+
+            <h4>Step 2: The Slope Parameter (μ)</h4>
+            <p>The slider controls the parameter `μ`, which is the height (and slope) of the tent. The behavior of the map depends critically on this value.</p>
+            <ul>
+                <li><strong>μ < 1:</strong> The slopes are less than 1. All trajectories are attracted to the fixed point at x=0. The system is predictable.</li>
+                <li><strong>μ > 1:</strong> The slopes are greater than 1. This means the map is "stretching" distances between points on average. This stretching is the source of the chaos. The trajectory will appear to jump around erratically within the interval.</li>
+            </ul>
+
+            <h4>Step 3: Sensitive Dependence on Initial Conditions</h4>
+            <p>The right canvas demonstrates the "butterfly effect." It starts with two points that are incredibly close together (`x₀` and `y₀ = x₀ + 0.0001`). It then plots the distance between their trajectories over time.</p>
+            <p>When `μ > 1` (the chaotic regime), you will see this distance grow exponentially fast until it is as large as the entire space. This shows that even a tiny initial difference is quickly magnified, making long-term prediction impossible. This is the defining feature of chaos.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Use the slider to set the slope `μ`. Click on the "Cobweb Plot" to set an initial condition.</p>
+                <div class="slider-container">
+                    <label for="mu-slider">Slope Parameter (μ)</label>
+                    <input type="range" id="mu-slider" min="0.5" max="2.0" value="1.8" step="0.01">
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <div class="viz-box">
+                    <h4>Cobweb Plot</h4>
+                    <canvas id="cobweb-canvas" width="400" height="400"></canvas>
+                </div>
+                <div class="viz-box">
+                    <h4>Divergence of Nearby Trajectories</h4>
+                    <canvas id="divergence-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            mu: 1.8,
+            x0: 0.2,
+        };
+
+        // --- DOM ELEMENTS ---
+        const cobwebCanvas = document.getElementById('cobweb-canvas');
+        const cCtx = cobwebCanvas.getContext('2d');
+        const divergenceCanvas = document.getElementById('divergence-canvas');
+        const dCtx = divergenceCanvas.getContext('2d');
+        const muSlider = document.getElementById('mu-slider');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            draw();
+        }
+
+        function addEventListeners() {
+            muSlider.addEventListener('input', () => {
+                state.mu = parseFloat(muSlider.value);
+                draw();
+            });
+            cobwebCanvas.addEventListener('click', (e) => {
+                const rect = cobwebCanvas.getBoundingClientRect();
+                const x_canvas = e.clientX - rect.left;
+                state.x0 = x_canvas / cobwebCanvas.width; // Normalize to [0,1]
+                draw();
+            });
+        }
+
+        // --- CORE LOGIC ---
+        const tentMap = (x) => (x < 0.5) ? state.mu * x : state.mu * (1 - x);
+
+        // --- DRAWING ---
+        function draw() {
+            drawCobweb();
+            drawDivergence();
+        }
+
+        function drawCobweb() {
+            cCtx.fillStyle = '#111';
+            cCtx.fillRect(0, 0, cobwebCanvas.width, cobwebCanvas.height);
+            cCtx.save();
+            cCtx.scale(cobwebCanvas.width, cobwebCanvas.height);
+
+            // Draw y=x line
+            cCtx.strokeStyle = 'var(--secondary-color)';
+            cCtx.lineWidth = 0.005;
+            cCtx.beginPath();
+            cCtx.moveTo(0, 0); cCtx.lineTo(1, 1);
+            cCtx.stroke();
+
+            // Draw tent map
+            cCtx.strokeStyle = 'var(--map-color)';
+            cCtx.lineWidth = 0.01;
+            cCtx.beginPath();
+            cCtx.moveTo(0, 0);
+            cCtx.lineTo(0.5, state.mu * 0.5);
+            cCtx.lineTo(1, 0);
+            cCtx.stroke();
+
+            // Draw trajectory
+            cCtx.strokeStyle = 'var(--trajectory-color)';
+            cCtx.lineWidth = 0.005;
+            cCtx.beginPath();
+            let x = state.x0;
+            cCtx.moveTo(x, 0);
+            for (let i = 0; i < 50; i++) {
+                const y = tentMap(x);
+                cCtx.lineTo(x, y);
+                cCtx.lineTo(y, y);
+                x = y;
+                if (x < 0 || x > 1) break;
+            }
+            cCtx.stroke();
+            cCtx.restore();
+        }
+
+        function drawDivergence() {
+            dCtx.fillStyle = '#111';
+            dCtx.fillRect(0, 0, divergenceCanvas.width, divergenceCanvas.height);
+            dCtx.save();
+
+            const padding = {x: 30, y: 20};
+
+            // Draw axes
+            dCtx.strokeStyle = 'var(--secondary-color)';
+            dCtx.lineWidth = 1;
+            dCtx.beginPath();
+            dCtx.moveTo(padding.x, padding.y);
+            dCtx.lineTo(padding.x, divergenceCanvas.height - padding.y);
+            dCtx.lineTo(divergenceCanvas.width - padding.x, divergenceCanvas.height - padding.y);
+            dCtx.stroke();
+
+            // Draw divergence plot
+            dCtx.strokeStyle = 'var(--trajectory-color)';
+            dCtx.lineWidth = 2;
+            dCtx.beginPath();
+
+            let x1 = state.x0;
+            let x2 = state.x0 + 0.0001;
+            const num_iter = 50;
+
+            for(let i=0; i<num_iter; i++) {
+                const divergence = Math.abs(x1 - x2);
+                const plotX = padding.x + (i / num_iter) * (divergenceCanvas.width - 2*padding.x);
+                const plotY = divergenceCanvas.height - padding.y - divergence * (divergenceCanvas.height - 2*padding.y);
+
+                if (i === 0) dCtx.moveTo(plotX, plotY);
+                else dCtx.lineTo(plotX, plotY);
+
+                x1 = tentMap(x1);
+                x2 = tentMap(x2);
+            }
+            dCtx.stroke();
+
+            dCtx.restore();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anosov Diffeomorphism (Arnold's Cat Map)</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #9013FE; /* A chaotic purple */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); image-rendering: pixelated; }
+
+        #readouts { text-align: left; background-color: #222; padding: 1rem; border-radius: 4px; }
+        #readouts p { margin: 0.5rem 0; font-size: 1.1rem; }
+        #readouts span { font-weight: bold; color: var(--primary-color);}
+
+        #controls-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        button { background-color: var(--secondary-color); color: var(--text-color); border: 2px solid var(--secondary-color); padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #555; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Anosov Diffeomorphism (Arnold's Cat Map)</h1>
+        <p>A visualization of a chaotic map on a torus.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p><strong>Arnold's Cat Map</strong> is a famous example of a chaotic map on the surface of a torus (a donut shape, which we represent as a square with its edges "glued" together). The map takes every point in an image and moves it to a new location. When applied repeatedly, it demonstrates two key features of chaos: first, it acts as a perfect "mixer," rapidly scrambling the image into what looks like random noise. Second, because it is a deterministic process on a finite grid of pixels, it exhibits <strong>Poincaré recurrence</strong>: after a specific number of steps, the original image will magically reappear, perfectly intact. This simulation lets you apply the map step-by-step or automatically to see both the chaotic mixing and the surprising recurrence.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to a Chaotic Cat</h2>
+
+            <h4>Step 1: The Torus (A Square with Wrapped Edges)</h4>
+            <p>The canvas shows an image on a square. This square represents a torus (the surface of a donut). Imagine gluing the left edge of the square to the right edge, and the top edge to the bottom edge. This means that if a point moves off the right side, it instantly reappears on the left side, and similarly for the top and bottom. This "wrapping" is crucial to the map's behavior.</p>
+
+            <h4>Step 2: The Map - A Simple Transformation</h4>
+            <p>The Cat Map is a very simple linear transformation applied to the coordinates of each pixel. For a pixel at `(x, y)`, its new position `(x', y')` is given by:</p>
+            <p><code>x' = (2x + y) mod N</code><br>
+               <code>y' = (x + y) mod N</code></p>
+            <p>Where `N` is the width of the image. The "mod N" part is what handles the wrapping around the edges of the torus.</p>
+
+            <h4>Step 3: Chaotic Mixing</h4>
+            <p>This simple rule has a profound effect. It strongly stretches and squeezes the image at every point. When you click the "Apply Map" button, you will see the image get sheared and distorted. After just a few clicks, the original image is completely unrecognizable, scrambled into apparent randomness. This is a hallmark of chaotic mixing.</p>
+
+            <h4>Step 4: Poincaré Recurrence</h4>
+            <p>Even though the image looks random, it is not. The map is just a permutation, shuffling the pixels around. Since there are a finite number of pixels, this shuffling must eventually repeat. If you let the simulation run using the "Auto-Play" button, you will see a surprising result: after a certain number of steps (the "Poincaré recurrence time"), the scrambling will reverse itself, and the original image will suddenly reappear, perfectly restored! This recurrence is a deep and fundamental property of deterministic systems.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Apply the map step-by-step or let it play automatically.</p>
+                <div id="controls-toolbar">
+                     <button id="step-btn">Apply Map</button>
+                     <button id="play-pause-btn">Auto-Play</button>
+                     <button id="reset-btn">Reset Image</button>
+                </div>
+                <div id="readouts">
+                    <p>Iteration: <span id="iter-readout">0</span></p>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="300" height="300"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE ---
+        const state = {
+            iteration: 0,
+            isRunning: false,
+            originalImageData: null,
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const stepBtn = document.getElementById('step-btn');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const iterReadout = document.getElementById('iter-readout');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            loadAndDrawImage();
+        }
+
+        function addEventListeners() {
+            resetBtn.addEventListener('click', () => {
+                state.iteration = 0;
+                state.isRunning = false;
+                playPauseBtn.textContent = 'Auto-Play';
+                loadAndDrawImage();
+            });
+            stepBtn.addEventListener('click', applyMap);
+            playPauseBtn.addEventListener('click', () => {
+                state.isRunning = !state.isRunning;
+                playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Auto-Play';
+            });
+        }
+
+        function loadAndDrawImage() {
+            const img = new Image();
+            // A simple, recognizable cat face encoded as a data URL to keep it self-contained
+            img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAReSURBVHhe7VtdTttAFH7vK/5A4I/4A5IfIDlB8gYhN4h5g5AbJDxBcgLJDULeIOQGCR+A+AMmfmDkR4wf8CO+wY/4F3+gQJq2Pevs2dlnZ519ZhVf9Ek9s9qzvb6+zWzP1iAIIYQQQogB9fX14eDgQPj4+DAyMqL9mZmZQXNzc/j8/Nz+vLy84OPjg9bW1vD6+rp9vLy8IC4uLoQQQgghBkTj4uKCdHV1obW1NXx8fLC/nZ2d4eHhQWppaUFlZWV4fHwcra2t4e7uDj4+PjA3N4fW1taQQgghhBgiPz4+DiYmJvD19YVfX1/Y39fXl/ZraWlBS0sL2tvbQ2dnZ7i5ucHNzQ0aGxtDQUEBmjZCCCGEEGLA/OzsLNiZncXW1hY2NzdhZ2cHFhcX8Pb2hn19fX1hYWEBDQ0N4ejoyL5+fn4wNzeHpqamiI2NhRBCCCGEGBAbGxtDS0sL9vf09IStra3w9vaGvb09fHx8YH9bW1tobW0NXV1d4ePjA2VlZdja2kJpaSkaGhpCCCFkCqWlpWHfD/i+7+bmJpSXl4eamhpUVVWFxsbGkEIpKSkRcnJyQlxcXAghZAKhoaEh5ObmhvT09CAjIyPk5eWFjIwM0dHRkQshhBBCyGQoKChIuLm5obW1tQshhBBCyDQEBQUF2N/b2zuyuro6VFZWhoqKCtHV1RViY2NDCOH3iI+Ph5aWFnZ2djYshBBCyAwaGhpCfX19aGpqCg0NDWHf931fWloaKioqQkdHR4iPj4cQQgghhBjwS0tLw87OznBxcYH9fXp6QltbW+jr6wvt7e2wtbWFra0tZGdnQzVNQ0NDaGhoCCGEEEIIIfKzs7PDzs4ONjY2wtraGvb29rC/f39/bGxsDLu7u7C/x8fH0NbWFq5fv4ZpmsaZM2dCCCHE0AghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCHkC9/f32N/c3Bw2NjaGvb097O/v7w8fHx/s7+vrC1tbW2hpaQmdnZ3Z19vbG7q7u+Hj4wNlZWWwtbWF1tZWNDQ0hNra2hBCyBQaGxtDdXU1VFVVhcrKylBfXx8aGhpCbm5uaGhoCHl5eSEjIyOkp6eHjIwM0dHRkQshhBBCyDQEBQXF0NbWFm5ubi5ZWVkhIyMD6enpITs7O+z7vn94eCAvLy8kJCQEbW1tIYR8H/Lz80N6enpIS0sLGRkZIaenpzE3N4eWlpYQQgghhBBCPj09PaGtrS20tbWF/f39/WFvb4/9fXp6QktLCzIyMkJeXl7Izc0NKSkpobS0NPz+/mZfX15eUFZWFrKzs8Pe3h4WFhZCCCHkP1paWtDf3z9SCAmCIMV/gQYAeL9p08WJc3AAAAAASUVORK5CYII=';
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                state.originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            };
+        }
+
+        // --- CORE LOGIC ---
+        function applyMap() {
+            const N = canvas.width;
+            const currentData = ctx.getImageData(0, 0, N, N);
+            const newData = ctx.createImageData(N, N);
+
+            for (let x = 0; x < N; x++) {
+                for (let y = 0; y < N; y++) {
+                    const newX = (2*x + y) % N;
+                    const newY = (x + y) % N;
+
+                    const oldIdx = (x + y * N) * 4;
+                    const newIdx = (newX + newY * N) * 4;
+
+                    newData.data[newIdx] = currentData.data[oldIdx];
+                    newData.data[newIdx + 1] = currentData.data[oldIdx + 1];
+                    newData.data[newIdx + 2] = currentData.data[oldIdx + 2];
+                    newData.data[newIdx + 3] = 255;
+                }
+            }
+            ctx.putImageData(newData, 0, 0);
+            state.iteration++;
+            iterReadout.textContent = state.iteration;
+        }
+
+        function mainLoop() {
+            if (state.isRunning) {
+                applyMap();
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

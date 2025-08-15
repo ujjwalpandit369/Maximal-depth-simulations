@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton's Method Fractal</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #9013FE; /* A fractal purple */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color);}
+
+        #controls-form { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        #poly-input { flex-grow: 1; background-color: #333; color: var(--text-color); border: 1px solid var(--secondary-color); border-radius: 4px; padding: 0.5rem; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #7a0fd6; }
+        button:disabled { background-color: var(--secondary-color); cursor: not-allowed; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Newton's Method Fractal</h1>
+        <p>A fractal generator based on finding the roots of a polynomial using Newton's method.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 28 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Newton's method is a classic algorithm for finding the roots of a function. When applied to polynomials in the complex plane, it produces stunningly beautiful and intricate fractals. This simulation explores this connection. For a given polynomial, such as `z³ - 1 = 0`, every starting point in the complex plane will converge to one of the polynomial's roots. The plane is colored based on which root each point converges to. The fascinating result is that the boundaries between these "basins of attraction" are not simple lines, but infinitely complex fractals. You can explore the classic `z³ - 1` fractal or even input your own simple polynomial to generate new ones.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Newton Fractals</h2>
+
+            <h4>Step 1: Finding Roots</h4>
+            <p>A "root" of a polynomial is a number that makes the polynomial equal to zero. For example, the polynomial `p(z) = z³ - 1` has three roots in the complex plane: `1`, `-0.5 + 0.866i`, and `-0.5 - 0.866i`. These are the three cube roots of unity.</p>
+
+            <h4>Step 2: Newton's Method</h4>
+            <p>Newton's method is an iterative recipe to find these roots. You start with a guess, `z₀`, and the recipe tells you how to find a better guess, `z₁`, and so on. The formula is `z_next = z_current - p(z) / p'(z)`, where `p'(z)` is the derivative of the polynomial. For most starting guesses, this process will quickly converge to one of the roots.</p>
+
+            <h4>Step 3: Basins of Attraction</h4>
+            <p>Which root do you find? It depends on your starting guess `z₀`. The "basin of attraction" for a root is the set of all starting points that eventually lead to that root. In the simulation, we color the plane based on which basin each point belongs to. For `z³ - 1`, there are three roots, so we use three colors (e.g., red, green, and blue).</p>
+
+            <h4>Step 4: The Fractal Boundaries</h4>
+            <p>The amazing part is what happens at the boundaries between these colored regions. A point on the boundary will not converge to any single root; its trajectory under Newton's method will be chaotic, jumping wildly between the different basins. This chaotic behavior creates an infinitely intricate and detailed fractal structure at the boundaries. The brightness of the colors in the simulation indicates how fast a point converged; the dark lines closest to the boundaries took the longest to "make up their mind."</p>
+
+            <h4>How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Observe the Default:</strong> The simulation starts by showing the classic fractal for `z³ - 1`.</li>
+                <li><strong>Try Your Own:</strong> Type a simple polynomial into the input box, like `z^4 - 1` or `z^5 + z - 1`, and click "Generate". The simulation will find the roots and render the new fractal. (Note: Only simple polynomials like `z^n + ... = 0` are supported).</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Enter a simple polynomial and click Generate.</p>
+                 <div id="controls-form">
+                    <input type="text" id="poly-input" value="z^3 - 1">
+                    <button id="generate-btn">Generate</button>
+                 </div>
+                 <p>Example: `z^4 - 1` or `z^5 + z - 2`</p>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE ---
+        let state = {
+            // polynomial represented as a map of powers to coefficients
+            p: new Map([[3, {r:1, i:0}], [0, {r:-1, i:0}]]),
+            dp: new Map([[2, {r:3, i:0}]]),
+            roots: [],
+            isRendering: false,
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const polyInput = document.getElementById('poly-input');
+        const generateBtn = document.getElementById('generate-btn');
+
+        // --- COMPLEX NUMBER MATH ---
+        const C = {
+            add: (a, b) => ({r: a.r + b.r, i: a.i + b.i}),
+            sub: (a, b) => ({r: a.r - b.r, i: a.i - b.i}),
+            mul: (a, b) => ({r: a.r*b.r - a.i*b.i, i: a.r*b.i + a.i*b.r}),
+            div: (a, b) => {
+                const d = b.r*b.r + b.i*b.i;
+                return {r: (a.r*b.r + a.i*b.i)/d, i: (a.i*b.r - a.r*b.i)/d};
+            },
+            pow: (a, n) => {
+                let r = {r:1, i:0};
+                for(let i=0; i<n; i++) r = C.mul(r, a);
+                return r;
+            },
+            abs: (a) => Math.sqrt(a.r*a.r + a.i*a.i)
+        };
+
+        // --- POLYNOMIAL LOGIC ---
+        function parsePoly(str) {
+            // Simplified parser for "z^n + ... - c" form
+            try {
+                const p = new Map(), dp = new Map();
+                str = str.replace(/\s/g, '').replace(/\-/g, '+-');
+                const terms = str.split('+');
+                terms.forEach(term => {
+                    if (!term) return;
+                    let coeff = {r:1, i:0};
+                    let power = 0;
+                    if (term.includes('z')) {
+                        power = 1;
+                        if (term.includes('^')) {
+                            power = parseInt(term.split('^')[1]);
+                        }
+                    }
+                    const c_part = term.split('z')[0];
+                    if (c_part && c_part !== '-') {
+                        coeff.r = parseFloat(c_part);
+                    } else if (c_part === '-') {
+                        coeff.r = -1;
+                    }
+                    p.set(power, C.add(p.get(power) || {r:0,i:0}, coeff));
+                    if (power > 0) {
+                        dp.set(power - 1, C.add(dp.get(power-1) || {r:0,i:0}, {r: coeff.r * power, i: coeff.i * power}));
+                    }
+                });
+                return {p, dp};
+            } catch(e) {
+                alert("Invalid polynomial format. Please use simple forms like 'z^3 - 1'.");
+                return null;
+            }
+        }
+
+        const evalPoly = (poly, z) => {
+            let sum = {r:0, i:0};
+            for (const [power, coeff] of poly.entries()) {
+                sum = C.add(sum, C.mul(coeff, C.pow(z, power)));
+            }
+            return sum;
+        };
+
+        function findRoots(poly, dp) {
+            // Use Newton's method from several random starting points to find roots
+            const roots = [];
+            const epsilon = 1e-6;
+            for(let i=0; i<20; i++) {
+                let z = {r: Math.random()*4-2, i: Math.random()*4-2};
+                for (let j=0; j<100; j++) {
+                    const pz = evalPoly(poly, z);
+                    const dpz = evalPoly(dp, z);
+                    if (C.abs(dpz) < epsilon) break;
+                    z = C.sub(z, C.div(pz, dpz));
+                }
+                // Check if this root is new
+                if (roots.every(r => C.abs(C.sub(r, z)) > epsilon)) {
+                    roots.push(z);
+                }
+            }
+            return roots;
+        }
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            generateFractal();
+        }
+
+        function addEventListeners() {
+            generateBtn.addEventListener('click', () => {
+                const parsed = parsePoly(polyInput.value);
+                if (parsed) {
+                    state.p = parsed.p;
+                    state.dp = parsed.dp;
+                    generateFractal();
+                }
+            });
+        }
+
+        function generateFractal() {
+            if (state.isRendering) return;
+            state.isRendering = true;
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Rendering...';
+
+            // Use setTimeout to avoid freezing the browser UI thread
+            setTimeout(() => {
+                state.roots = findRoots(state.p, state.dp);
+                drawFractal();
+                state.isRendering = false;
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate';
+            }, 50);
+        }
+
+        // --- FRACTAL LOGIC ---
+        function drawFractal() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const maxIter = 50;
+            const view = { x: 0, y: 0, w: 4 };
+            const epsilon = 1e-3;
+
+            const rootColors = [
+                {r:231, g:76, b:60}, {r:46, g:204, b:113}, {r:52, g:152, b:219},
+                {r:155, g:89, b:182}, {r:241, g:196, b:15}, {r:26, g:188, b:156}
+            ];
+            const imageData = ctx.createImageData(width, height);
+
+            for (let px = 0; px < width; px++) {
+                for (let py = 0; py < height; py++) {
+                    let z = {
+                        r: view.x + (px / width - 0.5) * view.w,
+                        i: view.y + (py / height - 0.5) * view.w * (height/width)
+                    };
+
+                    let iter = 0;
+                    let root_idx = -1;
+                    for (iter = 0; iter < maxIter; iter++) {
+                        const pz = evalPoly(state.p, z);
+                        const dpz = evalPoly(state.dp, z);
+                        if (C.abs(dpz) < epsilon) break;
+                        z = C.sub(z, C.div(pz, dpz));
+
+                        for (let i=0; i<state.roots.length; i++) {
+                            if (C.abs(C.sub(z, state.roots[i])) < epsilon) {
+                                root_idx = i;
+                                break;
+                            }
+                        }
+                        if (root_idx !== -1) break;
+                    }
+
+                    const color = root_idx !== -1 ? rootColors[root_idx % rootColors.length] : {r:0,g:0,b:0};
+                    const brightness = root_idx !== -1 ? 1 - iter/maxIter : 0;
+
+                    const idx = (px + py * width) * 4;
+                    imageData.data[idx] = color.r * brightness;
+                    imageData.data[idx+1] = color.g * brightness;
+                    imageData.data[idx+2] = color.b * brightness;
+                    imageData.data[idx+3] = 255;
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
