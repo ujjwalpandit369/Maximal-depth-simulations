@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elastic Potential: Lennard-Jones Potential</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #D0021B; /* A strong red for atomic forces */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --atom-color: #4A90E2;
+            --force-color: #F5A623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; }
+        #main-canvas { cursor: grab; }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Elastic Potential: Lennard-Jones Potential</h1>
+        <p>A simulation of the potential energy between two neutral atoms.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>What holds matter together? At the atomic scale, it's a delicate balance of attraction and repulsion. This simulation explores the <strong>Lennard-Jones potential</strong>, a famous model that describes the interaction between two neutral atoms. By dragging an atom, you can directly "feel" the forces at play: a gentle, long-range attraction that pulls the atoms together, and an incredibly strong, short-range repulsion that prevents them from collapsing into each other. The accompanying graph visualizes the potential energy of this interaction, showing a distinct "well" which represents the stable bond between the atoms.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Atomic Forces</h2>
+            <p>Let's explore the invisible forces that govern the atomic world.</p>
+
+            <h4>Step 1: A Tale of Two Forces</h4>
+            <p>The interaction between two neutral atoms is dominated by two opposing forces, which are captured by the Lennard-Jones model:</p>
+            <ul>
+                <li><strong>Long-Range Attraction:</strong> At moderate distances, atoms attract each other. This is due to a weak, fleeting force called the London dispersion force (a type of van der Waals force). Imagine it as a gentle pull, trying to bring the atoms closer.</li>
+                <li><strong>Short-Range Repulsion:</strong> When atoms get extremely close, their electron clouds start to overlap. Due to a quantum mechanical principle (the Pauli exclusion principle), this causes a very strong repulsive force, pushing them apart much more powerfully than the attraction pulls them together. Think of it as a rigid, impenetrable wall.</li>
+            </ul>
+
+            <h4>Step 2: The Potential Energy Well</h4>
+            <p>The plot below the two atoms shows the potential energy `U(r)` as a function of the distance `r` between them. This curve is the result of the two competing forces.</p>
+            <ul>
+                <li><strong>The "Well":</strong> The dip in the curve is the most important feature. This "potential well" represents the most stable state for the two atoms. The very bottom of the well is the <strong>equilibrium bond distance</strong>, where the attractive and repulsive forces are perfectly balanced.</li>
+                <li><strong>Feeling the Force:</strong> As you drag the right atom, notice the orange force arrow. When you pull it far away, the arrow points left (attraction). When you push it very close, the arrow points right (repulsion) and gets much bigger. If you release the atom, it will "roll down" the sides of the potential well and settle at the bottom.</li>
+            </ul>
+
+            <h4>Step 3: How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Drag the Atom:</strong> Click and drag the right-hand atom to change its distance from the left atom.</li>
+                <li><strong>Watch the Graph:</strong> Observe how the white dot moves along the potential energy curve in sync with the atom's position.</li>
+                <li><strong>Observe the Force Vector:</strong> The orange arrow on the atom shows the direction and strength of the net force.</li>
+                <li><strong>Release to Equilibrate:</strong> Let go of the atom and watch it automatically animate to its most stable position at the bottom of the potential well.</li>
+                <li><strong>Use the Sliders:</strong> Adjust Epsilon (ε), the well depth, and Sigma (σ), the effective atom size, to see how they change the bond strength and bond length.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Drag the right atom to change the distance. Release to let it settle.</p>
+                <div class="slider-container">
+                    <label for="epsilon-slider">Well Depth (ε)</label>
+                    <input type="range" id="epsilon-slider" min="0.5" max="5" value="2" step="0.1">
+                </div>
+                <div class="slider-container">
+                    <label for="sigma-slider">Atom Size (σ)</label>
+                    <input type="range" id="sigma-slider" min="20" max="60" value="40" step="1">
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="150"></canvas>
+                <canvas id="potential-canvas" width="500" height="300"></canvas>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Lennard-Jones 6-12 Potential</h2>
+            <p>The potential energy U as a function of the distance r between the two atoms is given by the Lennard-Jones formula:</p>
+            <p><code>U(r) = 4ε [ (σ/r)¹² - (σ/r)⁶ ]</code></p>
+            <ul>
+                <li><strong>ε (Epsilon):</strong> This parameter controls the <strong>depth of the potential well</strong>. A larger ε means a stronger bond between the atoms.</li>
+                <li><strong>σ (Sigma):</strong> This parameter is the distance at which the potential energy is zero. It's a measure of the <strong>effective size of the atoms</strong>.</li>
+                <li><strong>The (σ/r)¹² term:</strong> This term represents the short-range <strong>repulsive force</strong>. The high power of 12 makes it very steep and significant only at very small r.</li>
+                <li><strong>The -(σ/r)⁶ term:</strong> This term represents the long-range <strong>attractive force</strong>. It dominates at larger distances but becomes less important than the repulsive term as r gets very small.</li>
+            </ul>
+            <p>The equilibrium distance, rₘᵢₙ, where the potential is at a minimum, can be shown to be <code>rₘᵢₙ = 2¹ᐟ⁶ * σ ≈ 1.122 * σ</code>.</p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            epsilon: 2, // Well depth
+            sigma: 40,  // "size" / zero-potential distance
+            atom1_x: 150,
+            atom2_x: 250,
+            isDragging: false,
+            isSettling: false,
+        };
+
+        // --- DOM ELEMENTS ---
+        const mainCanvas = document.getElementById('main-canvas');
+        const mCtx = mainCanvas.getContext('2d');
+        const potentialCanvas = document.getElementById('potential-canvas');
+        const pCtx = potentialCanvas.getContext('2d');
+
+        const epsilonSlider = document.getElementById('epsilon-slider');
+        const sigmaSlider = document.getElementById('sigma-slider');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            epsilonSlider.addEventListener('input', () => { state.epsilon = parseFloat(epsilonSlider.value); });
+            sigmaSlider.addEventListener('input', () => { state.sigma = parseFloat(sigmaSlider.value); });
+
+            mainCanvas.addEventListener('mousedown', (e) => {
+                const pos = getMousePos(mainCanvas, e);
+                if (Math.abs(pos.x - state.atom2_x) < 20) { // 20px grab radius
+                    state.isDragging = true;
+                    state.isSettling = false;
+                    mainCanvas.style.cursor = 'grabbing';
+                }
+            });
+            window.addEventListener('mouseup', () => {
+                if (state.isDragging) {
+                    state.isDragging = false;
+                    state.isSettling = true;
+                    mainCanvas.style.cursor = 'grab';
+                }
+            });
+            mainCanvas.addEventListener('mousemove', (e) => {
+                if (state.isDragging) {
+                    const pos = getMousePos(mainCanvas, e);
+                    state.atom2_x = pos.x;
+                }
+            });
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+        }
+
+        // --- CORE LOGIC ---
+        function getLJPotential(r) {
+            const term6 = (state.sigma / r) ** 6;
+            const term12 = (state.sigma / r) ** 12;
+            return 4 * state.epsilon * (term12 - term6);
+        }
+
+        function getLJForce(r) {
+            const term7 = (state.sigma / r) ** 7;
+            const term13 = (state.sigma / r) ** 13;
+            return 24 * state.epsilon / state.sigma * (2 * term13 - term7);
+        }
+
+        function mainLoop() {
+            if (state.isSettling) {
+                const r_min = Math.pow(2, 1/6) * state.sigma;
+                const target_x = state.atom1_x + r_min;
+                const dx = target_x - state.atom2_x;
+                if (Math.abs(dx) < 0.1) {
+                    state.isSettling = false;
+                    state.atom2_x = target_x;
+                } else {
+                    state.atom2_x += dx * 0.1; // Animate towards equilibrium
+                }
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawMainCanvas();
+            drawPotentialCanvas();
+        }
+
+        function drawMainCanvas() {
+            mCtx.fillStyle = '#111';
+            mCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+            const y = mainCanvas.height / 2;
+
+            // Draw atoms
+            mCtx.fillStyle = 'var(--atom-color)';
+            mCtx.beginPath();
+            mCtx.arc(state.atom1_x, y, 15, 0, 2 * Math.PI);
+            mCtx.fill();
+            mCtx.beginPath();
+            mCtx.arc(state.atom2_x, y, 15, 0, 2 * Math.PI);
+            mCtx.fill();
+
+            // Draw force vector
+            const r = Math.abs(state.atom2_x - state.atom1_x);
+            if (r > 1) {
+                const force = getLJForce(r);
+                const forceMag = Math.min(100, Math.abs(force) * 20); // Scaled and capped
+                const forceDir = -Math.sign(force);
+                drawArrow(state.atom2_x, y, state.atom2_x + forceDir * forceMag, y);
+            }
+        }
+
+        function drawArrow(fromx, fromy, tox, toy) {
+            mCtx.strokeStyle = 'var(--force-color)';
+            mCtx.fillStyle = 'var(--force-color)';
+            mCtx.lineWidth = 3;
+            const headlen = 10;
+            const angle = Math.atan2(toy - fromy, tox - fromx);
+            mCtx.beginPath();
+            mCtx.moveTo(fromx, fromy);
+            mCtx.lineTo(tox, toy);
+            mCtx.stroke();
+            mCtx.beginPath();
+            mCtx.moveTo(tox, toy);
+            mCtx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            mCtx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+            mCtx.closePath();
+            mCtx.fill();
+        }
+
+        function drawPotentialCanvas() {
+            const padding = { top: 20, right: 20, bottom: 40, left: 40 };
+            const chartWidth = potentialCanvas.width - padding.left - padding.right;
+            const chartHeight = potentialCanvas.height - padding.top - padding.bottom;
+
+            pCtx.fillStyle = '#111';
+            pCtx.fillRect(0, 0, potentialCanvas.width, potentialCanvas.height);
+
+            // Draw axes
+            pCtx.strokeStyle = '#888';
+            pCtx.lineWidth = 1;
+            pCtx.beginPath();
+            pCtx.moveTo(padding.left, padding.top);
+            pCtx.lineTo(padding.left, potentialCanvas.height - padding.bottom);
+            pCtx.lineTo(potentialCanvas.width - padding.right, potentialCanvas.height - padding.bottom);
+            pCtx.stroke();
+            pCtx.fillStyle = '#aaa';
+            pCtx.font = '12px sans-serif';
+            pCtx.textAlign = 'center';
+            pCtx.fillText('Distance (r)', potentialCanvas.width / 2, potentialCanvas.height - 10);
+
+            // Draw curve
+            pCtx.strokeStyle = 'var(--primary-color)';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            const maxR = chartWidth * 1.2;
+            const U_scale = 15;
+            for (let px = 0; px < chartWidth; px++) {
+                const r = (px / chartWidth) * maxR + 20; // Start away from singularity
+                const U = getLJPotential(r);
+                const x = padding.left + px;
+                const y = potentialCanvas.height - padding.bottom - (U + state.epsilon * 1.5) * U_scale;
+                if (px === 0) pCtx.moveTo(x, y); else pCtx.lineTo(x, y);
+            }
+            pCtx.stroke();
+
+            // Draw equilibrium lines
+            const r_min = Math.pow(2, 1/6) * state.sigma;
+            const r_min_x = padding.left + ((r_min - 20) / maxR) * chartWidth;
+            const U_min_y = potentialCanvas.height - padding.bottom - (-state.epsilon + state.epsilon * 1.5) * U_scale;
+            pCtx.strokeStyle = '#888';
+            pCtx.setLineDash([2, 2]);
+            pCtx.beginPath();
+            pCtx.moveTo(r_min_x, U_min_y);
+            pCtx.lineTo(r_min_x, potentialCanvas.height - padding.bottom);
+            pCtx.moveTo(padding.left, U_min_y);
+            pCtx.lineTo(r_min_x, U_min_y);
+            pCtx.stroke();
+            pCtx.setLineDash([]);
+
+            // Draw current position dot
+            const current_r = Math.abs(state.atom2_x - state.atom1_x);
+            const current_U = getLJPotential(current_r);
+            const current_x = padding.left + ((current_r - 20) / maxR) * chartWidth;
+            const current_y = potentialCanvas.height - padding.bottom - (current_U + state.epsilon * 1.5) * U_scale;
+            pCtx.fillStyle = 'white';
+            pCtx.beginPath();
+            pCtx.arc(current_x, current_y, 6, 0, 2*Math.PI);
+            pCtx.fill();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

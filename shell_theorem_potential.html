@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Potential: Sphere vs. Point Mass</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #4a90e2; /* Blue for gravity */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --mass-color: #e0e0e0;
+            --force-color: #f5a623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gravitational Potential: Sphere vs. Point Mass</h1>
+        <p>A simulation to demonstrate Newton's Shell Theorem.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>How does a large object like a planet pull on other things? Isaac Newton solved this with his elegant <strong>Shell Theorem</strong>. This simulation demonstrates the two surprising results of this theorem. First, it shows that for any object outside a spherical shell, the shell's gravity acts as if its entire mass were concentrated into a single point at its center. Second, and more strangely, it shows that for any object *inside* the shell, the net gravitational force is zero! This is because the pull from all parts of the shell perfectly cancels out. Explore these concepts by dragging a test mass and observing the resulting potential energy and forces.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to the Shell Theorem</h2>
+            <p>This simulation reveals a fundamental and beautiful property of gravity.</p>
+
+            <h4>Part 1: The Potential Plot (Top Visualization)</h4>
+            <p>The top canvas shows a graph of <strong>Gravitational Potential Energy (U)</strong> versus the distance (r) of a small test mass from the center of a hollow spherical shell.</p>
+            <ul>
+                <li><strong>The Red Line:</strong> This shows the potential energy curve for the hollow shell.</li>
+                <li><strong>The Dashed Gray Line:</strong> This shows the potential energy for a single point mass with the same mass as the shell.</li>
+            </ul>
+            <p><strong>Observe what happens:</strong></p>
+            <ol>
+                <li><strong>Outside the Shell (r > R):</strong> When you drag the test mass (the white dot) so it's outside the shell's radius, notice that the red line and the gray dashed line are identical. This is the first part of the theorem: from the outside, the shell's gravity is indistinguishable from a point mass. The potential follows the familiar <code>-1/r</code> curve.</li>
+                <li><strong>Inside the Shell (r < R):</strong> As soon as you drag the mass inside the shell's radius, the potential energy (the red line) becomes flat and constant. This is the second part of the theorem. Since force is the slope (or gradient) of the potential, a flat potential means the net force is <strong>zero</strong>. It takes no work to move the test mass around inside the shell.</li>
+            </ol>
+
+            <h4>Part 2: The Force Cancellation Diagram (Bottom Visualization)</h4>
+            <p>Why is the force zero inside? The bottom canvas provides a visual proof.</p>
+            <p><strong>Everyday Analogy: A Tug-of-War.</strong> Imagine you are the test mass inside the shell. The part of the shell that is close to you is small, but it pulls hard on you. The part of the shell that is far away is much larger, but its pull is weaker due to the distance. The miracle of the shell theorem is that these two effects—the amount of mass and its distance—perfectly cancel each other out, no matter where you stand inside the shell. The orange arrows represent these opposing pulls, showing how the net force is always zero.</p>
+
+            <h4>How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Drag the Test Mass:</strong> In the top visualization, click and drag the white test mass left and right to change its distance `r` from the center. Observe how its position on the red potential curve changes.</li>
+                <li><strong>Use the Sliders:</strong> Change the Shell's Mass and Radius to see how the potential well gets deeper or wider.</li>
+                <li><strong>Move the Mass Inside:</strong> In the bottom visualization, drag the test mass around inside the shell to see how the cancellation forces follow you, always summing to zero.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div class="slider-container">
+                    <label for="mass-slider">Shell Mass (M)</label>
+                    <input type="range" id="mass-slider" min="1" max="10" value="5" step="0.5">
+                </div>
+                <div class="slider-container">
+                    <label for="radius-slider">Shell Radius (R)</label>
+                    <input type="range" id="radius-slider" min="50" max="150" value="100" step="5">
+                </div>
+                 <p>In the top plot, drag the white "test mass" to change its distance from the center.</p>
+                 <p>In the bottom plot, drag the mass around inside the shell to see the force cancellation.</p>
+            </div>
+            <div id="simulation-visuals">
+                <h4>Potential U(r) vs. Distance (r)</h4>
+                <canvas id="potential-canvas" width="500" height="300"></canvas>
+                <h4>Force Cancellation Inside Shell</h4>
+                <canvas id="force-canvas" width="500" height="300"></canvas>
+            </div>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory: The Gravitational Potential</h2>
+            <p>The gravitational potential U at a distance r from the center of a spherical shell of mass M and radius R is given by a piecewise function:</p>
+
+            <p>1. <strong>Outside the shell (r ≥ R):</strong></p>
+            <p><code>U(r) = - (G * M * m) / r</code></p>
+            <p>This is identical to the potential of a point mass M at the center.</p>
+
+            <p>2. <strong>Inside the shell (r < R):</strong></p>
+            <p><code>U(r) = - (G * M * m) / R</code></p>
+            <p>The potential is constant and equal to the potential at the surface of the shell. Since the gravitational force is the negative derivative of the potential with respect to distance (<code>F = -dU/dr</code>), and the derivative of a constant is zero, the force inside the shell is zero.</p>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            shellMass: 5,
+            shellRadius: 100,
+            testMassR: 150, // Distance of test mass from center
+            testMassInside: { x: 250, y: 150 } // Position for force diagram
+        };
+        const G = 1; // Simplified gravitational constant
+
+        // --- DOM ELEMENTS ---
+        const potentialCanvas = document.getElementById('potential-canvas');
+        const pCtx = potentialCanvas.getContext('2d');
+        const forceCanvas = document.getElementById('force-canvas');
+        const fCtx = forceCanvas.getContext('2d');
+
+        const massSlider = document.getElementById('mass-slider');
+        const radiusSlider = document.getElementById('radius-slider');
+
+        // --- PADDING & COORDINATES ---
+        const p_padding = { top: 20, right: 20, bottom: 40, left: 40 };
+
+        // --- DRAGGING STATE ---
+        let isDraggingPotential = false;
+        let isDraggingForce = false;
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            draw();
+        }
+
+        function addEventListeners() {
+            massSlider.addEventListener('input', () => { state.shellMass = parseFloat(massSlider.value); draw(); });
+            radiusSlider.addEventListener('input', () => { state.shellRadius = parseFloat(radiusSlider.value); draw(); });
+
+            // Listeners for potential canvas
+            potentialCanvas.addEventListener('mousedown', (e) => {
+                const pos = getMousePos(potentialCanvas, e);
+                const p_chartWidth = potentialCanvas.width - p_padding.left - p_padding.right;
+                const testMassX = p_padding.left + (state.testMassR / (potentialCanvas.width * 0.6)) * p_chartWidth;
+                if (Math.abs(pos.x - testMassX) < 10) {
+                    isDraggingPotential = true;
+                }
+            });
+            potentialCanvas.addEventListener('mousemove', (e) => {
+                if (isDraggingPotential) {
+                    const pos = getMousePos(potentialCanvas, e);
+                    const p_chartWidth = potentialCanvas.width - p_padding.left - p_padding.right;
+                    state.testMassR = ((pos.x - p_padding.left) / p_chartWidth) * (potentialCanvas.width * 0.6);
+                    if (state.testMassR < 0) state.testMassR = 0;
+                    if (state.testMassR > potentialCanvas.width * 0.6) state.testMassR = potentialCanvas.width * 0.6;
+                    draw();
+                }
+            });
+            window.addEventListener('mouseup', () => {
+                isDraggingPotential = false;
+                isDraggingForce = false;
+            });
+
+            // Listeners for force canvas
+            forceCanvas.addEventListener('mousedown', (e) => {
+                 const pos = getMousePos(forceCanvas, e);
+                 const dx = pos.x - state.testMassInside.x;
+                 const dy = pos.y - state.testMassInside.y;
+                 if (dx*dx + dy*dy < 10*10) {
+                    isDraggingForce = true;
+                 }
+            });
+            forceCanvas.addEventListener('mousemove', (e) => {
+                if (isDraggingForce) {
+                    state.testMassInside = getMousePos(forceCanvas, e);
+                    draw();
+                }
+            });
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawPotentialCanvas();
+            drawForceCanvas();
+        }
+
+        // --- POTENTIAL CANVAS LOGIC ---
+        function drawPotentialCanvas() {
+            pCtx.fillStyle = '#111';
+            pCtx.fillRect(0, 0, potentialCanvas.width, potentialCanvas.height);
+
+            drawPotentialAxes();
+            drawPotentialCurve();
+            drawTestMassOnPlot();
+        }
+
+        function getPotential(r) {
+            if (r < state.shellRadius) {
+                return - (G * state.shellMass) / state.shellRadius;
+            } else {
+                return - (G * state.shellMass) / r;
+            }
+        }
+
+        function drawPotentialAxes() {
+            pCtx.strokeStyle = '#888';
+            pCtx.lineWidth = 1;
+            const p_chartHeight = potentialCanvas.height - p_padding.top - p_padding.bottom;
+
+            // Y-Axis
+            pCtx.beginPath();
+            pCtx.moveTo(p_padding.left, p_padding.top);
+            pCtx.lineTo(p_padding.left, p_padding.top + p_chartHeight);
+            pCtx.stroke();
+
+            // X-Axis
+            pCtx.beginPath();
+            pCtx.moveTo(p_padding.left, p_padding.top + p_chartHeight);
+            pCtx.lineTo(potentialCanvas.width - p_padding.right, p_padding.top + p_chartHeight);
+            pCtx.stroke();
+
+            pCtx.fillStyle = '#aaa';
+            pCtx.font = '12px sans-serif';
+            pCtx.textAlign = 'center';
+            pCtx.fillText('Distance (r)', potentialCanvas.width / 2, potentialCanvas.height - 5);
+        }
+
+        function drawPotentialCurve() {
+            const p_chartWidth = potentialCanvas.width - p_padding.left - p_padding.right;
+            const p_chartHeight = potentialCanvas.height - p_padding.top - p_padding.bottom;
+            const maxR = potentialCanvas.width * 0.6;
+            const maxU = 0.2; // Scaling factor for potential
+
+            // Draw shell potential
+            pCtx.strokeStyle = 'var(--primary-color)';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            for (let r_px = 0; r_px < p_chartWidth; r_px++) {
+                const r = (r_px / p_chartWidth) * maxR;
+                if (r < 1) continue;
+                const U = getPotential(r);
+                const x = p_padding.left + r_px;
+                const y = p_padding.top + p_chartHeight - (-U / maxU) * p_chartHeight;
+                r_px === 0 ? pCtx.moveTo(x, y) : pCtx.lineTo(x, y);
+            }
+            pCtx.stroke();
+
+            // Draw point mass potential
+            pCtx.strokeStyle = '#888';
+            pCtx.lineWidth = 2;
+            pCtx.setLineDash([5, 5]);
+            pCtx.beginPath();
+            for (let r_px = 0; r_px < p_chartWidth; r_px++) {
+                const r = (r_px / p_chartWidth) * maxR;
+                 if (r < 1) continue;
+                const U = - (G * state.shellMass) / r;
+                const x = p_padding.left + r_px;
+                const y = p_padding.top + p_chartHeight - (-U / maxU) * p_chartHeight;
+                r_px === 0 ? pCtx.moveTo(x, y) : pCtx.lineTo(x, y);
+            }
+            pCtx.stroke();
+            pCtx.setLineDash([]);
+
+            // Draw shell radius line
+            const shellRadiusX = p_padding.left + (state.shellRadius / maxR) * p_chartWidth;
+            pCtx.strokeStyle = '#aaa';
+            pCtx.lineWidth = 1;
+            pCtx.setLineDash([2, 2]);
+            pCtx.beginPath();
+            pCtx.moveTo(shellRadiusX, p_padding.top);
+            pCtx.lineTo(shellRadiusX, potentialCanvas.height - p_padding.bottom);
+            pCtx.stroke();
+            pCtx.setLineDash([]);
+            pCtx.fillStyle = '#aaa';
+            pCtx.fillText('R', shellRadiusX, p_padding.top + 10);
+        }
+
+        function drawTestMassOnPlot() {
+            const p_chartWidth = potentialCanvas.width - p_padding.left - p_padding.right;
+            const p_chartHeight = potentialCanvas.height - p_padding.top - p_padding.bottom;
+            const maxR = potentialCanvas.width * 0.6;
+            const maxU = 0.2;
+
+            const testMassX = p_padding.left + (state.testMassR / maxR) * p_chartWidth;
+            const testMassU = getPotential(state.testMassR);
+            const testMassY = p_padding.top + p_chartHeight - (-testMassU / maxU) * p_chartHeight;
+
+            // The draggable mass on the x-axis
+            pCtx.fillStyle = 'white';
+            pCtx.beginPath();
+            pCtx.arc(testMassX, p_padding.top + p_chartHeight, 8, 0, 2 * Math.PI);
+            pCtx.fill();
+
+            // The corresponding point on the curve
+            pCtx.fillStyle = 'var(--primary-color)';
+            pCtx.beginPath();
+            pCtx.arc(testMassX, testMassY, 6, 0, 2 * Math.PI);
+            pCtx.fill();
+        }
+
+        // --- FORCE CANVAS LOGIC ---
+        function drawForceCanvas() {
+            fCtx.fillStyle = '#111';
+            fCtx.fillRect(0, 0, forceCanvas.width, forceCanvas.height);
+
+            const centerX = forceCanvas.width / 2;
+            const centerY = forceCanvas.height / 2;
+
+            // Draw shell
+            fCtx.strokeStyle = 'var(--mass-color)';
+            fCtx.lineWidth = 2;
+            fCtx.beginPath();
+            fCtx.arc(centerX, centerY, state.shellRadius, 0, 2 * Math.PI);
+            fCtx.stroke();
+
+            // Draw test mass
+            fCtx.fillStyle = 'var(--primary-color)';
+            fCtx.beginPath();
+            fCtx.arc(state.testMassInside.x, state.testMassInside.y, 8, 0, 2 * Math.PI);
+            fCtx.fill();
+
+            // Draw force cancellation lines
+            drawForceVectors();
+        }
+
+        function drawForceVectors() {
+            const p = state.testMassInside;
+            const center = { x: forceCanvas.width / 2, y: forceCanvas.height / 2 };
+            fCtx.strokeStyle = 'var(--force-color)';
+            fCtx.lineWidth = 1;
+
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * 2 * Math.PI;
+                const P1 = lineCircleIntersect(p, angle, center, state.shellRadius);
+                const P2 = lineCircleIntersect(p, angle + Math.PI, center, state.shellRadius);
+
+                if (P1 && P2) {
+                    // Vectors from shell points to the mass
+                    const d1_sq = (P1.x - p.x)**2 + (P1.y - p.y)**2;
+                    const d2_sq = (P2.x - p.x)**2 + (P2.y - p.y)**2;
+
+                    // Force is proportional to 1/d^2, but the amount of mass in the cone is prop to d^2. They cancel.
+                    // So vector length is constant for visualization.
+                    const forceMag = 25;
+
+                    drawArrow(p.x, p.y, p.x + forceMag * Math.cos(angle), p.y + forceMag * Math.sin(angle));
+                    drawArrow(p.x, p.y, p.x + forceMag * Math.cos(angle + Math.PI), p.y + forceMag * Math.sin(angle + Math.PI));
+                }
+            }
+        }
+
+        function lineCircleIntersect(p, angle, center, radius) {
+            const x1 = p.x, y1 = p.y;
+            const m = Math.tan(angle);
+            const c = y1 - m * x1;
+
+            const A = m*m + 1;
+            const B = 2 * (m*c - m*center.y - center.x);
+            const C = center.y*center.y - radius*radius + center.x*center.x - 2*c*center.y + c*c;
+
+            const det = B*B - 4*A*C;
+            if (det < 0) return null;
+
+            const x_plus = (-B + Math.sqrt(det)) / (2*A);
+            const x_minus = (-B - Math.sqrt(det)) / (2*A);
+            const y_plus = m*x_plus + c;
+            const y_minus = m*x_minus + c;
+
+            // Return the point in the correct direction
+            if (Math.cos(angle) > 0) {
+                return x_plus > x1 ? {x: x_plus, y: y_plus} : {x: x_minus, y: y_minus};
+            } else {
+                 return x_plus < x1 ? {x: x_plus, y: y_plus} : {x: x_minus, y: y_minus};
+            }
+        }
+
+        function drawArrow(fromx, fromy, tox, toy) {
+            const headlen = 10;
+            const angle = Math.atan2(toy - fromy, tox - fromx);
+            fCtx.beginPath();
+            fCtx.moveTo(fromx, fromy);
+            fCtx.lineTo(tox, toy);
+            fCtx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            fCtx.moveTo(tox, toy);
+            fCtx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+            fCtx.stroke();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
