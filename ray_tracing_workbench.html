@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Ray Tracing Workbench</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --object-color: #28a745;
+            --image-color: #dc3545;
+            --virtual-color: #ffc107;
+            --ray-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #e9ecef;
+        }
+        [data-theme="dark"] {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --primary-color: #58a6ff;
+            --secondary-color: #8b949e;
+            --object-color: #3fb950;
+            --image-color: #ff7b72;
+            --virtual-color: #f1c40f;
+            --ray-color: #8b949e;
+            --border-color: #30363d;
+            --canvas-bg: #161b22;
+            --control-bg: #21262d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 350px; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); cursor: grab; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .readout-box { background: var(--control-bg); padding: 15px; border-radius: 5px; font-family: monospace; }
+        .readout-box p { margin: 5px 0; }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #30363d; color: #c9d1d9; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; grid-auto-flow: dense; } .controls-column { grid-row: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Interactive Ray Tracing Workbench</h1>
+            <p class="subtitle">Build simple optical systems with lenses and mirrors to understand image formation.</p>
+        </header>
+        <main>
+            <div class="simulation-container">
+                <div class="canvas-wrapper">
+                    <canvas id="main-canvas" height="600"></canvas>
+                </div>
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="control-group">
+                        <label>Add Optical Element</label>
+                        <div class="button-group">
+                            <button id="add-converging-lens">Converging Lens</button>
+                            <button id="add-diverging-lens">Diverging Lens</button>
+                            <button id="add-concave-mirror">Concave Mirror</button>
+                            <button id="add-convex-mirror">Convex Mirror</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Object Controls</label>
+                        <p><small>Drag the green object arrow on the canvas to move it or change its height.</small></p>
+                    </div>
+                    <hr>
+                    <h4>Selected Element Controls</h4>
+                    <div id="selected-element-controls">
+                        <p>No element selected. Drag an element to select it.</p>
+                    </div>
+                    <hr>
+                    <div class="readout-box" id="readout-box">
+                        <p>Object Dist (dₒ): --</p>
+                        <p>Image Dist (dᵢ): --</p>
+                        <p>Focal Length (f): --</p>
+                        <p>Magnification (M): --</p>
+                        <p>Image Type: --</p>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — How Lenses and Mirrors Form Images</h2>
+                <h4>Step 1: The Setup</h4>
+                <p>The main view is our optical workbench. The horizontal line is the <strong>optical axis</strong>. The green arrow is our <strong>object</strong>. Our goal is to see what kind of <strong>image</strong> is formed by the optical elements we add.</p>
+
+                <h4>Step 2: Adding Lenses and Mirrors</h4>
+                <p>Use the buttons to add different components to the workbench. You can drag them left and right along the axis. There are four types:</p>
+                <ul>
+                    <li><strong>Converging Lens:</strong> A standard convex lens, thicker in the middle. It bends parallel light rays so they converge at a focal point. Think of a magnifying glass.</li>
+                    <li><strong>Diverging Lens:</strong> A concave lens, thinner in the middle. It spreads parallel light rays out as if they were coming from a focal point.</li>
+                    <li><strong>Concave Mirror:</strong> A curved mirror that focuses parallel light rays. Think of a satellite dish or a makeup mirror.</li>
+                    <li><strong>Convex Mirror:</strong> A curved mirror that spreads light rays out. Think of a security mirror in a store.</li>
+                </ul>
+
+                <h4>Step 3: The Three Principal Rays</h4>
+                <p>To figure out where an image will form, we don't need to trace every ray of light. We can use a clever shortcut by drawing just three special "principal rays" from the tip of the object. Where these three rays (or their imaginary extensions) cross, that's where the tip of the image will be!</p>
+                <ol>
+                    <li><strong>The Parallel Ray (Blue):</strong> This ray leaves the object parallel to the axis. After hitting the lens/mirror, it is bent to pass through the focal point on the other side.</li>
+                    <li><strong>The Focal Ray (Red):</strong> This ray first passes through the focal point on the same side as the object. When it hits the lens/mirror, it is bent so it comes out parallel to the axis.</li>
+                    <li><strong>The Central Ray (Gray):</strong> This ray passes through the very center of the lens (or hits the vertex of the mirror). It continues in a straight line, undeviated.</li>
+                </ol>
+
+                <h4>Step 4: Real vs. Virtual Images</h4>
+                <p>After you place an object and a lens, you'll see an image arrow appear.
+                <ul>
+                    <li>If the principal rays <strong>actually cross</strong> after passing through the lens, they form a <strong>real image</strong> (shown in red). A real image is always inverted and can be projected onto a screen. This is how a movie projector works.</li>
+                    <li>If the rays are spreading out and don't cross, our brain traces them backwards to a point where they <em>appear</em> to cross. This is a <strong>virtual image</strong> (shown in yellow and dashed). A virtual image is always upright and cannot be projected onto a screen. This is what you see when you look at yourself in a regular flat mirror.</li>
+                </ul>
+                Try moving the object closer to and further from a converging lens. You'll see it can create both real and virtual images depending on the object's position!
+                </p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Mathematics of Optics</h2>
+                <h4>The Thin Lens / Mirror Equation</h4>
+                <p>The relationship between the object distance (dₒ), image distance (dᵢ), and focal length (f) is described by this beautiful and simple equation:</p>
+                <p><code>1/dₒ + 1/dᵢ = 1/f</code></p>
+                <p>To use this equation correctly, we must follow sign conventions:</p>
+                <ul>
+                    <li><strong>dₒ</strong> is always positive.</li>
+                    <li><strong>f</strong> is <strong>positive</strong> for converging elements (converging lens, concave mirror) and <strong>negative</strong> for diverging elements (diverging lens, convex mirror).</li>
+                    <li><strong>dᵢ</strong> is <strong>positive</strong> if the image is real (on the opposite side of the lens from the object) and <strong>negative</strong> if the image is virtual (on the same side of the lens).</li>
+                </ul>
+                <p><strong>Example:</strong> An object is placed 30 cm from a converging lens with a 10 cm focal length. Where is the image?
+                <br><code>1/30 + 1/dᵢ = 1/10  =>  1/dᵢ = 1/10 - 1/30 = 2/30  =>  dᵢ = 15 cm</code>. Since dᵢ is positive, the image is real.
+                </p>
+
+                <h4>Magnification (M)</h4>
+                <p>The magnification tells us how large the image is compared to the object, and whether it is upright or inverted.</p>
+                <p><code>M = hᵢ / hₒ = -dᵢ / dₒ</code></p>
+                <ul>
+                    <li>If <code>|M| > 1</code>, the image is magnified. If <code>|M| < 1</code>, it's reduced.</li>
+                    <li>If <code>M</code> is <strong>negative</strong>, the image is inverted. If <code>M</code> is <strong>positive</strong>, the image is upright.</li>
+                </ul>
+                 <p><strong>Example (continued):</strong> <code>M = -15 / 30 = -0.5</code>. The image is inverted (due to the minus sign) and half the size of the object.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class RayTracerSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.elements = [];
+        this.object = { x: 150, y: -80, h: 80 }; // y is height from axis
+
+        this.selectedElement = null;
+        this.draggingElement = null;
+        this.dragOffset = { x: 0, y: 0 };
+
+        this.initControls();
+        this.resizeCanvas();
+        this.loop();
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    resizeCanvas() {
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper.clientWidth;
+        this.canvas.height = wrapper.clientHeight;
+    }
+
+    initControls() {
+        document.getElementById('add-converging-lens').addEventListener('click', () => this.addElement('converging-lens'));
+        document.getElementById('add-diverging-lens').addEventListener('click', () => this.addElement('diverging-lens'));
+        document.getElementById('add-concave-mirror').addEventListener('click', () => this.addElement('concave-mirror'));
+        document.getElementById('add-convex-mirror').addEventListener('click', () => this.addElement('convex-mirror'));
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+
+        this.canvas.addEventListener('mousedown', e => {
+            const pos = this.getMousePos(e);
+            // Check object first
+            if (pos.x > this.object.x - 10 && pos.x < this.object.x + 10 && pos.y > this.object.y - 10 && pos.y < 10) {
+                 this.draggingElement = this.object;
+                 this.dragOffset.x = pos.x - this.object.x;
+                 this.dragOffset.y = pos.y - this.object.y;
+                 return;
+            }
+
+            // Check optical elements
+            for (let i = this.elements.length - 1; i >= 0; i--) {
+                const el = this.elements[i];
+                if (Math.abs(pos.x - el.x) < 15 && Math.abs(pos.y) < 150) {
+                    this.draggingElement = el;
+                    this.selectedElement = el;
+                    this.dragOffset.x = pos.x - el.x;
+                    this.updateSelectedControls();
+                    return;
+                }
+            }
+        });
+
+        this.canvas.addEventListener('mousemove', e => {
+            if (!this.draggingElement) return;
+            const pos = this.getMousePos(e);
+            if(this.draggingElement === this.object) {
+                this.object.x = pos.x - this.dragOffset.x;
+                this.object.y = pos.y - this.dragOffset.y;
+                this.object.h = -this.object.y;
+            } else {
+                this.draggingElement.x = pos.x - this.dragOffset.x;
+            }
+        });
+
+        this.canvas.addEventListener('mouseup', () => {
+            this.draggingElement = null;
+        });
+    }
+
+    getMousePos(evt) {
+        const rect = this.canvas.getBoundingClientRect();
+        const axisY = this.canvas.height / 2;
+        return {
+            x: evt.clientX - rect.left,
+            y: (evt.clientY - rect.top) - axisY
+        };
+    }
+
+    addElement(type) {
+        const x = this.canvas.width / 2 + this.elements.length * 20;
+        let f;
+        switch(type) {
+            case 'converging-lens': f = 150; break;
+            case 'diverging-lens': f = -150; break;
+            case 'concave-mirror': f = 150; break;
+            case 'convex-mirror': f = -150; break;
+        }
+        this.elements.push({ id: Date.now(), type, x, f });
+    }
+
+    updateSelectedControls() {
+        const container = document.getElementById('selected-element-controls');
+        if (!this.selectedElement) {
+            container.innerHTML = `<p>No element selected. Drag an element to select it.</p>`;
+            return;
+        }
+        container.innerHTML = `
+            <div class="control-group">
+                <label for="focal-length-slider">Focal Length: <output id="focal-length-output">${this.selectedElement.f.toFixed(0)}</output> px</label>
+                <input type="range" id="focal-length-slider" min="-300" max="300" step="10" value="${this.selectedElement.f}" style="width:100%;">
+            </div>
+            <button id="remove-selected-btn">Remove Element</button>
+        `;
+        document.getElementById('focal-length-slider').addEventListener('input', e => {
+            this.selectedElement.f = parseFloat(e.target.value);
+            document.getElementById('focal-length-output').textContent = this.selectedElement.f.toFixed(0);
+        });
+        document.getElementById('remove-selected-btn').addEventListener('click', () => {
+            this.elements = this.elements.filter(el => el.id !== this.selectedElement.id);
+            this.selectedElement = null;
+            this.updateSelectedControls();
+        });
+    }
+
+    loop() {
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const axisY = h / 2;
+
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw optical axis
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--secondary-color').trim();
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, axisY);
+        ctx.lineTo(w, axisY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw object
+        this.drawArrow(this.object.x, axisY, this.object.h, getComputedStyle(document.body).style.getPropertyValue('--object-color') || '#28a745');
+
+        // Sort elements by x position
+        this.elements.sort((a,b) => a.x - b.x);
+
+        // Process first element for ray tracing
+        if (this.elements.length > 0) {
+            const el = this.elements[0];
+            this.drawElement(el, axisY);
+
+            const ho = this.object.h;
+            const do_val = el.x - this.object.x;
+            const f = el.f;
+
+            if (Math.abs(do_val) < 1e-6 || Math.abs(do_val - f) < 1e-6) {
+                this.updateReadouts(do_val, f, Infinity, Infinity, 'Undefined');
+                return;
+            };
+
+            const di = 1 / (1/f - 1/do_val);
+            const hi = -di * ho / do_val;
+            const M = hi / ho;
+
+            const image_x = el.x + di;
+            const image_is_real = di > 0;
+
+            this.drawRays(el, image_x, -hi, axisY);
+            this.drawArrow(image_x, axisY, -hi, image_is_real ? (getComputedStyle(document.body).style.getPropertyValue('--image-color') || '#dc3545') : (getComputedStyle(document.body).style.getPropertyValue('--virtual-color') || '#ffc107'), !image_is_real);
+            this.updateReadouts(do_val, f, di, M, image_is_real ? 'Real, Inverted' : 'Virtual, Upright');
+        } else {
+             this.updateReadouts(null, null, null, null, 'No element');
+        }
+
+        // Draw other elements without rays
+        for(let i=1; i<this.elements.length; i++) {
+            this.drawElement(this.elements[i], axisY);
+        }
+    }
+
+    drawArrow(x, axisY, h, color, dashed = false) {
+        this.ctx.strokeStyle = color;
+        this.ctx.fillStyle = color;
+        this.ctx.lineWidth = 3;
+        if (dashed) this.ctx.setLineDash([8, 8]);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, axisY);
+        this.ctx.lineTo(x, axisY - h);
+        this.ctx.stroke();
+
+        // Arrowhead
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, axisY - h);
+        this.ctx.lineTo(x - 5, axisY - h + Math.sign(h) * 10);
+        this.ctx.lineTo(x + 5, axisY - h + Math.sign(h) * 10);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.setLineDash([]);
+    }
+
+    drawElement(el, axisY) {
+        const ctx = this.ctx;
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.lineWidth = 2;
+
+        const isMirror = el.type.includes('mirror');
+        const isConverging = el.f > 0;
+
+        // Draw focal points
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+        ctx.beginPath(); ctx.arc(el.x - el.f, axisY, 5, 0, 2*Math.PI); ctx.fill();
+        ctx.beginPath(); ctx.arc(el.x + el.f, axisY, 5, 0, 2*Math.PI); ctx.fill();
+
+        ctx.beginPath();
+        if (isMirror) {
+            const r = 2 * el.f;
+            const startAngle = Math.PI/2 - 0.8;
+            const endAngle = Math.PI/2 + 0.8;
+            ctx.arc(el.x - r, axisY, Math.abs(r), -0.8, 0.8);
+        } else { // Lens
+            const h = 150;
+            ctx.moveTo(el.x, axisY-h);
+            if (isConverging) {
+                ctx.quadraticCurveTo(el.x + 30, axisY, el.x, axisY+h);
+                ctx.quadraticCurveTo(el.x - 30, axisY, el.x, axisY-h);
+            } else {
+                ctx.quadraticCurveTo(el.x - 20, axisY, el.x, axisY+h);
+                ctx.lineTo(el.x, axisY-h);
+                ctx.moveTo(el.x, axisY+h);
+                ctx.quadraticCurveTo(el.x + 20, axisY, el.x, axisY-h);
+            }
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    drawRays(el, image_x, image_y, axisY) {
+        const ctx = this.ctx;
+        const fromX = this.object.x;
+        const fromY = axisY - this.object.h;
+        const f = el.f;
+        const isMirror = el.type.includes('mirror');
+        const rayColor = getComputedStyle(document.body).style.getPropertyValue('--ray-color') || '#6c757d';
+
+        // 1. Parallel -> Focal
+        this.drawRaySegment(fromX, fromY, el.x, fromY, rayColor, false); // to element
+        if (isMirror) {
+            this.drawRaySegment(el.x, fromY, image_x, axisY+image_y, rayColor, false); // reflected
+            this.drawRaySegment(el.x, fromY, el.x + 500, fromY, rayColor, true); // virtual
+        } else {
+            this.drawRaySegment(el.x, fromY, image_x, axisY+image_y, rayColor, false); // refracted
+            this.drawRaySegment(el.x, fromY, el.x - 500, fromY + (el.x-fromY-axisY-image_y)/(el.x-image_x)*(el.x-500-el.x), rayColor, true); // virtual
+        }
+
+        // 2. Focal -> Parallel
+        this.drawRaySegment(fromX, fromY, el.x, axisY+image_y, rayColor, false); // to element
+        if (isMirror) {
+            this.drawRaySegment(el.x, axisY+image_y, image_x, axisY+image_y, rayColor, false); // reflected
+        } else {
+            this.drawRaySegment(el.x, axisY+image_y, image_x, axisY+image_y, rayColor, false); // refracted
+        }
+
+        // 3. Central
+        this.drawRaySegment(fromX, fromY, image_x, axisY+image_y, rayColor, false);
+    }
+
+    drawRaySegment(x1, y1, x2, y2, color, dashed) {
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 1;
+        if(dashed) this.ctx.setLineDash([4,4]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+        if(dashed) this.ctx.setLineDash([]);
+    }
+
+    updateReadouts(do_val, f, di, M, type) {
+        const box = document.getElementById('readout-box');
+        if(do_val === null) {
+            box.innerHTML = `<p>Object Dist (dₒ): --</p><p>Image Dist (dᵢ): --</p><p>Focal Length (f): --</p><p>Magnification (M): --</p><p>Image Type: --</p>`;
+            return;
+        }
+        box.innerHTML = `
+            <p>Object Dist (dₒ): ${do_val.toFixed(1)} px</p>
+            <p>Image Dist (dᵢ): ${isFinite(di) ? di.toFixed(1) : '∞'} px</p>
+            <p>Focal Length (f): ${f.toFixed(1)} px</p>
+            <p>Magnification (M): ${isFinite(M) ? M.toFixed(2) : '∞'}</p>
+            <p>Image Type: ${type}</p>
+        `;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new RayTracerSim();
+});
+</script>
+</body>
+</html>

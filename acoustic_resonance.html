@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acoustic Resonance in a Tube</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #ff6f00; /* Vibrant Orange */
+            --secondary-color: #6c757d;
+            --wave-color: #007bff;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #fff8e1;
+        }
+        [data-theme="dark"] {
+            --bg-color: #161b22;
+            --text-color: #c9d1d9;
+            --primary-color: #f39c12;
+            --secondary-color: #8b949e;
+            --wave-color: #58a6ff;
+            --border-color: #30363d;
+            --canvas-bg: #0d1117;
+            --control-bg: #3c3222;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 350px; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .canvas-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 5px; }
+        canvas { display: block; width: 100%; height: 250px; background: var(--canvas-bg); }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .harmonics-box { background: var(--control-bg); padding: 15px; border-radius: 5px; }
+        .harmonics-box h4 { margin-top: 0; }
+        .harmonics-list { list-style: none; padding: 0; }
+        .resonance-indicator { text-align: center; font-size: 1.5em; font-weight: bold; color: var(--primary-color); height: 30px; transition: transform 0.2s ease-out; }
+        .resonance-indicator.active { transform: scale(1.2); text-shadow: 0 0 10px var(--primary-color); }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #30363d; color: #c9d1d9; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; grid-auto-flow: dense; } .controls-column { grid-row: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Acoustic Resonance in a Tube</h1>
+            <p class="subtitle">How musical instruments create specific notes using standing waves.</p>
+        </header>
+        <main>
+            <div class="simulation-container">
+                <div class="canvas-wrapper">
+                    <div class="canvas-title">Air Molecule Displacement</div>
+                    <canvas id="main-canvas"></canvas>
+                </div>
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="control-group">
+                        <label for="frequency-slider">Source Frequency: <output id="frequency-output">171.5</output> Hz</label>
+                        <input type="range" id="frequency-slider" min="50" max="1500" step="0.5" value="171.5" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="length-slider">Tube Length: <output id="length-output">1.0</output> m</label>
+                        <input type="range" id="length-slider" min="0.2" max="2.0" step="0.05" value="1.0" style="width:100%;">
+                    </div>
+                    <div class="button-group">
+                        <button id="tube-type-btn">Mode: Open at Both Ends</button>
+                    </div>
+                    <hr>
+                    <div class="resonance-indicator" id="resonance-indicator">RESONANCE!</div>
+                    <div class="harmonics-box">
+                        <h4>Resonant Frequencies (Harmonics)</h4>
+                        <ul class="harmonics-list" id="harmonics-list"></ul>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — How Flutes and Organ Pipes Work</h2>
+                <h4>Step 1: Waves in a Tube</h4>
+                <p>When a sound wave from the tuning fork enters the tube, it travels to the other end, reflects, and travels back. The original wave and the reflected wave then interfere with each other. Most of the time, they interfere randomly and cancel each other out. But at certain special frequencies, something magical happens.</p>
+
+                <h4>Step 2: Resonance and Standing Waves</h4>
+                <p>At these special "resonant" frequencies, the original and reflected waves line up perfectly to create a <strong>standing wave</strong>. A standing wave doesn't look like it's traveling; it looks like it's vibrating in place with a large amplitude. In the simulation, we visualize this by showing how far the air molecules are being displaced from their rest positions.
+                <ul>
+                    <li><strong>Nodes:</strong> Points where the displacement is always zero (the air isn't moving).</li>
+                    <li><strong>Antinodes:</strong> Points where the displacement is at its maximum (the air is moving back and forth wildly).</li>
+                </ul>
+                When you hit a resonant frequency with the slider, the "Resonance!" indicator will light up, and you'll see the amplitude of the standing wave in the tube grow much larger. This is the principle behind all wind instruments: they are designed so that blowing into them creates sound at one of the tube's resonant frequencies, producing a loud, clear note.
+                </p>
+
+                <h4>Step 3: The Importance of the Ends (Boundary Conditions)</h4>
+                <p>The type of standing wave that can form depends on what's happening at the ends of the tube. You can toggle between two types:</p>
+                <ol>
+                    <li><strong>Open at Both Ends:</strong> Air molecules can move freely at an open end, so an open end must be a displacement <strong>antinode</strong> (maximum motion). This is like a flute. For a standing wave to fit perfectly, the tube's length must be an integer multiple of half-wavelengths.</li>
+                    <li><strong>Closed at One End:</strong> Air molecules cannot move at a closed end, so it must be a displacement <strong>node</strong> (zero motion). The open end is still an antinode. This is like a clarinet or an organ pipe. For a wave to fit this condition, the tube's length must be an <em>odd</em> integer multiple of quarter-wavelengths.</li>
+                </ol>
+
+                <h4>Step 4: Harmonics</h4>
+                <p>The "Resonant Frequencies" box shows you the set of special frequencies (the "harmonics") for the current tube setup. Notice the difference:
+                    <ul>
+                        <li>The <strong>open-open</strong> tube supports all integer harmonics (1st, 2nd, 3rd, 4th, etc.).</li>
+                        <li>The <strong>open-closed</strong> tube only supports the odd harmonics (1st, 3rd, 5th, etc.).</li>
+                    </ul>
+                This difference in harmonic content is why instruments with different tube types have a different sound or "timbre," even when playing the same fundamental note.
+                </p>
+                <p><strong>Analogy: A Guitar String.</strong> A plucked guitar string is a perfect example of a standing wave. It's fixed at both ends (two nodes). It can only vibrate at frequencies that allow a standing wave to "fit" perfectly on its length. The main note you hear is the fundamental frequency, and the richer "overtones" are the higher harmonics (2nd, 3rd, etc.), which are all present.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Mathematics of Resonance</h2>
+                <p>The resonant frequencies are determined by how many wavelengths of a standing wave can "fit" inside the tube's length `L` while satisfying the boundary conditions.</p>
+
+                <h4>1. Tube Open at Both Ends</h4>
+                <p>The condition is that both ends must be displacement antinodes. This allows for standing waves where the length of the tube `L` is an integer number `n` of half-wavelengths (λ).</p>
+                <p><code>L = n * (λₙ / 2)</code>   (where n = 1, 2, 3, ...)</p>
+                <p>Using the relationship `f = v / λ` (where `v` is the speed of sound, ~343 m/s), we can solve for the resonant frequencies `fₙ`:</p>
+                <p><code>fₙ = n * (v / 2L)</code></p>
+                <p>The first harmonic (n=1) is the fundamental frequency. The higher harmonics are integer multiples of the fundamental.</p>
+
+                <h4>2. Tube Closed at One End</h4>
+                <p>The condition is one node (at the closed end) and one antinode (at the open end). This is only satisfied when the tube's length `L` is an <em>odd</em> integer number `n` of quarter-wavelengths.</p>
+                <p><code>L = n * (λₙ / 4)</code>   (where n = 1, 3, 5, ...)</p>
+                <p>Solving for the resonant frequencies `fₙ` gives:</p>
+                <p><code>fₙ = n * (v / 4L)</code></p>
+                <p>The fundamental frequency is `v / 4L`, which is half that of an open-open tube of the same length. The next possible resonant frequency is the 3rd harmonic (`3 * v / 4L`), then the 5th, and so on. The even harmonics are missing.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class ResonanceSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            frequency: 171.5, // Hz
+            length: 1.0, // m
+            tubeType: 'open-open', // 'open-open' or 'open-closed'
+            speedOfSound: 343, // m/s
+        };
+
+        this.state = { time: 0 };
+
+        this.initControls();
+        this.loop();
+    }
+
+    initControls() {
+        document.getElementById('frequency-slider').addEventListener('input', e => {
+            this.params.frequency = parseFloat(e.target.value);
+            document.getElementById('frequency-output').textContent = this.params.frequency.toFixed(1);
+        });
+        document.getElementById('length-slider').addEventListener('input', e => {
+            this.params.length = parseFloat(e.target.value);
+            document.getElementById('length-output').textContent = this.params.length.toFixed(2);
+            this.updateHarmonics();
+        });
+        document.getElementById('tube-type-btn').addEventListener('click', () => {
+            this.params.tubeType = this.params.tubeType === 'open-open' ? 'open-closed' : 'open-open';
+            document.getElementById('tube-type-btn').textContent = this.params.tubeType === 'open-open' ? 'Mode: Open at Both Ends' : 'Mode: Closed at One End';
+            this.updateHarmonics();
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+
+        this.updateHarmonics();
+    }
+
+    updateHarmonics() {
+        const { length, tubeType, speedOfSound } = this.params;
+        const list = document.getElementById('harmonics-list');
+        list.innerHTML = '';
+
+        if (tubeType === 'open-open') {
+            const f1 = speedOfSound / (2 * length);
+            for (let n = 1; n <= 5; n++) {
+                const fn = n * f1;
+                const li = document.createElement('li');
+                li.textContent = `n=${n}: ${fn.toFixed(1)} Hz`;
+                list.appendChild(li);
+            }
+        } else { // open-closed
+            const f1 = speedOfSound / (4 * length);
+            for (let n = 1; n <= 9; n += 2) {
+                const fn = n * f1;
+                const li = document.createElement('li');
+                li.textContent = `n=${n}: ${fn.toFixed(1)} Hz`;
+                list.appendChild(li);
+            }
+        }
+    }
+
+    loop() {
+        this.state.time += 0.1;
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0, 0, w, h);
+
+        const { frequency, length, tubeType, speedOfSound } = this.params;
+        const tube_w = w * 0.8;
+        const tube_h = h * 0.4;
+        const tube_x = w * 0.1;
+        const tube_y = h / 2 - tube_h / 2;
+
+        // Draw tube
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        ctx.lineWidth = 3;
+        ctx.strokeRect(tube_x, tube_y, tube_w, tube_h);
+        if (tubeType === 'open-closed') {
+            ctx.fillRect(tube_x + tube_w, tube_y, 5, tube_h);
+        }
+
+        // Calculate resonance amplitude
+        let amplitude = 0;
+        let isResonant = false;
+        const harmonics = this.getHarmonics();
+        for (const h_freq of harmonics) {
+            const diff = Math.abs(frequency - h_freq);
+            const resonance_factor = Math.exp(-Math.pow(diff / 5, 2)); // Gaussian
+            amplitude += resonance_factor;
+            if (resonance_factor > 0.5) {
+                isResonant = true;
+            }
+        }
+        amplitude = Math.min(1, amplitude) * (tube_h / 2 - 10);
+
+        document.getElementById('resonance-indicator').classList.toggle('active', isResonant);
+
+        // Draw standing wave (displacement)
+        const k = 2 * Math.PI * frequency / speedOfSound;
+        const waveColor = getComputedStyle(document.body).style.getPropertyValue('--wave-color') || '#007bff';
+
+        ctx.fillStyle = `${waveColor}80`; // semi-transparent
+        ctx.beginPath();
+        let firstY = 0;
+        for (let x_m = 0; x_m <= length; x_m += length / 200) {
+            const px = tube_x + (x_m / length) * tube_w;
+            let displacement;
+            if (tubeType === 'open-open') {
+                displacement = Math.cos(k * x_m) * Math.sin(k * length * (px/w)); // Simplified model
+                displacement = Math.cos(k * x_m) * Math.sin(k * (x_m - length/2)); // Better model
+                displacement = Math.sin(k * x_m) * Math.cos(this.state.time);
+            } else { // open-closed
+                 displacement = Math.sin(k*x_m) * Math.cos(this.state.time);
+            }
+
+            const y_pos = h/2 + amplitude * displacement;
+            const y_neg = h/2 - amplitude * displacement;
+
+            if (x_m === 0) {
+                ctx.moveTo(px, y_pos);
+                firstY = y_neg;
+            } else {
+                ctx.lineTo(px, y_pos);
+            }
+        }
+        for (let x_m = length; x_m >= 0; x_m -= length / 200) {
+             const px = tube_x + (x_m / length) * tube_w;
+             let displacement;
+             if (tubeType === 'open-open') {
+                 displacement = Math.sin(k * x_m) * Math.cos(this.state.time);
+             } else { // open-closed
+                 displacement = Math.sin(k*x_m) * Math.cos(this.state.time);
+             }
+             const y_neg = h/2 - amplitude * displacement;
+             ctx.lineTo(px, y_neg);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    getHarmonics() {
+        const { length, tubeType, speedOfSound } = this.params;
+        const harmonics = [];
+        if (tubeType === 'open-open') {
+            const f1 = speedOfSound / (2 * length);
+            for (let n = 1; n <= 10; n++) harmonics.push(n * f1);
+        } else { // open-closed
+            const f1 = speedOfSound / (4 * length);
+            for (let n = 1; n <= 19; n += 2) harmonics.push(n * f1);
+        }
+        return harmonics;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new ResonanceSim();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snell's Law and Total Internal Reflection</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --ray-color: #ffc107;
+            --reflected-color: #fd7e14;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --control-bg: #e7f1ff;
+            --medium1-color: rgba(173, 216, 230, 0.2);
+            --medium2-color: rgba(144, 238, 144, 0.2);
+        }
+        [data-theme="dark"] {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --primary-color: #58a6ff;
+            --secondary-color: #8b949e;
+            --ray-color: #f1c40f;
+            --reflected-color: #e67e22;
+            --border-color: #30363d;
+            --canvas-bg: #161b22;
+            --control-bg: #21262d;
+            --medium1-color: rgba(88, 166, 255, 0.1);
+            --medium2-color: rgba(63, 185, 80, 0.1);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 350px; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 1.5; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); cursor: pointer; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .readout-box { background: var(--control-bg); padding: 15px; border-radius: 5px; font-family: monospace; }
+        .readout-box p { margin: 5px 0; }
+        .tir-indicator { text-align: center; font-size: 1.2em; font-weight: bold; color: var(--ray-color); height: 25px; }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #30363d; color: #c9d1d9; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; grid-auto-flow: dense; } .controls-column { grid-row: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Snell's Law and Total Internal Reflection</h1>
+            <p class="subtitle">An interactive simulation of light bending at a boundary.</p>
+        </header>
+        <main>
+            <div class="simulation-container">
+                <div class="canvas-wrapper">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <p><small>Drag the laser on the protractor to change the angle of incidence.</small></p>
+                    <div class="control-group">
+                        <label for="n1-slider">Refractive Index of Medium 1 (n₁): <output id="n1-output">1.00</output></label>
+                        <input type="range" id="n1-slider" min="1.00" max="2.5" step="0.01" value="1.00" style="width:100%;">
+                    </div>
+                     <div class="control-group">
+                        <label for="n2-slider">Refractive Index of Medium 2 (n₂): <output id="n2-output">1.50</output></label>
+                        <input type="range" id="n2-slider" min="1.00" max="2.5" step="0.01" value="1.50" style="width:100%;">
+                    </div>
+                    <hr>
+                    <div class="readout-box">
+                        <p>Angle of Incidence (θ₁): <span id="theta1-display">--</span>°</p>
+                        <p>Angle of Reflection: <span id="theta_r-display">--</span>°</p>
+                        <p>Angle of Refraction (θ₂): <span id="theta2-display">--</span>°</p>
+                        <p>Critical Angle (θ_c): <span id="theta_c-display">--</span>°</p>
+                    </div>
+                    <div class="tir-indicator" id="tir-indicator"></div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — Why a Straw in Water Looks Bent</h2>
+                <h4>Step 1: Light Changes Speed</h4>
+                <p>Light travels at different speeds in different materials. The "refractive index" (`n`) is a measure of how much a material slows down light compared to a vacuum. A higher `n` means light travels slower. In the simulation, you can change the refractive index for the top medium (Medium 1) and the bottom medium (Medium 2).</p>
+
+                <h4>Step 2: Reflection and Refraction</h4>
+                <p>When a ray of light hits the boundary between two media, two things happen:</p>
+                <ul>
+                    <li><strong>Reflection:</strong> Some of the light bounces off the surface. The Law of Reflection is simple: the angle of reflection is always equal to the angle of incidence.</li>
+                    <li><strong>Refraction:</strong> The rest of the light passes into the new medium and bends. The amount it bends is governed by Snell's Law. This bending is why a straw in a glass of water appears broken at the surface.</li>
+                </ul>
+                <p>In the simulation, you can control the incoming "incident ray" by dragging the laser. The simulation then shows you both the reflected and refracted rays.</p>
+
+                <h4>Step 3: Snell's Law in Action</h4>
+                <p>Snell's Law describes a beautiful relationship between the angles and the refractive indices. The key idea is:
+                    <ul>
+                        <li>When light enters a <strong>denser</strong> medium (higher `n`), it bends <strong>towards the normal</strong> (the dashed line perpendicular to the surface).</li>
+                        <li>When light enters a <strong>less dense</strong> medium (lower `n`), it bends <strong>away from the normal</strong>.</li>
+                    </ul>
+                Try it! Start with n₁=1.00 (Air) and n₂=1.50 (Glass). See how the ray bends towards the normal. Now, swap them so n₁=1.50 and n₂=1.00. Notice how the ray bends away.
+                </p>
+
+                <h4>Step 4: Total Internal Reflection (TIR)</h4>
+                <p>A fascinating phenomenon occurs ONLY when light travels from a denser medium to a less dense one (n₁ > n₂). Set n₁ to 1.50 (Glass) and n₂ to 1.00 (Air).
+                <br><br>
+                Now, slowly increase the angle of incidence by dragging the laser. Watch the refracted ray. It bends further and further away from the normal, getting closer to the boundary. At a specific angle, called the <strong>critical angle (θ_c)</strong>, the refracted ray will skim right along the boundary at 90°.
+                <br><br>
+                If you increase the angle of incidence beyond this critical angle, the light can no longer escape! The refracted ray vanishes, and <strong>100% of the light is reflected</strong> back into the first medium. This is Total Internal Reflection. The simulation will clearly indicate when this happens. TIR is not just a curiosity; it's the principle behind fiber optic cables that power the internet.
+                </p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Laws of Reflection and Refraction</h2>
+
+                <h4>1. The Law of Reflection</h4>
+                <p>This law states that the angle of the incident ray (θ₁) equals the angle of the reflected ray (θᵣ), both measured with respect to the normal.</p>
+                <p><code>θᵣ = θ₁</code></p>
+
+                <h4>2. Snell's Law of Refraction</h4>
+                <p>This law relates the angles of incidence and refraction to the refractive indices of the two media.</p>
+                <p><code>n₁ * sin(θ₁) = n₂ * sin(θ₂)</code></p>
+                <ul>
+                    <li><code>n₁</code> and <code>θ₁</code> are the refractive index and angle in the first medium.</li>
+                    <li><code>n₂</code> and <code>θ₂</code> are the refractive index and angle in the second medium.</li>
+                </ul>
+                <p>We can rearrange this to find the angle of refraction: <code>θ₂ = arcsin( (n₁/n₂) * sin(θ₁) )</code></p>
+                <p><strong>Example:</strong> Light travels from air (n₁=1.00) into water (n₂=1.33) at an angle of θ₁ = 30°.
+                <br><code>1.00 * sin(30°) = 1.33 * sin(θ₂)</code>
+                <br><code>0.5 = 1.33 * sin(θ₂)</code>
+                <br><code>sin(θ₂) = 0.5 / 1.33 ≈ 0.376</code>
+                <br><code>θ₂ = arcsin(0.376) ≈ 22.1°</code>
+                </p>
+
+                <h4>3. The Critical Angle for TIR</h4>
+                <p>Total Internal Reflection occurs when the angle of refraction `θ₂` reaches 90°. This can only happen if `n₁ > n₂`. We can find the critical angle of incidence `θ_c` by setting `θ₂ = 90°` in Snell's Law.</p>
+                <p><code>n₁ * sin(θ_c) = n₂ * sin(90°)</code></p>
+                <p>Since `sin(90°) = 1`, the formula simplifies to:</p>
+                <p><code>sin(θ_c) = n₂ / n₁</code>   or   <code>θ_c = arcsin(n₂ / n₁)</code></p>
+                 <p><strong>Example:</strong> For light going from glass (n₁=1.50) to air (n₂=1.00):
+                <br><code>θ_c = arcsin(1.00 / 1.50) = arcsin(0.667) ≈ 41.8°</code>
+                <br>Any angle of incidence greater than 41.8° will result in Total Internal Reflection.
+                </p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class SnellSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            n1: 1.00,
+            n2: 1.50,
+            angle1: 30, // degrees
+        };
+
+        this.isDragging = false;
+
+        this.initControls();
+        this.resizeCanvas();
+        this.draw();
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    resizeCanvas() {
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper.clientWidth;
+        this.canvas.height = wrapper.clientHeight;
+        this.draw();
+    }
+
+    initControls() {
+        document.getElementById('n1-slider').addEventListener('input', e => {
+            this.params.n1 = parseFloat(e.target.value);
+            this.draw();
+        });
+        document.getElementById('n2-slider').addEventListener('input', e => {
+            this.params.n2 = parseFloat(e.target.value);
+            this.draw();
+        });
+
+        const eventHandler = (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const w = this.canvas.width;
+            const h = this.canvas.height;
+            const origin = { x: w / 2, y: h / 2 };
+
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            let angle = Math.atan2(mouseY - origin.y, mouseX - origin.x);
+            // Restrict to top hemisphere
+            if (angle > 0) angle = 0;
+            if (angle < -Math.PI) angle = -Math.PI;
+
+            this.params.angle1 = -angle * 180 / Math.PI;
+            this.draw();
+            e.preventDefault();
+        };
+
+        this.canvas.addEventListener('mousedown', e => { this.isDragging = true; eventHandler(e); });
+        this.canvas.addEventListener('mousemove', e => { if (this.isDragging) eventHandler(e); });
+        this.canvas.addEventListener('mouseup', () => this.isDragging = false);
+        this.canvas.addEventListener('mouseleave', () => this.isDragging = false);
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+             this.draw();
+        });
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const origin = { x: w / 2, y: h / 2 };
+
+        // Update display readouts first
+        document.getElementById('n1-output').textContent = this.params.n1.toFixed(2);
+        document.getElementById('n2-output').textContent = this.params.n2.toFixed(2);
+        document.getElementById('theta1-display').textContent = this.params.angle1.toFixed(1);
+        document.getElementById('theta_r-display').textContent = this.params.angle1.toFixed(1);
+
+        // Calculations
+        const theta1_rad = this.params.angle1 * Math.PI / 180;
+        const sin_t1 = Math.sin(theta1_rad);
+        const n1_n2_ratio = this.params.n1 / this.params.n2;
+
+        let theta2_rad = Math.asin(n1_n2_ratio * sin_t1);
+        let isTIR = false;
+        let criticalAngle = null;
+
+        if (this.params.n1 > this.params.n2) {
+            const ratio = this.params.n2 / this.params.n1;
+            criticalAngle = Math.asin(ratio) * 180 / Math.PI;
+            if (sin_t1 > ratio) {
+                isTIR = true;
+            }
+        }
+
+        document.getElementById('theta2-display').textContent = isTIR ? '---' : (theta2_rad * 180 / Math.PI).toFixed(1);
+        document.getElementById('theta_c-display').textContent = criticalAngle ? criticalAngle.toFixed(1) : 'N/A';
+        document.getElementById('tir-indicator').textContent = isTIR ? 'Total Internal Reflection!' : '';
+
+        // --- Drawing ---
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw media
+        ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--medium1-color') || 'rgba(173, 216, 230, 0.2)';
+        ctx.fillRect(0, 0, w, origin.y);
+        ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--medium2-color') || 'rgba(144, 238, 144, 0.2)';
+        ctx.fillRect(0, origin.y, w, h);
+
+        // Draw boundary and normal
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--secondary-color').trim();
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, origin.y); ctx.lineTo(w, origin.y); ctx.stroke();
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, h); ctx.stroke();
+        ctx.setLineDash([]);
+
+        const rayLength = w;
+
+        // Draw protractor
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--secondary-color').trim();
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(origin.x, origin.y, 100, Math.PI, 0);
+        ctx.stroke();
+        for (let i = 0; i <= 180; i += 10) {
+            const angle_rad = i * Math.PI / 180;
+            const r1 = i % 30 === 0 ? 90 : 95;
+            const r2 = 100;
+            ctx.beginPath();
+            ctx.moveTo(origin.x + r1 * Math.cos(angle_rad), origin.y - r1 * Math.sin(angle_rad));
+            ctx.lineTo(origin.x + r2 * Math.cos(angle_rad), origin.y - r2 * Math.sin(angle_rad));
+            ctx.stroke();
+        }
+
+        // Incident Ray
+        const incidentEnd = {
+            x: origin.x - rayLength * Math.cos(theta1_rad),
+            y: origin.y - rayLength * Math.sin(theta1_rad)
+        };
+        this.drawRay(incidentEnd.x, incidentEnd.y, origin.x, origin.y, getComputedStyle(document.body).style.getPropertyValue('--ray-color') || '#ffc107', 4);
+
+        // Reflected Ray
+        const reflectedEnd = {
+            x: origin.x - rayLength * Math.cos(theta1_rad),
+            y: origin.y + rayLength * Math.sin(theta1_rad)
+        };
+        this.drawRay(origin.x, origin.y, reflectedEnd.x, reflectedEnd.y, getComputedStyle(document.body).style.getPropertyValue('--reflected-color') || '#fd7e14', 2);
+
+        // Refracted Ray
+        if (!isTIR) {
+            const refractedEnd = {
+                x: origin.x + rayLength * Math.cos(theta2_rad),
+                y: origin.y + rayLength * Math.sin(theta2_rad)
+            };
+            this.drawRay(origin.x, origin.y, refractedEnd.x, refractedEnd.y, getComputedStyle(document.body).style.getPropertyValue('--ray-color') || '#ffc107', 4);
+        } else {
+            // Make reflected ray brighter for TIR
+            this.drawRay(origin.x, origin.y, reflectedEnd.x, reflectedEnd.y, getComputedStyle(document.body).style.getPropertyValue('--ray-color') || '#ffc107', 4);
+        }
+    }
+
+    drawRay(x1, y1, x2, y2, color, width) {
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = width;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x1, y1);
+        this.ctx.lineTo(x2, y2);
+        this.ctx.stroke();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new SnellSim();
+});
+</script>
+</body>
+</html>

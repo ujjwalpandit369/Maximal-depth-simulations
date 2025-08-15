@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Doppler Effect for Sound Waves</title>
+    <style>
+        :root {
+            --bg-color: #f0f8ff;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --source-color: #dc3545;
+            --observer-color: #28a745;
+            --wave-color: #58a6ff;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --control-bg: #e6f2ff;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #58a6ff;
+            --secondary-color: #8b949e;
+            --source-color: #ff7b72;
+            --observer-color: #3fb950;
+            --wave-color: #8ab4f8;
+            --border-color: #555;
+            --canvas-bg: #0d1117;
+            --control-bg: #21262d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 1.5em; }
+        h1 { font-size: 2.5em; text-align: center; }
+        h2 { font-size: 2em; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--secondary-color); margin-top: -10px; margin-bottom: 20px; }
+        .simulation-container { display: grid; grid-template-columns: 1fr 350px; gap: 20px; margin-top: 20px; align-items: flex-start; }
+        .controls-column { background: var(--control-bg); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .canvas-wrapper { position: relative; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; aspect-ratio: 2/1; }
+        canvas { display: block; width: 100%; height: 100%; background: var(--canvas-bg); cursor: grab; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .button-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        button { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        .readout-box { background: var(--control-bg); padding: 15px; border-radius: 5px; font-family: monospace; }
+        .readout-box p { margin: 5px 0; }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: #e9ecef; padding: 2px 4px; border-radius: 3px; color: #333; }
+        [data-theme="dark"] code { background-color: #30363d; color: #c9d1d9; }
+        #sonic-boom-indicator { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 5em; font-weight: bold; color: var(--source-color); opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        @media (max-width: 900px) { .simulation-container { grid-template-columns: 1fr; grid-auto-flow: dense; } .controls-column { grid-row: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Doppler Effect for Sound Waves</h1>
+            <p class="subtitle">Why a moving siren changes its pitch.</p>
+        </header>
+        <main>
+            <div class="simulation-container">
+                <div class="canvas-wrapper">
+                    <canvas id="main-canvas"></canvas>
+                    <div id="sonic-boom-indicator">SONIC BOOM!</div>
+                </div>
+                <div class="controls-column">
+                    <h3>Controls</h3>
+                    <div class="button-group">
+                        <button id="start-btn">Start / Pause</button>
+                        <button id="reset-btn">Reset</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="source-velocity-slider">Source Velocity: <output id="source-velocity-output">50</output> m/s</label>
+                        <input type="range" id="source-velocity-slider" min="-500" max="500" step="10" value="50" style="width:100%;">
+                        <p><small>Speed of Sound: 343 m/s. Mach Number: <span id="mach-display">0.15</span></small></p>
+                    </div>
+                    <div class="control-group">
+                        <label for="source-frequency-slider">Source Frequency: <output id="source-frequency-output">440</output> Hz</label>
+                        <input type="range" id="source-frequency-slider" min="200" max="1000" step="10" value="440" style="width:100%;">
+                    </div>
+                    <hr>
+                    <h4>Observer</h4>
+                    <p><small>Drag the green observer on the canvas to a new position.</small></p>
+                    <div class="readout-box">
+                        <p>Observed Freq: <span id="observed-freq-display">--</span> Hz</p>
+                    </div>
+                    <hr>
+                    <button id="theme-toggle">Toggle Dark Mode</button>
+                </div>
+            </div>
+
+            <section id="beginner-guide">
+                <h2>Beginner's Guide — Why a Moving Siren Changes Pitch</h2>
+                <h4>Step 1: Sound as Waves</h4>
+                <p>Sound travels through the air in waves, much like ripples spreading out from a pebble dropped in a pond. The pitch of a sound is determined by its <strong>frequency</strong>—the number of wave crests that reach your ear per second. Higher frequency means a higher pitch.</p>
+
+                <h4>Step 2: The Stationary Source</h4>
+                <p>First, set the "Source Velocity" slider to 0. The source is now stationary. Notice that it emits perfectly concentric, evenly-spaced circles representing the sound waves. No matter where you place the observer, they will perceive the same number of waves per second, so they hear the true "Source Frequency."</p>
+
+                <h4>Step 3: The Moving Source</h4>
+                <p>Now, increase the source's velocity. As the source moves, it continues to emit waves, but from a new position each time. This has a dramatic effect:</p>
+                <ul>
+                    <li><strong>In Front of the Source:</strong> The source is "catching up" to the waves it just sent out. This causes the wave fronts to bunch up together. The distance between waves (wavelength) gets shorter, so more waves hit the observer's ear per second. The result: the observer hears a <strong>higher frequency (higher pitch)</strong>.</li>
+                    <li><strong>Behind the Source:</strong> The source is moving away from the waves it sent out in that direction. This stretches the wave fronts apart. The wavelength gets longer, so fewer waves hit the observer's ear per second. The result: the observer hears a <strong>lower frequency (lower pitch)</strong>.</li>
+                </ul>
+                <p>This change in perceived frequency due to relative motion is the Doppler Effect. Drag the observer around to see how the frequency they "hear" changes based on their position relative to the moving source.</p>
+
+                <h4>Step 4: The Sonic Boom</h4>
+                <p>What happens if the source moves faster than the waves it creates? Use the slider to set the source velocity higher than the speed of sound (343 m/s). The source now outruns its own sound waves. These waves, unable to get out of the way, pile up into a single, massive pressure wave in the shape of a V or a cone. This is a <strong>shock wave</strong>, or a "Mach cone."</p>
+                <p>When this highly-compressed cone of air passes over the observer, they experience a sudden, dramatic change in pressure, which they hear as a loud <strong>sonic boom</strong>. Watch the simulation and you'll see the "SONIC BOOM!" indicator flash at the exact moment the cone hits the observer.</p>
+            </section>
+
+            <section id="theory">
+                <h2>Core Theory — The Doppler Effect Equation</h2>
+                <p>The perceived frequency can be calculated precisely.</p>
+
+                <h4>Moving Source, Stationary Observer</h4>
+                <p>The frequency `fₒ` heard by the observer is related to the source's true frequency `fₛ` by the following formula:</p>
+                <p><code>fₒ = fₛ * ( v / (v - vₛ) )</code></p>
+                <ul>
+                    <li><code>v</code> is the speed of sound (a constant, 343 m/s in this simulation).</li>
+                    <li><code>vₛ</code> is the velocity of the source. This value is <strong>positive</strong> if the source is moving <strong>towards</strong> the observer and <strong>negative</strong> if it is moving <strong>away</strong>.</li>
+                </ul>
+                <p><strong>Example:</strong> A source with fₛ = 440 Hz moves towards an observer at 50 m/s.
+                <br><code>fₒ = 440 * (343 / (343 - 50)) = 440 * (343 / 293) ≈ 515 Hz</code> (a higher pitch).
+                <br>After it passes and moves away, vₛ becomes -50 m/s:
+                <br><code>fₒ = 440 * (343 / (343 - (-50))) = 440 * (343 / 393) ≈ 384 Hz</code> (a lower pitch).
+                </p>
+
+                <h4>The Mach Cone</h4>
+                <p>A sonic boom occurs when the source velocity `vₛ` is greater than the speed of sound `v`. The ratio of these speeds is the Mach number, `M = vₛ / v`.</p>
+                <p>The angle `θ` of the V-shaped shock wave (the Mach cone) is given by:</p>
+                <p><code>sin(θ) = v / vₛ = 1 / M</code></p>
+                <p>This shows that a shock wave can only form when `M > 1`. As the source gets faster (M increases), the angle `θ` of the cone gets smaller and sharper.</p>
+            </section>
+        </main>
+    </div>
+
+<script>
+class DopplerSim {
+    constructor() {
+        this.canvas = document.getElementById('main-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        this.params = {
+            sourceVelocity: 50, // m/s
+            sourceFrequency: 440, // Hz
+            speedOfSound: 343, // m/s
+        };
+
+        this.state = {
+            isRunning: false,
+            time: 0,
+            source: { x: 0, y: 0 },
+            observer: { x: 0, y: 0, isDragging: false },
+            wavefronts: [],
+        };
+
+        this.initControls();
+        this.resizeCanvas();
+        this.reset();
+
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
+
+    resizeCanvas() {
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper.clientWidth;
+        this.canvas.height = wrapper.clientHeight;
+        this.reset();
+    }
+
+    initControls() {
+        document.getElementById('start-btn').addEventListener('click', () => this.togglePause());
+        document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+
+        document.getElementById('source-velocity-slider').addEventListener('input', e => {
+            this.params.sourceVelocity = parseFloat(e.target.value);
+            this.updateDisplays();
+        });
+        document.getElementById('source-frequency-slider').addEventListener('input', e => {
+            this.params.sourceFrequency = parseFloat(e.target.value);
+            this.updateDisplays();
+            this.reset(); // Frequency change requires reset
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+             const currentTheme = document.documentElement.getAttribute('data-theme');
+             if (currentTheme === 'dark') document.documentElement.removeAttribute('data-theme');
+             else document.documentElement.setAttribute('data-theme', 'dark');
+        });
+
+        this.canvas.addEventListener('mousedown', e => {
+            const pos = this.getMousePos(e);
+            const d = Math.sqrt((pos.x - this.state.observer.x)**2 + (pos.y - this.state.observer.y)**2);
+            if (d < 20) {
+                this.state.observer.isDragging = true;
+            }
+        });
+        this.canvas.addEventListener('mousemove', e => {
+            if (this.state.observer.isDragging) {
+                const pos = this.getMousePos(e);
+                this.state.observer.x = pos.x;
+                this.state.observer.y = pos.y;
+            }
+        });
+        this.canvas.addEventListener('mouseup', () => this.state.observer.isDragging = false);
+    }
+
+    getMousePos(evt) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: evt.clientX - rect.left,
+            y: evt.clientY - rect.top
+        };
+    }
+
+    togglePause() {
+        this.state.isRunning = !this.state.isRunning;
+        document.getElementById('start-btn').textContent = this.state.isRunning ? "Pause" : "Resume";
+        if (this.state.isRunning) this.loop();
+    }
+
+    reset() {
+        this.state.isRunning = false;
+        document.getElementById('start-btn').textContent = "Start";
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+
+        this.state.time = 0;
+        this.state.source = { x: 100, y: this.canvas.height / 2 };
+        this.state.observer = { x: this.canvas.width / 2, y: this.canvas.height / 2 + 100, isDragging: false };
+        this.state.wavefronts = [];
+        this.updateDisplays();
+        this.draw();
+    }
+
+    updateDisplays() {
+        document.getElementById('source-velocity-output').textContent = this.params.sourceVelocity.toFixed(0);
+        document.getElementById('source-frequency-output').textContent = this.params.sourceFrequency.toFixed(0);
+        const mach = this.params.sourceVelocity / this.params.speedOfSound;
+        document.getElementById('mach-display').textContent = mach.toFixed(2);
+    }
+
+    calculateObservedFreq() {
+        const { source, observer } = this.state;
+        const { sourceVelocity, sourceFrequency, speedOfSound } = this.params;
+
+        const dx = observer.x - source.x;
+        const dy = observer.y - source.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+
+        if (dist === 0) return sourceFrequency;
+
+        // Component of source velocity towards observer
+        const vs_towards_observer = sourceVelocity * (dx / dist);
+
+        const observedFreq = sourceFrequency * (speedOfSound / (speedOfSound - vs_towards_observer));
+        document.getElementById('observed-freq-display').textContent = observedFreq.toFixed(0);
+    }
+
+    loop() {
+        if (!this.state.isRunning) return;
+
+        this.update();
+        this.draw();
+
+        this.animationFrameId = requestAnimationFrame(() => this.loop());
+    }
+
+    update() {
+        const dt = 1/60; // time step
+        this.state.time += dt;
+
+        // Move source
+        this.state.source.x += this.params.sourceVelocity * dt * 20; // 20 is a scaling factor for visibility
+        if (this.state.source.x > this.canvas.width + 200) {
+            this.state.source.x = -200;
+        }
+
+        // Emit new wavefronts
+        const period = 1 / this.params.sourceFrequency;
+        if (this.state.time % (period * 10) < dt) { // Emit waves less frequently for performance
+             this.state.wavefronts.push({ x: this.state.source.x, y: this.state.source.y, birthTime: this.state.time });
+        }
+
+        // Remove old wavefronts
+        this.state.wavefronts = this.state.wavefronts.filter(w => {
+            const age = this.state.time - w.birthTime;
+            const radius = age * this.params.speedOfSound * 20;
+            return radius < this.canvas.width * 1.5;
+        });
+
+        this.calculateObservedFreq();
+        this.checkSonicBoom();
+    }
+
+    checkSonicBoom() {
+        const M = this.params.sourceVelocity / this.params.speedOfSound;
+        if (M <= 1) return;
+
+        const sinTheta = 1 / M;
+        const observer = this.state.observer;
+        const source = this.state.source;
+
+        // Check if observer is inside the Mach cone
+        const dx = observer.x - source.x;
+        if (dx > 0) return; // Observer must be behind the source
+
+        const dy = Math.abs(observer.y - source.y);
+        const coneRadiusAtObserver = Math.abs(dx) * Math.tan(Math.asin(sinTheta));
+
+        const boomIndicator = document.getElementById('sonic-boom-indicator');
+        if (Math.abs(dy - coneRadiusAtObserver) < 10) {
+            boomIndicator.style.opacity = 1;
+        } else {
+            boomIndicator.style.opacity = 0;
+        }
+    }
+
+    draw() {
+        this.ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg').trim();
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw wavefronts
+        this.ctx.strokeStyle = getComputedStyle(document.body).style.getPropertyValue('--wave-color') || '#58a6ff';
+        this.ctx.lineWidth = 1;
+        this.state.wavefronts.forEach(w => {
+            const age = this.state.time - w.birthTime;
+            const radius = age * this.params.speedOfSound * 20;
+            this.ctx.beginPath();
+            this.ctx.arc(w.x, w.y, radius, 0, 2 * Math.PI);
+            this.ctx.stroke();
+        });
+
+        // Draw Mach cone
+        const M = this.params.sourceVelocity / this.params.speedOfSound;
+        if (M > 1) {
+            const sinTheta = 1 / M;
+            const angle = Math.asin(sinTheta);
+            this.ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--source-color').trim();
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.state.source.x, this.state.source.y);
+            this.ctx.lineTo(this.state.source.x - this.canvas.width, this.state.source.y - this.canvas.width * Math.tan(angle));
+            this.ctx.moveTo(this.state.source.x, this.state.source.y);
+            this.ctx.lineTo(this.state.source.x - this.canvas.width, this.state.source.y + this.canvas.width * Math.tan(angle));
+            this.ctx.stroke();
+        }
+
+        // Draw source
+        this.ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--source-color').trim();
+        this.ctx.beginPath();
+        this.ctx.arc(this.state.source.x, this.state.source.y, 10, 0, 2 * Math.PI);
+        this.ctx.fill();
+
+        // Draw observer
+        this.ctx.fillStyle = getComputedStyle(document.body).style.getPropertyValue('--observer-color').trim();
+        this.ctx.beginPath();
+        this.ctx.arc(this.state.observer.x, this.state.observer.y, 10, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new DopplerSim();
+});
+</script>
+</body>
+</html>
