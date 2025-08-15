@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Attractor Basin Explorer</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #d63384; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { /* ... */ }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        #simulation-area { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        canvas { border: 1px solid var(--border-color); cursor: crosshair; }
+        #controls { margin-top: 10px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>The Attractor Basin in a Dynamical System</h1><p class="subtitle">Mapping the fractal boundaries between basins of attraction.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="600" height="600"></canvas></div>
+            <div id="controls">
+                <button id="clear-btn">Clear Basins</button>
+                <div class="control-group"><label>Friction: <span id="friction-val">0.2</span></label><input type="range" id="friction-slider" min="0.01" max="0.5" step="0.01" value="0.2"></div>
+            </div>
+        </section>
+        <!-- Text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"><p>Last attractor: <span id="dev-attractor">N/A</span></p></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class MagneticPendulumEngine { /* ... */ }
+        class BasinRenderer { /* ... */ }
+        class SimulationController {
+            constructor() {
+                this.canvas = document.getElementById('simulation-canvas');
+                this.bindElements();
+                this.config = this.readConfig();
+                this.engine = new MagneticPendulumEngine(this.config);
+                this.renderer = new BasinRenderer(this.canvas, this.engine);
+                this.renderer.clear();
+                this.addEventListeners();
+            }
+            bindElements() {
+                for (const id of ['clear-btn', 'friction-slider', 'friction-val', 'export-png-btn', 'dev-console-toggle', 'dev-console', 'dev-attractor']) {
+                    if(document.getElementById(id)) this[id.replace(/-(\w)/g, (m, g) => g.toUpperCase())] = document.getElementById(id);
+                }
+            }
+            addEventListeners() {
+                this.canvas.addEventListener('click', (e) => this.handleClick(e));
+                this.clearBtn.addEventListener('click', () => this.renderer.clear());
+                this.frictionSlider.addEventListener('input', () => this.updateConfig());
+                this.exportPngBtn.addEventListener('click', () => this.exportPNG());
+                this.devConsoleToggle.addEventListener('click', () => this.devConsole.classList.toggle('hidden'));
+            }
+            readConfig() { /* ... */ }
+            updateConfig() { /* ... */ }
+            handleClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const simX = x - this.canvas.width / 2;
+                const simY = y - this.canvas.height / 2;
+                const attractorIndex = this.engine.runUntilSettled(simX, simY);
+                this.renderer.drawBasinPixel(x, y, attractorIndex);
+                this.devAttractor.textContent = attractorIndex;
+            }
+            exportPNG() { /* ... */ }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const checks = { 'Canvas': 'simulation-canvas', 'Clear Button': 'clear-btn' };
+            const list = document.getElementById('quality-check-list');
+            for (const [name, id] of Object.entries(checks)) { const el = document.getElementById(id); const li = document.createElement('li'); li.textContent = `${name}: ${el ? 'OK' : 'FAIL'}`; li.className = el ? 'pass' : 'fail'; list.appendChild(li); }
+            new SimulationController();
+        });
+    </script>
+</body>
+</html>

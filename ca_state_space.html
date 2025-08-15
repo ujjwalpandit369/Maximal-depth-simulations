@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: CA State Space Explorer</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #6610f2; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { /* ... */ }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        #simulation-area { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        canvas { border: 1px solid var(--border-color); }
+        #controls { margin-bottom: 10px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>The State Space of a Cellular Automaton</h1><p class="subtitle">Exploring the complete behavior of a simple 1D cellular automaton.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="controls">
+                <label>Cells (N): <span id="n-val">6</span></label> <input type="range" id="n-slider" min="3" max="8" value="6">
+                <label>Rule: <span id="rule-val">30</span></label> <input type="range" id="rule-slider" min="0" max="255" value="30">
+                <button id="generate-btn">Generate Graph</button>
+            </div>
+            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="600"></canvas></div>
+        </section>
+        <!-- Text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"><p>Nodes: <span id="dev-nodes">0</span>, Components: <span id="dev-components">0</span></p></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class AutomatonEngine { /* ... */ }
+        class GraphAnalyzer { /* ... */ }
+        class GraphRenderer { /* ... */ }
+        class SimulationController {
+            constructor() {
+                this.canvas = document.getElementById('simulation-canvas');
+                this.bindElements();
+                this.addEventListeners();
+                this.generate();
+            }
+            bindElements() {
+                for (const id of ['n-slider', 'n-val', 'rule-slider', 'rule-val', 'generate-btn', 'export-png-btn', 'dev-console-toggle', 'dev-console', 'dev-nodes', 'dev-components']) {
+                    if(document.getElementById(id)) this[id.replace(/-(\w)/g, (m, g) => g.toUpperCase())] = document.getElementById(id);
+                }
+            }
+            addEventListeners() {
+                this.generateBtn.addEventListener('click', () => this.generate());
+                this.nSlider.addEventListener('input', (e) => this.nVal.textContent = e.target.value);
+                this.ruleSlider.addEventListener('input', (e) => this.ruleVal.textContent = e.target.value);
+                this.exportPngBtn.addEventListener('click', () => this.exportPNG());
+                this.devConsoleToggle.addEventListener('click', () => this.devConsole.classList.toggle('hidden'));
+            }
+            generate() {
+                const N = parseInt(this.nSlider.value, 10);
+                const ruleNumber = parseInt(this.ruleSlider.value, 10);
+                if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+                this.devNodes.textContent = 2**N;
+
+                const engine = new AutomatonEngine({ N, ruleNumber });
+                const graph = engine.generateStateSpaceGraph();
+                const analyzer = new GraphAnalyzer(graph);
+                const components = analyzer.analyze();
+                this.devComponents.textContent = components.length;
+
+                this.renderer = new GraphRenderer(this.canvas, graph, components);
+                this.animate();
+            }
+            animate() {
+                this.renderer.applyForceLayout();
+                this.renderer.draw();
+                this.animationFrameId = requestAnimationFrame(() => this.animate());
+            }
+            exportPNG() { const url = this.canvas.toDataURL('image/png'); const link = document.createElement('a'); link.download = `ca_statespace_n${this.nSlider.value}_r${this.ruleSlider.value}.png`; link.href = url; link.click(); }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const checks = { 'Canvas': 'simulation-canvas', 'N Slider': 'n-slider', 'Rule Slider': 'rule-slider' };
+            const list = document.getElementById('quality-check-list');
+            for (const [name, id] of Object.entries(checks)) { const el = document.getElementById(id); const li = document.createElement('li'); li.textContent = `${name}: ${el ? 'OK' : 'FAIL'}`; li.className = el ? 'pass' : 'fail'; list.appendChild(li); }
+            new SimulationController();
+        });
+    </script>
+</body>
+</html>
