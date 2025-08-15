@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Loop Space</title>
+    <style>
+        :root {
+            --bg-color: #f9f9f9;
+            --text-color: #333;
+            --primary-color: #ff5722; /* Topology orange */
+            --secondary-color: #607d8b;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --loop-color: #03a9f4;
+            --hole-color: #455a64;
+            --base-color: #d81b60;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1.5 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Loop Space and Fundamental Group</h1>
+            <p class="subtitle">A simulation of loops on a manifold with holes.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Interactive Manifold</h2>
+            <p>Click and drag from the <strong style="color:var(--base-color)">base point</strong> to draw a loop. Then, see if it can shrink to a point!</p>
+            <canvas id="sim-canvas"></canvas>
+            <div>
+                <button id="deform-btn">Deform Loop</button>
+                <button id="clear-btn">Clear</button>
+            </div>
+            <p id="result-text" style="font-weight: bold; min-height: 1.2em;"></p>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Rubber Sheet Geometry</h2>
+            <h3>What is Topology?</h3>
+            <p>Topology is a branch of mathematics sometimes called "rubber sheet geometry." It studies the properties of shapes that are preserved under continuous deformations, like stretching or bending, but not tearing or gluing. From a topological point of view, a coffee mug and a donut are the same because they both have exactly one hole. The number of holes is a fundamental topological property.</p>
+
+            <h3>The Fundamental Group: Classifying Loops</h3>
+            <p>One way to probe the topology of a space is by studying the types of closed loops you can draw on it. The set of all different "classes" of loops forms a mathematical structure called the <strong>fundamental group</strong>.
+            <ul>
+                <li><strong>Trivial Loops:</strong> In the simulation, try drawing a loop that doesn't enclose the hole. When you press "Deform," it will shrink smoothly to the base point. All such loops belong to the "trivial" or "identity" class.</li>
+                <li><strong>Non-Trivial Loops:</strong> Now, draw a loop that goes around the hole. When you try to deform it, the loop gets "caught" on the hole and cannot shrink to a point. This loop belongs to a different class.</li>
+            </ul>
+            Two loops are in the same class if one can be continuously deformed into the other. A loop that goes around the hole twice is in yet another class, distinct from the one that goes around only once. By classifying the loops, you are measuring the "holey-ness" of the space. A simple plane with no holes has only one class of loops (the trivial one). A plane with one hole has infinitely many classes, corresponding to how many times (and in which direction) a loop wraps around the hole.
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const deformBtn = document.getElementById('deform-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const resultText = document.getElementById('result-text');
+
+        let isDrawing = false;
+        let loop = [];
+        const basePoint = { x: 100, y: 200 };
+        const holes = [{ x: 350, y: 200, r: 50 }];
+        let animationFrameId;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw holes
+            holes.forEach(hole => {
+                ctx.fillStyle = 'var(--hole-color)';
+                ctx.beginPath();
+                ctx.arc(hole.x, hole.y, hole.r, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+            // Draw base point
+            ctx.fillStyle = 'var(--base-color)';
+            ctx.beginPath();
+            ctx.arc(basePoint.x, basePoint.y, 8, 0, 2 * Math.PI);
+            ctx.fill();
+            // Draw loop
+            if (loop.length > 1) {
+                ctx.strokeStyle = 'var(--loop-color)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(loop[0].x, loop[0].y);
+                for (let i = 1; i < loop.length; i++) {
+                    ctx.lineTo(loop[i].x, loop[i].y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+            const distToBase = Math.hypot(pos.x - basePoint.x, pos.y - basePoint.y);
+            if (distToBase < 15) {
+                isDrawing = true;
+                loop = [basePoint];
+                resultText.textContent = "";
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            loop.push(getMousePos(e));
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            loop.push(basePoint); // Close the loop
+            draw();
+        });
+
+        function deformLoop() {
+            if (loop.length < 3) return;
+
+            const k_spring = 0.1; // Spring force between adjacent points
+            const k_shrink = 0.001; // Force pulling towards base point
+            const k_repel = 2000; // Repulsive force from holes
+
+            // Move each point (except the fixed base point)
+            for (let i = 1; i < loop.length - 1; i++) {
+                const p_i = loop[i];
+                const p_prev = loop[i - 1];
+                const p_next = loop[i + 1];
+
+                // Spring force (for smoothness)
+                const f_spring_x = (p_prev.x - p_i.x) + (p_next.x - p_i.x);
+                const f_spring_y = (p_prev.y - p_i.y) + (p_next.y - p_i.y);
+
+                // Shrinking force
+                const f_shrink_x = basePoint.x - p_i.x;
+                const f_shrink_y = basePoint.y - p_i.y;
+
+                let f_repel_x = 0;
+                let f_repel_y = 0;
+
+                // Repulsive force from holes
+                holes.forEach(hole => {
+                    const vec_x = p_i.x - hole.x;
+                    const vec_y = p_i.y - hole.y;
+                    const dist_sq = vec_x * vec_x + vec_y * vec_y;
+                    if (dist_sq < (hole.r * 2.5) * (hole.r * 2.5)) {
+                        const dist = Math.sqrt(dist_sq);
+                        const force_mag = k_repel / dist_sq;
+                        f_repel_x += (vec_x / dist) * force_mag;
+                        f_repel_y += (vec_y / dist) * force_mag;
+                    }
+                });
+
+                const total_force_x = k_spring * f_spring_x + k_shrink * f_shrink_x + f_repel_x;
+                const total_force_y = k_spring * f_spring_y + k_shrink * f_shrink_y + f_repel_y;
+
+                p_i.x += total_force_x;
+                p_i.y += total_force_y;
+            }
+        }
+
+        function animateDeformation() {
+            deformLoop();
+            draw();
+
+            // Check for completion
+            let total_dist = 0;
+            for (let i = 1; i < loop.length - 1; i++) {
+                total_dist += Math.hypot(loop[i].x - basePoint.x, loop[i].y - basePoint.y);
+            }
+            let avg_dist = total_dist / (loop.length - 2);
+
+            let isCaught = false;
+            holes.forEach(hole => {
+                 let winding_number = 0;
+                 for(let i=0; i<loop.length-1; i++) {
+                     const p1 = loop[i];
+                     const p2 = loop[i+1];
+                     winding_number += Math.atan2(p1.x-hole.x, p1.y-hole.y) - Math.atan2(p2.x-hole.x, p2.y-hole.y);
+                 }
+                 if(Math.abs(winding_number) > Math.PI) {
+                     isCaught = true;
+                 }
+            });
+
+            if (avg_dist < 5) {
+                resultText.textContent = "This loop is TRIVIAL (it shrinks to a point).";
+                return; // Stop animation
+            }
+
+            // A simple check to see if it's stuck
+            if(isCaught && avg_dist < 150) {
+                 resultText.textContent = "This loop is NON-TRIVIAL (it is caught on the hole).";
+                 return;
+            }
+
+            animationFrameId = requestAnimationFrame(animateDeformation);
+        }
+
+        deformBtn.addEventListener('click', () => {
+            if (loop.length > 2) {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                animateDeformation();
+            }
+        });
+        clearBtn.addEventListener('click', () => {
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            loop = [];
+            resultText.textContent = "";
+            draw();
+        });
+
+        function init() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.width / 1.5;
+            basePoint.x = canvas.width * 0.2;
+            basePoint.y = canvas.height * 0.5;
+            holes[0].x = canvas.width * 0.6;
+            holes[0].y = canvas.height * 0.5;
+            holes[0].r = canvas.width * 0.1;
+            draw();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

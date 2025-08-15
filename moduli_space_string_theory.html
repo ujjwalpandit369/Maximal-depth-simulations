@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Moduli Space of String Theory</title>
+    <style>
+        :root {
+            --bg-color: #f2f2f7;
+            --text-color: #333;
+            --primary-color: #6a1b9a; /* Cosmic purple */
+            --secondary-color: #4a4a4a;
+            --border-color: #e1e1e1;
+            --canvas-bg: #000;
+            --potential-color: #ab47bc;
+            --ball-color: #fdd835; /* Bright yellow for 'our' universe */
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header, section {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1.5 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: move;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.8rem 1.5rem; border-radius: 5px; cursor: pointer; font-size: 1.1rem;
+            transition: background-color 0.2s; margin-top: 1rem;
+        }
+        button:hover { opacity: 0.85; }
+        .flex-container { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .flex-container > div { flex: 1; min-width: 300px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Moduli Space of String Theory</h1>
+            <p class="subtitle">A conceptual visualization of the string theory "landscape."</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>The Landscape of Possible Universes</h2>
+            <p>Click and drag to rotate the landscape. Press the button to witness a quantum tunneling event.</p>
+            <canvas id="sim-canvas" width="750" height="500"></canvas>
+            <button id="tunnel-btn">Attempt to Tunnel</button>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: A Landscape of 10⁵⁰⁰ Valleys</h2>
+            <div class="flex-container">
+                <div>
+                    <h3>Extra Dimensions and Physical Laws</h3>
+                    <p>String theory, a leading candidate for a "theory of everything," proposes that fundamental particles are not points, but unimaginably tiny, vibrating strings. For the mathematics to be consistent, the theory requires the existence of extra dimensions of space beyond the three we experience.</p>
+                    <p>The crucial insight is that the <strong>shape and size of these extra dimensions</strong> determine the laws of physics in our universe. Properties like the mass of an electron, the strength of gravity, and the number of particle families are all encoded in the geometry of these hidden dimensions (known as Calabi-Yau manifolds).</p>
+                </div>
+                <div>
+                    <h3>The Landscape and its Valleys</h3>
+                    <p>The "moduli space" is the vast, abstract space of all possible shapes for these extra dimensions. Physicists often visualize this as a complex energy landscape, like the one shown in the simulation.
+                    <ul>
+                        <li><strong>The Landscape:</strong> The entire surface represents the space of all possible physical laws.</li>
+                        <li><strong>Valleys (Vacua):</strong> Each valley is a stable or metastable configuration—a "vacuum state." A universe can exist in one of these valleys. The depth of the valley represents its energy level.</li>
+                        <li><strong>Our Universe:</strong> The yellow ball represents our universe, sitting in one specific valley, which gives us our specific laws of physics.</li>
+                    </ul>
+                    The "landscape problem" is that calculations suggest there could be a colossal number of these valleys—perhaps 10⁵⁰⁰ or more—with no known principle to explain why our universe has the properties it does, instead of the properties of any other valley.
+                    </p>
+                </div>
+            </div>
+            <h3>Quantum Tunneling</h3>
+            <p>If our universe is in a "false vacuum" (a valley that isn't the absolute lowest point), quantum mechanics allows for a bizarre possibility: it could spontaneously "tunnel" through the energy barrier to a neighboring, lower-energy valley. This would be a catastrophic event, as the fundamental constants and laws of nature would instantly change. The simulation conceptualizes this jump, showing the universe transitioning to a new state with different properties.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const tunnelBtn = document.getElementById('tunnel-btn');
+
+        const scene = { angleX: 0.6, angleY: 0.3, zoom: 80 };
+        let landscape = { mesh: [], valleys: [] };
+        let universe = {
+            pos: { x: 0, y: 0, z: 0 },
+            targetPos: { x: 0, y: 0, z: 0 },
+            isTunneling: false,
+            tunnelProgress: 0
+        };
+
+        // --- Landscape Generation ---
+        function generateLandscape() {
+            landscape.valleys = [
+                { x: 0, y: 0, A: 2.5, w: 2.0 },
+                { x: 2.5, y: 1.5, A: 2.0, w: 1.5 },
+                { x: -2, y: 3, A: 1.8, w: 1.8 },
+                { x: -3, y: -2.5, A: 2.2, w: 1.6 },
+                { x: 1.5, y: -3, A: 1.5, w: 1.2 },
+            ];
+            const V = (x, y) => {
+                let z = 0.05 * (x*x + y*y); // Overall bowl shape
+                for (const valley of landscape.valleys) {
+                    z -= valley.A * Math.exp(-(Math.pow(x - valley.x, 2) + Math.pow(y - valley.y, 2)) / valley.w);
+                }
+                return z;
+            };
+
+            landscape.mesh = [];
+            const gridSize = 50;
+            const range = 5.0;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const x = (i / (gridSize - 1) - 0.5) * 2 * range;
+                    const y = (j / (gridSize - 1) - 0.5) * 2 * range;
+                    const z = V(x, y);
+                    landscape.mesh.push({ x, y, z });
+                }
+            }
+            // Set initial universe position
+            const initialValley = landscape.valleys[0];
+            universe.pos = { x: initialValley.x, y: initialValley.y, z: V(initialValley.x, initialValley.y) };
+            universe.targetPos = { ...universe.pos };
+        }
+
+        // --- 3D Projection ---
+        function project(p3d) {
+            let { x, y, z } = p3d;
+            const rotX = Math.cos(scene.angleX) * y - Math.sin(scene.angleX) * z;
+            const rotZ = Math.sin(scene.angleX) * y + Math.cos(scene.angleX) * z;
+            y = rotX; z = rotZ;
+            const rotY = Math.cos(scene.angleY) * x + Math.sin(scene.angleY) * z;
+            z = -Math.sin(scene.angleY) * x + Math.cos(scene.angleY) * z;
+            x = rotY;
+            return {
+                x: canvas.width / 2 + x * scene.zoom,
+                y: canvas.height / 2 + y * scene.zoom
+            };
+        }
+
+        // --- Drawing ---
+        function draw() {
+            ctx.fillStyle = 'var(--canvas-bg)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawMesh();
+            drawBall();
+        }
+
+        function drawMesh() {
+            ctx.strokeStyle = 'var(--potential-color)';
+            ctx.lineWidth = 0.5;
+            const gridSize = 50;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const p1 = landscape.mesh[i * gridSize + j];
+                    if (j < gridSize - 1) {
+                        const p2 = landscape.mesh[i * gridSize + (j + 1)];
+                        const scr1 = project(p1); const scr2 = project(p2);
+                        ctx.beginPath(); ctx.moveTo(scr1.x, scr1.y); ctx.lineTo(scr2.x, scr2.y); ctx.stroke();
+                    }
+                    if (i < gridSize - 1) {
+                        const p2 = landscape.mesh[(i + 1) * gridSize + j];
+                        const scr1 = project(p1); const scr2 = project(p2);
+                        ctx.beginPath(); ctx.moveTo(scr1.x, scr1.y); ctx.lineTo(scr2.x, scr2.y); ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function drawBall() {
+            const scr = project(universe.pos);
+            ctx.save();
+            if(universe.isTunneling) {
+                 ctx.globalAlpha = 0.1 + 0.9*Math.abs(0.5 - universe.tunnelProgress)*2;
+            }
+            ctx.fillStyle = 'var(--ball-color)';
+            ctx.beginPath();
+            ctx.arc(scr.x, scr.y, 8, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // --- Animation & Interaction ---
+        function animate() {
+            if (universe.isTunneling) {
+                universe.tunnelProgress += 0.02;
+                const t = universe.tunnelProgress;
+                universe.pos.x = (1 - t) * universe.pos.x + t * universe.targetPos.x;
+                universe.pos.y = (1 - t) * universe.pos.y + t * universe.targetPos.y;
+                universe.pos.z = (1 - t) * universe.pos.z + t * universe.targetPos.z;
+                if (universe.tunnelProgress >= 1.0) {
+                    universe.isTunneling = false;
+                    universe.pos = { ...universe.targetPos };
+                }
+            } else {
+                 // Jiggle
+                universe.pos.x = universe.targetPos.x + (Math.random() - 0.5) * 0.05;
+                universe.pos.y = universe.targetPos.y + (Math.random() - 0.5) * 0.05;
+                const V = (x, y) => {
+                    let z = 0.05 * (x*x + y*y);
+                    for (const v of landscape.valleys) {
+                        z -= v.A * Math.exp(-(Math.pow(x - v.x, 2) + Math.pow(y - v.y, 2)) / v.w);
+                    }
+                    return z;
+                };
+                universe.pos.z = V(universe.pos.x, universe.pos.y);
+            }
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        tunnelBtn.addEventListener('click', () => {
+            if (universe.isTunneling) return;
+            const currentValleyIndex = landscape.valleys.findIndex(v => v.x === universe.targetPos.x && v.y === universe.targetPos.y);
+            const nextValleyIndex = (currentValleyIndex + 1 + Math.floor(Math.random()*(landscape.valleys.length-1))) % landscape.valleys.length;
+            const nextValley = landscape.valleys[nextValleyIndex];
+
+            universe.isTunneling = true;
+            universe.tunnelProgress = 0;
+            const V = (x, y) => {
+                 let z = 0.05 * (x*x + y*y);
+                 for (const v of landscape.valleys) {
+                    z -= v.A * Math.exp(-(Math.pow(x - v.x, 2) + Math.pow(y - v.y, 2)) / v.w);
+                 }
+                 return z;
+            };
+            universe.targetPos = { x: nextValley.x, y: nextValley.y, z: V(nextValley.x, nextValley.y) };
+        });
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            scene.angleY += dx * 0.01;
+            scene.angleX += dy * 0.01;
+            lastMouseX = e.clientX; lastMouseY = e.clientY;
+        });
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            generateLandscape();
+            animate();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

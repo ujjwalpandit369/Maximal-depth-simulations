@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Geometry</title>
+    <style>
+        :root {
+            --bg-color: #fafafa;
+            --text-color: #333;
+            --primary-color: #00897b; /* Teal */
+            --secondary-color: #5f6368;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --geodesic-color: #d81b60;
+            --euclidean-color: #cccccc;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #f1f8e9; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Information Geometry: The Space of Probability Distributions</h1>
+            <p class="subtitle">A visualization of the Fisher information metric for Gaussian distributions.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>The Poincaré Half-Plane Model</h2>
+            <p>Click two points on the parameter space below. Each point represents a Gaussian distribution (μ, σ). The simulation will draw the geodesic (shortest path) between them.</p>
+            <canvas id="sim-canvas"></canvas>
+            <button id="clear-btn">Clear Points</button>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Geometry of Information</h2>
+            <h3>A Space of Bell Curves</h3>
+            <p>Information geometry is a mind-bending field that treats families of probability distributions as if they are points in a continuous geometric space, or "manifold." In this simulation, each point represents a specific Gaussian (normal) distribution, defined by its mean `μ` (the center of the bell curve) and its standard deviation `σ` (the width of the bell curve).</p>
+            <p>The crucial idea is that the "distance" between two points in this space is not the simple straight-line distance you're used to. Instead, the distance is a measure of how "distinguishable" the two probability distributions are. If two bell curves are very similar, the distance between them is small. If they are very different, the distance is large. This special kind of distance is defined by the <strong>Fisher Information Metric</strong>.</p>
+
+            <h3>A Curved Space</h3>
+            <p>For Gaussian distributions, this metric defines a curved space. Specifically, it's a famous example of hyperbolic geometry called the <strong>Poincaré half-plane</strong>. The grid lines drawn on the canvas are not straight lines but are themselves geodesics (the "straightest possible" paths) in this curved space. Notice how they are all semi-circles centered on the μ-axis below.</p>
+
+            <h3>Geodesics: The Shortest Path</h3>
+            <p>Just like the shortest path for an airplane between two cities on the globe is a "great circle" arc and not a straight line on a flat map, the shortest path between two probability distributions in this information space is a <strong>geodesic</strong>. In the Poincaré half-plane, these geodesics are always semi-circles whose centers lie on the horizontal axis (`σ=0`).</p>
+            <p>When you click two points, the simulation draws both the geodesic (in <span style="color:var(--geodesic-color)">pink</span>) and the incorrect Euclidean straight line (in gray) for comparison. This visually demonstrates that the most efficient way to "morph" one bell curve into another is not by linearly changing `μ` and `σ`, but by following the curved geodesic path.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>The Fisher Information Metric</h2>
+            <p>The geometry of the space of Gaussian distributions `P(x|μ,σ)` is defined by the Fisher Information Metric, which gives the line element `ds²`:</p>
+            <pre>ds² = (1/σ²) * (dμ² + 2dσ²)</pre>
+            <p>This metric defines the infinitesimal distance between two nearby distributions. The factor of `1/σ²` is key; it means that the same change in `μ` or `σ` corresponds to a much larger "information distance" when `σ` is small (a very narrow, certain distribution) than when `σ` is large (a wide, uncertain distribution). This is what curves the space.</p>
+            <p>This geometry is equivalent to the Poincaré half-plane, a standard model of 2D hyperbolic space. The geodesics (shortest paths) in this space are semi-circles whose centers lie on the `σ=0` axis, or vertical lines if the two points have the same `μ` coordinate.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clear-btn');
+
+        let points = [];
+        const world = { xMin: -10, xMax: 10, yMin: 0, yMax: 10 };
+
+        function toScreen(p) {
+            return {
+                x: (p.x - world.xMin) / (world.xMax - world.xMin) * canvas.width,
+                y: canvas.height - (p.y - world.yMin) / (world.yMax - world.yMin) * canvas.height
+            };
+        }
+
+        function toWorld(p) {
+            return {
+                x: (p.x / canvas.width) * (world.xMax - world.xMin) + world.xMin,
+                y: (canvas.height - p.y) / canvas.height * (world.yMax - world.yMin) + world.yMin
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            drawGrid();
+
+            points.forEach(p_world => {
+                const p_screen = toScreen(p_world);
+                ctx.fillStyle = 'var(--primary-color)';
+                ctx.beginPath();
+                ctx.arc(p_screen.x, p_screen.y, 8, 0, 2*Math.PI);
+                ctx.fill();
+            });
+
+            if (points.length === 2) {
+                drawGeodesic(points[0], points[1]);
+            }
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#eee';
+            ctx.lineWidth = 1;
+
+            // Vertical geodesics
+            for(let x = world.xMin; x <= world.xMax; x += 1) {
+                const start = toScreen({x, y: 0});
+                const end = toScreen({x, y: world.yMax});
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+                ctx.stroke();
+            }
+
+            // Horizontal geodesics (semi-circles)
+            for(let y = 1; y <= world.yMax * 2; y *= 1.5) {
+                const r = y; // Radius of semi-circle is its y-intercept
+                for(let center_x = world.xMin - world.xMax; center_x < world.xMax + world.xMax; center_x += 2) {
+                     const center = {x: center_x, y: 0};
+                     const screen_center = toScreen(center);
+                     const screen_r = (r / (world.yMax - world.yMin)) * canvas.height;
+                     ctx.beginPath();
+                     ctx.arc(screen_center.x, screen_center.y, screen_r, Math.PI, 2*Math.PI);
+                     ctx.stroke();
+                }
+            }
+
+            // Draw mu-axis
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            const axis = toScreen({x:0, y:0});
+            ctx.beginPath();
+            ctx.moveTo(0, axis.y);
+            ctx.lineTo(canvas.width, axis.y);
+            ctx.stroke();
+            ctx.fillStyle = '#333';
+            ctx.font = "14px sans-serif";
+            ctx.fillText("μ (mean)", canvas.width/2, axis.y - 10);
+            ctx.fillText("σ (std. dev.)", 10, 20);
+        }
+
+        function drawGeodesic(p1, p2) {
+            // Euclidean line for comparison
+            const s1 = toScreen(p1);
+            const s2 = toScreen(p2);
+            ctx.strokeStyle = 'var(--euclidean-color)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(s1.x, s1.y);
+            ctx.lineTo(s2.x, s2.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Geodesic (semi-circle)
+            ctx.strokeStyle = 'var(--geodesic-color)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+
+            if (Math.abs(p1.x - p2.x) < 1e-6) { // Vertical line
+                ctx.moveTo(s1.x, s1.y);
+                ctx.lineTo(s2.x, s2.y);
+            } else {
+                // Calculate center and radius of the semi-circle
+                const center_x = (p2.y*p2.y - p1.y*p1.y + p2.x*p2.x - p1.x*p1.x) / (2 * (p2.x - p1.x));
+                const radius_sq = (p1.x - center_x)*(p1.x - center_x) + p1.y*p1.y;
+                const radius = Math.sqrt(radius_sq);
+
+                const screen_center = toScreen({x: center_x, y: 0});
+                const screen_radius = (radius / (world.xMax - world.xMin)) * canvas.width;
+
+                const angle1 = Math.atan2(- (s1.y - screen_center.y), s1.x - screen_center.x);
+                const angle2 = Math.atan2(- (s2.y - screen_center.y), s2.x - screen_center.x);
+
+                ctx.arc(screen_center.x, screen_center.y, screen_radius, angle1, angle2, angle1 > angle2);
+            }
+            ctx.stroke();
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (points.length >= 2) {
+                points = [];
+            }
+            const rect = canvas.getBoundingClientRect();
+            const mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            const worldPos = toWorld(mousePos);
+            if(worldPos.y > 0.1) { // Avoid clicking on the axis
+                points.push(worldPos);
+            }
+            draw();
+        });
+
+        clearBtn.addEventListener('click', () => {
+            points = [];
+            draw();
+        });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            draw();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

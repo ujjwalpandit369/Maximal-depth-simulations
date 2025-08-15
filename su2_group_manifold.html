@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lie Groups as Manifolds: The SU(2) Group</title>
+    <style>
+        :root {
+            --bg-color: #f7f7f7;
+            --text-color: #333;
+            --primary-color: #c2185b; /* Physics/Math Pink */
+            --secondary-color: #555;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --sphere-color: rgba(74, 20, 140, 0.1);
+            --path-color: #fdd835;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: move;
+        }
+        .slider-container { margin-top: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; font-weight: bold; font-size: 1.2rem; }
+        input[type="range"] { width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lie Groups as Manifolds: The SU(2) Group</h1>
+            <p class="subtitle">A visualization of the SU(2) group manifold (the 3-sphere) and the 720° symmetry of spinors.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>The Manifold of Spin States</h2>
+            <p>Drag the sphere to rotate it. Use the slider to rotate a quantum state in real space and observe the corresponding path on the SU(2) manifold.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div class="slider-container">
+                <label for="rot-slider">Rotation in Real Space: <span id="rot-value">0</span>°</label>
+                <input type="range" id="rot-slider" min="0" max="720" value="0" step="1">
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Dirac Belt Trick and 720° Symmetry</h2>
+            <h3>The Manifold of Rotations</h3>
+            <p>In quantum mechanics, the state of a spin-1/2 particle (like an electron) is described by transformations in a group called <strong>SU(2)</strong>. This group of all possible spin states can be visualized as a continuous shape, or "manifold." Amazingly, this manifold has the same structure as a <strong>3-sphere</strong>—a sphere that lives in 4-dimensional space.</p>
+            <p>We can't see 4D space, so this simulation shows a 3D projection of the 3-sphere. A point on this sphere represents a specific rotation of the quantum state. As we continuously rotate the particle in real space, the point traces a path on the manifold.</p>
+
+            <h3>Why 720°? The Belt Trick Analogy</h3>
+            <p>Observe the slider. When you rotate the particle by <strong>360°</strong>, the point on the manifold travels to the exact opposite side (the antipodal point). It has <strong>not</strong> returned to its start! This is the strange nature of spinors. To get back to the original state on the manifold, you must rotate by another 360°, for a total of <strong>720°</strong>.</p>
+            <p>A famous analogy is the <strong>Dirac belt trick</strong>. Imagine holding a belt buckle, with the belt hanging down.
+            <ul>
+                <li>Twist the buckle by a full 360°. The buckle is oriented correctly again, but the belt has a twist in it that you cannot remove without moving the buckle. This is like the state at 360° on the manifold.</li>
+                <li>Now, twist the buckle by another 360° (720° total). Miraculously, you can now pass the free end of the belt around the buckle and remove the twist completely. The system is back to its true original state.</li>
+            </ul>
+            This topological property is why particles with spin 1/2 must be rotated by 720° to return to their original quantum state.
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const rotSlider = document.getElementById('rot-slider');
+        const rotValue = document.getElementById('rot-value');
+
+        const scene = { angleX: 0.3, angleY: 0.3, zoom: 200 };
+        let pathPoints = [];
+
+        function project(p3d) {
+            let { x, y, z } = p3d;
+            const rotX = Math.cos(scene.angleX) * y - Math.sin(scene.angleX) * z;
+            const rotZ_ = Math.sin(scene.angleX) * y + Math.cos(scene.angleX) * z;
+            y = rotX; z = rotZ_;
+            const rotY = Math.cos(scene.angleY) * x + Math.sin(scene.angleY) * z;
+            z = -Math.sin(scene.angleY) * x + Math.cos(scene.angleY) * z;
+            x = rotY;
+            return { x: canvas.width / 2 + x * scene.zoom, y: canvas.height / 2 - y * scene.zoom };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            // Draw sphere guides (lat/lon lines)
+            ctx.strokeStyle = 'var(--sphere-color)';
+            ctx.lineWidth = 1;
+            for(let lat = -Math.PI/2; lat <= Math.PI/2; lat += Math.PI/10) {
+                ctx.beginPath();
+                for(let lon = 0; lon <= 2*Math.PI; lon += 0.1) {
+                    const p = {x: Math.cos(lat)*Math.cos(lon), y: Math.sin(lat), z: Math.cos(lat)*Math.sin(lon)};
+                    const scr = project(p);
+                    if(lon === 0) ctx.moveTo(scr.x, scr.y); else ctx.lineTo(scr.x, scr.y);
+                }
+                ctx.stroke();
+            }
+             for(let lon = 0; lon < 2*Math.PI; lon += Math.PI/5) {
+                ctx.beginPath();
+                for(let lat = -Math.PI/2; lat <= Math.PI/2; lat += 0.1) {
+                    const p = {x: Math.cos(lat)*Math.cos(lon), y: Math.sin(lat), z: Math.cos(lat)*Math.sin(lon)};
+                    const scr = project(p);
+                    if(lat === -Math.PI/2) ctx.moveTo(scr.x, scr.y); else ctx.lineTo(scr.x, scr.y);
+                }
+                ctx.stroke();
+            }
+
+            // Draw path
+            if (pathPoints.length > 1) {
+                ctx.strokeStyle = 'var(--path-color)';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                const start = project(pathPoints[0]);
+                ctx.moveTo(start.x, start.y);
+                for (let i = 1; i < pathPoints.length; i++) {
+                    const p = project(pathPoints[i]);
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            }
+
+            // Draw current point
+            if (pathPoints.length > 0) {
+                 const currentPoint = pathPoints[pathPoints.length - 1];
+                 const p = project(currentPoint);
+                 ctx.fillStyle = '#c2185b';
+                 ctx.beginPath();
+                 ctx.arc(p.x, p.y, 8, 0, 2 * Math.PI);
+                 ctx.fill();
+            }
+        }
+
+        function updatePath() {
+            const totalAngle = parseFloat(rotSlider.value) * Math.PI / 180; // Real space rotation
+            rotValue.textContent = Math.round(totalAngle * 180 / Math.PI);
+
+            const manifoldAngle = totalAngle / 2; // SU(2) manifold rotation
+
+            pathPoints = [];
+            const steps = 100;
+            for(let i=0; i<=steps; i++) {
+                const angle = (i/steps) * manifoldAngle;
+                // Path along a great circle. This is a stereographic projection of that path.
+                const w = Math.cos(angle);
+                const z = Math.sin(angle);
+                // Project S^3 (w,x,y,z) to R^3 (x',y',z')
+                const scale = 1 / (1 - w);
+                const p = { x: z*scale, y: 0, z: 0 };
+                // To make it more visually interesting, let's trace on the S^2 surface
+                const p_on_S2 = {x: Math.cos(angle - Math.PI/2), y: Math.sin(angle - Math.PI/2), z: 0};
+                pathPoints.push(p_on_S2);
+            }
+            draw();
+        }
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            scene.angleY += dx * 0.01;
+            scene.angleX -= dy * 0.01;
+            lastMouseX = e.clientX; lastMouseY = e.clientY;
+            draw();
+        });
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        rotSlider.addEventListener('input', updatePath);
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            updatePath();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
