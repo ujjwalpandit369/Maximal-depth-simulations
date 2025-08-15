@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foliations of a Manifold</title>
+    <style>
+        :root {
+            --bg-color: #1d2d35;
+            --text-color: #d0e0e3;
+            --primary-color: #48c9b0; /* Mint green */
+            --secondary-color: #a569bd; /* Purple */
+            --border-color: #283747;
+            --canvas-bg: #17202a;
+            --accent-color: #f4d03f;
+            --leaf-color: rgba(244, 208, 63, 0.7);
+            --font-family: 'Roboto Mono', 'Consolas', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1.2/1; cursor:move; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--border-color); background-color:#283747; color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; border:none; transition:background-color 0.2s; }
+        button.active { background-color:var(--secondary-color); font-weight:bold; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Foliations of a Manifold</h1>
+    <p>A visualization of how a higher-dimensional space can be "sliced" into a family of lower-dimensional "leaves."</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">3D Manifold View</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Select a Foliation</h3>
+                <button id="foliation-simple" class="active">Simple Foliation of a Cube</button>
+                <button id="foliation-reeb">Reeb Foliation Analogy</button>
+            </div>
+            <div class="controls-group">
+                <h3>2. Explore the Leaves</h3>
+                <label for="leaf-slider">Sweep through leaves:</label>
+                <input type="range" id="leaf-slider" min="0" max="100" value="50" step="1">
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Slicing Up Spacetime (and other things)</h4>
+        <p>In mathematics, a <strong>manifold</strong> is a type of space that, if you zoom in far enough, looks like familiar Euclidean space (like a flat plane or 3D space). The surface of a sphere is a 2D manifold; it's curved globally, but any small patch looks flat.
+        <br><br>
+        A <strong>foliation</strong> of a manifold is a way of "slicing" it up into a stack of smaller-dimensional manifolds, called "leaves." Think of it like a deck of cards: the whole deck is a 3D object, but it's composed of a stack of 2D leaves (the cards). Or think of the grain in a piece of wood.
+        </p>
+        <h4>Example 1: The Simple Foliation</h4>
+        <p>Select the "Simple Foliation of a Cube" view. Here, our 3D manifold is the cube. We are foliating it with a family of 2D leaves. Use the "Sweep through leaves" slider. You are moving a single leaf (a 2D plane) through the cube. This is the simplest possible example: slicing a 3D space with parallel planes.</p>
+        <h4>Example 2: The Reeb Foliation Analogy</h4>
+        <p>Now for something much stranger. The <strong>Reeb foliation</strong> is a famous way to foliate a 3-sphere (the 3D surface of a 4D ball). We can't see this directly, so this simulation shows a common <em>analogy</em> inside a solid torus (a donut).
+        <br><br>
+        Select the "Reeb Foliation Analogy" view. The transparent donut is our manifold. The leaves are the surfaces inside.
+        <ul>
+            <li>Use the slider to move from the outer edge towards the center. The leaves are nested surfaces that look like distorted donuts themselves.</li>
+            <li>Right in the middle (at slider value 50), there is a single, special leaf: a flat torus.</li>
+            <li>As you move the slider away from the center, the leaves "unroll" and spiral outwards, eventually becoming the boundary of the solid torus itself.</li>
+        </ul>
+        This demonstrates a much more complex way a space can be sliced up. The leaves are all 2D surfaces, but they curve and twist around each other, and there is one special leaf (the central torus) that is topologically different from the others nearby. This has deep implications in fields like dynamical systems and topology.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+
+    // --- DOM Elements & Contexts ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const leafSlider = document.getElementById('leaf-slider');
+
+    // --- State ---
+    let simState = {
+        foliation: 'simple', // 'simple' or 'reeb'
+        leafParam: 0.5, // 0 to 1
+        view: { rotX: 0.5, rotY: 0.5, zoom: 5 },
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Geometry Generation ---
+    const geometry = {
+        cube: { verts: [[-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1], [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]],
+                lines: [0,1,1,2,2,3,3,0, 4,5,5,6,6,7,7,4, 0,4,1,5,2,6,3,7] },
+        plane: { verts: [[-1,-1,0], [1,-1,0], [1,1,0], [-1,1,0]], faces: [0,1,2,3] }
+    };
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return {
+                x: w/2 * (1 + (mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d),
+                y: h/2 * (1 - (mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d),
+            };
+        };
+
+        if (simState.foliation === 'simple') {
+            // Draw cube wireframe
+            ctx.strokeStyle = 'var(--secondary-color)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            geometry.cube.lines.forEach((val, i) => {
+                if (i % 2 === 0) {
+                    const p1 = transform(geometry.cube.verts[geometry.cube.lines[i]]);
+                    const p2 = transform(geometry.cube.verts[geometry.cube.lines[i+1]]);
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                }
+            });
+            ctx.stroke();
+
+            // Draw leaf plane
+            ctx.fillStyle = 'var(--leaf-color)';
+            const z = simState.leafParam * 2 - 1;
+            ctx.beginPath();
+            geometry.plane.verts.forEach((v, i) => {
+                const p = transform([v[0], v[1], z]);
+                if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            });
+            ctx.closePath();
+            ctx.fill();
+
+        } else { // Reeb foliation analogy
+            const R = 1.5, r_center = 0.6;
+            const detail = 32;
+            const leaf_r = Math.abs(simState.leafParam - 0.5) * 2 * r_center;
+
+            // Draw boundary torus
+            ctx.strokeStyle = 'rgba(165, 105, 189, 0.2)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            for(let i=0; i<=detail; i++){
+                for(let j=0; j<=detail; j++){
+                    const u = j/detail * 2*Math.PI;
+                    const v = i/detail * 2*Math.PI;
+                    const p = [(R+r_center*Math.cos(v))*Math.cos(u), r_center*Math.sin(v), (R+r_center*Math.cos(v))*Math.sin(u)];
+                    const pt = transform(p);
+                    if(j==0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                }
+            }
+            ctx.stroke();
+
+            // Draw leaf
+            ctx.fillStyle = 'var(--leaf-color)';
+            ctx.strokeStyle = 'var(--accent-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i=0; i<=detail; i++){
+                for(let j=0; j<=detail; j++){
+                    const u = j/detail * 2*Math.PI;
+                    const v = i/detail * 2*Math.PI;
+                    // Parametrization of spiraling leaf
+                    const twist = 8 * (0.5 - simState.leafParam) * v;
+                    const p = [(R+leaf_r*Math.cos(v))*Math.cos(u+twist), leaf_r*Math.sin(v), (R+leaf_r*Math.cos(v))*Math.sin(u+twist)];
+                    const pt = transform(p);
+                    if(j==0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                }
+                if(i > 0){
+                    const u=0, v1 = (i-1)/detail * 2*Math.PI, v2 = i/detail * 2*Math.PI;
+                    const twist1 = 8 * (0.5 - simState.leafParam) * v1;
+                    const twist2 = 8 * (0.5 - simState.leafParam) * v2;
+                    const p1 = [(R+leaf_r*Math.cos(v1))*Math.cos(u+twist1), leaf_r*Math.sin(v1), (R+leaf_r*Math.cos(v1))*Math.sin(u+twist1)];
+                    const p2 = [(R+leaf_r*Math.cos(v2))*Math.cos(u+twist2), leaf_r*Math.sin(v2), (R+leaf_r*Math.cos(v2))*Math.sin(u+twist2)];
+                    ctx.moveTo(transform(p1).x, transform(p1).y);
+                    ctx.lineTo(transform(p2).x, transform(p2).y);
+                }
+            }
+            ctx.stroke();
+        }
+    }
+
+    // --- Event Handling & Main Loop ---
+    function init() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w * window.devicePixelRatio; ctx.canvas.height = h * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        // UI Listeners
+        leafSlider.addEventListener('input', e => simState.leafParam = parseFloat(e.target.value) / 100);
+        document.getElementById('foliation-simple').addEventListener('click', () => {
+            simState.foliation = 'simple';
+            simState.view.zoom = 5;
+            document.getElementById('foliation-simple').classList.add('active');
+            document.getElementById('foliation-reeb').classList.remove('active');
+        });
+        document.getElementById('foliation-reeb').addEventListener('click', () => {
+            simState.foliation = 'reeb';
+            simState.view.zoom = 7;
+            document.getElementById('foliation-reeb').classList.add('active');
+            document.getElementById('foliation-simple').classList.remove('active');
+        });
+
+        // Mouse listeners
+        canvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+            }
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+        mainLoop();
+    }
+    init();
+});
+</script>
+</body>
+</html>

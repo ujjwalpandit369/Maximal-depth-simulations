@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Seifert-van Kampen Theorem Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #212121;
+            --primary-color: #ff5722; /* Deep Orange for topology */
+            --secondary-color: #03a9f4; /* Light Blue */
+            --tertiary-color: #4caf50; /* Green */
+            --border-color: #e0e0e0;
+            --canvas-bg: #ffffff;
+            --font-family: 'Georgia', 'Times New Roman', serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:280px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1.5/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button { width:100%; padding:0.8em; margin-bottom:0.5em; border-radius:4px; border:none; background-color:#795548; color:white; box-sizing:border-box; font-family:inherit; cursor:pointer; text-align:left; }
+        button.active { background-color:var(--primary-color); font-weight:bold; }
+        #info-panel { background:#fff; border-left:4px solid var(--primary-color); padding:1em; min-height:100px; }
+        .code { font-family: 'Courier New', monospace; background: #eee; padding: 2px 5px; border-radius: 3px; color: #333; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Seifert-van Kampen Theorem Visualizer</h1>
+    <p>A schematic tool to understand how the "group of loops" of a space is built from its pieces.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Topological Spaces and their Loops</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Theorem Steps</h3>
+                <button id="step-1" class="active">1. Space U₁</button>
+                <button id="step-2">2. Space U₂</button>
+                <button id="step-3">3. Intersection U₁∩U₂</button>
+                <button id="step-4">4. The Union X = U₁∪U₂</button>
+                <button id="step-5">5. The Final Group π₁(X)</button>
+            </div>
+            <div id="info-panel">
+                <h3>Fundamental Group π₁</h3>
+                <div id="info-text"></div>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Loops, Glue, and Topology</h4>
+        <p>In a field of math called algebraic topology, we study the properties of shapes that don't change when you stretch or bend them (without tearing). One of the most powerful ideas is the <strong>fundamental group</strong>, which is essentially a collection of all the different kinds of "loops" you can draw on a shape.</p>
+        <h4>Step 1: Our First Shape</h4>
+        <p>Click button <strong>"1. Space U₁"</strong>. The canvas shows a schematic of a torus (a donut) with a small hole in it. This is our first space, <span style="color:var(--primary-color)">U₁</span>. We can draw two fundamental, independent loops on this shape, labeled <span class="code">a</span> and <span class="code">b</span>. Any other loop can be made by combining these two. We say the fundamental group is "generated" by a and b, written as <span class="code">π₁(U₁) = ⟨a, b⟩</span>.</p>
+        <h4>Step 2: Our Second Shape</h4>
+        <p>Click button <strong>"2. Space U₂"</strong>. This shows another punctured torus, <span style="color:var(--secondary-color)">U₂</span>, with its own loop generators, <span class="code">c</span> and <span class="code">d</span>. Its group is <span class="code">π₁(U₂) = ⟨c, d⟩</span>.</p>
+        <h4>Step 3: The Intersection</h4>
+        <p>Now, imagine we are going to glue these two shapes together along the boundary of their holes. Click button <strong>"3. Intersection U₁∩U₂"</strong>. The "glue" region is their intersection, which is topologically a cylinder (or, viewed end-on, a circle). A circle has only one type of loop, which we'll call <span class="code">f</span>. So, <span class="code">π₁(U₁∩U₂) = ⟨f⟩</span>.</p>
+        <h4>Step 4: The Glued Space</h4>
+        <p>Click button <strong>"4. The Union X = U₁∪U₂"</strong>. We now see the resulting shape, which is a "genus-2 surface" or a double-donut. All the loops from the original spaces are still there.</p>
+        <h4>Step 5: The Seifert-van Kampen Theorem</h4>
+        <p>Here's the magic. Click button <strong>"5. The Final Group π₁(X)"</strong>. The theorem tells us how to find the loops on the new shape. We start with all the generators from the original shapes: <span class="code">a, b, c, d</span>. But we have to account for the gluing.
+        <br><br>
+        The loop <span class="code">f</span> in the intersection corresponds to some combination of loops in <span style="color:var(--primary-color)">U₁</span> and some combination in <span style="color:var(--secondary-color)">U₂</span>. In this case, `f` is equivalent to the loop that goes around the hole in <span style="color:var(--primary-color)">U₁</span>, and also equivalent to the loop around the hole in <span style="color:var(--secondary-color)">U₂</span>.
+        <br><br>
+        When we glue them, we are effectively saying these two loops are now the same. This creates a <strong>relation</strong>. The theorem gives us the fundamental group of the new space `X` by combining the generators and adding the relation. The visualization now shows the final set of four independent loops on our double-donut.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const buttons = [1,2,3,4,5].map(i => document.getElementById(`step-${i}`));
+    const infoText = document.getElementById('info-text');
+
+    let state = { step: 1, animFrame: 0 };
+
+    const colors = {
+        u1: 'var(--primary-color)',
+        u2: 'var(--secondary-color)',
+        u1_loop: 'rgba(255, 87, 34, 0.8)',
+        u2_loop: 'rgba(3, 169, 244, 0.8)',
+        intersection: 'var(--tertiary-color)',
+        intersection_loop: 'rgba(76, 175, 80, 0.8)',
+        text: '#212121'
+    };
+
+    function draw() {
+        const w = canvas.getBoundingClientRect().width;
+        const h = canvas.getBoundingClientRect().height;
+        ctx.clearRect(0,0,w,h);
+
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        const step = state.step;
+        if (step === 1 || step >= 4) drawU1(w, h, step);
+        if (step === 2 || step >= 4) drawU2(w, h, step);
+        if (step === 3) drawIntersection(w, h);
+
+        requestAnimationFrame(draw);
+        state.animFrame++;
+    }
+
+    function drawLoop(points, color, dashOffset) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.setLineDash([8, 8]);
+        ctx.lineDashOffset = -dashOffset;
+        ctx.beginPath();
+        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    const u1_pos = { x: 0.25, y: 0.5 };
+    const u2_pos = { x: 0.75, y: 0.5 };
+    const union_scale = 0.6;
+
+    function drawU1(w, h, step) {
+        const scale = (step >= 4) ? 0.4 : 0.6;
+        const cx = w * ((step >= 4) ? u1_pos.x * union_scale + 0.15 : u1_pos.x);
+        const cy = h * u1_pos.y;
+
+        // Shape
+        ctx.strokeStyle = colors.u1;
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.arc(cx, cy, w*0.1, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.clearRect(cx-w*0.04, cy-h*0.1, w*0.08, h*0.2);
+        ctx.beginPath();
+        ctx.arc(cx - w*0.05, cy, w*0.05, -Math.PI/2, Math.PI/2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + w*0.05, cy, w*0.05, Math.PI/2, 3*Math.PI/2);
+        ctx.stroke();
+        ctx.fillText("U₁", cx - 10, cy - h*0.2);
+
+        // Loops
+        const loop_a = [], loop_b = [];
+        for(let i=0; i<=30; i++){
+            const angle = i/30 * 2*Math.PI;
+            loop_a.push({x: cx + Math.cos(angle)*w*0.15, y: cy + Math.sin(angle)*h*0.1});
+            loop_b.push({x: cx - w*0.05 + Math.cos(angle)*w*0.03, y: cy + Math.sin(angle)*h*0.2});
+        }
+        drawLoop(loop_a, colors.u1_loop, state.animFrame);
+        drawLoop(loop_b, colors.u1_loop, -state.animFrame);
+        ctx.fillStyle = colors.text;
+        ctx.fillText("a", cx+w*0.15, cy);
+        ctx.fillText("b", cx-w*0.08, cy-h*0.2);
+    }
+
+    function drawU2(w, h, step) {
+        const scale = (step >= 4) ? 0.4 : 0.6;
+        const cx = w * ((step >= 4) ? u2_pos.x * union_scale + 0.3 : u2_pos.x);
+        const cy = h * u2_pos.y;
+
+        // Shape
+        ctx.strokeStyle = colors.u2;
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.arc(cx, cy, w*0.1, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.clearRect(cx-w*0.04, cy-h*0.1, w*0.08, h*0.2);
+        ctx.beginPath();
+        ctx.arc(cx - w*0.05, cy, w*0.05, -Math.PI/2, Math.PI/2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + w*0.05, cy, w*0.05, Math.PI/2, 3*Math.PI/2);
+        ctx.stroke();
+        ctx.fillText("U₂", cx - 10, cy - h*0.2);
+
+        // Loops
+        const loop_c = [], loop_d = [];
+        for(let i=0; i<=30; i++){
+            const angle = i/30 * 2*Math.PI;
+            loop_c.push({x: cx + Math.cos(angle)*w*0.15, y: cy + Math.sin(angle)*h*0.1});
+            loop_d.push({x: cx - w*0.05 + Math.cos(angle)*w*0.03, y: cy + Math.sin(angle)*h*0.2});
+        }
+        drawLoop(loop_c, colors.u2_loop, state.animFrame);
+        drawLoop(loop_d, colors.u2_loop, -state.animFrame);
+        ctx.fillStyle = colors.text;
+        ctx.fillText("c", cx+w*0.15, cy);
+        ctx.fillText("d", cx-w*0.08, cy-h*0.2);
+    }
+
+    function drawIntersection(w, h) {
+        const cx = w*0.5, cy = h*0.5;
+        ctx.strokeStyle = colors.intersection;
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, w*0.2, h*0.3, 0, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.fillText("U₁ ∩ U₂", cx-30, cy-h*0.35);
+
+        const loop_f = [];
+        for(let i=0; i<=30; i++){
+            const angle = i/30 * 2*Math.PI;
+            loop_f.push({x: cx + Math.cos(angle)*w*0.2, y: cy + Math.sin(angle)*h*0.3});
+        }
+        drawLoop(loop_f, colors.intersection_loop, state.animFrame);
+        ctx.fillStyle = colors.text;
+        ctx.fillText("f", cx+w*0.22, cy);
+    }
+
+    function setStep(step) {
+        state.step = step;
+        buttons.forEach((btn, i) => btn.classList.toggle('active', i + 1 === step));
+
+        let text = '';
+        switch(step){
+            case 1: text = 'π₁(U₁) = ⟨a, b⟩ (free group on 2 generators)'; break;
+            case 2: text = 'π₁(U₂) = ⟨c, d⟩ (free group on 2 generators)'; break;
+            case 3: text = 'π₁(U₁∩U₂) = ⟨f⟩ ≅ ℤ (group of integers)'; break;
+            case 4: text = 'The union space X = U₁∪U₂ is a genus-2 surface.'; break;
+            case 5: text = 'π₁(X) = ⟨a, b, c, d | [a,b] = [c,d]⟩ where [x,y]=xyx⁻¹y⁻¹ is the commutator. The loop f from the intersection identifies the boundary loops of U₁ and U₂.'; break;
+        }
+        infoText.innerHTML = text.replace(/⟨/g, '⟨<span class="code">').replace(/⟩/g, '</span>⟩').replace(/\|/g, '|</span>');
+    }
+
+    buttons.forEach((btn, i) => btn.addEventListener('click', () => setStep(i+1)));
+
+    setStep(1);
+    draw();
+});
+</script>
+</body>
+</html>

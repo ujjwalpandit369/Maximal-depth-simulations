@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Wheeler-DeWitt Equation and Superspace</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #e0e0e0;
+            --primary-color: #f0f; /* Magenta for quantum weirdness */
+            --secondary-color: #0ff; /* Cyan */
+            --border-color: #333;
+            --canvas-bg: #050505;
+            --accent-color: #fff;
+            --font-family: 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { text-align: center; }
+        button { padding:0.8em 1.5em; margin: 1em; border-radius:4px; border:1px solid var(--primary-color); background-color:transparent; color:var(--primary-color); font-family:inherit; cursor:pointer; font-size: 1.2em; }
+        button:hover { background-color: var(--primary-color); color: var(--bg-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Space of All Possible Universes</h1>
+    <p style="text-align:center;">A conceptual animation of "Superspace," the configuration space of General Relativity.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">A path through Superspace</p>
+            <canvas id="superspace-canvas"></canvas>
+        </div>
+        <div class="panel">
+            <p class="panel-title">The corresponding 3-Geometry of Space</p>
+            <canvas id="geometry-canvas"></canvas>
+        </div>
+    </div>
+    <div class="controls-sidebar">
+        <button id="play-btn">Play Animation</button>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>The Arena of Quantum Gravity</h4>
+        <p>In classical physics, we think of a particle moving through space over time. Its state is its position, and its path is a line. But what if we want to describe the state of an entire universe, especially in a quantum theory of gravity? The "thing" that evolves is not a particle, but the very geometry of space itself.</p>
+        <h4>Step 1: What is Superspace?</h4>
+        <p>The panel on the left represents <strong>Superspace</strong>. This is one of the most mind-bending concepts in physics. It is an infinite-dimensional "space of all possible spaces."
+        <br><br>
+        <strong>Every single point in Superspace does not represent a location; it represents an entire 3D geometry of a universe.</strong>
+        <br><br>
+        Our simulation shows a tiny 2D slice of this infinite landscape. The glowing dot represents the current state of our toy universe.
+        </p>
+        <h4>Step 2: A History of the Universe as a Path</h4>
+        <p>The panel on the right shows the actual 3D spatial geometry that corresponds to the glowing dot's current position in Superspace.
+        <br><br>
+        Click the <strong>"Play Animation"</strong> button.
+        <br><br>
+        Watch as the dot moves along a path in Superspace. As it moves, the 3D geometry on the right smoothly changes, crinkling and warping. This is the key idea:
+        <br><br>
+        <strong>A path through Superspace <em>is</em> a 4D spacetime—the complete history of an evolving universe.</strong>
+        </p>
+        <h4>The Wheeler-DeWitt Equation</h4>
+        <p>In the 1960s, physicists John Wheeler and Bryce DeWitt formulated an equation that attempts to describe quantum gravity. The <strong>Wheeler-DeWitt equation</strong> describes a "wavefunction of the universe," which is a wave that exists on Superspace. Its value at each point tells you the probability amplitude for the universe to *have* that particular 3-geometry.
+        <br><br>
+        This leads to profound philosophical problems. For instance, the equation has no time variable. In this view, the evolution of the universe—what we perceive as time—is just the correlation between the different geometric variables encoded in a timeless wavefunction on Superspace. This simulation gives a small glimpse into the arena where these incredible ideas are explored.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+
+    // --- Canvas Setup ---
+    const sCanvas = document.getElementById('superspace-canvas');
+    const sCtx = sCanvas.getContext('2d');
+    const gCanvas = document.getElementById('geometry-canvas');
+    const gCtx = gCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        time: 0,
+        playing: false,
+        view: { rotX: 0, rotY: 0, zoom: 4 },
+        superspacePath: { x:0, y:0 }
+    };
+
+    // --- Geometry Generation ---
+    const geometry = { verts: [], lines: [] };
+    const detail = 24;
+    for (let i = 0; i <= detail; i++) {
+        for (let j = 0; j <= detail; j++) {
+            const index = i*(detail+1)+j;
+            geometry.verts.push([0,0,0]); // Placeholder
+            if(i<detail && j<detail){
+                const p1=i*(detail+1)+j, p2=p1+1, p3=(i+1)*(detail+1)+j, p4=p3+1;
+                geometry.lines.push(p1,p2, p1,p3);
+            }
+        }
+    }
+
+    function updateGeometry(superspaceX, superspaceY) {
+        const R = 1.0;
+        const freq1 = 2 + superspaceX * 3;
+        const freq2 = 3 + superspaceY * 4;
+        const amp1 = 0.1 + superspaceX * 0.2;
+        const amp2 = 0.05 + superspaceY * 0.15;
+
+        for (let i = 0; i <= detail; i++) {
+            for (let j = 0; j <= detail; j++) {
+                const u = j/detail * 2*Math.PI, v = i/detail * Math.PI;
+                const r = R + amp1*Math.sin(freq1*u)*Math.sin(freq2*v) + amp2*Math.cos(freq2*u*0.5)*Math.cos(freq1*v);
+                const index = i*(detail+1)+j;
+                geometry.verts[index] = [r*Math.cos(u)*Math.sin(v), r*Math.cos(v), r*Math.sin(u)*Math.sin(v)];
+            }
+        }
+    }
+
+    // --- Drawing ---
+    function draw() {
+        drawSuperspace();
+        drawGeometry();
+        if(simState.playing) requestAnimationFrame(draw);
+    }
+
+    function drawSuperspace() {
+        const w = sCanvas.getBoundingClientRect().width;
+        const h = sCanvas.getBoundingClientRect().height;
+        // Static background
+        if(!sCanvas.background){
+            sCanvas.background = document.createElement('canvas');
+            sCanvas.background.width = w; sCanvas.background.height = h;
+            const bgCtx = sCanvas.background.getContext('2d');
+            const imgData = bgCtx.createImageData(w,h);
+            for(let i=0; i<w*h*4; i+=4){
+                const l = Math.random()*20;
+                imgData.data[i]=l; imgData.data[i+1]=l*0.8; imgData.data[i+2]=l*1.2; imgData.data[i+3]=255;
+            }
+            bgCtx.putImageData(imgData, 0,0);
+        }
+        sCtx.drawImage(sCanvas.background, 0, 0);
+
+        // Path
+        const sx = w/2 + Math.cos(simState.time * 0.3) * w*0.4;
+        const sy = h/2 + Math.sin(simState.time * 0.5) * h*0.4;
+        simState.superspacePath = {x: sx/w, y: sy/h};
+
+        // Glowing point
+        const g = sCtx.createRadialGradient(sx, sy, 0, sx, sy, 30);
+        g.addColorStop(0, 'rgba(255,255,255,1)');
+        g.addColorStop(0.3, 'var(--primary-color)');
+        g.addColorStop(1, 'rgba(255,0,255,0)');
+        sCtx.fillStyle = g;
+        sCtx.beginPath();
+        sCtx.arc(sx, sy, 30, 0, 2*Math.PI);
+        sCtx.fill();
+    }
+
+    function drawGeometry() {
+        const w = gCanvas.getBoundingClientRect().width, h = gCanvas.getBoundingClientRect().height;
+        gCtx.fillStyle = 'var(--canvas-bg)';
+        gCtx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return { x:w/2*(1+(mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d), y:h/2*(1-(mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d) };
+        };
+
+        updateGeometry(simState.superspacePath.x, simState.superspacePath.y);
+
+        gCtx.strokeStyle = 'var(--secondary-color)';
+        gCtx.lineWidth = 0.5;
+        gCtx.beginPath();
+        geometry.lines.forEach((val, i) => {
+            if(i%2===0){
+                const p1 = transform(geometry.verts[geometry.lines[i]]);
+                const p2 = transform(geometry.verts[geometry.lines[i+1]]);
+                gCtx.moveTo(p1.x, p1.y);
+                gCtx.lineTo(p2.x, p2.y);
+            }
+        });
+        gCtx.stroke();
+    }
+
+    function mainLoop() {
+        if(simState.playing){
+            simState.time += 0.01;
+            simState.view.rotY += 0.005;
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+    }
+
+    function init() {
+        [sCanvas, gCanvas].forEach(c => {
+            const w = c.getBoundingClientRect().width, h = c.getBoundingClientRect().height;
+            c.getContext('2d').canvas.width = w * window.devicePixelRatio;
+            c.getContext('2d').canvas.height = h * window.devicePixelRatio;
+            c.getContext('2d').scale(window.devicePixelRatio, window.devicePixelRatio);
+        });
+
+        document.getElementById('play-btn').addEventListener('click', () => {
+            if(!simState.playing){
+                simState.playing = true;
+                mainLoop();
+            }
+        });
+
+        draw();
+    }
+    init();
+});
+</script>
+</body>
+</html>

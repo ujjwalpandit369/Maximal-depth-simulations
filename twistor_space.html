@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twistor Space Correspondence</title>
+    <style>
+        :root {
+            --bg-color: #111;
+            --text-color: #eee;
+            --primary-color: #00a8ff; /* Electric blue */
+            --secondary-color: #9c88ff; /* Lavender */
+            --border-color: #444;
+            --canvas-bg: #000;
+            --accent-color: #fbc531; /* Yellow */
+            --font-family: 'Andale Mono', 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:pointer; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        #info-panel { padding:1em; text-align:center; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Twistor Correspondence</h1>
+    <p>A visualization of Roger Penrose's theory linking the geometry of spacetime to the complex world of twistor space.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">Minkowski Spacetime (1+1 D)</p>
+            <canvas id="spacetime-canvas"></canvas>
+        </div>
+        <div class="panel">
+            <p class="panel-title">Projective Twistor Space (Real Slice)</p>
+            <canvas id="twistor-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <h3>Interaction</h3>
+            <p style="font-size:0.9em;">Click and drag in the Spacetime panel to define a null line (a light ray). Observe the corresponding point that appears in Twistor Space.</p>
+            <div id="info-panel">
+                <p>A <strong>null line</strong> in spacetime corresponds to a <strong>point</strong> in twistor space.</p>
+                <hr style="border-color:var(--border-color)">
+                <p>(Conversely, a <strong>point</strong> in spacetime corresponds to a <strong>line</strong> in twistor space.)</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>A Different View of Reality</h4>
+        <p>What is reality made of? We usually think of it as points in spacetime. But what if the fundamental objects were not points, but light rays? This is the core idea of <strong>Twistor Theory</strong>, a radical and beautiful approach to physics developed by Sir Roger Penrose.</p>
+        <h4>The Two Spaces</h4>
+        <p>The simulation shows two linked panels:
+        <ul>
+            <li><strong>Minkowski Spacetime:</strong> On the left is our familiar spacetime, simplified to one dimension of space (x) and one of time (t). The diagonal grid lines represent the paths that light can travel (we set the speed of light, c, to 1).</li>
+            <li><strong>Twistor Space:</strong> On the right is a representation of the corresponding "twistor space." While technically a 3D complex space, we are looking at a 3D real "slice" of it.</li>
+        </ul>
+        </p>
+        <h4>The Correspondence</h4>
+        <p>Twistor theory proposes a deep, magical correspondence between these two spaces. This simulation demonstrates the most famous part of that correspondence.
+        <br><br>
+        <strong>Click and drag in the Spacetime panel.</strong> Your drag action defines a yellow line. The simulation forces this line to have a slope of +1 or -1, meaning it represents a <strong>null line</strong>—the path a ray of light would take.
+        <br><br>
+        As you define this light ray, watch the Twistor Space panel. A single, unique yellow point appears. This is the correspondence:
+        <br><br>
+        <strong>Every light ray in spacetime is represented by a single point in twistor space.</strong>
+        </br>
+        Try moving the light ray around in the spacetime panel. Notice how the corresponding point moves in twistor space. The entire history of a photon, a path through spacetime, is encoded as a single, static point in this other world.
+        </p>
+        <h4>Why is this useful?</h4>
+        <p>Penrose and others hoped that by reformulating physics in twistor space, some difficult problems (like quantum gravity) might become simpler. For example, interactions between particles that are complex processes in spacetime can sometimes be described by the geometry of intersecting lines and surfaces in twistor space. While it hasn't yet solved everything, twistor theory has led to powerful new mathematical tools and provides a profound new perspective on the nature of reality.</p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const sCanvas = document.getElementById('spacetime-canvas');
+    const sCtx = sCanvas.getContext('2d');
+    const tCanvas = document.getElementById('twistor-canvas');
+    const tCtx = tCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        lightRay: { start: {x: -0.5, t: -1}, end: {x: 0.5, t: 0} },
+        mouse: { down: false }
+    };
+
+    // --- Twistor Correspondence Math (Simplified for 1+1 D) ---
+    // Spacetime point (t,x) -> Twistor line
+    // Null line y=mx+c, m=±1 -> Twistor point
+    // We map a null line in (t,x) space to a point in a 3D real space (z1, z2, z3)
+    function lineToTwistorPoint(start, end) {
+        const slope = (end.t - start.t) / (end.x - start.x);
+        const intercept = start.t - slope * start.x; // t = slope*x + intercept
+
+        // This is a simplified, representative mapping, not the full spinor calculation
+        const z1 = intercept / 2;
+        const z2 = slope;
+        const z3 = (start.x + end.x) / 2;
+
+        return {x: z1, y: z2, z: z3};
+    }
+
+    // --- Drawing ---
+    function draw() {
+        drawSpacetime();
+        drawTwistorSpace();
+        requestAnimationFrame(draw);
+    }
+
+    function drawSpacetime() {
+        const w = sCanvas.getBoundingClientRect().width;
+        const h = sCanvas.getBoundingClientRect().height;
+        sCtx.fillStyle = 'var(--canvas-bg)';
+        sCtx.fillRect(0,0,w,h);
+
+        // Draw lightcone grid
+        sCtx.strokeStyle = 'var(--border-color)';
+        sCtx.lineWidth = 0.5;
+        sCtx.beginPath();
+        for(let i=-10; i<=10; i++){
+            sCtx.moveTo(0, h/2 + i*20); sCtx.lineTo(w, h/2 + i*20); // time slices
+            sCtx.moveTo(w/2 + i*20, 0); sCtx.lineTo(w/2 + i*20, h); // space slices
+            sCtx.moveTo(0, i*w/2); sCtx.lineTo(w, h+i*w/2); // null lines
+            sCtx.moveTo(0, h-i*w/2); sCtx.lineTo(w, -i*w/2); // null lines
+        }
+        sCtx.stroke();
+
+        // Draw axes
+        sCtx.strokeStyle = 'var(--primary-color)';
+        sCtx.lineWidth = 1;
+        sCtx.beginPath();
+        sCtx.moveTo(w/2, 0); sCtx.lineTo(w/2, h); sCtx.fillText("t", w/2+5, 10);
+        sCtx.moveTo(0, h/2); sCtx.lineTo(w, h/2); sCtx.fillText("x", w-10, h/2-5);
+        sCtx.stroke();
+
+        // Draw light ray
+        const toCanvas = (p) => ({
+            x: w/2 + p.x * w/2,
+            y: h/2 - p.t * h/2
+        });
+        const p1 = toCanvas(simState.lightRay.start);
+        const p2 = toCanvas(simState.lightRay.end);
+
+        sCtx.strokeStyle = 'var(--accent-color)';
+        sCtx.lineWidth = 3;
+        sCtx.beginPath();
+        sCtx.moveTo(p1.x, p1.y);
+        sCtx.lineTo(p2.x, p2.y);
+        sCtx.stroke();
+    }
+
+    function drawTwistorSpace() {
+        const w = tCanvas.getBoundingClientRect().width;
+        const h = tCanvas.getBoundingClientRect().height;
+        tCtx.fillStyle = 'var(--canvas-bg)';
+        tCtx.fillRect(0,0,w,h);
+
+        // Draw 3D box for context
+        tCtx.strokeStyle = 'var(--border-color)';
+        tCtx.lineWidth = 1;
+        tCtx.beginPath();
+        const p = [ [0.1,0.1], [0.9,0.1], [0.9,0.9], [0.1,0.9] ];
+        const p2 = [ [0.2,0.2], [0.95,0.2], [0.95,0.95], [0.2,0.95] ];
+        p.forEach((pt, i) => {
+            tCtx.moveTo(pt[0]*w, pt[1]*h); tCtx.lineTo(p[(i+1)%4][0]*w, p[(i+1)%4][1]*h);
+            tCtx.moveTo(p2[i][0]*w, p2[i][1]*h); tCtx.lineTo(p2[(i+1)%4][0]*w, p2[(i+1)%4][1]*h);
+            tCtx.moveTo(pt[i][0]*w, pt[i][1]*h); tCtx.lineTo(p2[i][0]*w, p2[i][1]*h);
+        });
+        tCtx.stroke();
+
+        // Draw the point
+        const twistorPoint = lineToTwistorPoint(simState.lightRay.start, simState.lightRay.end);
+
+        // Project 3D twistor point to 2D canvas
+        const pz = (twistorPoint.z + 1) / 2; // z from -1 to 1
+        const cx = w/2 + twistorPoint.x * 50;
+        const cy = h/2 - twistorPoint.y * 50;
+        const finalX = cx * (1-pz) + w/2 * pz;
+        const finalY = cy * (1-pz) + h/2 * pz;
+        const radius = 20 * (1-pz*0.5);
+
+        tCtx.fillStyle = 'var(--accent-color)';
+        tCtx.beginPath();
+        tCtx.arc(finalX, finalY, radius, 0, 2*Math.PI);
+        tCtx.fill();
+        tCtx.strokeStyle = 'rgba(0,0,0,0.5)';
+        tCtx.lineWidth = 2;
+        tCtx.stroke();
+    }
+
+    // --- Event Handling ---
+    function handleSpacetimeMouse(e) {
+        if(!simState.mouse.down) return;
+        const rect = sCanvas.getBoundingClientRect();
+        const endX = (e.clientX - rect.left) / rect.width * 2 - 1;
+        const endT = -((e.clientY - rect.top) / rect.height * 2 - 1);
+
+        const startX = simState.lightRay.start.x;
+        const startT = simState.lightRay.start.t;
+
+        const dx = endX - startX;
+        const dt = endT - startT;
+
+        // Enforce null line (slope = +-1)
+        if (Math.abs(dx) > Math.abs(dt)) {
+            simState.lightRay.end.t = startT + Math.abs(dx) * Math.sign(dt);
+            simState.lightRay.end.x = startX + dx;
+        } else {
+            simState.lightRay.end.x = startX + Math.abs(dt) * Math.sign(dx);
+            simState.lightRay.end.t = startT + dt;
+        }
+    }
+
+    sCanvas.addEventListener('mousedown', e => {
+        const rect = sCanvas.getBoundingClientRect();
+        simState.mouse.down = true;
+        simState.lightRay.start = {
+            x: (e.clientX - rect.left) / rect.width * 2 - 1,
+            t: -((e.clientY - rect.top) / rect.height * 2 - 1)
+        };
+        simState.lightRay.end = { ...simState.lightRay.start };
+    });
+    window.addEventListener('mouseup', () => simState.mouse.down = false);
+    sCanvas.addEventListener('mousemove', handleSpacetimeMouse);
+
+    // --- Init ---
+    function init() {
+        const w = sCanvas.getBoundingClientRect().width, h = sCanvas.getBoundingClientRect().height;
+        sCtx.canvas.width = tCtx.canvas.width = w * window.devicePixelRatio;
+        sCtx.canvas.height = tCtx.canvas.height = h * window.devicePixelRatio;
+        sCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        tCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        draw();
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Theory Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f4f1f8;
+            --text-color: #3c3c3c;
+            --primary-color: #6a1b9a; /* Purple */
+            --secondary-color: #1e88e5; /* Blue */
+            --border-color: #d1c4e9;
+            --canvas-bg: #ffffff;
+            --accent-color: #fdd835; /* Yellow */
+            --font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1.5/1; cursor:move; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        input[type="range"] { width: 100%; }
+        #info-panel { background:#fff; border-left:4px solid var(--primary-color); padding:1em; text-align:center; transition: background-color 0.3s; }
+        #info-event { font-weight:bold; font-size:1.2em; min-height: 2em; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Building Shapes with Morse Theory</h1>
+    <p>Explore how the topology of a surface is revealed by sweeping a "water level" across it and observing what happens at critical points.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">2D Surface (Torus) with Height Function</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Sweep Height</h3>
+                <label for="height-slider">Height (h): <span id="height-value">0.0</span></label>
+                <input type="range" id="height-slider" min="-1.1" max="1.1" value="-1.1" step="0.01">
+            </div>
+            <div class="controls-group">
+                <h3>Visualization</h3>
+                <label><input type="checkbox" id="show-plane" checked> Show Sweep Plane</label><br>
+                <label><input type="checkbox" id="show-critical-points" checked> Show Critical Points</label>
+            </div>
+            <div id="info-panel">
+                <h3>Topological Event</h3>
+                <p id="info-event">Passed a MINIMUM</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>How Mathematicians Build Shapes</h4>
+        <p>Morse Theory is a beautiful branch of mathematics that connects the shape (topology) of a surface to special points on it called "critical points." It gives us a recipe for building complex shapes from simple pieces.</p>
+        <h4>Step 1: The Landscape</h4>
+        <p>The simulation shows a 2D surface—in this case, a torus (donut) standing on its side. We've defined a "height function" on this surface, which is just the vertical `z` coordinate. The critical points of this function are marked:
+        <ul>
+            <li><span style="color:blue">●</span> <strong>Minimum:</strong> The very bottom point.</li>
+            <li><span style="color:green">●</span> <strong>Saddle Points:</strong> Two "pass" points on the sides.</li>
+            <li><span style="color:red">●</span> <strong>Maximum:</strong> The very top point.</li>
+        </ul>
+        </p>
+        <h4>Step 2: The Sweeping Water Level</h4>
+        <p>Use the "Sweep Height" slider to control the position of the semi-transparent plane. Think of this as a rising water level. The bright yellow line on the surface is the "waterline"—the intersection of the water level with the surface. This is called a <strong>level set</strong>.</p>
+        <h4>Step 3: Watching Topology Change</h4>
+        <p>The key idea of Morse Theory is that the <em>topology</em> (the number of pieces, the number of holes) of the surface below the water level <strong>only changes when the level passes a critical point.</strong>
+        <br><br>
+        Slowly move the slider from bottom to top and watch the info panel:
+        <ol>
+            <li><strong>At the MINIMUM:</strong> A new component is born. The waterline starts as a single point, then becomes a small circle. We have "created" a piece of the surface.</li>
+            <li><strong>Between the minimum and the saddles:</strong> As you raise the level, the waterline is just a single circle that gets bigger. Nothing topologically interesting happens.</li>
+            <li><strong>At the SADDLE POINTS:</strong> The magic happens here. The single circular waterline pinches in the middle and transforms into <em>two</em> separate circles. This is a fundamental change in topology, like adding a "handle" to our shape.</li>
+            <li><strong>Between the saddles and the maximum:</strong> Now we have two separate circles for our waterline, and they just shrink. No topological change.</li>
+            <li><strong>At the MAXIMUM:</strong> The two circles shrink down to a single point and disappear. We have "filled in" the final cap of our shape.</li>
+        </ol>
+        By understanding what happens at these four critical points, we have completely described how to build a torus: start with a disk (minimum), stretch it and glue its sides together (the two saddles), and then put a cap on the remaining hole (maximum).
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+
+    // --- DOM Elements & Contexts ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        height: -1.1,
+        showPlane: true, showPoints: true,
+        view: { rotX: 0.5, rotY: 0.5, zoom: 6 },
+        mouse: { down: false, x: 0, y: 0 },
+        lastCritical: -1.1
+    };
+
+    // --- Geometry: Torus standing on its side ---
+    const R=1.5, r=0.5;
+    const torusFunc = (u, v) => { // u, v in [0, 2pi]
+        const x = (R + r*Math.cos(v)) * Math.cos(u);
+        const y = (R + r*Math.cos(v)) * Math.sin(u);
+        const z = r * Math.sin(v);
+        return [x, z, -y]; // Rotated to stand up
+    };
+
+    const geometry = { verts: [], faces: [] };
+    const detail = 40;
+    for (let i = 0; i <= detail; i++) {
+        for (let j = 0; j <= detail; j++) {
+            const u = j/detail * 2*Math.PI, v = i/detail * 2*Math.PI;
+            geometry.verts.push(torusFunc(u,v));
+            if(i<detail && j<detail){
+                const p1 = i*(detail+1)+j;
+                const p2 = p1+1;
+                const p3 = (i+1)*(detail+1)+j;
+                const p4 = p3+1;
+                geometry.faces.push([p1,p2,p4,p3]);
+            }
+        }
+    }
+    const criticalPoints = [
+        { type: 'Minimum', h: -r, pos: torusFunc(0, -Math.PI/2), color: 'blue' },
+        { type: 'Saddle', h: 0, pos: torusFunc(0, 0), color: 'green' },
+        { type: 'Saddle', h: 0, pos: torusFunc(Math.PI, 0), color: 'green' },
+        { type: 'Maximum', h: r, pos: torusFunc(0, Math.PI/2), color: 'red' },
+    ];
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return { x: w/2*(1+(mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d), y: h/2*(1-(mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d), z:d };
+        };
+
+        // Draw surface
+        geometry.faces.forEach(face => {
+            const p = face.map(i => geometry.verts[i]);
+            const normal = [0,1,0]; // Simplified normal for flat shading
+            const avg_z = (p[0][2]+p[1][2]+p[2][2]+p[3][2])/4;
+            const intensity = Math.max(0.2, Math.abs(avg_z));
+            ctx.fillStyle = `rgba(106, 27, 154, ${intensity})`;
+            ctx.beginPath();
+            p.map(transform).forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y));
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // Draw sweep plane and level set
+        const levelSetSegments = [];
+        ctx.fillStyle = 'rgba(30, 136, 229, 0.3)';
+        if(simState.showPlane) {
+            const plane = [[-3,simState.height,-3], [3,simState.height,-3], [3,simState.height,3], [-3,simState.height,3]].map(transform);
+            ctx.beginPath();
+            plane.forEach((p,i) => i===0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        geometry.faces.forEach(face => {
+            const points = face.map(i => geometry.verts[i]);
+            const heights = points.map(p => p[1]); // y is height in our setup
+            const intersections = [];
+            for (let i = 0; i < 4; i++) {
+                const p1 = points[i], p2 = points[(i+1)%4];
+                const h1 = heights[i], h2 = heights[(i+1)%4];
+                if ((h1 < simState.height && h2 > simState.height) || (h1 > simState.height && h2 < simState.height)) {
+                    const t = (simState.height - h1) / (h2 - h1);
+                    intersections.push([p1[0]+t*(p2[0]-p1[0]), simState.height, p1[2]+t*(p2[2]-p1[2])]);
+                }
+            }
+            if (intersections.length === 2) {
+                levelSetSegments.push([intersections[0], intersections[1]]);
+            }
+        });
+
+        ctx.strokeStyle = 'var(--accent-color)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        levelSetSegments.forEach(seg => {
+            const p1 = transform(seg[0]), p2 = transform(seg[1]);
+            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+        });
+        ctx.stroke();
+
+        // Draw critical points
+        if(simState.showPoints){
+            criticalPoints.forEach(p => {
+                const pt = transform(p.pos);
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 6, 0, 2*Math.PI); ctx.fill();
+            });
+        }
+    }
+
+    function checkCriticalEvent() {
+        const h = simState.height;
+        let eventText = '';
+        let eventColor = '#fff';
+        criticalPoints.forEach(p => {
+            if (h >= p.h && simState.lastCritical < p.h) {
+                eventText = `Passed a ${p.type.toUpperCase()}`;
+                eventColor = p.color;
+            } else if (h <= p.h && simState.lastCritical > p.h) {
+                eventText = `Passed a ${p.type.toUpperCase()}`;
+                eventColor = p.color;
+            }
+        });
+        if(eventText) {
+            const infoPanel = document.getElementById('info-panel');
+            infoPanel.querySelector('#info-event').textContent = eventText;
+            infoPanel.style.backgroundColor = eventColor;
+            setTimeout(() => infoPanel.style.backgroundColor = '#fff', 500);
+        }
+    }
+
+    function init() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w * window.devicePixelRatio; ctx.canvas.height = h * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        document.getElementById('height-slider').addEventListener('input', e => {
+            checkCriticalEvent();
+            simState.height = parseFloat(e.target.value);
+            simState.lastCritical = simState.height;
+            document.getElementById('height-value').textContent = simState.height.toFixed(2);
+        });
+        document.getElementById('show-plane').addEventListener('change', e => simState.showPlane = e.target.checked);
+        document.getElementById('show-critical-points').addEventListener('change', e => simState.showPoints = e.target.checked);
+
+        canvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+            }
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+
+        checkCriticalEvent();
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+        mainLoop();
+    }
+    init();
+});
+</script>
+</body>
+</html>
