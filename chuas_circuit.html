@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chua's Circuit</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --primary-color: #e91e63; /* Pink for Chua's circuit */
+            --secondary-color: #5e35b1;
+            --border-color: #f8bbd0;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 1rem;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header, section {
+            background-color: #fff; border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #fce4ec; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%; max-width: 600px; height: auto; aspect-ratio: 1/1;
+            background-color: var(--canvas-bg); border: 1px solid var(--border-color);
+            border-radius: 5px; cursor: move;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+        .controls {
+            display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem;
+        }
+        @media (min-width: 600px) {
+            .controls { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chua's Circuit: The Double Scroll Attractor</h1>
+            <p class="subtitle">A simulation of the first simple electronic circuit designed to be chaotic.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>3D Phase Space View</h2>
+            <p>Drag to rotate. Adjust the parameters to see how the attractor changes shape.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="alpha-slider">α: <span id="alpha-val">9.0</span></label>
+                    <input type="range" id="alpha-slider" min="5" max="15" value="9" step="0.1">
+                </div>
+                <div class="slider-container">
+                    <label for="beta-slider">β: <span id="beta-val">14.28</span></label>
+                    <input type="range" id="beta-slider" min="10" max="20" value="14.28" step="0.01">
+                </div>
+            </div>
+             <div>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: An Electronic Butterfly</h2>
+            <h3>The First Chaotic Circuit</h3>
+            <p>While chaos was first discovered in complex models of weather, Chua's circuit was a landmark achievement because it was the first simple, physical, and buildable electronic circuit that was mathematically proven to exhibit chaos. It consists of only a resistor, an inductor, two capacitors, and one non-linear element called "Chua's Diode."</p>
+            <h3>The Double Scroll</h3>
+            <p>The simulation shows the state of the circuit (the voltages across the capacitors and the current through the inductor) as a point moving in a 3D phase space. The trajectory quickly settles onto the famous <strong>"double scroll" strange attractor</strong>.
+            The motion has a characteristic pattern:
+            <ol>
+                <li>The trajectory spirals outwards around one of the two lobes.</li>
+                <li>After a number of spirals, it becomes unstable and is unpredictably "kicked" over to the other lobe.</li>
+                <li>It then spirals around the second lobe for a while before being kicked back to the first.</li>
+            </ol>
+            This process repeats forever, never settling into a simple periodic orbit. The combination of the spiraling motion and the unpredictable switching between the two lobes is what generates the chaotic behavior. The attractor's shape resembles two Lorenz attractors joined together.
+            </p>
+        </section>
+
+        <section id="core-theory">
+            <h2>The Equations of Chua's Circuit</h2>
+            <p>The behavior of the circuit can be described by a system of three dimensionless ordinary differential equations:</p>
+            <pre>dx/dt = α * (y - x - f(x))
+dy/dt = x - y + z
+dz/dt = -β * y</pre>
+            <p>The variables `x`, `y`, and `z` are related to the voltages and currents in the circuit. The parameters `α` and `β` depend on the values of the resistors, capacitors, and inductor. The key to the chaos is the non-linear function `f(x)`, which describes the behavior of the Chua's diode:</p>
+            <pre>f(x) = m₁x + 0.5 * (m₀ - m₁) * (|x + 1| - |x - 1|)</pre>
+            <p>This piecewise-linear function acts as a negative resistance in the central region, "pumping" energy into the system to sustain the oscillations, while the outer regions are dissipative, ensuring the trajectory remains bounded. This local instability combined with global stability is a perfect recipe for a strange attractor.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const sliders = { alpha: document.getElementById('alpha-slider'), beta: document.getElementById('beta-slider') };
+        const readouts = { alpha: document.getElementById('alpha-val'), beta: document.getElementById('beta-val') };
+        const resetBtn = document.getElementById('reset-btn');
+
+        const scene = { angleX: 0.3, angleY: 0.5, zoom: 60 };
+        let state = {
+            params: { alpha: 9.0, beta: 14.28, m0: -1/7, m1: 2/7 },
+            pos: { x: 0.7, y: 0, z: 0 },
+            path: []
+        };
+
+        function project(p3d) {
+            let { x, y, z } = p3d;
+            const rotX = Math.cos(scene.angleX) * y - Math.sin(scene.angleX) * z;
+            const rotZ_ = Math.sin(scene.angleX) * y + Math.cos(scene.angleX) * z;
+            y = rotX; z = rotZ_;
+            const rotY = Math.cos(scene.angleY) * x + Math.sin(scene.angleY) * z;
+            z = -Math.sin(scene.angleY) * x + Math.cos(scene.angleY) * z;
+            x = rotY;
+            const w = canvas.width, h = canvas.height;
+            return { x: w / 2 + x * scene.zoom, y: h / 2 - y * scene.zoom };
+        }
+
+        function step() {
+            const { alpha, beta, m0, m1 } = state.params;
+            const { x, y, z } = state.pos;
+            const dt = 0.01;
+
+            const f_x = m1 * x + 0.5 * (m0 - m1) * (Math.abs(x + 1) - Math.abs(x - 1));
+
+            const dx = alpha * (y - x - f_x);
+            const dy = x - y + z;
+            const dz = -beta * y;
+
+            state.pos.x += dx * dt;
+            state.pos.y += dy * dt;
+            state.pos.z += dz * dt;
+
+            state.path.push({ ...state.pos });
+            if (state.path.length > 8000) {
+                state.path.shift();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = 'var(--canvas-bg)';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            let first = true;
+            for(let i=0; i<state.path.length; i++) {
+                const p = state.path[i];
+                const scr = project(p);
+                const hue = (i / state.path.length) * 120 + 180;
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.6)`;
+                if (first) {
+                    ctx.moveTo(scr.x, scr.y);
+                    first = false;
+                } else {
+                    ctx.lineTo(scr.x, scr.y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        let animationFrameId;
+        function loop() {
+            for(let i=0; i<20; i++) step();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function reset() {
+            cancelAnimationFrame(animationFrameId);
+            Object.keys(sliders).forEach(key => {
+                state.params[key] = parseFloat(sliders[key].value);
+                readouts[key].textContent = state.params[key].toFixed(2);
+            });
+            state.pos = { x: 0.7, y: 0, z: 0 };
+            state.path = [];
+            loop();
+        }
+
+        Object.values(sliders).forEach(s => s.addEventListener('input', reset));
+        resetBtn.addEventListener('click', reset);
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            scene.angleY += dx * 0.005;
+            scene.angleX -= dy * 0.005;
+        });
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

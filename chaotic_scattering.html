@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaotic Scattering</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #e53935; /* Red for scattering */
+            --secondary-color: #546e7a;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 1rem;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg); border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        #plot-canvas { aspect-ratio: 2/1; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chaotic Scattering</h1>
+            <p class="subtitle">A simulation of a particle scattering off a complex potential.</p>
+        </header>
+
+        <section>
+            <div class="sim-layout">
+                <div>
+                    <h3>Trajectory View</h3>
+                    <p>Click on the plot below to run a single trajectory.</p>
+                    <div class="canvas-container"><canvas id="traj-canvas"></canvas></div>
+                </div>
+                <div>
+                    <h3>Scattering Function (Final Angle vs. Impact Parameter)</h3>
+                    <p>Press "Generate" to compute the fractal scattering function.</p>
+                    <div class="canvas-container" style="aspect-ratio: 2/1;"><canvas id="plot-canvas"></canvas></div>
+                </div>
+            </div>
+            <div style="text-align:center; margin-top: 1rem;">
+                <button id="generate-btn">Generate Plot</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Unpredictable Bounce</h2>
+            <h3>The Experiment</h3>
+            <p>This simulation models a simple physics experiment: firing a particle at a set of three repulsive "hills." The particle is always fired from the bottom edge with the same initial energy. The only thing we change is its initial horizontal position, the "impact parameter." The question is: how does the final angle at which the particle exits depend on this impact parameter?</p>
+            <h3>A Fractal Relationship</h3>
+            <p>One might expect a smooth relationship—a small change in the starting position should lead to a small change in the final angle. But for this system, that is not the case. Press "Generate Plot" to see the result. The graph of Final Angle vs. Impact Parameter is not a smooth curve. It is a <strong>fractal</strong>, full of abrupt jumps and infinitely nested regions of complexity. This means that there are regions where a tiny, almost immeasurable change in the initial impact parameter leads to a wildly different outcome. This is a classic example of <strong>transient chaos</strong>.</p>
+            <p>Once the plot is generated, you can click on it. This will run a single trajectory simulation in the left-hand window for the impact parameter you selected, allowing you to see the physical path that corresponds to a point on the fractal graph.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const trajCanvas = document.getElementById('traj-canvas');
+        const tCtx = trajCanvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const pCtx = plotCanvas.getContext('2d');
+        const generateBtn = document.getElementById('generate-btn');
+
+        const w = trajCanvas.width, h = trajCanvas.height;
+        const hills = [
+            { x: w/2, y: h/2, A: 1e6 },
+            { x: w/2 - 100, y: h/2 + 87, A: 1e6 },
+            { x: w/2 + 100, y: h/2 + 87, A: 1e6 }
+        ];
+
+        let worker;
+
+        function drawSetup(ctx) {
+            ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,ctx.canvas.width, ctx.canvas.height);
+            hills.forEach(hill => {
+                const grad = ctx.createRadialGradient(hill.x, hill.y, 0, hill.x, hill.y, 50);
+                grad.addColorStop(0, 'rgba(229, 57, 53, 0.5)');
+                grad.addColorStop(1, 'rgba(229, 57, 53, 0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(hill.x, hill.y, 50, 0, 2*Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function runSingleTrajectory(impact_param) {
+            drawSetup(tCtx);
+            tCtx.strokeStyle = 'rgba(0,0,0,0.7)';
+            tCtx.lineWidth = 2;
+            tCtx.beginPath();
+
+            let x = impact_param, y = h - 1, vx = 0, vy = -2.0;
+            tCtx.moveTo(x,y);
+
+            for(let i=0; i<5000; i++) {
+                let fx=0, fy=0;
+                hills.forEach(hill => {
+                    const dx = x - hill.x, dy = y - hill.y;
+                    const r2 = dx*dx + dy*dy;
+                    if (r2 > 0) {
+                        const r4 = r2*r2;
+                        const force = hill.A / r4;
+                        fx += force * dx;
+                        fy += force * dy;
+                    }
+                });
+                vx += fx; vy += fy;
+                x += vx; y += vy;
+                tCtx.lineTo(x,y);
+                if (x<0 || x>w || y<0 || y>h) break;
+            }
+            tCtx.stroke();
+        }
+
+        function generatePlot() {
+            if (worker) worker.terminate();
+            generateBtn.disabled = true;
+            generateBtn.textContent = "Generating...";
+            drawSetup(pCtx);
+
+            const workerCode = `
+                const hills = ${JSON.stringify(hills)};
+                self.onmessage = function(e) {
+                    const { start_col, end_col, width, height } = e.data;
+                    const results = [];
+                    for(let i = start_col; i < end_col; i++) {
+                        let x = i, y = height - 1, vx = 0, vy = -2.0;
+                        for(let iter=0; iter < 5000; iter++) {
+                            let fx=0, fy=0;
+                            hills.forEach(hill => {
+                                const dx = x - hill.x, dy = y - hill.y;
+                                const r2 = dx*dx + dy*dy;
+                                if(r2 > 0) {
+                                    const force = hill.A / (r2*r2);
+                                    fx += force * dx;
+                                    fy += force * dy;
+                                }
+                            });
+                            vx += fx; vy += fy;
+                            x += vx; y += vy;
+                            if (x<0 || x>width || y<0 || y>height) break;
+                        }
+                        const final_angle = Math.atan2(vy, vx);
+                        results.push({col: i, angle: final_angle});
+                    }
+                    self.postMessage(results);
+                }
+            `;
+            const blob = new Blob([workerCode], {type:'application/javascript'});
+            const num_workers = navigator.hardwareConcurrency || 4;
+            const cols_per_worker = Math.ceil(plotCanvas.width / num_workers);
+            let finished_workers = 0;
+
+            for(let i=0; i<num_workers; i++) {
+                const w = new Worker(URL.createObjectURL(blob));
+                w.onmessage = function(e) {
+                    e.data.forEach(res => {
+                        const hue = (res.angle + Math.PI) / (2*Math.PI) * 360;
+                        pCtx.fillStyle = \`hsl(\${hue}, 80%, 50%)\`;
+                        pCtx.fillRect(res.col, 0, 1, plotCanvas.height);
+                    });
+                    finished_workers++;
+                    if (finished_workers === num_workers) {
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = "Generate Plot";
+                    }
+                    w.terminate();
+                }
+                const start_col = i * cols_per_worker;
+                const end_col = Math.min((i+1) * cols_per_worker, plotCanvas.width);
+                if(start_col < end_col) {
+                    w.postMessage({start_col, end_col, width: plotCanvas.width, height: plotCanvas.height});
+                } else {
+                    finished_workers++;
+                }
+            }
+        }
+
+        generateBtn.addEventListener('click', generatePlot);
+        plotCanvas.addEventListener('click', e => {
+            const rect = plotCanvas.getBoundingClientRect();
+            const impact_param = (e.clientX - rect.left) / rect.width * trajCanvas.width;
+            runSingleTrajectory(impact_param);
+        });
+
+        function init() {
+            [trajCanvas, plotCanvas].forEach(c => {
+                c.width = c.parentElement.offsetWidth;
+                c.height = c.parentElement.offsetHeight;
+            });
+            drawSetup(trajCanvas);
+            drawSetup(plotCanvas);
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

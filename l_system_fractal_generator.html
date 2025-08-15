@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L-System Fractal Generator</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f5;
+            --text-color: #18181b;
+            --primary-color: #6d28d9; /* Violet */
+            --secondary-color: #64748b;
+            --border-color: #d4d4d8;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .main-layout { grid-template-columns: 1fr 2fr; }
+        }
+        #sim-canvas {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        .controls-area {
+            display: flex; flex-direction: column; gap: 1rem;
+        }
+        .control-group {
+            display: flex; flex-direction: column; gap: 0.5rem;
+        }
+        label { font-weight: 500; }
+        input[type="text"], input[type="number"] {
+            padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px;
+            font-family: monospace;
+        }
+        #rules-container { display: flex; flex-direction: column; gap: 0.5rem; }
+        .rule-input { display: flex; align-items: center; gap: 0.5rem; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.8rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+        }
+        .preset-buttons button { background-color: var(--secondary-color); margin: 0.25rem; padding: 0.5rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>L-System Fractal Generator</h1>
+            <p class="subtitle">A tool for generating fractals using Lindenmayer systems.</p>
+        </header>
+
+        <section class="main-layout">
+            <div class="controls-area">
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button data-preset="koch">Koch Curve</button>
+                    <button data-preset="sierpinski">Sierpinski</button>
+                    <button data-preset="dragon">Dragon</button>
+                    <button data-preset="plant">Plant</button>
+                </div>
+                <h3>Parameters</h3>
+                <div class="control-group">
+                    <label for="axiom">Axiom (Start String):</label>
+                    <input type="text" id="axiom" value="F">
+                </div>
+                <div class="control-group">
+                    <label>Production Rules:</label>
+                    <div id="rules-container"></div>
+                    <button id="add-rule-btn" style="width: fit-content;">+ Add Rule</button>
+                </div>
+                <div class="control-group">
+                    <label for="angle">Angle (°):</label>
+                    <input type="number" id="angle" value="90">
+                </div>
+                 <div class="control-group">
+                    <label for="iterations">Iterations:</label>
+                    <input type="number" id="iterations" value="4" min="1" max="15">
+                </div>
+                <button id="generate-btn">Generate</button>
+            </div>
+            <div class="canvas-container">
+                <canvas id="sim-canvas" width="600" height="600"></canvas>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: A Grammar for Growth</h2>
+            <p>Lindenmayer systems, or L-systems, are a type of formal grammar—a set of rules and symbols used to generate complex strings. They were developed to model the growth of plants and have since become a popular way to generate beautiful fractals. The process has two stages:</p>
+            <ol>
+                <li><strong>String Rewriting:</strong> The system starts with a simple string called the <strong>axiom</strong>. It then repeatedly iterates through the string, replacing characters according to a set of <strong>production rules</strong>. This process can quickly generate an immensely long and complex string from simple beginnings.</li>
+                <li><strong>Turtle Graphics:</strong> The final string is interpreted as a set of drawing commands for a "turtle." The turtle has a position and an angle, and it follows the commands in the string to draw the fractal.
+                    <ul>
+                        <li><code>F</code> or <code>G</code>: Move forward by a set length, drawing a line.</li>
+                        <li><code>+</code>: Turn right by the specified angle.</li>
+                        <li><code>-</code>: Turn left by the specified angle.</li>
+                        <li><code>[</code>: Push the current turtle state (position and angle) onto a stack. This is like saving your place to start a new branch.</li>
+                        <li><code>]</code>: Pop a state from the stack and return to it. This is like finishing a branch and returning to the main stem.</li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const axiomEl = document.getElementById('axiom');
+        const angleEl = document.getElementById('angle');
+        const iterationsEl = document.getElementById('iterations');
+        const rulesContainer = document.getElementById('rules-container');
+        const addRuleBtn = document.getElementById('add-rule-btn');
+        const generateBtn = document.getElementById('generate-btn');
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+
+        const presets = {
+            koch: { axiom: 'F', rules: [['F', 'F+F-F-F+F']], angle: 90, iterations: 3 },
+            sierpinski: { axiom: 'F-G-G', rules: [['F', 'F-G+F+G-F'], ['G', 'GG']], angle: 120, iterations: 5 },
+            dragon: { axiom: 'FX', rules: [['X', 'X+YF+'], ['Y', '-FX-Y']], angle: 90, iterations: 10 },
+            plant: { axiom: 'X', rules: [['X', 'F+[[X]-X]-F[-FX]+X'], ['F', 'FF']], angle: 25, iterations: 5 }
+        };
+
+        function addRule(char = '', replacement = '') {
+            const ruleDiv = document.createElement('div');
+            ruleDiv.className = 'rule-input';
+            ruleDiv.innerHTML = `
+                <input type="text" value="${char}" placeholder="char" size="2">
+                <span>→</span>
+                <input type="text" value="${replacement}" placeholder="replacement" style="flex-grow:1;">
+                <button class="remove-rule-btn" style="background-color: #ef5350; padding: 0.2rem 0.5rem;">-</button>
+            `;
+            ruleDiv.querySelector('.remove-rule-btn').addEventListener('click', () => ruleDiv.remove());
+            rulesContainer.appendChild(ruleDiv);
+        }
+
+        function loadPreset(name) {
+            const p = presets[name];
+            axiomEl.value = p.axiom;
+            angleEl.value = p.angle;
+            iterationsEl.value = p.iterations;
+            rulesContainer.innerHTML = '';
+            p.rules.forEach(rule => addRule(rule[0], rule[1]));
+        }
+
+        addRuleBtn.addEventListener('click', () => addRule());
+        document.querySelectorAll('.preset-buttons button').forEach(btn => {
+            btn.addEventListener('click', () => loadPreset(btn.dataset.preset));
+        });
+
+        function generate() {
+            const axiom = axiomEl.value;
+            const iterations = parseInt(iterationsEl.value);
+            const rules = {};
+            document.querySelectorAll('.rule-input').forEach(div => {
+                const inputs = div.querySelectorAll('input');
+                if (inputs[0].value) rules[inputs[0].value] = inputs[1].value;
+            });
+
+            let currentString = axiom;
+            for (let i = 0; i < iterations; i++) {
+                let nextString = '';
+                for (const char of currentString) {
+                    nextString += rules[char] || char;
+                }
+                currentString = nextString;
+            }
+            drawLSystem(currentString);
+        }
+
+        function drawLSystem(str) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'var(--primary-color)';
+            ctx.lineWidth = 1;
+
+            const angle = parseFloat(angleEl.value) * Math.PI / 180;
+            const stateStack = [];
+            let length = 10;
+
+            // Pre-calculate bounds to center and scale the drawing
+            let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+            let turtle = { x: 0, y: 0, ang: -Math.PI / 2 };
+            for (const char of str) {
+                if (char === 'F' || char === 'G') {
+                    turtle.x += length * Math.cos(turtle.ang);
+                    turtle.y += length * Math.sin(turtle.ang);
+                } else if (char === '+') turtle.ang += angle;
+                else if (char === '-') turtle.ang -= angle;
+                else if (char === '[') stateStack.push({ ...turtle });
+                else if (char === ']') turtle = stateStack.pop();
+                minX = Math.min(minX, turtle.x); minY = Math.min(minY, turtle.y);
+                maxX = Math.max(maxX, turtle.x); maxY = Math.max(maxY, turtle.y);
+            }
+
+            const scale = Math.min(canvas.width / (maxX - minX), canvas.height / (maxY - minY)) * 0.9;
+            const offsetX = (canvas.width - (maxX - minX) * scale) / 2;
+            const offsetY = (canvas.height - (maxY - minY) * scale) / 2;
+
+            turtle = { x: -minX * scale + offsetX, y: -minY * scale + offsetY, ang: -Math.PI / 2 };
+            ctx.beginPath();
+            ctx.moveTo(turtle.x, turtle.y);
+
+            for (const char of str) {
+                if (char === 'F' || char === 'G') {
+                    const newX = turtle.x + length * scale * Math.cos(turtle.ang);
+                    const newY = turtle.y + length * scale * Math.sin(turtle.ang);
+                    ctx.lineTo(newX, newY);
+                    turtle.x = newX; turtle.y = newY;
+                } else if (char === '+') turtle.ang += angle;
+                else if (char === '-') turtle.ang -= angle;
+                else if (char === '[') {
+                    stateStack.push({ ...turtle });
+                } else if (char === ']') {
+                    turtle = stateStack.pop();
+                    ctx.moveTo(turtle.x, turtle.y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        generateBtn.addEventListener('click', generate);
+
+        loadPreset('plant');
+        generate();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torus Breakdown: Route to Chaos</title>
+    <style>
+        :root {
+            --bg-color: #f3e5f5;
+            --text-color: #333;
+            --primary-color: #8e24aa;
+            --secondary-color: #5e35b1;
+            --border-color: #e1bee7;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6; margin: 0; padding: 1rem;
+            background-color: var(--bg-color); color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: #fff; border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%; max-width: 600px; height: auto; aspect-ratio: 1/1;
+            background-color: var(--canvas-bg); border: 1px solid var(--border-color);
+            border-radius: 5px; cursor: move;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Ruelle-Takens-Newhouse Route to Chaos</h1>
+            <p class="subtitle">A conceptual simulation of the torus breakdown route to chaos.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Phase Space Attractor</h2>
+            <p>Drag to rotate. Adjust the control parameter to see the attractor change.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div class="slider-container">
+                <label for="p-slider">Control Parameter (p): <span id="p-val">0.00</span></label>
+                <input type="range" id="p-slider" min="0" max="1.5" value="0.0" step="0.01">
+            </div>
+            <h3 id="attractor-type">Attractor Type: Limit Cycle</h3>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Breakdown of Predictability</h2>
+            <h3>An Alternative Path to Chaos</h3>
+            <p>The period-doubling cascade is a famous route to chaos, but it's not the only one. The Ruelle-Takens-Newhouse scenario describes another common path, based on the interaction of different frequencies of oscillation within a system.</p>
+            <p>Use the slider to adjust the control parameter `p` and observe the evolution of the system's attractor in phase space:
+            <ol>
+                <li><strong>p ≈ 0 (Limit Cycle):</strong> The system has one dominant frequency. It quickly settles into a simple, predictable periodic orbit called a <strong>limit cycle</strong>. This is a 1D loop living in 3D space.</li>
+                <li><strong>p ≈ 0.5 (Quasiperiodic on a 2-Torus):</strong> As `p` increases, a second, incommensurate frequency is introduced. The trajectory now moves on the surface of a donut, or <strong>2-torus</strong>. The motion never exactly repeats (it's quasiperiodic), but it is still predictable and confined to this smooth surface.</li>
+                <li><strong>p > 1 (Strange Attractor):</strong> According to the Ruelle-Takens-Newhouse theorem, when a third frequency attempts to appear, the motion on the resulting 3-torus is often unstable. The torus "breaks down," and the system's trajectory becomes chaotic, exploring a complex, fractal object called a <strong>strange attractor</strong>. The motion is no longer predictable, and the clean donut shape dissolves into a fuzzy, intricate mess.</li>
+            </ol>
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const pSlider = document.getElementById('p-slider');
+        const pVal = document.getElementById('p-val');
+        const attractorTypeEl = document.getElementById('attractor-type');
+
+        const scene = { angleX: 0.3, angleY: 0.5, zoom: 80 };
+        let state = {
+            p: 0.0,
+            pos: { x: 1, y: 0, z: 0 },
+            path: []
+        };
+
+        function project(p3d) {
+            let { x, y, z } = p3d;
+            const rotX = Math.cos(scene.angleX) * y - Math.sin(scene.angleX) * z;
+            const rotZ_ = Math.sin(scene.angleX) * y + Math.cos(scene.angleX) * z;
+            y = rotX; z = rotZ_;
+            const rotY = Math.cos(scene.angleY) * x + Math.sin(scene.angleY) * z;
+            z = -Math.sin(scene.angleY) * x + Math.cos(scene.angleY) * z;
+            x = rotY;
+            const w = canvas.width, h = canvas.height;
+            return { x: w / 2 + x * scene.zoom, y: h / 2 - y * scene.zoom };
+        }
+
+        // A custom set of equations designed to show the torus breakdown
+        function step() {
+            const { x, y, z } = state.pos;
+            const p = state.p;
+            const dt = 0.02;
+
+            // Base oscillator (limit cycle)
+            const w1 = 1.0;
+            let dx = w1 * y;
+            let dy = -w1 * x;
+            let dz = 0;
+
+            // Second frequency (torus)
+            const w2 = 1.0 / Math.sqrt(2); // Incommensurate
+            const r = Math.hypot(x,y);
+            dx += p * (1 - r*r) * x;
+            dy += p * (1 - r*r) * y;
+            dz += p * (w2*x);
+
+            // Third frequency / chaos (torus breakdown)
+            if (p > 1.0) {
+                const chaos_p = (p - 1.0);
+                dz += chaos_p * Math.sin(2*Math.PI*y) * Math.sin(2*Math.PI*x);
+                dx -= chaos_p * z * Math.cos(2*Math.PI*y);
+            }
+
+            state.pos.x += dx * dt;
+            state.pos.y += dy * dt;
+            state.pos.z += dz * dt;
+
+            state.path.push({ ...state.pos });
+            if (state.path.length > 4000) state.path.shift();
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = 'var(--canvas-bg)';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            let first = true;
+            for(let i=0; i<state.path.length; i++) {
+                const p = state.path[i];
+                const scr = project(p);
+                const hue = (i / state.path.length) * 200 + 180;
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.5)`;
+                if (first) {
+                    ctx.moveTo(scr.x, scr.y);
+                    first = false;
+                } else {
+                    ctx.lineTo(scr.x, scr.y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        let animationFrameId;
+        function loop() {
+            for(let i=0; i<5; i++) step();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function reset() {
+            cancelAnimationFrame(animationFrameId);
+            state.p = parseFloat(pSlider.value);
+            pVal.textContent = state.p.toFixed(2);
+
+            if (state.p < 0.2) attractorTypeEl.textContent = "Attractor Type: Limit Cycle";
+            else if (state.p < 1.0) attractorTypeEl.textContent = "Attractor Type: 2-Torus";
+            else attractorTypeEl.textContent = "Attractor Type: Strange Attractor";
+
+            state.pos = { x: 1, y: 0, z: 0 };
+            state.path = [];
+            loop();
+        }
+
+        pSlider.addEventListener('input', reset);
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            scene.angleY += dx * 0.005;
+            scene.angleX -= dy * 0.005;
+        });
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
