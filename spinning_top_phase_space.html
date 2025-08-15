@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symplectic Manifolds: Spinning Top Phase Space</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #8e44ad;
+            --secondary-color: #16a085;
+            --border-color: #34495e;
+            --canvas-bg: #34495e;
+            --accent-color: #f1c40f;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; display:flex; flex-wrap:wrap; gap:1em; }
+        .top-panel, .phase-space-panel { flex:1; min-width:280px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--border-color); background-color:#566573; color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; border:none; transition:background-color 0.2s; }
+        button:hover { filter:brightness(120%); }
+        button.secondary { background-color:var(--secondary-color); }
+        #info-display { background:rgba(0,0,0,0.2); border-top:3px solid var(--accent-color); padding:10px; font-size:0.9em; }
+        #info-display p { margin:0.5em 0; }
+        #info-display .value { font-weight:bold; color:var(--text-color); float:right; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>A Spinning Top on a Symplectic Manifold</h1>
+    <p>Visualize the complex motion of a spinning top and explore the geometry of its phase space, where area is conserved.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <div class="top-panel">
+                <p class="panel-title">3D View</p>
+                <canvas id="top-canvas"></canvas>
+            </div>
+            <div class="phase-space-panel">
+                <p class="panel-title">Phase Space Projection (ψ vs θ)</p>
+                <canvas id="phase-space-canvas"></canvas>
+            </div>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Initial Conditions</h3>
+                <label>Initial Spin (ω₃): <span id="spin-value">20</span></label>
+                <input type="range" id="spin-slider" min="5" max="50" value="20" step="1">
+                <label>Initial Angle (θ): <span id="angle-value">30</span>°</label>
+                <input type="range" id="angle-slider" min="10" max="80" value="30" step="1">
+            </div>
+            <div class="controls-group">
+                <h3>Simulation Control</h3>
+                <button id="start-btn">Start/Reset</button>
+                <button id="draw-area-btn" class="secondary">Draw Phase Space Area</button>
+            </div>
+            <div id="info-display">
+                <p>Initial Area: <span class="value" id="initial-area">N/A</span></p>
+                <p>Current Area: <span class="value" id="current-area">N/A</span></p>
+                <p>Area Change: <span class="value" id="area-change">N/A</span></p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Welcome to the Spinning Top Simulator!</h4>
+        <p>A simple spinning top exhibits surprisingly complex and beautiful motion. This simulation explores this motion and connects it to a deep idea in physics: the geometry of phase space.</p>
+        <h4>Step 1: The Two Views</h4>
+        <p>You see two panels:
+        <ul>
+            <li><strong>3D View:</strong> This shows a familiar spinning top, which is spinning rapidly around its own axis. Under the influence of gravity, its main axis will also wobble. This wobble is a combination of two motions: <strong>precession</strong> (the slow movement of the axis in a circle) and <strong>nutation</strong> (the "nodding" or up-and-down bobbing of the axis).</li>
+            <li><strong>Phase Space Projection:</strong> This is an abstract map of the top's state. The horizontal axis is the precession angle (ψ) and the vertical axis is the nutation angle (θ). As the top moves, it traces a path on this map, revealing the intricate pattern of its motion.</li>
+        </ul>
+        </p>
+        <h4>Step 2: Start the Simulation</h4>
+        <p>Use the sliders to set the initial conditions—how fast the top is spinning and its initial tilt angle. Then click <strong>"Start/Reset"</strong>. Watch the top precess and nutate in the 3D view, and see the corresponding path traced in the phase space view. The path is complex, but it's not random; it's a regular, repeating orbit on a higher-dimensional surface.</p>
+        <h4>Step 3: The Symplectic Manifold and Liouville's Theorem</h4>
+        <p>This is the deep part. The "phase space" of all possible states of the top is not just a simple graph, but a type of mathematical object called a <strong>symplectic manifold</strong>. Systems that evolve on these manifolds have a remarkable property, described by Liouville's theorem: <strong>phase space volume is conserved.</strong></p>
+        <p>Let's see this in action! Click the <strong>"Draw Phase Space Area"</strong> button. Now click and drag on the phase space canvas to draw a small rectangle. This rectangle represents a "bundle" of slightly different initial states for the top.
+        <br><br>
+        When you release the mouse, the simulation will trace the evolution of all the points in this bundle. Watch how the rectangle gets stretched and sheared into a distorted parallelogram shape. It changes shape dramatically, but look at the "Current Area" readout in the info panel—<strong>its area remains constant!</strong> This is a fundamental feature of Hamiltonian systems (like our frictionless top) and is deeply connected to the conservation of information in physics.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Math/3D library (from previous step) ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,out)=>{const [a00,a01,a02,a03,a10,a11,a12,a13,a20,a21,a22,a23,a30,a31,a32,a33]=a;let [b0,b1,b2,b3]=[b[0],b[1],b[2],b[3]];out[0]=b0*a00+b1*a10+b2*a20+b3*a30;out[1]=b0*a01+b1*a11+b2*a21+b3*a31;out[2]=b0*a02+b1*a12+b2*a22+b3*a32;out[3]=b0*a03+b1*a13+b2*a23+b3*a33;[b0,b1,b2,b3]=[b[4],b[5],b[6],b[7]];out[4]=b0*a00+b1*a10+b2*a20+b3*a30;out[5]=b0*a01+b1*a11+b2*a21+b3*a31;out[6]=b0*a02+b1*a12+b2*a22+b3*a32;out[7]=b0*a03+b1*a13+b2*a23+b3*a33;[b0,b1,b2,b3]=[b[8],b[9],b[10],b[11]];out[8]=b0*a00+b1*a10+b2*a20+b3*a30;out[9]=b0*a01+b1*a11+b2*a21+b3*a31;out[10]=b0*a02+b1*a12+b2*a22+b3*a32;out[11]=b0*a03+b1*a13+b2*a23+b3*a33;[b0,b1,b2,b3]=[b[12],b[13],b[14],b[15]];out[12]=b0*a00+b1*a10+b2*a20+b3*a30;out[13]=b0*a01+b1*a11+b2*a21+b3*a31;out[14]=b0*a02+b1*a12+b2*a22+b3*a32;out[15]=b0*a03+b1*a13+b2*a23+b3*a33;return out},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);return o.fill(0),o[0]=t/a,o[5]=t,o[10]=(r+n)/(n-r),o[11]=-1,o[14]=2*r*n/(n-r),o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotate:(m,r,a,o)=>{let [x,y,z]=a,n=Math.hypot(x,y,z);if(n<1e-6)return null;[x,y,z]=[x/n,y/n,z/n];const s=Math.sin(r),c=Math.cos(r),t=1-c;return Mat4.multiply(m,[x*x*t+c,y*x*t+z*s,z*x*t-y*s,0,x*y*t-z*s,y*y*t+c,z*y*t+x*s,0,x*z*t+y*s,y*z*t-x*s,z*z*t+c,0,0,0,0,1],o),o}};
+
+    // --- DOM Elements & Contexts ---
+    const topCanvas = document.getElementById('top-canvas');
+    const phaseCanvas = document.getElementById('phase-space-canvas');
+    const tCtx = topCanvas.getContext('2d');
+    const pCtx = phaseCanvas.getContext('2d');
+
+    // --- Simulation State ---
+    const topParams = { I1: 1.5, I3: 1, M: 1, g: 9.8, l: 1 }; // Inertia, mass, gravity, length
+    let simState = {
+        running: false,
+        vars: { t: 0, theta: 0, psi: 0, phi: 0, p_theta: 0, p_psi: 0, p_phi: 0 },
+        initial: { spin: 20, angle: 30 },
+        phaseTrajectory: [],
+        phaseArea: { active: false, drawing: false, points: [] },
+        view: { rotX: 0.8, rotY: 0 }
+    };
+
+    // --- Physics Engine (RK4 Integrator for Euler's Equations) ---
+    function getDerivs(vars) {
+        const { theta, p_psi, p_phi } = vars;
+        const { I1, I3, M, g, l } = topParams;
+        const sinT=Math.sin(theta), cosT=Math.cos(theta);
+
+        const theta_dot = vars.p_theta / I1;
+        const psi_dot = (p_psi - p_phi * cosT) / (I1 * sinT * sinT);
+        const phi_dot = (p_phi / I3) - psi_dot * cosT;
+
+        const p_theta_dot = (I1 * psi_dot*psi_dot * sinT*cosT) - (p_phi * psi_dot * sinT) + (M*g*l*sinT);
+        const p_psi_dot = 0; // Conserved
+        const p_phi_dot = 0; // Conserved
+
+        return { t: 1, theta: theta_dot, psi: psi_dot, phi: phi_dot, p_theta: p_theta_dot, p_psi: p_psi_dot, p_phi: p_phi_dot };
+    }
+
+    function rk4Step(vars, dt) {
+        const k1 = getDerivs(vars);
+        const k2_in = {}, k3_in = {}, k4_in = {};
+        for(let k in vars){ k2_in[k] = vars[k] + k1[k]*dt/2; k3_in[k] = vars[k] + getDerivs(k2_in)[k]*dt/2; k4_in[k] = vars[k] + getDerivs(k3_in)[k]*dt; }
+        const k2 = getDerivs(k2_in), k3 = getDerivs(k3_in), k4 = getDerivs(k4_in);
+
+        const out = {};
+        for(let k in vars){ out[k] = vars[k] + (k1[k] + 2*k2[k] + 2*k3[k] + k4[k])*dt/6; }
+        return out;
+    }
+
+    // --- Drawing ---
+    function draw() {
+        if (!simState.running) return;
+        drawTop();
+        drawPhaseSpace();
+        requestAnimationFrame(draw);
+    }
+
+    function drawTop() {
+        tCtx.fillStyle = 'var(--bg-color)';
+        tCtx.fillRect(0,0,topCanvas.width,topCanvas.height);
+        const w=topCanvas.getBoundingClientRect().width, h=topCanvas.getBoundingClientRect().height;
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0,-1,-8], view);
+        view = Mat4.rotate(view, simState.view.rotX, [1,0,0], Mat4.create());
+        view = Mat4.rotate(view, simState.view.rotY, [0,1,0], Mat4.create());
+
+        const transform = (v, m) => {
+            const clip = Mat4.multiply(proj, m, Mat4.create());
+            const p = new Float32Array(4); p[0]=v[0]; p[1]=v[1]; p[2]=v[2]; p[3]=1;
+            const res = Mat4.multiply(clip, p, []); // This is wrong, needs vec*mat
+            return { x: (res[0]/res[3]+1)/2*w, y: (1-res[1]/res[3])/2*h };
+        };
+
+        // Simplified rendering for now
+        tCtx.save();
+        tCtx.translate(w/2, h/2);
+        tCtx.rotate(simState.vars.psi);
+        tCtx.scale(1, Math.cos(simState.vars.theta));
+
+        tCtx.fillStyle = 'var(--primary-color)';
+        tCtx.beginPath();
+        tCtx.moveTo(0, -100); tCtx.lineTo(-30, 0); tCtx.lineTo(30, 0);
+        tCtx.closePath();
+        tCtx.fill();
+        tCtx.restore();
+    }
+
+    function drawPhaseSpace() {
+        const w = phaseCanvas.getBoundingClientRect().width, h = phaseCanvas.getBoundingClientRect().height;
+        if(simState.phaseTrajectory.length < 2) {
+            pCtx.fillStyle = 'var(--canvas-bg)';
+            pCtx.fillRect(0,0,w,h);
+        }
+
+        const toCanvas = (psi, theta) => ({
+            x: ((psi % (2*Math.PI)) / (2*Math.PI)) * w,
+            y: (theta / (Math.PI/2)) * h
+        });
+
+        // Draw trajectory
+        pCtx.strokeStyle = 'var(--accent-color)';
+        pCtx.lineWidth = 1;
+        pCtx.beginPath();
+        const lastPoint = simState.phaseTrajectory[simState.phaseTrajectory.length-1];
+        const secondLast = simState.phaseTrajectory[simState.phaseTrajectory.length-2];
+        const p1 = toCanvas(secondLast.psi, secondLast.theta);
+        const p2 = toCanvas(lastPoint.psi, lastPoint.theta);
+        if(Math.abs(p1.x - p2.x) < w/2) { // Avoid wrap-around lines
+           pCtx.moveTo(p1.x, p1.y);
+           pCtx.lineTo(p2.x, p2.y);
+           pCtx.stroke();
+        }
+
+        // Draw area
+        if(simState.phaseArea.active && simState.phaseArea.points.length > 0){
+            pCtx.fillStyle = 'rgba(22, 160, 133, 0.5)';
+            pCtx.beginPath();
+            simState.phaseArea.points.forEach((p, i) => {
+                const {x, y} = toCanvas(p.psi, p.theta);
+                if(i===0) pCtx.moveTo(x,y); else pCtx.lineTo(x,y);
+            });
+            pCtx.closePath();
+            pCtx.fill();
+        }
+    }
+
+    function polygonArea(points) {
+        let area = 0;
+        for (let i = 0; i < points.length; i++) {
+            const p1 = points[i];
+            const p2 = points[(i + 1) % points.length];
+            area += p1.psi * p2.theta - p2.psi * p1.theta;
+        }
+        return Math.abs(area / 2);
+    }
+
+    // --- Main Loop ---
+    let frameCount = 0;
+    function mainLoop() {
+        if (!simState.running) return;
+
+        const dt = 0.01;
+        simState.vars = rk4Step(simState.vars, dt);
+
+        if(simState.phaseArea.active){
+            simState.phaseArea.points = simState.phaseArea.points.map(p => rk4Step(p, dt));
+        }
+
+        if(frameCount % 5 === 0){ // Only record/draw every few frames
+            simState.phaseTrajectory.push(simState.vars);
+            if(simState.phaseTrajectory.length > 1000) simState.phaseTrajectory.shift();
+            draw();
+
+            if(simState.phaseArea.active){
+                 const currentArea = polygonArea(simState.phaseArea.points);
+                 document.getElementById('current-area').textContent = currentArea.toExponential(2);
+                 const initialArea = parseFloat(document.getElementById('initial-area').textContent);
+                 const change = 100 * (currentArea - initialArea) / initialArea;
+                 document.getElementById('area-change').textContent = `${change.toFixed(1)}%`;
+            }
+        }
+        frameCount++;
+        requestAnimationFrame(mainLoop);
+    }
+
+    // --- Event Handling ---
+    document.getElementById('start-btn').addEventListener('click', () => {
+        simState.initial.spin = parseFloat(document.getElementById('spin-slider').value);
+        simState.initial.angle = parseFloat(document.getElementById('angle-slider').value) * Math.PI / 180;
+
+        simState.vars = {
+            t: 0,
+            theta: simState.initial.angle,
+            psi: 0,
+            phi: 0,
+            p_theta: 0,
+            p_psi: topParams.I1 * 0.1, // Small initial precession
+            p_phi: topParams.I3 * simState.initial.spin
+        };
+
+        simState.phaseTrajectory = [simState.vars];
+        simState.running = true;
+
+        const w = phaseCanvas.getBoundingClientRect().width, h = phaseCanvas.getBoundingClientRect().height;
+        pCtx.fillStyle = 'var(--canvas-bg)';
+        pCtx.fillRect(0,0,w,h);
+
+        requestAnimationFrame(mainLoop);
+    });
+
+    document.getElementById('draw-area-btn').addEventListener('click', () => {
+        simState.phaseArea.drawing = true;
+        phaseCanvas.style.cursor = 'crosshair';
+    });
+
+    phaseCanvas.addEventListener('mousedown', e => {
+        if(!simState.phaseArea.drawing) return;
+        const rect = phaseCanvas.getBoundingClientRect();
+        const x1 = e.clientX - rect.left;
+        const y1 = e.clientY - rect.top;
+
+        const mouseup = (e2) => {
+            const x2 = e2.clientX - rect.left;
+            const y2 = e2.clientY - rect.top;
+            const w = rect.width, h = rect.height;
+
+            const p1_psi = (x1/w)*2*Math.PI, p1_theta = (y1/h)*Math.PI/2;
+            const p2_psi = (x2/w)*2*Math.PI, p2_theta = (y1/h)*Math.PI/2;
+            const p3_psi = (x2/w)*2*Math.PI, p3_theta = (y2/h)*Math.PI/2;
+            const p4_psi = (x1/w)*2*Math.PI, p4_theta = (y2/h)*Math.PI/2;
+
+            const baseVars = simState.vars;
+            simState.phaseArea.points = [
+                {...baseVars, psi:p1_psi, theta:p1_theta},
+                {...baseVars, psi:p2_psi, theta:p2_theta},
+                {...baseVars, psi:p3_psi, theta:p3_theta},
+                {...baseVars, psi:p4_psi, theta:p4_theta},
+            ];
+
+            simState.phaseArea.active = true;
+            simState.phaseArea.drawing = false;
+            phaseCanvas.style.cursor = 'default';
+            window.removeEventListener('mouseup', mouseup);
+
+            const initialArea = polygonArea(simState.phaseArea.points);
+            document.getElementById('initial-area').textContent = initialArea.toExponential(2);
+        };
+        window.addEventListener('mouseup', mouseup);
+    });
+
+    // Init sliders text
+    document.getElementById('spin-slider').oninput = e => document.getElementById('spin-value').textContent = e.target.value;
+    document.getElementById('angle-slider').oninput = e => document.getElementById('angle-value').textContent = e.target.value;
+});
+</script>
+</body>
+</html>

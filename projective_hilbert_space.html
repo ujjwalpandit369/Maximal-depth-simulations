@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projective Hilbert Space: The Bloch Sphere</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #e74c3c;
+            --secondary-color: #3498db;
+            --border-color: #34495e;
+            --canvas-bg: #212f3d;
+            --accent-color: #f1c40f;
+            --font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:move; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--border-color); background-color:#566573; color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        #info-display { background:rgba(0,0,0,0.2); border-top:3px solid var(--accent-color); padding:10px; font-size:0.9em; }
+        #info-display p { margin:0.5em 0; }
+        #info-display .value { font-weight:bold; color:var(--text-color); float:right; }
+        .ket { font-family: 'Times New Roman', Times, serif; font-style: italic; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Projective Hilbert Space & The Bloch Sphere</h1>
+    <p>Visualizing the state space of a quantum bit (qubit) and understanding why a "global phase" doesn't matter.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">The Bloch Sphere</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Define Qubit State</h3>
+                <label>Polar Angle (θ): <span id="theta-value">90</span>°</label>
+                <input type="range" id="theta-slider" min="0" max="180" value="90" step="1">
+                <label>Azimuthal Angle (φ): <span id="phi-value">45</span>°</label>
+                <input type="range" id="phi-slider" min="0" max="360" value="45" step="1">
+            </div>
+            <div class="controls-group">
+                <h3>2. Apply Global Phase</h3>
+                <label>Global Phase (α): <span id="alpha-value">0</span>°</label>
+                <input type="range" id="alpha-slider" min="0" max="360" value="0" step="1">
+            </div>
+            <div id="info-display">
+                <p>State Vector |ψ⟩ = cos(θ/2)|0⟩ + e<sup>iφ</sup>sin(θ/2)|1⟩</p>
+                <hr style="border-color:var(--border-color)">
+                <p>Physical State: <span class="value">Unchanged</span></p>
+                <p>Global Phase Factor e<sup>iα</sup>: <span class="value" id="phase-factor">1.00</span></p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Welcome to the Quantum World of Qubits!</h4>
+        <p>In classical computing, a bit is either 0 or 1. A quantum bit, or <strong>qubit</strong>, can be in a "superposition" of both states at once. The Bloch Sphere is a beautiful way to visualize all possible states of a single qubit.</p>
+        <h4>Step 1: The State on the Sphere</h4>
+        <p>A qubit's state is represented by an arrow pointing from the center of the sphere to its surface.
+        <ul>
+            <li>The <strong>North Pole</strong> represents the pure state <span class="ket">|0⟩</span>.</li>
+            <li>The <strong>South Pole</strong> represents the pure state <span class="ket">|1⟩</span>.</li>
+            <li>Any other point on the surface is a superposition of <span class="ket">|0⟩</span> and <span class="ket">|1⟩</span>.</li>
+        </ul>
+        Use the <strong>Polar Angle (θ)</strong> and <strong>Azimuthal Angle (φ)</strong> sliders to move the state vector around the sphere and explore different superpositions.
+        </p>
+        <h4>Step 2: The Hidden Dimension - Global Phase</h4>
+        <p>In quantum mechanics, the overall "phase" of a state vector doesn't change any physical measurement. This is called a <strong>global phase</strong>. The equation for a quantum state is `|ψ⟩`, but the state `e^(iα)|ψ⟩` is physically identical for any angle `α`.
+        <br><br>
+        This is the most important part of the simulation. Use the <strong>Global Phase (α)</strong> slider. Watch the sphere closely.
+        </p>
+        <h4>Step 3: What Changed? (And What Didn't)</h4>
+        <p>As you move the `α` slider, notice two things:
+        <ol>
+            <li>The main arrow representing the state on the Bloch sphere <strong>does not move at all</strong>.</li>
+            <li>A small "phase clock" or ring drawn on the arrow's shaft <em>does</em> rotate.</li>
+        </ol>
+        This is the key insight! The rotating clock represents the changing global phase `e^(iα)`. But since this phase has no physical consequence, the actual state on the Bloch sphere remains fixed. The Bloch sphere doesn't represent the raw state vectors in Hilbert space, but the "rays" of physically equivalent vectors. This space of rays is called a <strong>Projective Hilbert Space</strong>.
+        <br><br>
+        In essence, the Bloch sphere is a "quotient space" where we have "divided out" the un-physical global phase, showing us only the physically distinct states. All the vectors that differ only by a global phase are projected down to the same single point on the sphere.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minified 3D rendering and math library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+
+    // --- DOM Elements & Contexts ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const sliders = {
+        theta: document.getElementById('theta-slider'),
+        phi: document.getElementById('phi-slider'),
+        alpha: document.getElementById('alpha-slider'),
+    };
+    const values = {
+        theta: document.getElementById('theta-value'),
+        phi: document.getElementById('phi-value'),
+        alpha: document.getElementById('alpha-value'),
+        phaseFactor: document.getElementById('phase-factor'),
+    };
+
+    // --- State ---
+    let simState = {
+        state: { theta: Math.PI/2, phi: Math.PI/4, alpha: 0 },
+        view: { rotX: 0.3, rotY: 0.5, zoom: 4 },
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Geometry ---
+    const sphere = { verts: [], lines: [] };
+    function createSphere(detail) {
+        // Latitude lines
+        for(let i=1; i<detail/2; i++){
+            const lat = i/(detail/2)*Math.PI - Math.PI/2;
+            for(let j=0; j<=detail; j++){
+                const lon = j/detail * 2 * Math.PI;
+                sphere.verts.push([Math.cos(lon)*Math.cos(lat), Math.sin(lat), Math.sin(lon)*Math.cos(lat)]);
+            }
+        }
+        // Longitude lines
+        for(let i=0; i<detail; i++){
+            const lon = i/detail * Math.PI;
+            for(let j=0; j<=detail; j++){
+                const lat = j/detail * 2 * Math.PI;
+                sphere.verts.push([Math.sin(lon)*Math.cos(lat), Math.cos(lon), Math.sin(lon)*Math.sin(lat)]);
+            }
+        }
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return {
+                x: w/2 * (1 + (mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d),
+                y: h/2 * (1 - (mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d),
+                z: (mvp[2]*x+mvp[6]*y+mvp[10]*z+mvp[14])/d
+            };
+        };
+
+        // Draw sphere wireframe
+        ctx.strokeStyle = 'rgba(236, 240, 241, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const detail = 32;
+        for(let i=0; i<sphere.verts.length; i+=detail+1){
+            for(let j=0; j<detail; j++){
+                const p1 = transform(sphere.verts[i+j]);
+                const p2 = transform(sphere.verts[i+j+1]);
+                if(p1.z < 0 && p2.z < 0){
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                }
+            }
+        }
+        ctx.stroke();
+
+        // Draw axes
+        const axes = [[[0,0,0], [0,1.3,0]], [[0,0,0], [1.3,0,0]], [[0,0,0], [0,0,1.3]]];
+        ctx.lineWidth = 1;
+        ctx.font = '14px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+        axes.forEach((axis, i) => {
+            const p1 = transform(axis[0]);
+            const p2 = transform(axis[1]);
+            ctx.strokeStyle = ['#e74c3c', '#2ecc71', '#3498db'][i];
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.fillText(['y |+⟩', 'x', 'z |0⟩'][i], p2.x + 5, p2.y + 5);
+        });
+        const southPole = transform([0,-1.3,0]);
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillText('|-⟩', southPole.x+5, southPole.y+5);
+        const southPoleZ = transform([0,0,-1.3]);
+        ctx.fillStyle = '#3498db';
+        ctx.fillText('|1⟩', southPoleZ.x+5, southPoleZ.y+5);
+
+
+        // Draw state vector
+        const {theta, phi, alpha} = simState.state;
+        const vx = Math.sin(theta) * Math.cos(phi);
+        const vy = Math.cos(theta); // Y is up in this coordinate system
+        const vz = Math.sin(theta) * Math.sin(phi);
+        const p_start = transform([0,0,0]);
+        const p_end = transform([vx, vy, vz]);
+
+        ctx.strokeStyle = 'var(--accent-color)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(p_start.x, p_start.y);
+        ctx.lineTo(p_end.x, p_end.y);
+        ctx.stroke();
+
+        // Draw phase clock
+        const T = [p_end.x - p_start.x, p_end.y - p_start.y, 0];
+        const T_len = Math.hypot(T[0], T[1]);
+        const T_norm = [T[0]/T_len, T[1]/T_len, 0];
+        const N_norm = [-T_norm[1], T_norm[0], 0]; // Normal in screen space
+
+        ctx.strokeStyle = 'var(--accent-color)';
+        ctx.lineWidth = 1.5;
+        const clockRadius = 15;
+        const clockDist = T_len * 0.5;
+        const clockCenterX = p_start.x + T_norm[0] * clockDist;
+        const clockCenterY = p_start.y + T_norm[1] * clockDist;
+
+        ctx.beginPath();
+        for(let i=0; i<=32; i++){
+            const angle = i/32 * 2*Math.PI;
+            const x = clockCenterX + Math.cos(angle)*clockRadius*N_norm[0];
+            const y = clockCenterY + Math.cos(angle)*clockRadius*N_norm[1];
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = 'white';
+        const indicatorX = clockCenterX + Math.cos(alpha)*clockRadius*N_norm[0];
+        const indicatorY = clockCenterY + Math.cos(alpha)*clockRadius*N_norm[1];
+        ctx.beginPath();
+        ctx.arc(indicatorX, indicatorY, 3, 0, 2*Math.PI);
+        ctx.fill();
+    }
+
+    // --- Event Handling & Main Loop ---
+    function init() {
+        createSphere(32);
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w * window.devicePixelRatio; ctx.canvas.height = h * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        Object.keys(sliders).forEach(key => {
+            sliders[key].addEventListener('input', e => {
+                simState.state[key] = parseFloat(e.target.value) * Math.PI / 180;
+                values[key].textContent = e.target.value;
+                if(key==='alpha') values.phaseFactor.textContent = `e^i${(simState.state.alpha*180/Math.PI).toFixed(0)}°`;
+            });
+        });
+
+        canvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+            }
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+        mainLoop();
+    }
+    init();
+});
+</script>
+</body>
+</html>

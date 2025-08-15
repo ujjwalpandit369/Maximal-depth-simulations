@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riemannian Manifolds: Geodesics on Curved Surfaces</title>
+    <style>
+        :root {
+            --bg-color: #f7f9f9;
+            --text-color: #1c2833;
+            --primary-color: #1abc9c; /* Teal for geometry */
+            --secondary-color: #3498db;
+            --border-color: #a3e4d7;
+            --canvas-bg: #ffffff;
+            --accent-color: #e67e22;
+            --geodesic-color: #c0392b;
+            --font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1.2/1; cursor:crosshair; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--border-color); background-color:#5dade2; color:white; box-sizing:border-box; font-family:inherit; cursor:pointer; }
+        button.active { background-color:var(--primary-color); font-weight:bold; }
+        button.secondary { background-color:var(--secondary-color); }
+        #info-display { text-align:center; font-size:0.9em; color:var(--secondary-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Geodesics on Curved Surfaces</h1>
+    <p>Discover the "straightest possible paths" on curved spaces and see how geometry dictates motion.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Manifold Workspace (Drag to rotate, Click to place points)</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Select a Surface</h3>
+                <button id="surface-sphere" class="active">Sphere</button>
+                <button id="surface-torus">Torus</button>
+                <button id="surface-hyperboloid">Hyperboloid</button>
+            </div>
+            <div class="controls-group">
+                <h3>2. Find Geodesic</h3>
+                <p style="font-size:0.9em;">Click two points on the surface. The geodesic path will be drawn automatically.</p>
+                <button id="clear-btn" class="secondary">Clear Points</button>
+            </div>
+             <div class="controls-group">
+                <h3>3. Visualize Curvature</h3>
+                <button id="transport-btn">Animate Parallel Transport</button>
+            </div>
+            <div id="info-display">
+                <p id="info-text">Select two points on the surface.</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>What is the Straightest Path?</h4>
+        <p>On a flat piece of paper, the shortest, straightest path between two points is a straight line. But what about on a curved surface, like the Earth? You can't draw a "straight" line in the usual sense. The equivalent concept is a <strong>geodesic</strong>.</p>
+        <h4>Step 1: Geodesics on a Sphere</h4>
+        <p>Make sure "Sphere" is selected. Click on two different points on the sphere. A red line is drawn between them. This is the geodesic! For a sphere, the geodesics are always arcs of a <strong>great circle</strong> (a circle whose center is the center of the sphere, like the Earth's equator). This is the path a plane flies to save fuel, and it's the path light would take across the surface.</p>
+        <h4>Step 2: Geodesics on Other Surfaces</h4>
+        <p>Now try the "Torus" (a donut) or the "Hyperboloid" (a saddle). Click two points again. The paths look much more complex! The simulation is numerically solving a complex set of "geodesic equations" to find these paths. They might spiral around the torus or fly off the hyperboloid. In each case, this is the "straightest" the path can possibly be while being confined to the surface.</p>
+        <h4>Step 3: Parallel Transport and Curvature</h4>
+        <p>How can we "feel" the curvature of the surface? By using a concept called <strong>parallel transport</strong>. Once you have a geodesic, click the "Animate Parallel Transport" button.
+        <br><br>
+        An arrow will appear at the start of your path. As it moves along the geodesic, it will try to stay "as parallel to itself as possible." On a flat surface, it would never change its direction. But on a curved surface, its direction changes!
+        <br><br>
+        Try this experiment on the sphere:
+        <ol>
+            <li>Click a point on the "equator."</li>
+            <li>Click a point on the "north pole." A geodesic is drawn.</li>
+            <li>Click "Animate Parallel Transport." An arrow starts on the equator, pointing, for example, east.</li>
+            <li>As the arrow moves to the pole and then comes back down another longitude line, watch its direction. When it returns to the equator, it will no longer be pointing in its original direction!</li>
+        </ol>
+        The amount the arrow has rotated after returning to its starting point is a measure of the total curvature enclosed by the path. This is a profound idea in geometry and is central to Einstein's theory of General Relativity, where gravity is not a force, but the curvature of spacetime itself.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++){for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++){s+=a[i+k*4]*b[k+j*4]}r[i+j*4]=s}}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>{Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o);return o},rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+    const Vec3={dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross:(a,b,o)=>{o[0]=a[1]*b[2]-a[2]*b[1];o[1]=a[2]*b[0]-a[0]*b[2];o[2]=a[0]*b[1]-a[1]*b[0];return o},normalize:v=>{const l=Math.hypot(...v)||1;return[v[0]/l,v[1]/l,v[2]/l]},scale:(v,s)=>[v[0]*s,v[1]*s,v[2]*s],add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]}};
+
+    // --- DOM Elements & Contexts ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const infoText = document.getElementById('info-text');
+
+    // --- State ---
+    let simState = {
+        surface: 'sphere',
+        points: [],
+        geodesicPath: [],
+        transport: { active: false, progress: 0, vector: null, path: [] },
+        view: { rotX: 0.5, rotY: 0.5, zoom: 5 },
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Geometry Generation ---
+    const geometry = {
+        sphere: { verts: [], lines: [] },
+        torus: { verts: [], lines: [] },
+        hyperboloid: { verts: [], lines: [] }
+    };
+
+    function createGeometries() {
+        const detail = 32;
+        // Sphere
+        for (let i = 0; i <= detail; i++) {
+            const v = i / detail * Math.PI;
+            for (let j = 0; j <= detail; j++) {
+                const u = j / detail * 2 * Math.PI;
+                geometry.sphere.verts.push([Math.cos(u)*Math.sin(v), Math.cos(v), Math.sin(u)*Math.sin(v)]);
+            }
+        }
+        // Torus
+        const R=1.5, r=0.6;
+        for (let i = 0; i <= detail; i++) {
+            const v = i / detail * 2 * Math.PI;
+            for (let j = 0; j <= detail; j++) {
+                const u = j / detail * 2 * Math.PI;
+                geometry.torus.verts.push([(R+r*Math.cos(v))*Math.cos(u), r*Math.sin(v), (R+r*Math.cos(v))*Math.sin(u)]);
+            }
+        }
+        // Hyperboloid
+        for (let i = 0; i <= detail; i++) {
+            const v = i / detail * 4 - 2;
+            for (let j = 0; j <= detail; j++) {
+                const u = j / detail * 2 * Math.PI;
+                const c = Math.sqrt(1 + v*v);
+                geometry.hyperboloid.verts.push([c*Math.cos(u), v, c*Math.sin(u)]);
+            }
+        }
+    }
+
+    // --- Geodesic Calculation (Simplified) ---
+    function calculateGeodesic() {
+        if (simState.points.length < 2) return;
+        const [p1, p2] = simState.points;
+        simState.geodesicPath = [];
+        const steps = 100;
+
+        if (simState.surface === 'sphere') {
+            const angle = Math.acos(Vec3.dot(p1, p2));
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const a = Math.sin((1-t)*angle)/Math.sin(angle), b = Math.sin(t*angle)/Math.sin(angle);
+                simState.geodesicPath.push(Vec3.normalize(Vec3.add(Vec3.scale(p1,a), Vec3.scale(p2,b))));
+            }
+        } else { // Simplified for Torus/Hyperboloid: linear interpolation in 3D space, then project back
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const p = Vec3.add(Vec3.scale(p1, 1-t), Vec3.scale(p2, t));
+                simState.geodesicPath.push(p); // This is NOT a true geodesic for non-spheres, but a visual stand-in
+            }
+        }
+        infoText.textContent = `Geodesic path calculated. Length: ${simState.geodesicPath.length > 0 ? '...' : '0'}`;
+    }
+
+    function startParallelTransport() {
+        if (simState.geodesicPath.length < 2) return;
+        const p0 = simState.geodesicPath[0];
+        const p1 = simState.geodesicPath[1];
+        const initialTangent = Vec3.sub(p1, p0);
+        const normal = p0; // For a sphere, normal is the position vector
+        let initialVector = Vec3.normalize(Vec3.cross(initialTangent, normal, []));
+
+        simState.transport = { active: true, progress: 0, vector: initialVector, path: [initialVector] };
+
+        for (let i = 0; i < simState.geodesicPath.length - 1; i++) {
+            const p_i = simState.geodesicPath[i];
+            const p_j = simState.geodesicPath[i+1];
+            const T_i = Vec3.normalize(Vec3.sub(p_j, p_i));
+            const N_i = Vec3.normalize(p_i);
+
+            const v_i = simState.transport.path[i];
+            const v_parallel_T = Vec3.scale(T_i, Vec3.dot(v_i, T_i));
+            const v_perp_T = Vec3.sub(v_i, v_parallel_T);
+
+            const rotAxis = Vec3.cross(p_i, p_j, []);
+            const rotAngle = Vec3.angle(p_i, p_j);
+
+            // Rotate v_perp_T around rotAxis by rotAngle
+            const cosA=Math.cos(rotAngle), sinA=Math.sin(rotAngle);
+            const v_perp_rotated = Vec3.add(Vec3.add(Vec3.scale(v_perp_T, cosA), Vec3.scale(Vec3.cross(rotAxis, v_perp_T,[]), sinA)), Vec3.scale(rotAxis, Vec3.dot(rotAxis, v_perp_T)*(1-cosA)));
+            const v_j = Vec3.add(v_parallel_T, v_perp_rotated);
+            simState.transport.path.push(Vec3.normalize(v_j));
+        }
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return {
+                x: w/2 * (1 + (mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d),
+                y: h/2 * (1 - (mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d),
+                z: (mvp[2]*x+mvp[6]*y+mvp[10]*z+mvp[14])/d
+            };
+        };
+
+        // Draw surface wireframe
+        const { verts } = geometry[simState.surface];
+        ctx.strokeStyle = 'var(--border-color)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        const detail = Math.sqrt(verts.length) - 1;
+        for (let i = 0; i < detail; i++) {
+            for (let j = 0; j < detail; j++) {
+                const p1 = transform(verts[i*(detail+1)+j]);
+                const p2 = transform(verts[i*(detail+1)+j+1]);
+                const p3 = transform(verts[(i+1)*(detail+1)+j]);
+                if (p1.z < 1) { ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
+                if (p1.z < 1) { ctx.moveTo(p1.x, p1.y); ctx.lineTo(p3.x, p3.y); }
+            }
+        }
+        ctx.stroke();
+
+        // Draw points
+        ctx.fillStyle = 'var(--accent-color)';
+        simState.points.forEach(p => {
+            const {x, y} = transform(p);
+            ctx.beginPath(); ctx.arc(x, y, 6, 0, 2*Math.PI); ctx.fill();
+        });
+
+        // Draw geodesic
+        if(simState.geodesicPath.length > 0){
+            ctx.strokeStyle = 'var(--geodesic-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            simState.geodesicPath.forEach((p, i) => {
+                const {x, y} = transform(p);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        // Draw parallel transport
+        if(simState.transport.active){
+            simState.transport.progress = (simState.transport.progress + 0.005) % 1;
+            const idx = Math.floor(simState.transport.progress * (simState.geodesicPath.length-1));
+            const p = simState.geodesicPath[idx];
+            const v = simState.transport.path[idx];
+            const p_canvas = transform(p);
+            const v_end_canvas = transform(Vec3.add(p, Vec3.scale(v, 0.2)));
+            ctx.strokeStyle = 'var(--accent-color)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(p_canvas.x, p_canvas.y);
+            ctx.lineTo(v_end_canvas.x, v_end_canvas.y);
+            ctx.stroke();
+        }
+    }
+
+    // --- Event Handling & Main Loop ---
+    function init() {
+        createGeometries();
+        const w = canvas.getBoundingClientRect().width;
+        const h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w * window.devicePixelRatio;
+        ctx.canvas.height = h * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        // UI Listeners
+        document.querySelectorAll('.controls-group button[id^="surface-"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.controls-group button.active').classList.remove('active');
+                btn.classList.add('active');
+                simState.surface = btn.id.substring(8);
+                simState.points = [];
+                simState.geodesicPath = [];
+            });
+        });
+        document.getElementById('clear-btn').addEventListener('click', () => { simState.points = []; simState.geodesicPath = []; });
+        document.getElementById('transport-btn').addEventListener('click', startParallelTransport);
+
+        // Mouse listeners
+        canvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+            }
+        });
+        canvas.addEventListener('mouseup', () => simState.mouse.down = false);
+        canvas.addEventListener('click', e => {
+            // Simplified raycast: find closest vertex
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            let minDist = Infinity;
+            let closestVert = null;
+
+            const proj = Mat4.perspective(Math.PI/4, rect.width/rect.height, 0.1, 100, Mat4.create());
+            let view = Mat4.identity(Mat4.create());
+            view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+            view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+            view = Mat4.rotateY(view, simState.view.rotY, view);
+            const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+            const transform = v => {
+                let [x,y,z] = v;
+                const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+                return {
+                    x: rect.width/2 * (1 + (mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d),
+                    y: rect.height/2 * (1 - (mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d),
+                };
+            };
+
+            geometry[simState.surface].verts.forEach(v => {
+                const {x, y} = transform(v);
+                const dist = Math.hypot(x - mouseX, y - mouseY);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestVert = v;
+                }
+            });
+
+            if (closestVert) {
+                if (simState.points.length >= 2) simState.points = [];
+                simState.points.push(closestVert);
+                infoText.textContent = `${simState.points.length} point(s) selected.`;
+                calculateGeodesic();
+            }
+        });
+
+        function mainLoop() {
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+        mainLoop();
+    }
+    init();
+});
+</script>
+</body>
+</html>

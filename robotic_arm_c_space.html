@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Manifold: A Robotic Arm on a Sphere</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f7;
+            --text-color: #212f3d;
+            --primary-color: #2980b9;
+            --secondary-color: #8e44ad;
+            --border-color: #b0c4de;
+            --canvas-bg: #ffffff;
+            --accent-color: #f39c12;
+            --arm-color: #e74c3c;
+            --c-space-color: #27ae60;
+            --font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; font-weight: 400; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 2; min-width: 300px; display: flex; flex-wrap: wrap; gap: 1em;}
+        .sphere-panel, .c-space-panel { flex: 1; min-width: 280px; }
+        .controls-sidebar { flex: 1; min-width: 250px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; aspect-ratio: 1/1; cursor: pointer; }
+        #sphere-canvas { cursor: move; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--primary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        button.secondary { background-color: var(--secondary-color); }
+        #info-display { background: #fff; border-left: 5px solid var(--primary-color); padding: 10px; margin-top: 1em; font-size: 0.9em;}
+        #info-display p { margin: 0.2em 0; }
+        #info-display .value { font-weight: bold; color: var(--primary-color); float: right; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Configuration Manifold of a Spherical Robot Arm</h1>
+        <p>Explore the relationship between a robot's physical workspace and its abstract configuration space (C-space).</p>
+        <div class="simulation-area">
+            <div class="main-content">
+                <div class="sphere-panel">
+                    <p class="panel-title">Workspace (Drag to rotate)</p>
+                    <canvas id="sphere-canvas"></canvas>
+                </div>
+                <div class="c-space-panel">
+                    <p class="panel-title">Configuration Space (C-Space)</p>
+                    <canvas id="c-space-canvas"></canvas>
+                </div>
+            </div>
+            <div class="controls-sidebar">
+                <div class="controls-group">
+                    <h3>Control the Arm</h3>
+                    <p style="font-size:0.9em;">Drag the point in C-space, or use the sliders.</p>
+                    <label for="theta1-slider">Joint 1 (θ₁): <span id="theta1-value">0</span>°</label>
+                    <input type="range" id="theta1-slider" min="0" max="360" value="0" step="1">
+                    <label for="theta2-slider">Joint 2 (θ₂): <span id="theta2-value">0</span>°</label>
+                    <input type="range" id="theta2-slider" min="-180" max="180" value="0" step="1">
+                </div>
+                <div class="controls-group">
+                    <h3>Obstacles</h3>
+                    <p style="font-size:0.9em;">Click on the sphere to add a circular obstacle.</p>
+                    <button id="clear-obstacles-btn" class="secondary">Clear Obstacles</button>
+                    <div id="c-space-status" style="text-align:center; font-size:0.9em; color: var(--secondary-color);"></div>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to Robot Abstract-o-Land!</h4>
+            <p>On the left, you see a simple robotic arm with two joints, living on the surface of a sphere. This is its <strong>Workspace</strong>—the physical world it moves in. On the right is a square. This is its "mind," its <strong>Configuration Space (C-Space)</strong>. This abstract map contains every single possible pose the robot arm can make.</p>
+            <h4>Step 1: The Two Worlds</h4>
+            <p>The robot's pose is completely defined by its two joint angles, `θ₁` and `θ₂`.
+            <ul>
+                <li>`θ₁` controls the rotation of the first link around the sphere's pole (like longitude).</li>
+                <li>`θ₂` controls the angle of the second link relative to the first.</li>
+            </ul>
+            The C-space on the right is a map of these two angles. The horizontal axis is `θ₁` (from 0° to 360°), and the vertical axis is `θ₂` (from -180° to 180°). The green dot shows the arm's current `(θ₁, θ₂)` configuration.
+            </p>
+            <h4>Step 2: Linked Motion</h4>
+            <p>Try dragging the green dot around in the C-space square. As you do, watch the physical arm on the sphere move. Every point in the C-space corresponds to exactly one unique pose of the arm. Now try the sliders—they do the same thing!</p>
+            <h4>Step 3: The Torus</h4>
+            <p>Drag the green dot off the right side of the square. It reappears on the left! Now drag it off the top—it reappears on the bottom. Why? Because angles wrap around. 360° is the same as 0°. This means the C-space isn't really a square; it's a <strong>torus</strong> (a donut shape). The square is just a "flattened" map of this donut.</p>
+            <h4>Step 4: Obstacles</h4>
+            <p>This is where C-space becomes incredibly useful for robot motion planning. Click on the sphere on the left to place a circular obstacle (a "no-go zone").
+            <br><br>
+            Instantly, a complex shape appears in the C-space on the right. This is the <strong>forbidden region</strong>. Any green dot placed inside this region corresponds to a robot arm pose that would collide with the obstacle. The robot is not allowed to enter this part of its "mind."
+            <br><br>
+            Planning a path for the robot in the physical world can be very hard. But planning a path in C-space is much easier: just find a path for the green dot from its start to its goal that doesn't enter the forbidden region. This is the core idea behind modern robotics path planning.
+            </p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Minified 3D rendering and math library ---
+        const Mat4 = {
+            create: () => new Float32Array(16),
+            identity: m => (m.fill(0), m[0]=m[5]=m[10]=m[15]=1, m),
+            multiply: (a, b, out) => {
+                const [a00,a01,a02,a03,a10,a11,a12,a13,a20,a21,a22,a23,a30,a31,a32,a33] = a;
+                let [b0,b1,b2,b3] = [b[0],b[1],b[2],b[3]];
+                out[0]=b0*a00+b1*a10+b2*a20+b3*a30; out[1]=b0*a01+b1*a11+b2*a21+b3*a31; out[2]=b0*a02+b1*a12+b2*a22+b3*a32; out[3]=b0*a03+b1*a13+b2*a23+b3*a33;
+                [b0,b1,b2,b3] = [b[4],b[5],b[6],b[7]];
+                out[4]=b0*a00+b1*a10+b2*a20+b3*a30; out[5]=b0*a01+b1*a11+b2*a21+b3*a31; out[6]=b0*a02+b1*a12+b2*a22+b3*a32; out[7]=b0*a03+b1*a13+b2*a23+b3*a33;
+                [b0,b1,b2,b3] = [b[8],b[9],b[10],b[11]];
+                out[8]=b0*a00+b1*a10+b2*a20+b3*a30; out[9]=b0*a01+b1*a11+b2*a21+b3*a31; out[10]=b0*a02+b1*a12+b2*a22+b3*a32; out[11]=b0*a03+b1*a13+b2*a23+b3*a33;
+                [b0,b1,b2,b3] = [b[12],b[13],b[14],b[15]];
+                out[12]=b0*a00+b1*a10+b2*a20+b3*a30; out[13]=b0*a01+b1*a11+b2*a21+b3*a31; out[14]=b0*a02+b1*a12+b2*a22+b3*a32; out[15]=b0*a03+b1*a13+b2*a23+b3*a33;
+                return out;
+            },
+            perspective: (fov, aspect, near, far, out) => {
+                const f=1/Math.tan(fov/2); out.fill(0);
+                out[0]=f/aspect; out[5]=f; out[10]=(far+near)/(near-far); out[11]=-1; out[14]=(2*far*near)/(near-far);
+                return out;
+            },
+            translate: (m, v, out) => (Mat4.multiply(m, [1,0,0,0, 0,1,0,0, 0,0,1,0, v[0],v[1],v[2],1], out), out),
+            rotateX: (m, rad, out) => (Mat4.multiply(m, [1,0,0,0, 0,Math.cos(rad),Math.sin(rad),0, 0,-Math.sin(rad),Math.cos(rad),0, 0,0,0,1], out), out),
+            rotateY: (m, rad, out) => (Mat4.multiply(m, [Math.cos(rad),0,-Math.sin(rad),0, 0,1,0,0, Math.sin(rad),0,Math.cos(rad),0, 0,0,0,1], out), out),
+        };
+        const Vec3 = {
+            transformMat4: (v, m, out) => {
+                const [x,y,z] = v, w=m[3]*x+m[7]*y+m[11]*z+m[15]||1;
+                out[0]=(m[0]*x+m[4]*y+m[8]*z+m[12])/w; out[1]=(m[1]*x+m[5]*y+m[9]*z+m[13])/w; out[2]=(m[2]*x+m[6]*y+m[10]*z+m[14])/w;
+                return out;
+            },
+            normalize: v => { const l=Math.hypot(...v); return l>0? [v[0]/l, v[1]/l, v[2]/l]:[0,0,0]; },
+            dot: (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+            cross: (a,b,out) => { out[0]=a[1]*b[2]-a[2]*b[1]; out[1]=a[2]*b[0]-a[0]*b[2]; out[2]=a[0]*b[1]-a[1]*b[0]; return out; },
+            angle: (a,b) => Math.acos(Math.max(-1, Math.min(1, Vec3.dot(a,b) / (Math.hypot(...a) * Math.hypot(...b))))),
+        };
+
+        // --- DOM Elements & Contexts ---
+        const sphereCanvas = document.getElementById('sphere-canvas');
+        const cSpaceCanvas = document.getElementById('c-space-canvas');
+        const sCtx = sphereCanvas.getContext('2d');
+        const cCtx = cSpaceCanvas.getContext('2d');
+        const sliders = { t1: document.getElementById('theta1-slider'), t2: document.getElementById('theta2-slider') };
+        const values = { t1: document.getElementById('theta1-value'), t2: document.getElementById('theta2-value') };
+        const cSpaceStatus = document.getElementById('c-space-status');
+
+        // --- Simulation State ---
+        let simState = {
+            arm: { t1: 0, t2: 0, l1: 1.0, l2: 0.8 }, // Angles in radians, lengths as radians on sphere
+            view: { rotX: 0.5, rotY: 0.5, zoom: 5 },
+            mouse: { down: false, x: 0, y: 0 },
+            obstacles: [],
+            cSpaceForbidden: null,
+            cSpaceNeedsUpdate: true
+        };
+
+        // --- 3D Sphere Geometry ---
+        let sphereVerts, sphereLines;
+        function createSphere(radius, detail) {
+            sphereVerts = [], sphereLines = [];
+            for (let i = 0; i <= detail; i++) {
+                const v = i / detail;
+                const phi = v * Math.PI;
+                for (let j = 0; j <= detail; j++) {
+                    const u = j / detail;
+                    const theta = u * 2 * Math.PI;
+                    sphereVerts.push([radius*Math.cos(theta)*Math.sin(phi), radius*Math.sin(theta)*Math.sin(phi), radius*Math.cos(phi)]);
+                }
+            }
+            for (let i = 0; i < detail; i++) {
+                for (let j = 0; j < detail; j++) {
+                    const first = i * (detail + 1) + j;
+                    const second = first + detail + 1;
+                    sphereLines.push(first, first + 1, first, second);
+                }
+            }
+        }
+
+        // --- Arm Kinematics ---
+        function getArmPoints(t1, t2) {
+            const p0 = [0, 0, 1]; // North pole
+
+            // First joint
+            const p1 = [Math.sin(simState.arm.l1)*Math.cos(t1), Math.sin(simState.arm.l1)*Math.sin(t1), Math.cos(simState.arm.l1)];
+
+            // Second joint - using Rodrigues' rotation formula for rotation on sphere
+            const axis = Vec3.normalize(Vec3.cross(p0, p1, []));
+            const rotAngle = simState.arm.l2;
+            const cosA = Math.cos(rotAngle), sinA = Math.sin(rotAngle);
+            const p2 = [
+                p1[0]*cosA + (axis[1]*p1[2] - axis[2]*p1[1])*sinA + axis[0]*(Vec3.dot(axis,p1))*(1-cosA),
+                p1[1]*cosA + (axis[2]*p1[0] - axis[0]*p1[2])*sinA + axis[1]*(Vec3.dot(axis,p1))*(1-cosA),
+                p1[2]*cosA + (axis[0]*p1[1] - axis[1]*p1[0])*sinA + axis[2]*(Vec3.dot(axis,p1))*(1-cosA),
+            ];
+
+            // Great circle arcs
+            const arc1 = [], arc2 = [];
+            const steps = 20;
+            for(let i=0; i<=steps; i++){
+                const t = i/steps;
+                const angle1 = Vec3.angle(p0, p1);
+                const a1 = Math.sin((1-t)*angle1)/Math.sin(angle1), b1 = Math.sin(t*angle1)/Math.sin(angle1);
+                arc1.push([ a1*p0[0]+b1*p1[0], a1*p0[1]+b1*p1[1], a1*p0[2]+b1*p1[2] ]);
+
+                const angle2 = Vec3.angle(p1, p2);
+                if(angle2 > 0.01){
+                    const a2 = Math.sin((1-t)*angle2)/Math.sin(angle2), b2 = Math.sin(t*angle2)/Math.sin(angle2);
+                    arc2.push([ a2*p1[0]+b2*p2[0], a2*p1[1]+b2*p2[1], a2*p1[2]+b2*p2[2] ]);
+                } else { arc2.push(p1); }
+            }
+
+            return { p1, p2, arc1, arc2 };
+        }
+
+        // --- C-Space Obstacle Calculation ---
+        function updateCSpaceObstacles() {
+            if (!simState.cSpaceNeedsUpdate || simState.obstacles.length === 0) return;
+            cSpaceStatus.textContent = 'Calculating forbidden region...';
+
+            const w = cSpaceCanvas.getBoundingClientRect().width;
+            const h = cSpaceCanvas.getBoundingClientRect().height;
+            const imgData = cCtx.createImageData(w, h);
+            const resolution = 64; // Calculate on a coarse grid
+
+            let forbidden = new Uint8ClampedArray(resolution * resolution * 4).fill(0);
+
+            setTimeout(() => { // Defer to prevent UI freeze
+                for(let i=0; i<resolution; i++){
+                    for(let j=0; j<resolution; j++){
+                        const t1 = (j/resolution) * 2 * Math.PI;
+                        const t2 = (i/resolution) * 2 * Math.PI - Math.PI;
+
+                        const arm = getArmPoints(t1, t2);
+                        let collision = false;
+                        for(const obs of simState.obstacles){
+                            for(const p of arm.arc1){ if(Vec3.angle(p, obs.pos) < obs.radius) collision = true; }
+                            for(const p of arm.arc2){ if(Vec3.angle(p, obs.pos) < obs.radius) collision = true; }
+                            if (collision) break;
+                        }
+
+                        if(collision){
+                            const idx = (i * resolution + j) * 4;
+                            forbidden[idx] = 139; forbidden[idx+1] = 0; forbidden[idx+2] = 0; forbidden[idx+3] = 150;
+                        }
+                    }
+                }
+                simState.cSpaceForbidden = forbidden;
+                simState.cSpaceNeedsUpdate = false;
+                cSpaceStatus.textContent = '';
+            }, 10);
+        }
+
+        // --- Drawing ---
+        function drawSphere() {
+            sCtx.fillStyle = 'var(--canvas-bg)';
+            sCtx.fillRect(0,0,sphereCanvas.width, sphereCanvas.height);
+
+            const w = sphereCanvas.getBoundingClientRect().width, h = sphereCanvas.getBoundingClientRect().height;
+            const projMatrix = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+            let viewMatrix = Mat4.identity(Mat4.create());
+            viewMatrix = Mat4.translate(viewMatrix, [0, 0, -simState.view.zoom], viewMatrix);
+            viewMatrix = Mat4.rotateX(viewMatrix, simState.view.rotX, viewMatrix);
+            viewMatrix = Mat4.rotateY(viewMatrix, simState.view.rotY, viewMatrix);
+
+            const transform = (v) => {
+                const p = Vec3.transformMat4(v, viewMatrix, []);
+                const clip = Vec3.transformMat4(p, projMatrix, []);
+                return { x: (clip[0]+1)/2*w, y: (1-clip[1])/2*h, z: p[2] };
+            };
+
+            // Draw sphere wireframe
+            sCtx.strokeStyle = 'var(--border-color)';
+            sCtx.lineWidth = 0.5;
+            sCtx.beginPath();
+            for(let i=0; i<sphereLines.length; i+=2){
+                const v1 = sphereVerts[sphereLines[i]];
+                const v2 = sphereVerts[sphereLines[i+1]];
+                const p1 = transform(v1);
+                const p2 = transform(v2);
+                if (p1.z > -simState.view.zoom+1 && p2.z > -simState.view.zoom+1) { // Basic back-face culling
+                    sCtx.moveTo(p1.x, p1.y);
+                    sCtx.lineTo(p2.x, p2.y);
+                }
+            }
+            sCtx.stroke();
+
+            // Draw obstacles
+            simState.obstacles.forEach(obs => {
+                sCtx.fillStyle = 'rgba(142, 68, 173, 0.5)';
+                const steps = 30;
+                sCtx.beginPath();
+                for(let i=0; i<=steps; i++){
+                    const angle = i/steps * 2 * Math.PI;
+                    const perpVec = Vec3.normalize([obs.pos[1], -obs.pos[0], 0]);
+                    const rotated_p = Vec3.normalize([
+                        obs.pos[0]*Math.cos(obs.radius) + (perpVec[1]*obs.pos[2] - perpVec[2]*obs.pos[1])*Math.sin(obs.radius),
+                        obs.pos[1]*Math.cos(obs.radius) + (perpVec[2]*obs.pos[0] - perpVec[0]*obs.pos[2])*Math.sin(obs.radius),
+                        obs.pos[2]*Math.cos(obs.radius) + (perpVec[0]*obs.pos[1] - perpVec[1]*obs.pos[0])*Math.sin(obs.radius)
+                    ]);
+                    const final_p = Vec3.normalize([
+                        rotated_p[0]*Math.cos(angle) - rotated_p[1]*Math.sin(angle),
+                        rotated_p[0]*Math.sin(angle) + rotated_p[1]*Math.cos(angle),
+                        rotated_p[2]
+                    ]);
+                    const {x, y, z} = transform(final_p);
+                    if(z > -simState.view.zoom+1){
+                        if(i===0) sCtx.moveTo(x,y); else sCtx.lineTo(x,y);
+                    }
+                }
+                sCtx.fill();
+            });
+
+            // Draw arm
+            const { arc1, arc2 } = getArmPoints(simState.arm.t1, simState.arm.t2);
+            sCtx.strokeStyle = 'var(--arm-color)';
+            sCtx.lineWidth = 4;
+            [arc1, arc2].forEach(arc => {
+                sCtx.beginPath();
+                arc.forEach((p, i) => {
+                    const {x, y, z} = transform(p);
+                    if (z > -simState.view.zoom+1) {
+                        if (i === 0) sCtx.moveTo(x, y); else sCtx.lineTo(x, y);
+                    }
+                });
+                sCtx.stroke();
+            });
+        }
+
+        function drawCSpace() {
+            const w = cSpaceCanvas.getBoundingClientRect().width;
+            const h = cSpaceCanvas.getBoundingClientRect().height;
+            cCtx.fillStyle = 'var(--canvas-bg)';
+            cCtx.fillRect(0,0,w,h);
+
+            // Draw forbidden region
+            if(simState.cSpaceForbidden){
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 64; tempCanvas.height = 64;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(new ImageData(simState.cSpaceForbidden, 64, 64), 0, 0);
+                cCtx.imageSmoothingEnabled = false;
+                cCtx.drawImage(tempCanvas, 0, 0, w, h);
+            }
+
+            // Draw grid
+            cCtx.strokeStyle = 'var(--border-color)';
+            cCtx.lineWidth = 0.5;
+            cCtx.beginPath();
+            for(let i=1; i<4; i++){
+                cCtx.moveTo(i*w/4, 0); cCtx.lineTo(i*w/4, h);
+                cCtx.moveTo(0, i*h/4); cCtx.lineTo(w, i*h/4);
+            }
+            cCtx.stroke();
+
+            // Draw current point
+            const x = w * simState.arm.t1 / (2*Math.PI);
+            const y = h * (1 - (simState.arm.t2 + Math.PI) / (2*Math.PI));
+            cCtx.fillStyle = 'var(--c-space-color)';
+            cCtx.strokeStyle = 'white';
+            cCtx.lineWidth = 2;
+            cCtx.beginPath();
+            cCtx.arc(x, y, 8, 0, 2*Math.PI);
+            cCtx.fill();
+            cCtx.stroke();
+        }
+
+        // --- Main Loop & Event Handling ---
+        function init() {
+            createSphere(1, 16);
+            setupCanvas();
+            requestAnimationFrame(draw);
+
+            sliders.t1.addEventListener('input', e => { simState.arm.t1 = e.target.value * Math.PI / 180; });
+            sliders.t2.addEventListener('input', e => { simState.arm.t2 = e.target.value * Math.PI / 180; });
+
+            cSpaceCanvas.addEventListener('mousedown', e => { simState.mouse.down = true; handleCSpaceMouse(e); });
+            cSpaceCanvas.addEventListener('mousemove', e => { if(simState.mouse.down) handleCSpaceMouse(e); });
+            window.addEventListener('mouseup', () => simState.mouse.down = false);
+
+            sphereCanvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+            sphereCanvas.addEventListener('mousemove', e => {
+                if (simState.mouse.down) {
+                    simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                    simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                    simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+                }
+            });
+            sphereCanvas.addEventListener('click', e => {
+                // Simplified obstacle placement: raycast to find intersection
+                simState.obstacles.push({pos: Vec3.normalize([Math.random()-0.5, Math.random()-0.5, Math.random()-0.5]), radius: 0.5});
+                simState.cSpaceNeedsUpdate = true;
+            });
+            document.getElementById('clear-obstacles-btn').addEventListener('click', () => {
+                simState.obstacles = [];
+                simState.cSpaceForbidden = null;
+                simState.cSpaceNeedsUpdate = true;
+            });
+        }
+
+        function handleCSpaceMouse(e){
+            const rect = cSpaceCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            simState.arm.t1 = (x / rect.width) * 2 * Math.PI;
+            simState.arm.t2 = (1 - y / rect.height) * 2 * Math.PI - Math.PI;
+        }
+
+        function draw() {
+            values.t1.textContent = (simState.arm.t1 * 180 / Math.PI).toFixed(0);
+            values.t2.textContent = (simState.arm.t2 * 180 / Math.PI).toFixed(0);
+            sliders.t1.value = simState.arm.t1 * 180 / Math.PI;
+            sliders.t2.value = simState.arm.t2 * 180 / Math.PI;
+
+            updateCSpaceObstacles();
+            drawSphere();
+            drawCSpace();
+            requestAnimationFrame(draw);
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
