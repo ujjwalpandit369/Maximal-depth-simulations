@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control of Chaos (OGY Method)</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #27ae60; /* Green for control */
+            --secondary-color: #c0392b; /* Red for chaos */
+            --border-color: #34495e;
+            --canvas-bg: #1a2531;
+            --accent-color: #f1c40f;
+            --font-family: 'Share Tech Mono', 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button { width:100%; padding:0.8em; margin-bottom:0.5em; border-radius:4px; border:none; background-color:var(--primary-color); color:white; box-sizing:border-box; font-family:inherit; cursor:pointer; font-size: 1.1em; }
+        button:hover { filter:brightness(120%); }
+        #info-panel { padding:1em; text-align:center; }
+        #info-status { font-weight:bold; font-size:1.4em; padding: 0.5em; border-radius: 4px; }
+        #info-status.chaotic { color: var(--secondary-color); background-color: rgba(192, 57, 43, 0.1); }
+        #info-status.controlled { color: var(--primary-color); background-color: rgba(39, 174, 96, 0.1); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Taming the Butterfly: The OGY Method for Control of Chaos</h1>
+    <p style="text-align:center;">A demonstration of how tiny, precise nudges can stabilize a chaotic system.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Hénon Map Phase Space</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Simulation Control</h3>
+                <button id="control-btn">Turn Control ON</button>
+                <button id="reset-btn">Reset System</button>
+            </div>
+            <div id="info-panel">
+                <h3>System Status</h3>
+                <div id="info-status" class="chaotic">CHAOTIC</div>
+                <p>Control Kick (δa): <span id="kick-value">0.000</span></p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Can Chaos Be Controlled?</h4>
+        <p>Chaotic systems, like the weather or a double pendulum, are famously unpredictable. A tiny nudge can lead to a completely different outcome. But in the 1990s, physicists Ott, Grebogi, and Yorke (OGY) realized this sensitivity could be exploited. Instead of being a problem, it could be the key to controlling the system with surprisingly little effort.</p>
+        <h4>Step 1: The Hénon Attractor</h4>
+        <p>The simulation shows the <strong>Hénon map</strong>, a simple 2D chaotic system. As the system evolves, the point traces a path that is confined to the beautiful, looping structure known as a strange attractor. The motion on this attractor is chaotic and unpredictable.</p>
+        <h4>Step 2: The Unstable Orbit</h4>
+        <p>Hidden within this chaotic attractor is an infinite number of <strong>unstable periodic orbits (UPOs)</strong>. These are paths that the system *could* follow perfectly, but the slightest deviation would send it flying away. The simulation has identified one such simple orbit—a "fixed point" marked by the small green circle. If the system landed on this point perfectly, it would stay there forever. In its natural chaotic state, the trajectory gets very close to this point but always overshoots it.</p>
+        <h4>Step 3: Turning on Control</h4>
+        <p>Click the <strong>"Turn Control ON"</strong> button. The system will continue to evolve chaotically, but now it's watching. The OGY method works in two stages:
+        <ol>
+            <li><strong>Wait:</strong> The controller does nothing until the system's natural chaotic wandering brings it very close to the target fixed point (inside the green circle).</li>
+            <li><strong>Nudge:</strong> As soon as the point enters the target region, the controller calculates a tiny, precise "nudge" to one of the system's parameters. This nudge is just enough to push the system not *onto* the fixed point, but onto its "stable manifold"—an invisible line that guides the trajectory directly into the fixed point on the next step.</li>
+        </ol>
+        Watch the system. After a few moments, you'll see the point enter the green circle, and then... it gets stuck! It has been stabilized onto the unstable fixed point. Look at the "Control Kick" value: the nudges required to keep it there are incredibly small. We have tamed chaos with minimal effort, not by fighting it with brute force, but by waiting for the right moment and exploiting its own sensitive dynamics.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        point: { x: 0.1, y: 0.1 },
+        trace: [],
+        controlOn: false,
+        params: { a: 1.4, b: 0.3 },
+        fixedPoint: null,
+        controlGain: 0,
+        lastKick: 0
+    };
+
+    // --- Hénon Map & OGY Control ---
+    const henonMap = (p, a, b) => ({ x: 1 - a*p.x*p.x + p.y, y: b*p.x });
+
+    function calculateControlParameters() {
+        const { a, b } = simState.params;
+        // Find fixed point for x = 1 - ax^2 + bx => ax^2 + (1-b)x - 1 = 0
+        const x_fp = (-(1-b) + Math.sqrt(Math.pow(1-b, 2) + 4*a)) / (2*a);
+        const y_fp = b * x_fp;
+        simState.fixedPoint = { x: x_fp, y: y_fp };
+
+        // Linearization and control gain (simplified for this specific fixed point)
+        // This is a pre-calculated value for the standard Hénon map
+        simState.controlGain = 1.85;
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        const scale = w / 3.0;
+        const cx = w/2, cy = h/2;
+
+        // Fade effect
+        ctx.fillStyle = 'rgba(26, 37, 49, 0.1)';
+        ctx.fillRect(0,0,w,h);
+
+        // Draw trace
+        ctx.fillStyle = 'var(--secondary-color)';
+        simState.trace.forEach(p => {
+            const x = cx + p.x * scale;
+            const y = cy - p.y * scale;
+            ctx.fillRect(x,y,1,1);
+        });
+
+        // Draw target orbit and control region
+        if(simState.fixedPoint){
+            const fp_x = cx + simState.fixedPoint.x * scale;
+            const fp_y = cy - simState.fixedPoint.y * scale;
+            ctx.strokeStyle = 'rgba(39, 174, 96, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(fp_x, fp_y, 0.05 * scale, 0, 2*Math.PI);
+            ctx.stroke();
+        }
+
+        // Draw current point
+        ctx.fillStyle = 'var(--accent-color)';
+        const x = cx + simState.point.x * scale;
+        const y = cy - simState.point.y * scale;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, 2*Math.PI);
+        ctx.fill();
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        const p = simState.params;
+        let kick = 0;
+
+        if(simState.controlOn && simState.fixedPoint){
+            const dx = simState.point.x - simState.fixedPoint.x;
+            const dy = simState.point.y - simState.fixedPoint.y;
+            if(dx*dx + dy*dy < 0.0025){ // If in control region (radius 0.05)
+                kick = simState.controlGain * dx;
+                kick = Math.max(-0.1, Math.min(0.1, kick)); // Clamp kick size
+            }
+        }
+
+        simState.point = henonMap(simState.point, p.a + kick, p.b);
+        simState.lastKick = kick;
+
+        simState.trace.push(simState.point);
+        if(simState.trace.length > 2000) simState.trace.shift();
+
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function updateInfoPanel(){
+        const statusDiv = document.getElementById('info-status');
+        if(simState.controlOn && Math.abs(simState.lastKick) > 1e-6){
+            statusDiv.textContent = 'CONTROLLED';
+            statusDiv.className = 'controlled';
+        } else {
+            statusDiv.textContent = 'CHAOTIC';
+            statusDiv.className = 'chaotic';
+        }
+        document.getElementById('kick-value').textContent = simState.lastKick.toFixed(4);
+        requestAnimationFrame(updateInfoPanel);
+    }
+
+    function init() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w; ctx.canvas.height = h;
+
+        document.getElementById('control-btn').addEventListener('click', () => {
+            simState.controlOn = !simState.controlOn;
+            document.getElementById('control-btn').textContent = simState.controlOn ? 'Turn Control OFF' : 'Turn Control ON';
+        });
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            simState.point = {x: Math.random()*0.5, y: Math.random()*0.5};
+            simState.trace = [];
+            ctx.fillStyle = 'var(--canvas-bg)';
+            ctx.fillRect(0,0,w,h);
+        });
+
+        calculateControlParameters();
+        mainLoop();
+        updateInfoPanel();
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Information Dimension and Entropy</title>
+    <style>
+        :root {
+            --bg-color: #262626;
+            --text-color: #e8e8e8;
+            --primary-color: #ff4757;
+            --secondary-color: #3742fa;
+            --border-color: #444;
+            --canvas-bg: #1e1e1e;
+            --accent-color: #f1c40f;
+            --font-family: 'IBM Plex Mono', 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1.5/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; font-size: 1.1em; }
+        button:hover { filter:brightness(120%); }
+        #info-panel { background:rgba(0,0,0,0.2); border-top:3px solid var(--accent-color); padding:10px; font-size:0.9em; text-align: center; }
+        #info-entropy { font-size: 1.6em; color: var(--accent-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Chaos and Information Entropy</h1>
+    <p>A simulation showing how chaotic systems continuously generate new information.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">Logistic Map State Space</p>
+            <canvas id="map-canvas"></canvas>
+        </div>
+        <div class="panel">
+            <p class="panel-title">Entropy Rate (H/n) vs. Iterations (n)</p>
+            <canvas id="entropy-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Simulation Control</h3>
+                <button id="start-btn">Start/Pause</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <div class="controls-group">
+                <h3>Parameters</h3>
+                <label>Number of Bins: <span id="bins-value">16</span></label>
+                <input type="range" id="bins-slider" min="2" max="64" value="16" step="1">
+            </div>
+            <div id="info-panel">
+                <h3>Entropy Rate (bits/iteration)</h3>
+                <div id="info-entropy">0.000</div>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Chaos, Uncertainty, and Information</h4>
+        <p>What is information? In a physical sense, information is the reduction of uncertainty. If a system is perfectly predictable, like a clock, observing it doesn't give you much new information after a while. But if a system is chaotic, it is fundamentally unpredictable. Each new observation gives you new information about its state. This simulation quantifies that idea using <strong>Shannon Entropy</strong>.</p>
+        <h4>Step 1: The Chaotic System</h4>
+        <p>The left panel shows the <strong>logistic map</strong> `x → 4x(1-x)`, a classic chaotic system. Its state `x` lives on the interval from 0 to 1. We have partitioned this state space into a number of discrete "bins," shown by the vertical gray lines. Instead of tracking the exact value of `x`, we will only record which bin it falls into at each iteration.</p>
+        <h4>Step 2: Generating an Information Sequence</h4>
+        <p>Click <strong>"Start"</strong>. The simulation begins iterating the logistic map. The red line shows the "cobweb" plot of the iteration. At each step, the bin containing the current state is highlighted. The sequence of visited bins (e.g., "A, C, D, B, A...") is recorded.</p>
+        <h4>Step 3: Measuring Information with Entropy</h4>
+        <p>The right panel plots the <strong>Entropy Rate (H/n)</strong> of the sequence of visited bins. Shannon Entropy (H) measures the average uncertainty or "surprise" of the sequence. Dividing by the number of steps `n` gives the average information generated per iteration.
+        <br><br>
+        Watch the plot as the simulation runs:
+        <ul>
+            <li>Initially, the entropy rate fluctuates wildly because the sequence is short.</li>
+            <li>As the sequence gets longer and longer, the entropy rate will converge towards a stable, <strong>positive</strong> value.</li>
+        </ul>
+        This is the key result. A positive, constant entropy rate means the system is a persistent source of new information. No matter how long you observe it, the next step is still uncertain, and observing it resolves that uncertainty, giving you new information. This is a fundamental signature of chaos. For a predictable, periodic system, the entropy rate would eventually fall to zero.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const mCanvas = document.getElementById('map-canvas');
+    const mCtx = mCanvas.getContext('2d');
+    const eCanvas = document.getElementById('entropy-canvas');
+    const eCtx = eCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        x: 0.2,
+        r: 4.0, // Fully chaotic regime
+        numBins: 16,
+        binSequence: [],
+        entropyHistory: [],
+        running: false,
+    };
+
+    const logisticMap = (x, r) => r * x * (1 - x);
+
+    // --- Entropy Calculation ---
+    function calculateEntropy(sequence) {
+        if(sequence.length === 0) return 0;
+        const counts = {};
+        sequence.forEach(s => counts[s] = (counts[s] || 0) + 1);
+
+        let entropy = 0;
+        const n = sequence.length;
+        for(let key in counts){
+            const p = counts[key] / n;
+            entropy -= p * Math.log2(p);
+        }
+        return entropy;
+    }
+
+    // --- Simulation Step ---
+    function step() {
+        if (!simState.running) return;
+
+        simState.x = logisticMap(simState.x, simState.r);
+        const bin = Math.floor(simState.x * simState.numBins);
+        simState.binSequence.push(bin);
+
+        const H = calculateEntropy(simState.binSequence);
+        const n = simState.binSequence.length;
+        const entropyRate = H / n;
+        simState.entropyHistory.push(entropyRate);
+
+        if(simState.entropyHistory.length > 1000) simState.entropyHistory.shift();
+
+        document.getElementById('info-entropy').textContent = entropyRate.toFixed(3);
+    }
+
+    // --- Drawing ---
+    function draw() {
+        drawMap();
+        drawEntropyPlot();
+        if(simState.running) requestAnimationFrame(draw);
+    }
+
+    function drawMap() {
+        const w = mCanvas.getBoundingClientRect().width, h = mCanvas.getBoundingClientRect().height;
+        mCtx.fillStyle = 'var(--canvas-bg)';
+        mCtx.fillRect(0,0,w,h);
+
+        // Draw bins
+        mCtx.strokeStyle = 'var(--border-color)';
+        mCtx.lineWidth = 1;
+        for(let i=1; i<simState.numBins; i++){
+            const x = i/simState.numBins * w;
+            mCtx.beginPath(); mCtx.moveTo(x,0); mCtx.lineTo(x,h); mCtx.stroke();
+        }
+
+        // Highlight current bin
+        const bin = Math.floor(simState.x * simState.numBins);
+        mCtx.fillStyle = 'rgba(255, 71, 87, 0.2)';
+        mCtx.fillRect(bin/simState.numBins*w, 0, w/simState.numBins, h);
+
+        // Draw parabola and y=x
+        mCtx.strokeStyle = 'var(--secondary-color)';
+        mCtx.lineWidth = 2;
+        mCtx.beginPath();
+        for(let i=0; i<=w; i++){
+            const x = i/w;
+            const y = logisticMap(x, simState.r);
+            mCtx.lineTo(i, h*(1-y));
+        }
+        mCtx.stroke();
+        mCtx.strokeStyle = '#888';
+        mCtx.beginPath(); mCtx.moveTo(0,h); mCtx.lineTo(w,0); mCtx.stroke();
+
+        // Draw current point
+        const x_canvas = simState.x * w;
+        const y_canvas = h * (1-simState.x);
+        mCtx.fillStyle = 'var(--accent-color)';
+        mCtx.beginPath(); mCtx.arc(x_canvas, y_canvas, 5, 0, 2*Math.PI); mCtx.fill();
+    }
+
+    function drawEntropyPlot() {
+        const w = eCanvas.getBoundingClientRect().width, h = eCanvas.getBoundingClientRect().height;
+        eCtx.fillStyle = 'var(--canvas-bg)';
+        eCtx.fillRect(0,0,w,h);
+
+        if(simState.entropyHistory.length < 2) return;
+
+        eCtx.strokeStyle = 'var(--primary-color)';
+        eCtx.lineWidth = 2;
+        eCtx.beginPath();
+        simState.entropyHistory.forEach((val, i) => {
+            const x = i/(simState.entropyHistory.length-1) * w;
+            const y = h - val * h; // Entropy rate for r=4 converges to ~1
+            if(i===0) eCtx.moveTo(x,y); else eCtx.lineTo(x,y);
+        });
+        eCtx.stroke();
+    }
+
+    // --- Event Handling & Init ---
+    function init() {
+        const rect = mCanvas.getBoundingClientRect();
+        [mCanvas, eCanvas].forEach(c => {
+            c.width = rect.width; c.height = rect.height;
+        });
+
+        let intervalId;
+        document.getElementById('start-btn').addEventListener('click', () => {
+            simState.running = !simState.running;
+            document.getElementById('start-btn').textContent = simState.running ? 'Pause' : 'Start';
+            if(simState.running) {
+                draw(); // Start render loop
+                intervalId = setInterval(step, 50); // Run physics step
+            } else {
+                clearInterval(intervalId);
+            }
+        });
+
+        function reset() {
+            simState.running = false;
+            document.getElementById('start-btn').textContent = 'Start';
+            if(intervalId) clearInterval(intervalId);
+            simState.x = Math.random();
+            simState.binSequence = [];
+            simState.entropyHistory = [];
+            document.getElementById('info-entropy').textContent = '0.000';
+            draw();
+        }
+
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        document.getElementById('bins-slider').addEventListener('input', e => {
+            simState.numBins = parseInt(e.target.value);
+            document.getElementById('bins-value').textContent = simState.numBins;
+            reset();
+        });
+
+        reset();
+    }
+    init();
+});
+</script>
+</body>
+</html>

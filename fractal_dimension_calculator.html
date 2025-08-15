@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Dimension Calculator</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #673ab7; /* Deep Purple */
+            --secondary-color: #009688; /* Teal */
+            --border-color: #ccc;
+            --canvas-bg: #ffffff;
+            --accent-color: #ffc107; /* Amber */
+            --font-family: 'Verdana', sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { flex:1; min-width:280px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:white; color:var(--primary-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); color:white; cursor:pointer; }
+        button.active { background-color:var(--accent-color); color:#333; font-weight:bold; }
+        #info-panel { background:#fff; border-left:4px solid var(--primary-color); padding:1em; text-align:center; }
+        #info-dimension { font-size: 1.8em; font-weight: bold; color: var(--secondary-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Fractal Dimension Calculator</h1>
+    <p>An interactive tool to estimate the dimension of a fractal using the box-counting method.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">Fractal Set with Grid Overlay</p>
+            <canvas id="fractal-canvas"></canvas>
+        </div>
+        <div class="panel">
+            <p class="panel-title">Log-Log Plot of N(ε) vs 1/ε</p>
+            <canvas id="plot-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Select a Set</h3>
+                <button id="set-line" class="active">Line</button>
+                <button id="set-sierpinski">Sierpinski Triangle</button>
+                <button id="set-square">Filled Square</button>
+            </div>
+            <div class="controls-group">
+                <h3>2. Run Analysis</h3>
+                <button id="run-btn">Start Box-Counting</button>
+            </div>
+            <div class="controls-group">
+                <h3>3. Explore Results</h3>
+                <label>Grid Size (ε): <span id="grid-size-value">--</span></label>
+                <input type="range" id="grid-slider" min="0" max="6" value="0" step="1" disabled>
+            </div>
+            <div id="info-panel">
+                <h3>Estimated Fractal Dimension (D)</h3>
+                <div id="info-dimension">--</div>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>More than 1D, Less than 2D?</h4>
+        <p>We're used to objects having integer dimensions: a line is 1D, a square is 2D, a cube is 3D. But what about fractals? A fractal like the Sierpinski triangle seems to be more than a line, but it's full of holes, so it's less than a full 2D square. A <strong>fractal dimension</strong> is a way to measure this "in-between" dimension, quantifying a fractal's complexity and how much space it fills.</p>
+        <h4>Step 1: The Box-Counting Method</h4>
+        <p>This simulation uses the <strong>box-counting</strong> method, a straightforward way to estimate fractal dimension. The idea is simple:
+        <ol>
+            <li>Cover the fractal shape with a grid of boxes of a certain size, `ε`.</li>
+            <li>Count how many boxes, `N(ε)`, actually contain a piece of the fractal.</li>
+            <li>Repeat this process with smaller and smaller boxes.</li>
+        </ol>
+        </p>
+        <h4>Step 2: Run the Analysis</h4>
+        <p>First, choose a shape to analyze. The "Line" (1D) and "Filled Square" (2D) are included as simple controls. The "Sierpinski Triangle" is our main fractal example.
+        <br><br>
+        Click the <strong>"Start Box-Counting"</strong> button. The simulation will perform the box-counting method for several different grid sizes.
+        </p>
+        <h4>Step 3: The Log-Log Plot</h4>
+        <p>The right panel shows the results on a <strong>log-log plot</strong>. The horizontal axis is `log(1/ε)` (related to how small the boxes are) and the vertical axis is `log(N(ε))` (the number of boxes counted).
+        <br><br>
+        For a fractal, these points will form a nearly straight line. The <strong>slope of this line is the estimated fractal dimension!</strong>
+        <br><br>
+        The simulation automatically fits a line to these points and displays the calculated slope in the "Estimated Fractal Dimension" box.
+        <ul>
+            <li>For the <strong>Line</strong>, the dimension will be very close to <strong>1.0</strong>.</li>
+            <li>For the <strong>Filled Square</strong>, the dimension will be very close to <strong>2.0</strong>.</li>
+            <li>For the <strong>Sierpinski Triangle</strong>, you should get a dimension of approximately <strong>1.585</strong>, a true fractional dimension!</li>
+        </ul>
+        Use the "Grid Size" slider to see the different grids overlaid on the fractal in the left panel, and the corresponding data point highlighted in the plot on the right.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const fCanvas = document.getElementById('fractal-canvas');
+    const fCtx = fCanvas.getContext('2d');
+    const pCanvas = document.getElementById('plot-canvas');
+    const pCtx = pCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        set: 'line',
+        points: [],
+        boxCountData: [],
+        dimension: 0,
+        gridIndex: 0,
+        gridSizes: [64, 32, 16, 8, 4, 2, 1]
+    };
+
+    // --- Fractal Generation ---
+    function generatePoints() {
+        simState.points = [];
+        const numPoints = 30000;
+        const w = fCanvas.width, h = fCanvas.height;
+
+        if (simState.set === 'line') {
+            for(let i=0; i<numPoints; i++) simState.points.push({x: w*0.1 + Math.random()*w*0.8, y: h/2});
+        } else if (simState.set === 'square') {
+            for(let i=0; i<numPoints; i++) simState.points.push({x: w*0.1+Math.random()*w*0.8, y: h*0.1+Math.random()*h*0.8});
+        } else if (simState.set === 'sierpinski') {
+            const vertices = [{x:w/2, y:h*0.1}, {x:w*0.1, y:h*0.9}, {x:w*0.9, y:h*0.9}];
+            let p = {x:w/2, y:h/2};
+            for(let i=0; i<numPoints; i++){
+                const target = vertices[Math.floor(Math.random()*3)];
+                p = {x: (p.x+target.x)/2, y: (p.y+target.y)/2};
+                simState.points.push(p);
+            }
+        }
+    }
+
+    // --- Box Counting & Dimension Calculation ---
+    function runBoxCounting() {
+        if(simState.points.length === 0) generatePoints();
+
+        simState.boxCountData = [];
+        const w = fCanvas.width;
+
+        simState.gridSizes.forEach(size => {
+            if(size < 1) return;
+            const gridSize = Math.ceil(w / size);
+            const occupied = new Set();
+
+            simState.points.forEach(p => {
+                const gridX = Math.floor(p.x / size);
+                const gridY = Math.floor(p.y / size);
+                occupied.add(`${gridX},${gridY}`);
+            });
+
+            const N = occupied.size;
+            if(N > 0) {
+                simState.boxCountData.push({
+                    logInvEpsilon: Math.log(w / size),
+                    logN: Math.log(N),
+                    size: size,
+                    N: N
+                });
+            }
+        });
+
+        // Linear regression on log-log data
+        let sumX=0, sumY=0, sumXY=0, sumX2=0;
+        const n = simState.boxCountData.length;
+        simState.boxCountData.forEach(d => {
+            sumX += d.logInvEpsilon;
+            sumY += d.logN;
+            sumXY += d.logInvEpsilon * d.logN;
+            sumX2 += d.logInvEpsilon * d.logInvEpsilon;
+        });
+
+        const denominator = n*sumX2 - sumX*sumX;
+        simState.dimension = (n*sumXY - sumX*sumY) / denominator;
+
+        document.getElementById('info-dimension').textContent = simState.dimension.toFixed(3);
+        document.getElementById('grid-slider').disabled = false;
+        draw();
+    }
+
+    // --- Drawing ---
+    function draw() {
+        drawFractal();
+        drawPlot();
+    }
+
+    function drawFractal() {
+        const w = fCanvas.width, h = fCanvas.height;
+        fCtx.fillStyle = 'var(--canvas-bg)';
+        fCtx.fillRect(0,0,w,h);
+
+        // Draw points
+        fCtx.fillStyle = 'var(--primary-color)';
+        simState.points.forEach(p => fCtx.fillRect(p.x, p.y, 1, 1));
+
+        // Draw grid overlay
+        if (simState.boxCountData.length > 0) {
+            const size = simState.gridSizes[simState.gridIndex];
+            const gridSize = Math.ceil(w/size);
+            const occupied = new Set();
+            simState.points.forEach(p => {
+                occupied.add(`${Math.floor(p.x/size)},${Math.floor(p.y/size)}`);
+            });
+
+            fCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+            fCtx.lineWidth = 0.5;
+            for(let i=0; i<=gridSize; i++){
+                fCtx.beginPath(); fCtx.moveTo(i*size, 0); fCtx.lineTo(i*size, h); fCtx.stroke();
+                fCtx.beginPath(); fCtx.moveTo(0, i*size); fCtx.lineTo(w, i*size); fCtx.stroke();
+            }
+
+            fCtx.fillStyle = 'rgba(255, 193, 7, 0.4)';
+            occupied.forEach(key => {
+                const [gx, gy] = key.split(',').map(Number);
+                fCtx.fillRect(gx*size, gy*size, size, size);
+            });
+        }
+    }
+
+    function drawPlot() {
+        const w = pCanvas.width, h = pCanvas.height;
+        pCtx.fillStyle = 'var(--canvas-bg)';
+        pCtx.fillRect(0,0,w,h);
+
+        if(simState.boxCountData.length < 2) return;
+
+        const data = simState.boxCountData;
+        const xMin=data[0].logInvEpsilon, xMax=data[data.length-1].logInvEpsilon;
+        const yMin=data[0].logN, yMax=data[data.length-1].logN;
+        const xRange = xMax-xMin, yRange=yMax-yMin;
+
+        const toCanvas = (lx, ly) => ({
+            x: w*0.1 + w*0.8 * (lx-xMin)/xRange,
+            y: h*0.9 - h*0.8 * (ly-yMin)/yRange
+        });
+
+        // Draw best-fit line
+        pCtx.strokeStyle = 'var(--secondary-color)';
+        pCtx.lineWidth = 2;
+        pCtx.beginPath();
+        const y1 = data[0].logInvEpsilon*simState.dimension + (sumY/n - simState.dimension*sumX/n);
+        const y2 = data[data.length-1].logInvEpsilon*simState.dimension + (sumY/n - simState.dimension*sumX/n);
+        const p1 = toCanvas(xMin, y1);
+        const p2 = toCanvas(xMax, y2);
+        pCtx.moveTo(p1.x, p1.y); pCtx.lineTo(p2.x, p2.y);
+        pCtx.stroke();
+
+        // Draw points
+        data.forEach((d, i) => {
+            const p = toCanvas(d.logInvEpsilon, d.logN);
+            pCtx.fillStyle = (i === simState.gridIndex) ? 'var(--accent-color)' : 'var(--primary-color)';
+            pCtx.beginPath(); pCtx.arc(p.x, p.y, 5, 0, 2*Math.PI); pCtx.fill();
+        });
+    }
+
+    function init() {
+        const rect = canvas.getBoundingClientRect();
+        [fCanvas, pCanvas].forEach(c => { c.width = rect.width; c.height = rect.height; });
+
+        document.querySelectorAll('.controls-group button[id^="set-"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.controls-group button.active').classList.remove('active');
+                btn.classList.add('active');
+                simState.set = btn.id.substring(4);
+                simState.points = [];
+                simState.boxCountData = [];
+                simState.dimension = 0;
+                document.getElementById('info-dimension').textContent = '--';
+                document.getElementById('grid-slider').disabled = true;
+                generatePoints();
+                draw();
+            });
+        });
+        document.getElementById('run-btn').addEventListener('click', runBoxCounting);
+        document.getElementById('grid-slider').addEventListener('input', e => {
+            simState.gridIndex = parseInt(e.target.value);
+            const size = simState.gridSizes[simState.gridIndex];
+            document.getElementById('grid-size-value').textContent = `${size}x${size}`;
+            draw();
+        });
+
+        generatePoints();
+        draw();
+    }
+    init();
+});
+</script>
+</body>
+</html>

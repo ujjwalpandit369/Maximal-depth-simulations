@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ikeda Map Attractor</title>
+    <style>
+        :root {
+            --bg-color: #0c0c0c;
+            --text-color: #dcdcdc;
+            --primary-color: #ff00ff; /* Magenta */
+            --secondary-color: #00ffff; /* Cyan */
+            --border-color: #333333;
+            --canvas-bg: #000000;
+            --accent-color: #ffff00; /* Yellow */
+            --font-family: 'Inconsolata', 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:zoom-in; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); color:#1e1e1e; cursor:pointer; border:none; transition:background-color 0.2s; }
+        button:hover { filter:brightness(120%); }
+        #info-panel { padding:1em; text-align:center; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Ikeda Map</h1>
+    <p style="text-align:center;">A strange attractor from the world of non-linear optics.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Phase Space</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Parameters</h3>
+                <label>u: <span id="u-value">0.918</span></label>
+                <input type="range" id="u-slider" min="0.7" max="1.0" value="0.918" step="0.001">
+            </div>
+            <div class="controls-group">
+                <h3>Generation</h3>
+                <label>Number of Points: <span id="points-value">200,000</span></label>
+                <input type="range" id="points-slider" min="10000" max="1000000" value="200000" step="10000">
+                <button id="start-btn">Generate</button>
+            </div>
+            <div id="info-panel">
+                <p>Use the mouse wheel to zoom and drag to pan the view.</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>A Chaotic Butterfly in a Laser Beam</h4>
+        <p>In the late 1970s, physicist Kensuke Ikeda developed a mathematical model to describe a pulse of light traveling through a non-linear optical resonator—essentially a hall of mirrors with a special material inside. He discovered that for certain parameters, the behavior of the light pulse became chaotic. The <strong>Ikeda map</strong> is a simplified version of this model.</p>
+        <h4>Step 1: The Map</h4>
+        <p>The simulation iterates a simple set of equations over and over:
+        <br>
+        `x_next = 1 + u * (x * cos(t) - y * sin(t))`
+        <br>
+        `y_next = u * (x * sin(t) + y * cos(t))`
+        <br>
+        Where `t` itself depends on the previous `(x, y)` point. We start with a random point and apply these rules hundreds of thousands of times, plotting each new point on the canvas.
+        </p>
+        <h4>Step 2: The Strange Attractor</h4>
+        <p>Click the <strong>"Generate"</strong> button. At first, you see a scattering of points, but quickly, a definite shape begins to emerge. This shape is the system's <strong>strange attractor</strong>. It's an infinitely detailed, fractal object. The points will never land in the same place twice, and they will never settle into a simple repeating pattern, but they are forever confined to this intricate "chaotic butterfly" shape.</p>
+        <h4>Step 3: Exploring the Parameters</h4>
+        <p>The parameter `u` is key to the system's behavior. The default value is `u = 0.918`, which produces the classic attractor. Try slowly changing the `u` slider and clicking "Generate" again. You will see the shape of the attractor dramatically change. For some values it might become simpler, for others it might look completely different. The transition between these states is often very sudden, showcasing the sensitive nature of chaotic systems.</p>
+        <h4>Step 4: Infinite Detail</h4>
+        <p>Like many fractals, the Ikeda map attractor possesses self-similarity. Use your mouse wheel to zoom into one of the "feathery" parts of the attractor. As you zoom, you'll see that the thick lines resolve into more fine lines, which themselves are made of even more fine lines, and so on. This infinite complexity arising from a simple set of equations is a hallmark of chaos. You can also click and drag the mouse to pan your view around.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let simState = {
+        u: 0.918,
+        numPoints: 200000,
+        view: { x: 0.5, y: 0.2, scale: 300 },
+        running: false,
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    const ikedaMap = (px, py, u) => {
+        const t = 0.4 - 6.0 / (1 + px*px + py*py);
+        const cos_t = Math.cos(t);
+        const sin_t = Math.sin(t);
+        return {
+            x: 1 + u * (px * cos_t - py * sin_t),
+            y: u * (px * sin_t + py * cos_t)
+        };
+    };
+
+    let animationFrameId;
+    function run() {
+        if(animationFrameId) cancelAnimationFrame(animationFrameId);
+        simState.running = true;
+
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        let { u, view } = simState;
+        let p = { x: 0.1, y: 0.1 };
+
+        // Settle onto attractor
+        for(let i=0; i<100; i++) p = ikedaMap(p.x, p.y, u);
+
+        let pointsToDraw = simState.numPoints;
+        const batchSize = 2000;
+
+        function drawBatch() {
+            ctx.fillStyle = `rgba(0, 255, 255, 0.2)`;
+            for(let i=0; i<batchSize; i++){
+                p = ikedaMap(p.x, p.y, u);
+
+                const canvasX = (p.x - view.x) * view.scale + w/2;
+                const canvasY = h - ((p.y - view.y) * view.scale + h/2);
+
+                if(canvasX > 0 && canvasX < w && canvasY > 0 && canvasY < h) {
+                    ctx.fillRect(canvasX, canvasY, 1, 1);
+                }
+            }
+            pointsToDraw -= batchSize;
+            if(pointsToDraw > 0 && simState.running) {
+                animationFrameId = requestAnimationFrame(drawBatch);
+            } else {
+                simState.running = false;
+            }
+        }
+        drawBatch();
+    }
+
+    function init() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+
+        document.getElementById('u-slider').addEventListener('input', e => {
+            simState.u = parseFloat(e.target.value);
+            document.getElementById('u-value').textContent = simState.u.toFixed(3);
+        });
+        document.getElementById('points-slider').addEventListener('input', e => {
+            simState.numPoints = parseInt(e.target.value);
+            document.getElementById('points-value').textContent = simState.numPoints.toLocaleString();
+        });
+        document.getElementById('start-btn').addEventListener('click', run);
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX-rect.left, mouseY = e.clientY-rect.top;
+
+            const worldX = (mouseX - rect.width/2)/simState.view.scale + simState.view.x;
+            const worldY = (rect.height - mouseY - rect.height/2)/simState.view.scale + simState.view.y;
+
+            const zoomFactor = e.deltaY < 0 ? 1.25 : 1/1.25;
+            simState.view.scale *= zoomFactor;
+
+            simState.view.x = worldX - (mouseX - rect.width/2)/simState.view.scale;
+            simState.view.y = worldY - (rect.height - mouseY - rect.height/2)/simState.view.scale;
+            run();
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            simState.mouse.down = true;
+            simState.mouse.x = e.clientX;
+            simState.mouse.y = e.clientY;
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+        canvas.addEventListener('mousemove', e => {
+            if(simState.mouse.down){
+                const dx = e.clientX - simState.mouse.x;
+                const dy = e.clientY - simState.mouse.y;
+                simState.view.x -= dx / simState.view.scale;
+                simState.view.y += dy / simState.view.scale;
+                simState.mouse.x = e.clientX;
+                simState.mouse.y = e.clientY;
+                run();
+            }
+        });
+
+        run();
+    }
+    init();
+});
+</script>
+</body>
+</html>
