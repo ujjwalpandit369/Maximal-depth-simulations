@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cotangent Bundle: Phase Space as a Manifold</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #2ecc71; /* A green for this topic */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --trajectory-color: #f5a623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-wrap: wrap; gap: 1.5rem; min-width: 400px; justify-content: space-around;}
+
+        .viz-box { flex: 1; min-width: 300px; text-align: center; }
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Cotangent Bundle: Phase Space as a Manifold</h1>
+        <p>A simulation visualizing the phase space of a simple pendulum as a cotangent bundle.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In advanced physics, the state of a system is described not just by its position, but by its position and momentum together. This combined space is called "phase space." This simulation demystifies the modern geometric view of phase space, which is described as the <strong>cotangent bundle</strong> of the system's configuration manifold. We use a simple pendulum as our example. Its configuration space is a circle, and we show how its phase space naturally becomes a cylinder. By adjusting the pendulum's energy, you can see how its real-world motion (swinging vs. rotating) creates different kinds of trajectories on this cylindrical phase space manifold.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Phase Space</h2>
+
+            <h4>Step 1: Configuration Space - Where the Pendulum Can Be</h4>
+            <p>The panel on the left shows a simple pendulum. Its position can be described by a single number: its angle. Since the angle wraps around, the space of all possible positions—its "configuration space"—is a <strong>circle</strong>. Mathematicians call this `S¹`.</p>
+
+            <h4>Step 2: Phase Space - Position AND Momentum</h4>
+            <p>To fully describe the pendulum's state at any instant, we need its position (angle, θ) and its momentum (p). The space of all possible positions and momenta is called <strong>phase space</strong>. How can we visualize this?
+            <p><strong>The Cotangent Bundle Idea:</strong> Imagine taking the circle of possible positions. At each and every point (angle) on that circle, we can attach a vertical line. This line represents all the possible momenta the pendulum could have at that exact angle (it could be moving fast to the right, fast to the left, or be momentarily still). "Gluing" a line to every point on a circle creates a <strong>cylinder</strong>. This cylinder is the phase space of the pendulum.</p>
+            <p>The panel on the right shows this cylindrical phase space. The circular direction is the angle θ, and the vertical direction is the momentum p.</p>
+
+            <h4>Step 3: Trajectories in Phase Space</h4>
+            <p>As the pendulum moves, its state `(θ, p)` changes, tracing a path on the surface of the cylinder. By changing the pendulum's total energy with the slider, you can create three distinct types of trajectories:</p>
+            <ul>
+                <li><strong>Low Energy (Oscillation):</strong> The pendulum swings back and forth but doesn't go over the top. In phase space, this creates a simple, closed loop—a "librational" orbit.</li>
+                <li><strong>High Energy (Rotation):</strong> The pendulum has enough energy to spin continuously in one direction. In phase space, this creates a wavy line that wraps all the way around the cylinder—a "rotational" orbit.</li>
+                <li><strong>Critical Energy (The Separatrix):</strong> At the exact energy needed to just reach the top, the pendulum's motion is special. In phase space, this creates a sharp, figure-eight-like path that separates the oscillation region from the rotation region. This path is called the separatrix.</li>
+            </ul>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div class="slider-container">
+                    <label for="energy-slider">Total Energy (E)</label>
+                    <input type="range" id="energy-slider" min="-0.9" max="2.5" value="0.5" step="0.05">
+                </div>
+                <button id="reset-btn">Reset Simulation</button>
+            </div>
+            <div id="simulation-visuals">
+                <div class="viz-box">
+                    <h4>Real Space</h4>
+                    <canvas id="pendulum-canvas" width="300" height="300"></canvas>
+                </div>
+                <div class="viz-box">
+                    <h4>Phase Space (Cotangent Bundle)</h4>
+                    <canvas id="cylinder-canvas" width="300" height="300"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            energy: 0.5,
+            theta: 0,
+            p: 0,
+            trajectory: [],
+            rotationY: -0.8,
+        };
+
+        // --- DOM ELEMENTS ---
+        const pendulumCanvas = document.getElementById('pendulum-canvas');
+        const pCtx = pendulumCanvas.getContext('2d');
+        const cylinderCanvas = document.getElementById('cylinder-canvas');
+        const cCtx = cylinderCanvas.getContext('2d');
+        const energySlider = document.getElementById('energy-slider');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            energySlider.addEventListener('input', () => {
+                state.energy = parseFloat(energySlider.value);
+                resetSimulation();
+            });
+            resetBtn.addEventListener('click', resetSimulation);
+
+            let isDragging = false, lastMouseX = 0;
+            cylinderCanvas.addEventListener('mousedown', (e) => { isDragging=true; lastMouseX=e.clientX; });
+            window.addEventListener('mouseup', () => { isDragging=false; });
+            cylinderCanvas.addEventListener('mousemove', (e) => {
+                if(isDragging) {
+                    const dx = e.clientX - lastMouseX;
+                    state.rotationY += dx * 0.01;
+                    lastMouseX = e.clientX;
+                }
+            });
+        }
+
+        function resetSimulation() {
+            state.theta = 0;
+            const p_sq = 2 * (state.energy + Math.cos(state.theta));
+            state.p = p_sq > 0 ? Math.sqrt(p_sq) : 0;
+            state.trajectory = [];
+        }
+
+        // --- CORE LOGIC (Hamilton's Equations) ---
+        function updateState() {
+            const dt = 0.05;
+            // d(theta)/dt = dH/dp = p
+            const dtheta = state.p * dt;
+            // d(p)/dt = -dH/d(theta) = -sin(theta)
+            const dp = -Math.sin(state.theta) * dt;
+
+            state.theta += dtheta;
+            state.p += dp;
+
+            state.trajectory.push({theta: state.theta, p: state.p});
+            if (state.trajectory.length > 500) state.trajectory.shift();
+        }
+
+        function mainLoop() {
+            updateState();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawPendulum();
+            drawCylinder();
+        }
+
+        function drawPendulum() {
+            pCtx.fillStyle = '#111';
+            pCtx.fillRect(0, 0, pendulumCanvas.width, pendulumCanvas.height);
+            pCtx.save();
+            pCtx.translate(pendulumCanvas.width / 2, pendulumCanvas.height / 2);
+
+            const bobX = 100 * Math.sin(state.theta);
+            const bobY = 100 * Math.cos(state.theta);
+
+            // Draw rod
+            pCtx.strokeStyle = '#888';
+            pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            pCtx.moveTo(0, 0);
+            pCtx.lineTo(bobX, bobY);
+            pCtx.stroke();
+
+            // Draw bob
+            pCtx.fillStyle = 'var(--primary-color)';
+            pCtx.beginPath();
+            pCtx.arc(bobX, bobY, 15, 0, 2*Math.PI);
+            pCtx.fill();
+
+            pCtx.restore();
+        }
+
+        function drawCylinder() {
+            cCtx.fillStyle = '#111';
+            cCtx.fillRect(0, 0, cylinderCanvas.width, cylinderCanvas.height);
+            cCtx.save();
+            cCtx.translate(cylinderCanvas.width / 2, cylinderCanvas.height / 2);
+
+            const radius = 80;
+            const height = 200;
+
+            // Draw cylinder wireframe
+            cCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            cCtx.lineWidth = 1;
+            const n_lines = 16;
+            for(let i=0; i < n_lines; i++) {
+                const angle = (i/n_lines) * 2 * Math.PI + state.rotationY;
+                const x = radius * Math.cos(angle);
+                const z_depth = radius * Math.sin(angle); // for perspective
+                if (z_depth < 0) continue; // Don't draw back lines
+                cCtx.beginPath();
+                cCtx.moveTo(x, -height/2);
+                cCtx.lineTo(x, height/2);
+                cCtx.stroke();
+            }
+
+            // Draw trajectory
+            cCtx.strokeStyle = 'var(--trajectory-color)';
+            cCtx.lineWidth = 3;
+            cCtx.beginPath();
+            state.trajectory.forEach((point, i) => {
+                const p_scaled = point.p * 30; // Scale momentum for visibility
+                const angle = point.theta + state.rotationY;
+                const x = radius * Math.cos(angle);
+                const y = -p_scaled;
+                const z_depth = radius * Math.sin(angle);
+                if (z_depth < 0) return; // Don't draw on back of cylinder
+
+                if (i === 0) cCtx.moveTo(x, y); else cCtx.lineTo(x, y);
+            });
+            cCtx.stroke();
+
+            // Draw current state point
+            const current_p_scaled = state.p * 30;
+            const current_angle = state.theta + state.rotationY;
+            const current_x = radius * Math.cos(current_angle);
+            const current_y = -current_p_scaled;
+            const current_z = radius * Math.sin(current_angle);
+
+            if (current_z >= 0) {
+                cCtx.fillStyle = 'white';
+                cCtx.beginPath();
+                cCtx.arc(current_x, current_y, 6, 0, 2*Math.PI);
+                cCtx.fill();
+            }
+
+            cCtx.restore();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

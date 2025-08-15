@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lorentz Manifolds: Spacetime of General Relativity</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A red for spacetime curvature */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --cone-color: rgba(245, 166, 35, 0.2);
+            --cone-border: #f5a623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; cursor: crosshair; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Lorentz Manifolds: Spacetime of General Relativity</h1>
+        <p>A simulation of light cones in a curved spacetime near a black hole.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 22 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In Einstein's theory of General Relativity, gravity is not a force, but a manifestation of the curvature of spacetime. This simulation explores one of the most profound consequences of this idea. We visualize a 2D slice of spacetime (one space and one time dimension) near a black hole. At every point, a "light cone" defines the possible future paths. By moving your cursor, you can see how the intense gravity of the black hole warps spacetime, causing the light cones to "tip over." This visualization provides an intuitive geometric reason for why nothing, not even light, can escape from beyond the black hole's event horizon.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Light Cones and Black Holes</h2>
+
+            <h4>Step 1: Spacetime and Light Cones</h4>
+            <p>The diagram shows a map of spacetime. The horizontal direction is <strong>space</strong> (distance `r` from the black hole's center), and the vertical direction is <strong>time</strong> (t). An "event" is just a point on this map—a specific place at a specific time.</p>
+            <p>The yellow shape that follows your cursor is a <strong>light cone</strong>. It represents the "structure of causality" at that point:</p>
+            <ul>
+                <li>Any path you take through spacetime must be "timelike," meaning you always move forward in time. Your path must stay <strong>inside</strong> the upper cone (the "future light cone").</li>
+                <li>Light travels along the <strong>edges</strong> of the cone.</li>
+                <li>You cannot travel to any point outside your future light cone.</li>
+            </ul>
+            <p>In flat, empty space, the light cone is always perfectly upright, with its edges at 45 degrees. The future is "up."</p>
+
+            <h4>Step 2: Curved Spacetime</h4>
+            <p>The black circle represents a black hole, and the white dashed line is its <strong>event horizon</strong>—the point of no return. A massive object like a black hole warps spacetime. We visualize this warping with the distorted grid lines.</p>
+
+            <h4>Step 3: The "Tipping" of the Cones (The Main Event)</h4>
+            <p>Move your cursor around the spacetime diagram and watch what happens to the light cone. This is the key insight of the simulation.</p>
+            <ul>
+                <li><strong>Far from the black hole:</strong> The light cone is upright. You can move away from the black hole (to the right) or towards it (to the left) in the future.</li>
+                <li><strong>Near the black hole:</strong> The cone starts to tip inwards. The curvature of spacetime is tilting the direction of "future" towards the black hole.</li>
+                <li><strong>At the event horizon:</strong> The cone has tipped so much that one edge is vertical. An outgoing light ray can just barely stay at the same radius. Any object moving slower than light (i.e., inside the cone) must move inwards.</li>
+                <li><strong>Inside the event horizon:</strong> The entire future light cone—all possible future paths—points towards the singularity at the center (r=0). "Escaping" would mean traveling to the right, but that direction is now outside your future light cone. It's not just difficult; it's a geometric impossibility. The future *is* the singularity.</li>
+            </ul>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Move your mouse over the spacetime diagram to place the light cone at different events.</p>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const M = 80; // Mass of the black hole (determines Schwarzschild radius)
+        const Rs = 2 * M; // Schwarzschild radius
+        const state = {
+            mouse: { x: 350, y: 250 },
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            requestAnimationFrame(draw);
+        }
+
+        function addEventListeners() {
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                state.mouse.x = e.clientX - rect.left;
+                state.mouse.y = e.clientY - rect.top;
+            });
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawGrid();
+            drawBlackHole();
+            drawLightCone();
+
+            requestAnimationFrame(draw);
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+
+            // Draw radial lines
+            for (let i = 0; i < 12; i++) {
+                const angle = i * Math.PI / 12;
+                ctx.beginPath();
+                ctx.moveTo(Rs, canvas.height/2);
+                ctx.lineTo(Rs + canvas.width * Math.cos(angle), canvas.height/2 + canvas.width * Math.sin(angle));
+                ctx.stroke();
+            }
+
+            // Draw time-like surfaces (circles)
+             for (let i = 1; i < 10; i++) {
+                ctx.beginPath();
+                ctx.arc(Rs, canvas.height/2, i * 50, 0, 2*Math.PI);
+                ctx.stroke();
+            }
+        }
+
+        function drawBlackHole() {
+            // Singularity
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(Rs, canvas.height/2, Rs, 0, 2*Math.PI);
+            ctx.fill();
+
+            // Event Horizon
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(Rs, canvas.height/2, Rs, 0, 2*Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText('Event Horizon', Rs, canvas.height/2 + Rs + 15);
+        }
+
+        function drawLightCone() {
+            const { x, y } = state.mouse;
+            const r = Math.sqrt((x - Rs)**2 + (y - canvas.height/2)**2);
+
+            if (r < 5) return;
+
+            // Ingoing light rays are always at 45 deg in this visualization
+            const ingoing_slope = 1;
+            // Outgoing light rays depend on r
+            const outgoing_slope_inv = (1 - Rs/r);
+
+            const cone_height = 60;
+
+            // Define the 4 vertices of the future and past cones
+            const p0 = {x: x, y: y};
+            const p_future_left = {x: x - cone_height, y: y - cone_height * ingoing_slope};
+            const p_future_right = {x: x + cone_height * outgoing_slope_inv, y: y - cone_height};
+
+            const p_past_left = {x: x - cone_height * outgoing_slope_inv, y: y + cone_height};
+            const p_past_right = {x: x + cone_height, y: y + cone_height * ingoing_slope};
+
+            // Draw future cone
+            ctx.fillStyle = 'var(--cone-color)';
+            ctx.strokeStyle = 'var(--cone-border)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p_future_left.x, p_future_left.y);
+            ctx.lineTo(p_future_right.x, p_future_right.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw past cone
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p_past_left.x, p_past_left.y);
+            ctx.lineTo(p_past_right.x, p_past_right.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

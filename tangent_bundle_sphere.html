@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tangent Bundle: Space of Velocities</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #2ecc71; /* A green for this topic */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --plane-color: rgba(74, 144, 226, 0.3);
+            --vector-color: #f5a623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; cursor: move; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #25a25a; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Tangent Bundle: Space of Velocities</h1>
+        <p>A simulation visualizing the tangent bundle for a particle on a sphere.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 28 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In modern physics and mathematics, the space of all possible states of a system—its positions and velocities—is described by a geometric object called a <strong>tangent bundle</strong>. This simulation provides an intuitive visualization of this concept for a simple system: a particle constrained to move on the surface of a sphere. At every point on the sphere, the particle's velocity must lie in a flat plane that is tangent to the sphere at that point. You can move the particle around and see this "tangent space" move with it. You can also define a velocity vector and launch the particle to see it travel along a "straight line" on the curved surface, known as a geodesic.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Tangent Spaces</h2>
+
+            <h4>Step 1: The Sphere (Configuration Space)</h4>
+            <p>Imagine a tiny particle that is forced to live on the surface of a sphere. The set of all possible positions for this particle is the sphere itself. In geometry, this is called the "configuration space."</p>
+
+            <h4>Step 2: The Tangent Plane (The Space of Velocities)</h4>
+            <p>Now, imagine the particle is at some point on the sphere. In what directions can it move? It can't move into or out of the sphere; its velocity must be along the surface. The set of all possible velocity vectors at that single point forms a flat 2D plane that just touches the sphere where the particle is. This plane is called the <strong>tangent space</strong>.</p>
+            <p>The simulation visualizes this as a small, transparent blue plane attached to the particle. As you drag the particle around, watch how the plane moves with it, always staying tangent to the surface.</p>
+
+            <h4>Step 3: The Tangent Bundle</h4>
+            <p>The "tangent bundle" is simply the name for the entire collection of all the tangent spaces for all the points on the sphere, all bundled together. It's the total space of (position, velocity) pairs.</p>
+
+            <h4>Step 4: Geodesics - Straight Lines on a Curve</h4>
+            <p>If you give the particle a push and then let it coast freely, what path will it follow? It will follow the "straightest possible path" on the curved surface. On a sphere, this path is always a <strong>great circle</strong> (like the equator). These paths of "straightest" motion on a curved manifold are called <strong>geodesics</strong>.</p>
+
+            <h4>How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Rotate the View:</strong> Click and drag on an empty part of the canvas to rotate the 3D view.</li>
+                <li><strong>Move the Particle:</strong> Click and drag the white particle to move it to any point on the sphere. Observe how the blue tangent plane follows it.</li>
+                <li><strong>Define a Velocity:</strong> With the particle placed, click and drag on the blue tangent plane itself. An orange arrow will appear. This is your velocity vector.</li>
+                <li><strong>Launch:</strong> Release the mouse to "launch" the particle with that velocity. Watch it trace a geodesic path around the sphere.</li>
+                <li><strong>Reset:</strong> Click "Reset" to stop the animation and place a new particle.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Drag the sphere to rotate. Drag the particle to move it. Drag on the blue plane to set velocity and launch.</p>
+                 <button id="reset-btn">Reset</button>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const R = 150; // Sphere Radius
+        const state = {
+            // Particle position on sphere using spherical coords
+            particle: { theta: Math.PI / 4, phi: Math.PI / 4 },
+            velocity: { vt: 0, vp: 0 }, // Velocity in the tangent plane basis
+            trajectory: [],
+            mode: 'positioning', // positioning, aiming, moving
+            // View rotation
+            rotation: { x: 0.3, y: -0.5 },
+            isDragging: false,
+            dragMode: 'none', // 'rotate' or 'position'
+            lastMouse: { x: 0, y: 0 },
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            resetBtn.addEventListener('click', () => { state.mode = 'positioning'; state.trajectory = []; });
+
+            canvas.addEventListener('mousedown', (e) => {
+                state.isDragging = true;
+                state.lastMouse = { x: e.clientX, y: e.clientY };
+                const pos = getMousePos(canvas, e);
+
+                if (state.mode === 'positioning') {
+                    // Check if clicking on particle
+                    const p_canvas = project(sphericalToCartesian(state.particle.theta, state.particle.phi));
+                    const dx = pos.x - (p_canvas.x + canvas.width/2);
+                    const dy = pos.y - (p_canvas.y + canvas.height/2);
+                    if (dx*dx + dy*dy < 15*15) {
+                        state.dragMode = 'position';
+                    } else {
+                        state.dragMode = 'rotate';
+                    }
+                } else if (state.mode === 'moving') {
+                     state.dragMode = 'rotate';
+                }
+            });
+            window.addEventListener('mouseup', (e) => {
+                state.isDragging = false;
+                state.dragMode = 'none';
+            });
+            canvas.addEventListener('mousemove', (e) => {
+                if (!state.isDragging) return;
+                const dx = e.clientX - state.lastMouse.x;
+                const dy = e.clientY - state.lastMouse.y;
+
+                if (state.dragMode === 'rotate') {
+                    state.rotation.y += dx * 0.01;
+                    state.rotation.x += dy * 0.01;
+                } else if (state.dragMode === 'position') {
+                    // This is a simplification; proper dragging on a sphere is complex
+                    state.particle.phi += dx * 0.01;
+                    state.particle.theta += dy * 0.01;
+                    state.particle.theta = Math.max(0.01, Math.min(Math.PI - 0.01, state.particle.theta));
+                }
+                state.lastMouse = { x: e.clientX, y: e.clientY };
+            });
+
+            // Simplified aiming on the tangent plane
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (state.mode === 'positioning') {
+                    const vel = Math.random() * 0.05 + 0.01;
+                    const angle = Math.random() * 2 * Math.PI;
+                    state.velocity = {vt: vel * Math.cos(angle), vp: vel * Math.sin(angle)};
+                    state.mode = 'moving';
+                    state.trajectory = [sphericalToCartesian(state.particle.theta, state.particle.phi)];
+                }
+            });
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+        }
+
+        function resetSimulation() {
+             state.mode = 'positioning';
+             state.trajectory = [];
+        }
+
+        // --- CORE LOGIC ---
+        function sphericalToCartesian(theta, phi) {
+            return {
+                x: R * Math.sin(theta) * Math.cos(phi),
+                y: R * Math.sin(theta) * Math.sin(phi),
+                z: R * Math.cos(theta)
+            };
+        }
+
+        function mainLoop() {
+            if (state.mode === 'moving') {
+                updateParticlePosition();
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function updateParticlePosition() {
+            // Move along a geodesic (great circle)
+            // This is complex. A simple way is to define a rotation axis and rotate the position vector.
+            const pos = sphericalToCartesian(state.particle.theta, state.particle.phi);
+            const {e_theta, e_phi} = getTangentBasis(state.particle.theta, state.particle.phi);
+
+            // Velocity vector in 3D cartesian space
+            const vel_vec = {
+                x: state.velocity.vt * e_theta.x + state.velocity.vp * e_phi.x,
+                y: state.velocity.vt * e_theta.y + state.velocity.vp * e_phi.y,
+                z: state.velocity.vt * e_theta.z + state.velocity.vp * e_phi.z
+            };
+
+            // Rotation axis is perpendicular to position and velocity
+            const rot_axis = cross(pos, vel_vec);
+            normalize(rot_axis);
+
+            const speed = Math.sqrt(state.velocity.vt**2 + state.velocity.vp**2);
+            const angle_step = speed;
+
+            const new_pos = rotate(pos, rot_axis, angle_step);
+
+            // Convert back to spherical
+            state.particle.theta = Math.acos(new_pos.z / R);
+            state.particle.phi = Math.atan2(new_pos.y, new_pos.x);
+            state.trajectory.push(new_pos);
+            if (state.trajectory.length > 200) state.trajectory.shift();
+        }
+
+        // --- 3D & Vector Math ---
+        function project(p3d) {
+            const { x, y } = state.rotation;
+            let p = { ...p3d };
+            // Rotate around Y axis
+            let p_y = p.x * Math.cos(y) - p.z * Math.sin(y);
+            let p_z1 = p.x * Math.sin(y) + p.z * Math.cos(y);
+            p.x = p_y; p.z = p_z1;
+            // Rotate around X axis
+            let p_x = p.y * Math.cos(x) - p.z * Math.sin(x);
+            let p_z2 = p.y * Math.sin(x) + p.z * Math.cos(x);
+            p.y = p_x; p.z = p_z2;
+            return p;
+        }
+
+        function getTangentBasis(theta, phi) {
+            // e_theta is partial derivative w.r.t. theta
+            const e_theta = {
+                x: R * Math.cos(theta) * Math.cos(phi),
+                y: R * Math.cos(theta) * Math.sin(phi),
+                z: -R * Math.sin(theta)
+            };
+            // e_phi is partial derivative w.r.t. phi
+            const e_phi = {
+                x: -R * Math.sin(theta) * Math.sin(phi),
+                y: R * Math.sin(theta) * Math.cos(phi),
+                z: 0
+            };
+            return { e_theta: normalize(e_theta), e_phi: normalize(e_phi) };
+        }
+
+        const cross = (a, b) => ({x: a.y*b.z - a.z*b.y, y: a.z*b.x - a.x*b.z, z: a.x*b.y - a.y*b.x});
+        const normalize = v => { const l=Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z); if(l>0){v.x/=l; v.y/=l; v.z/=l;} return v; };
+        // Rodrigues' rotation formula
+        function rotate(v, k, angle) {
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            const k_dot_v = k.x*v.x + k.y*v.y + k.z*v.z;
+            const k_cross_v = cross(k, v);
+            return {
+                x: v.x*cosA + k_cross_v.x*sinA + k.x*k_dot_v*(1-cosA),
+                y: v.y*cosA + k_cross_v.y*sinA + k.y*k_dot_v*(1-cosA),
+                z: v.z*cosA + k_cross_v.z*sinA + k.z*k_dot_v*(1-cosA),
+            };
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+
+            drawSphere();
+            drawTrajectory();
+            drawParticleAndTangentPlane();
+
+            ctx.restore();
+        }
+
+        function drawSphere() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            const n = 24;
+            for (let i = 0; i < n; i++) {
+                ctx.beginPath();
+                const lat = Math.PI * (i/(n/2) - 0.5);
+                for (let j = 0; j <= n*2; j++) {
+                    const lon = 2 * Math.PI * (j/(n*2));
+                    const p = project(sphericalToCartesian(lat, lon));
+                    if (j === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function drawParticleAndTangentPlane() {
+            const p_pos_cartesian = sphericalToCartesian(state.particle.theta, state.particle.phi);
+            const p_pos_proj = project(p_pos_cartesian);
+
+            // Only draw if not on back side
+            if (p_pos_proj.z > -R * 0.3) {
+                 // Tangent Plane
+                const { e_theta, e_phi } = getTangentBasis(state.particle.theta, state.particle.phi);
+                const plane_size = 30;
+                const corners = [
+                    {x: -e_theta.x - e_phi.x, y: -e_theta.y - e_phi.y, z: -e_theta.z - e_phi.z},
+                    {x:  e_theta.x - e_phi.x, y:  e_theta.y - e_phi.y, z:  e_theta.z - e_phi.z},
+                    {x:  e_theta.x + e_phi.x, y:  e_theta.y + e_phi.y, z:  e_theta.z + e_phi.z},
+                    {x: -e_theta.x + e_phi.x, y: -e_theta.y + e_phi.y, z: -e_theta.z + e_phi.z},
+                ];
+
+                ctx.fillStyle = 'var(--plane-color)';
+                ctx.beginPath();
+                for (let i = 0; i < 4; i++) {
+                    const corner_world = {
+                        x: p_pos_cartesian.x + corners[i].x * plane_size,
+                        y: p_pos_cartesian.y + corners[i].y * plane_size,
+                        z: p_pos_cartesian.z + corners[i].z * plane_size,
+                    };
+                    const corner_proj = project(corner_world);
+                    if (i===0) ctx.moveTo(corner_proj.x, corner_proj.y); else ctx.lineTo(corner_proj.x, corner_proj.y);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Particle
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(p_pos_proj.x, p_pos_proj.y, 6, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function drawTrajectory() {
+             if (state.trajectory.length < 2) return;
+            ctx.strokeStyle = 'var(--vector-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < state.trajectory.length; i++) {
+                const p = project(state.trajectory[i]);
+                if (p.z > -R*0.5) { // Basic back-face culling
+                    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                } else {
+                    ctx.moveTo(p.x, p.y); // move to back side without drawing
+                }
+            }
+            ctx.stroke();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
