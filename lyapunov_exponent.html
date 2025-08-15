@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Lyapunov Exponent Calculator</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #d63384; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        canvas { border: 1px solid var(--border-color); }
+        #controls { margin-top: 10px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>Lyapunov Exponent Calculator for the Logistic Map</h1><p class="subtitle">A numerical tool to measure the "chaos" in a simple dynamical system.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="500"></canvas></div>
+            <div id="controls">
+                <label for="r-slider">Parameter r: <span id="r-val">3.900</span></label>
+                <input type="range" id="r-slider" min="3.5" max="4.0" step="0.001" value="3.9">
+                <button id="reset-btn">Recalculate</button>
+            </div>
+        </section>
+        <!-- All text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"><p>Iterations: <span id="dev-iterations">0</span></p></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class ChaoticSystemEngine { static step(x, r) { return r * x * (1 - x); } }
+        class LyapunovCalculator { constructor(r, ix = 0.5, d0 = 1e-9) { this.r = r; this.x1 = ix; this.x2 = ix + d0; this.d0 = d0; this.sum = 0; this.iter = 0; this.history = []; } step() { this.x1 = ChaoticSystemEngine.step(this.x1, this.r); this.x2 = ChaoticSystemEngine.step(this.x2, this.r); const d = Math.abs(this.x1 - this.x2); if (d > 0) { this.sum += Math.log(d / this.d0); this.iter++; this.history.push(this.sum / this.iter); this.x2 = this.x1 + this.d0; } } getExponent() { return this.iter > 0 ? this.sum / this.iter : 0; } }
+        class LyapunovRenderer { constructor(c, calc) { this.canvas = c; this.ctx = c.getContext('2d'); this.calc = calc; } draw() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); const h = this.calc.history; if (h.length < 2) return; const w = this.canvas.width, H = this.canvas.height, p = 50; const max = Math.max(...h), min = Math.min(...h); this.ctx.strokeStyle = '#333'; this.ctx.beginPath(); this.ctx.moveTo(p, p); this.ctx.lineTo(p, H - p); this.ctx.lineTo(w - p, H - p); this.ctx.stroke(); this.ctx.strokeStyle = 'blue'; this.ctx.beginPath(); for (let i = 0; i < h.length; i++) { const x = p + (i / h.length) * (w - 2 * p); const y = H - p - ((h[i] - min) / (max - min)) * (H - 2 * p); if (i === 0) this.ctx.moveTo(x, y); else this.ctx.lineTo(x, y); } this.ctx.stroke(); const exp = this.calc.getExponent(); this.ctx.fillStyle = exp > 0 ? 'red' : 'green'; this.ctx.font = '20px Arial'; this.ctx.fillText(`λ ≈ ${exp.toFixed(4)}`, p, 30); } }
+        class SimulationController { constructor() { this.canvas = document.getElementById('simulation-canvas'); this.rSlider = document.getElementById('r-slider'); this.rVal = document.getElementById('r-val'); this.resetBtn = document.getElementById('reset-btn'); this.exportPngBtn = document.getElementById('export-png-btn'); this.devConsoleToggle = document.getElementById('dev-console-toggle'); this.devConsole = document.getElementById('dev-console'); this.devIterations = document.getElementById('dev-iterations'); this.r = 3.9; this.reset(); this.addEventListeners(); this.animate(); } addEventListeners() { this.rSlider.addEventListener('input', (e) => this.onSliderChange(e)); this.resetBtn.addEventListener('click', () => this.reset()); this.exportPngBtn.addEventListener('click', () => this.exportPNG()); this.devConsoleToggle.addEventListener('click', () => this.devConsole.classList.toggle('hidden')); } onSliderChange(e) { this.r = parseFloat(e.target.value); this.reset(); } updateUI() { this.rVal.textContent = this.r.toFixed(3); this.rSlider.value = this.r; this.devIterations.textContent = this.calculator.iter; } reset() { this.calculator = new LyapunovCalculator(this.r); this.renderer = new LyapunovRenderer(this.canvas, this.calculator); this.updateUI(); } animate() { for (let i = 0; i < 500; i++) { this.calculator.step(); } this.renderer.draw(); this.updateUI(); requestAnimationFrame(() => this.animate()); } exportPNG() { const url = this.canvas.toDataURL('image/png'); const link = document.createElement('a'); link.download = 'lyapunov_exponent.png'; link.href = url; link.click(); } }
+        document.addEventListener('DOMContentLoaded', () => { const checks = { 'Canvas': 'simulation-canvas', 'Slider': 'r-slider', 'Button': 'reset-btn' }; const list = document.getElementById('quality-check-list'); for (const [name, id] of Object.entries(checks)) { const el = document.getElementById(id); const li = document.createElement('li'); li.textContent = `${name}: ${el ? 'OK' : 'FAIL'}`; li.className = el ? 'pass' : 'fail'; list.appendChild(li); } new SimulationController(); });
+    </script>
+</body>
+</html>

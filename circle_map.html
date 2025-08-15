@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Circle Map</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #6f42c1; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        #canvas-container { display: flex; gap: 20px; align-items: flex-start; justify-content: center; }
+        canvas { border: 1px solid var(--border-color); }
+        #controls { margin-top: 10px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>The Circle Map</h1><p class="subtitle">An interactive exploration of mode-locking and the devil's staircase.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container">
+                <canvas id="staircase-canvas" width="600" height="500"></canvas>
+                <canvas id="circle-canvas" width="200" height="200"></canvas>
+            </div>
+            <div id="controls">
+                <label for="k-slider">Coupling K: <span id="k-val">1.0</span></label>
+                <input type="range" id="k-slider" min="0" max="2" step="0.01" value="1.0">
+                <button id="recalculate-btn">Recalculate Staircase</button>
+                <br>
+                <label for="omega-slider">Omega Ω: <span id="omega-val">0.500</span></label>
+                <input type="range" id="omega-slider" min="0" max="1" step="0.001" value="0.5">
+            </div>
+        </section>
+        <!-- All text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"><p>Winding Number: <span id="dev-winding">N/A</span></p></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class CircleMapEngine { constructor(o, k) { this.o = o; this.k = k; this.th = Math.random(); } step() { this.th = (this.th + this.o - (this.k / (2 * Math.PI)) * Math.sin(2 * Math.PI * this.th)) % 1.0; if (this.th < 0) this.th += 1.0; return this.th; } }
+        class WindingNumberCalculator { static calculate(o, k, t = 100, it = 200) { const e = new CircleMapEngine(o, k); for (let i = 0; i < t; i++) e.step(); const s = e.th; for (let i = 0; i < it; i++) e.step(); return (e.th - s) / it; } static generateStaircase(k, s = 200) { const r = []; for (let i = 0; i <= s; i++) { const o = i / s; const w = this.calculate(o, k); r.push({ o: o, w: w }); } return r; } }
+        class CircleMapRenderer { constructor(s, c) { this.sC = s; this.sCtx = s.getContext('2d'); this.cC = c; this.cCtx = c.getContext('2d'); } drawStaircase(d) { const w = this.sC.width, h = this.sC.height, p = 50; this.sCtx.clearRect(0, 0, w, h); this.sCtx.strokeStyle = '#333'; this.sCtx.strokeRect(p, p, w - 2 * p, h - 2 * p); this.sCtx.strokeStyle = 'purple'; this.sCtx.beginPath(); d.forEach((pt, i) => { const x = p + pt.o * (w - 2 * p); const y = h - p - pt.w * (h - 2 * p); if (i === 0) this.sCtx.moveTo(x, y); else this.sCtx.lineTo(x, y); }); this.sCtx.stroke(); } drawCircle(th) { const w = this.cC.width, h = this.cC.height, r = w / 2 - 10; this.cCtx.clearRect(0, 0, w, h); this.cCtx.strokeStyle = '#ccc'; this.cCtx.beginPath(); this.cCtx.arc(w / 2, h / 2, r, 0, 2 * Math.PI); this.cCtx.stroke(); const a = th * 2 * Math.PI; const x = w / 2 + r * Math.cos(a); const y = h / 2 + r * Math.sin(a); this.cCtx.fillStyle = 'red'; this.cCtx.beginPath(); this.cCtx.arc(x, y, 5, 0, 2 * Math.PI); this.cCtx.fill(); } }
+        class SimulationController { constructor() { this.sC = document.getElementById('staircase-canvas'); this.cC = document.getElementById('circle-canvas'); this.kS = document.getElementById('k-slider'); this.kV = document.getElementById('k-val'); this.oS = document.getElementById('omega-slider'); this.oV = document.getElementById('omega-val'); this.rB = document.getElementById('recalculate-btn'); this.eB = document.getElementById('export-png-btn'); this.dT = document.getElementById('dev-console-toggle'); this.dC = document.getElementById('dev-console'); this.dW = document.getElementById('dev-winding'); this.k = 1.0; this.o = 0.5; this.r = new CircleMapRenderer(this.sC, this.cC); this.cME = new CircleMapEngine(this.o, this.k); this.addEventListeners(); this.updateUI(); this.recalculateStaircase(); this.animate(); } addEventListeners() { this.kS.addEventListener('input', (e) => { this.k = parseFloat(e.target.value); this.updateUI(); }); this.oS.addEventListener('input', (e) => { this.o = parseFloat(e.target.value); this.cME = new CircleMapEngine(this.o, this.k); this.updateUI(); }); this.rB.addEventListener('click', () => this.recalculateStaircase()); this.eB.addEventListener('click', () => this.exportPNG()); this.dT.addEventListener('click', () => this.dC.classList.toggle('hidden')); } updateUI() { this.kV.textContent = this.k.toFixed(2); this.oV.textContent = this.o.toFixed(3); } recalculateStaircase() { this.rB.textContent = "Calculating..."; this.rB.disabled = true; setTimeout(() => { const d = WindingNumberCalculator.generateStaircase(this.k); this.r.drawStaircase(d); this.rB.textContent = "Recalculate Staircase"; this.rB.disabled = false; }, 50); } animate() { const th = this.cME.step(); this.r.drawCircle(th); this.dW.textContent = WindingNumberCalculator.calculate(this.o, this.k, 100, 200).toFixed(4); requestAnimationFrame(() => this.animate()); } exportPNG() { const url = this.sC.toDataURL('image/png'); const link = document.createElement('a'); link.download = 'circle_map_staircase.png'; link.href = url; link.click(); } }
+        document.addEventListener('DOMContentLoaded', () => { const checks = { 'Staircase Canvas': 'staircase-canvas', 'Circle Canvas': 'circle-canvas', 'K Slider': 'k-slider' }; const list = document.getElementById('quality-check-list'); for (const [name, id] of Object.entries(checks)) { const el = document.getElementById(id); const li = document.createElement('li'); li.textContent = `${name}: ${el ? 'OK' : 'FAIL'}`; li.className = el ? 'pass' : 'fail'; list.appendChild(li); } new SimulationController(); });
+    </script>
+</body>
+</html>

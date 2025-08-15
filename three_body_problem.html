@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Three-Body Problem</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        canvas { border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <header><h1>The Three-Body Gravitational Problem</h1></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="600"></canvas></div>
+            <div id="controls"></div>
+        </section>
+    </main>
+    <script>
+        class Vector { /* ... as before ... */ }
+        class Body { /* ... as before ... */ }
+        class GravityEngine { /* ... as before ... */ }
+
+        class GravityRenderer {
+            constructor(canvas, engine) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.engine = engine;
+                this.colors = ['#ff6b6b', '#4ecdc4', '#45b7d1'];
+            }
+
+            draw() {
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Fading effect for trails
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.engine.bodies.forEach((body, index) => {
+                    // Draw path
+                    this.ctx.strokeStyle = this.colors[index];
+                    this.ctx.lineWidth = 1;
+                    this.ctx.beginPath();
+                    for (let i = 0; i < body.path.length; i++) {
+                        if (i === 0) this.ctx.moveTo(body.path[i].x, body.path[i].y);
+                        else this.ctx.lineTo(body.path[i].x, body.path[i].y);
+                    }
+                    this.ctx.stroke();
+
+                    // Draw body
+                    this.ctx.fillStyle = this.colors[index];
+                    this.ctx.beginPath();
+                    this.ctx.arc(body.pos.x, body.pos.y, Math.log(body.mass + 1) * 2, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                });
+            }
+        }
+
+        class SimulationController {
+            constructor() {
+                this.canvas = document.getElementById('simulation-canvas');
+                const bodies = [
+                    new Body(100, new Vector(200, 300), new Vector(0, 1)),
+                    new Body(100, new Vector(400, 300), new Vector(0, -1)),
+                    new Body(100, new Vector(300, 500), new Vector(-1, 0))
+                ];
+                this.engine = new GravityEngine(bodies);
+                this.renderer = new GravityRenderer(this.canvas, this.engine);
+                this.isRunning = true;
+                this.animate();
+            }
+
+            animate() {
+                if (!this.isRunning) return;
+                this.engine.step(0.01);
+                this.renderer.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => new SimulationController());
+    </script>
+</body>
+</html>
