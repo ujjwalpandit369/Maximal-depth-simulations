@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Coupled Map Lattices</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #0d6efd; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        canvas { border: 1px solid var(--border-color); }
+        #controls { margin-top: 10px; display: flex; gap: 20px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>Coupled Map Lattices</h1><p class="subtitle">An interactive exploration of spatiotemporal chaos.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="400" height="600"></canvas></div>
+            <div id="controls">
+                <div><label for="r-slider">r: <span id="r-val">3.80</span></label><input type="range" id="r-slider" min="3.5" max="4.0" step="0.01" value="3.8"></div>
+                <div><label for="epsilon-slider">ε: <span id="epsilon-val">0.10</span></label><input type="range" id="epsilon-slider" min="0" max="0.5" step="0.01" value="0.1"></div>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+        <!-- Text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class CMLEngine { constructor(c){this.config=c;this.lattice=new Array(c.size).fill(0);this.initLattice();} initLattice(){for(let i=0;i<this.config.size;i++)this.lattice[i]=Math.random();} step(){const{size,r,epsilon}=this.config;const next=new Array(size);const evolved=this.lattice.map(x=>r*x*(1-x));for(let i=0;i<size;i++){const l=evolved[(i-1+size)%size];const R=evolved[(i+1)%size];next[i]=(1-epsilon)*evolved[i]+(epsilon/2)*(l+R);}this.lattice=next;return this.lattice;} }
+        class CMLRenderer { constructor(c,e){this.canvas=c;this.ctx=c.getContext('2d');this.engine=e;this.row=0;} drawRow(l){if(this.row>=this.canvas.height){const img=this.ctx.getImageData(0,1,this.canvas.width,this.canvas.height-1);this.ctx.putImageData(img,0,0);}const y=Math.min(this.row,this.canvas.height-1);for(let i=0;i<l.length;i++){const v=Math.floor(l[i]*255);this.ctx.fillStyle=`rgb(${v},${v},${v})`;this.ctx.fillRect(i,y,1,1);}this.row++;} reset(){this.row=0;this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);} }
+        class SimulationController { constructor(){this.canvas=document.getElementById('simulation-canvas');this.rS=document.getElementById('r-slider');this.rV=document.getElementById('r-val');this.eS=document.getElementById('epsilon-slider');this.eV=document.getElementById('epsilon-val');this.resetBtn=document.getElementById('reset-btn');this.exportPngBtn=document.getElementById('export-png-btn');this.config={size:400,r:3.8,epsilon:0.1};this.engine=new CMLEngine(this.config);this.renderer=new CMLRenderer(this.canvas,this.engine);this.addEventListeners();this.updateUI();this.animate();} addEventListeners(){this.rS.addEventListener('input',(e)=>{this.config.r=parseFloat(e.target.value);this.updateUI();});this.eS.addEventListener('input',(e)=>{this.config.epsilon=parseFloat(e.target.value);this.updateUI();});this.resetBtn.addEventListener('click',()=>this.reset());this.exportPngBtn.addEventListener('click',()=>this.exportPNG());} updateUI(){this.rV.textContent=this.config.r.toFixed(2);this.eV.textContent=this.config.epsilon.toFixed(2);} reset(){this.engine=new CMLEngine(this.config);this.renderer.engine=this.engine;this.renderer.reset();} animate(){const l=this.engine.step();this.renderer.drawRow(l);requestAnimationFrame(()=>this.animate());} exportPNG(){const u=this.canvas.toDataURL('image/png');const l=document.createElement('a');l.download='cml.png';l.href=u;l.click();} }
+        document.addEventListener('DOMContentLoaded',()=>{const c={'Canvas':'simulation-canvas','r Slider':'r-slider','Epsilon Slider':'epsilon-slider'};const l=document.getElementById('quality-check-list');for(const[n,i]of Object.entries(c)){const e=document.getElementById(i);const li=document.createElement('li');li.textContent=`${n}: ${e?'OK':'FAIL'}`;li.className=e?'pass':'fail';l.appendChild(li);}new SimulationController();});
+    </script>
+</body>
+</html>

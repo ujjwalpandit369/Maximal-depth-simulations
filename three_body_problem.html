@@ -5,77 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Simulation: The Three-Body Problem</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        canvas { border: 1px solid #ccc; }
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #0d6efd; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 300px 1fr; gap: 20px;}
+        header { grid-column: 1 / -1; text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--section-bg-color); }
+        canvas { border: 1px solid var(--border-color); width: 100%; height: auto; }
+        .body-controls { border-top: 1px solid #eee; padding: 10px 0; }
+        .body-controls input { width: 60px; margin: 2px; }
+        footer { grid-column: 1 / -1; border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
     </style>
 </head>
 <body>
-    <header><h1>The Three-Body Gravitational Problem</h1></header>
+    <header><h1>The Three-Body Gravitational Problem</h1><p class="subtitle">An interactive exploration of chaotic orbital mechanics.</p></header>
     <main>
-        <section id="simulation-area">
-            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="600"></canvas></div>
-            <div id="controls"></div>
-        </section>
+        <div id="left-column">
+            <section id="controls">
+                <div id="body-inputs"></div>
+                <button id="start-btn">Start/Reset</button>
+                <button id="twin-btn">Launch Twin & Show Divergence</button>
+                <div><label>Time Step: <input type="range" id="dt-slider" min="0.001" max="0.05" step="0.001" value="0.01"></label></div>
+            </section>
+            <section id="overview"><h2>Overview</h2><p>This simulation demonstrates the famous **three-body problem**. While the two-body problem is perfectly solvable, the three-body problem has no general analytical solution and its behavior is often **chaotic**. Use the controls to set the initial conditions and watch the intricate, unpredictable dance they perform.</p></section>
+        </div>
+        <div id="right-column">
+            <section id="visualization"><canvas id="simulation-canvas" width="800" height="600"></canvas></section>
+            <section id="beginners-guide"><h2>Beginner's Guide</h2><p>The **three-body problem** describes the motion of three objects interacting gravitationally. Unlike the simple, predictable orbits of a two-body system (like Earth and the Sun), the three-body system is famously chaotic. A tiny change in the starting position or velocity of one body can lead to a drastically different outcome. The "Launch Twin" button demonstrates this by running a second, invisible simulation with a minuscule change, then revealing its wildly different path after a few moments.</p></section>
+        </div>
     </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"></div></div>
+    </footer>
     <script>
-        class Vector { /* ... as before ... */ }
-        class Body { /* ... as before ... */ }
-        class GravityEngine { /* ... as before ... */ }
-
-        class GravityRenderer {
-            constructor(canvas, engine) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.engine = engine;
-                this.colors = ['#ff6b6b', '#4ecdc4', '#45b7d1'];
-            }
-
-            draw() {
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Fading effect for trails
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-                this.engine.bodies.forEach((body, index) => {
-                    // Draw path
-                    this.ctx.strokeStyle = this.colors[index];
-                    this.ctx.lineWidth = 1;
-                    this.ctx.beginPath();
-                    for (let i = 0; i < body.path.length; i++) {
-                        if (i === 0) this.ctx.moveTo(body.path[i].x, body.path[i].y);
-                        else this.ctx.lineTo(body.path[i].x, body.path[i].y);
-                    }
-                    this.ctx.stroke();
-
-                    // Draw body
-                    this.ctx.fillStyle = this.colors[index];
-                    this.ctx.beginPath();
-                    this.ctx.arc(body.pos.x, body.pos.y, Math.log(body.mass + 1) * 2, 0, 2 * Math.PI);
-                    this.ctx.fill();
-                });
-            }
-        }
-
-        class SimulationController {
-            constructor() {
-                this.canvas = document.getElementById('simulation-canvas');
-                const bodies = [
-                    new Body(100, new Vector(200, 300), new Vector(0, 1)),
-                    new Body(100, new Vector(400, 300), new Vector(0, -1)),
-                    new Body(100, new Vector(300, 500), new Vector(-1, 0))
-                ];
-                this.engine = new GravityEngine(bodies);
-                this.renderer = new GravityRenderer(this.canvas, this.engine);
-                this.isRunning = true;
-                this.animate();
-            }
-
-            animate() {
-                if (!this.isRunning) return;
-                this.engine.step(0.01);
-                this.renderer.draw();
-                requestAnimationFrame(() => this.animate());
-            }
-        }
-        document.addEventListener('DOMContentLoaded', () => new SimulationController());
+        // Final, complete script
+        class Vector { constructor(x=0,y=0){this.x=x;this.y=y;} add(v){return new Vector(this.x+v.x,this.y+v.y);} subtract(v){return new Vector(this.x-v.x,this.y-v.y);} multiply(s){return new Vector(this.x*s,this.y*s);} magnitudeSq(){return this.x**2+this.y**2;} magnitude(){return Math.sqrt(this.magnitudeSq());} }
+        class Body { constructor(m,p,v){this.mass=m;this.pos=p;this.vel=v;this.path=[];} }
+        class GravityEngine { constructor(b){this.bodies=b;this.G=100;this.softening=5;} step(dt){const forces=[];for(let i=0;i<this.bodies.length;i++){let f=new Vector();for(let j=0;j<this.bodies.length;j++){if(i===j)continue;const a=this.bodies[i],b=this.bodies[j];const r=b.pos.subtract(a.pos);const dsq=r.magnitudeSq()+this.softening**2;const mag=(this.G*a.mass*b.mass)/dsq;f=f.add(r.multiply(mag/Math.sqrt(dsq)));}forces.push(f);}for(let i=0;i<this.bodies.length;i++){const b=this.bodies[i];const acc=forces[i].multiply(1/b.mass);b.vel=b.vel.add(acc.multiply(dt));b.pos=b.pos.add(b.vel.multiply(dt));b.path.push(b.pos);if(b.path.length>500)b.path.shift();}} }
+        class GravityRenderer { constructor(c,e){this.canvas=c;this.ctx=c.getContext('2d');this.engine=e;this.colors=['#ff6b6b','#4ecdc4','#45b7d1'];this.twinEngine=null;} draw(){this.ctx.fillStyle='rgba(255,255,255,0.1)';this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);this.engine.bodies.forEach((b,i)=>this.drawBody(b,i,false));if(this.twinEngine){this.twinEngine.bodies.forEach((b,i)=>this.drawBody(b,i,true));}} drawBody(b,i,isTwin){this.ctx.lineWidth=isTwin?1:2;this.ctx.strokeStyle=this.colors[i];this.ctx.beginPath();b.path.forEach((p,j)=>{if(j===0)this.ctx.moveTo(p.x,p.y);else this.ctx.lineTo(p.x,p.y);});this.ctx.stroke();this.ctx.fillStyle=this.colors[i];this.ctx.beginPath();this.ctx.arc(b.pos.x,b.pos.y,Math.log(b.mass+1)*2+2,0,2*Math.PI);this.ctx.globalAlpha=isTwin?0.5:1.0;this.ctx.fill();this.ctx.globalAlpha=1.0;} }
+        class SimulationController { constructor(){this.canvas=document.getElementById('simulation-canvas');this.bodyInputsContainer=document.getElementById('body-inputs');this.startBtn=document.getElementById('start-btn');this.twinBtn=document.getElementById('twin-btn');this.dtSlider=document.getElementById('dt-slider');this.exportPngBtn=document.getElementById('export-png-btn');this.createBodyInputs();this.reset();this.addEventListeners();this.animate();} createBodyInputs(){for(let i=0;i<3;i++){const d=document.createElement('div');d.className='body-controls';d.innerHTML=`<h4>Body ${i+1}</h4>Mass: <input type="number" id="m${i}" value="${[100,100,100][i]}"><br>Pos X: <input type="number" id="px${i}" value="${[200,600,400][i]}"> Pos Y: <input type="number" id="py${i}" value="${[300,300,500][i]}"><br>Vel X: <input type="number" id="vx${i}" value="${[1, -1, 0][i]}"> Vel Y: <input type="number" id="vy${i}" value="${[0, 0, 0][i]}">`;this.bodyInputsContainer.appendChild(d);}} readInputs(){const b=[];for(let i=0;i<3;i++){const m=parseFloat(document.getElementById(`m${i}`).value),px=parseFloat(document.getElementById(`px${i}`).value),py=parseFloat(document.getElementById(`py${i}`).value),vx=parseFloat(document.getElementById(`vx${i}`).value),vy=parseFloat(document.getElementById(`vy${i}`).value);b.push(new Body(m,new Vector(px,py),new Vector(vx,vy)));}return b;} addEventListeners(){this.startBtn.addEventListener('click',()=>this.reset());this.twinBtn.addEventListener('click',()=>this.launchTwin());this.exportPngBtn.addEventListener('click',()=>this.exportPNG());} reset(){const b=this.readInputs();this.engine=new GravityEngine(b);this.twinEngine=null;this.renderer=new GravityRenderer(this.canvas,this.engine);this.isRunning=true;} launchTwin(){const b=this.readInputs();const tB=this.readInputs();tB[0].pos.x+=1e-6;this.engine=new GravityEngine(b);this.twinEngine=new GravityEngine(tB);this.renderer.twinEngine=this.twinEngine;} animate(){if(!this.isRunning)return;const dt=parseFloat(this.dtSlider.value);this.engine.step(dt);if(this.twinEngine)this.twinEngine.step(dt);this.renderer.draw();requestAnimationFrame(()=>this.animate());} exportPNG(){const u=this.canvas.toDataURL('image/png');const l=document.createElement('a');l.download='three_body_problem.png';l.href=u;l.click();} }
+        document.addEventListener('DOMContentLoaded',()=>new SimulationController());
     </script>
 </body>
 </html>

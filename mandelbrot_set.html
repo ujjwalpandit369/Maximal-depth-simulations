@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Mandelbrot Set</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #000000; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #fff; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        canvas { border: 1px solid var(--border-color); cursor: move; }
+        #controls { margin-top: 10px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>The Mandelbrot Set</h1><p class="subtitle">An interactive explorer for one of the most famous fractals.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="600"></canvas></div>
+            <div id="controls">
+                <label for="iter-slider">Max Iterations: <span id="iter-val">100</span></label>
+                <input type="range" id="iter-slider" min="50" max="1000" value="100">
+                <button id="reset-view-btn">Reset View</button>
+            </div>
+        </section>
+        <!-- Text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button><button id="share-preset-btn">Share View</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"><p>Center: <span id="dev-center"></span><br>Zoom: <span id="dev-zoom"></span></p></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class MandelbrotEngine { static calculatePixel(cr,ci,maxIter){let zr=0,zi=0,n=0;while(n<maxIter){const zr2=zr*zr,zi2=zi*zi;if(zr2+zi2>4)break;const zr_new=zr2-zi2+cr;zi=2*zr*zi+ci;zr=zr_new;n++;}return n;} }
+        class MandelbrotRenderer { constructor(c,conf){this.canvas=c;this.ctx=c.getContext('2d');this.config=conf;} draw(){const{width,height}=this.canvas;const{centerX,centerY,zoom,maxIter}=this.config;const img=this.ctx.createImageData(width,height);for(let px=0;px<width;px++){for(let py=0;py<height;py++){const cr=centerX+(px-width/2)*zoom;const ci=centerY+(py-height/2)*zoom;const n=MandelbrotEngine.calculatePixel(cr,ci,maxIter);const color=this.getColor(n,maxIter);const i=(py*width+px)*4;img.data[i]=color.r;img.data[i+1]=color.g;img.data[i+2]=color.b;img.data[i+3]=255;}}this.ctx.putImageData(img,0,0);} getColor(n,max){if(n===max)return{r:0,g:0,b:0};const t=n/max;return{r:Math.floor(9*(1-t)*t*t*t*255),g:Math.floor(15*(1-t)*(1-t)*t*t*255),b:Math.floor(8.5*(1-t)*(1-t)*(1-t)*t*255)};} }
+        class SimulationController { constructor(){this.canvas=document.getElementById('simulation-canvas');this.iterSlider=document.getElementById('iter-slider');this.iterVal=document.getElementById('iter-val');this.resetBtn=document.getElementById('reset-view-btn');this.exportPngBtn=document.getElementById('export-png-btn');this.shareBtn=document.getElementById('share-preset-btn');this.devToggle=document.getElementById('dev-console-toggle');this.devConsole=document.getElementById('dev-console');this.devCenter=document.getElementById('dev-center');this.devZoom=document.getElementById('dev-zoom');this.initialConfig={centerX:-0.5,centerY:0,zoom:4.0/this.canvas.width,maxIter:100};this.config={...this.initialConfig};this.renderer=new MandelbrotRenderer(this.canvas,this.config);this.isDragging=false;this.lastPos={x:0,y:0};this.addEventListeners();this.applyUrlParams();this.updateUI();this.renderer.draw();} addEventListeners(){this.iterSlider.addEventListener('change',(e)=>this.onSliderChange(e));this.resetBtn.addEventListener('click',()=>this.resetView());this.canvas.addEventListener('mousedown',(e)=>this.onMouseDown(e));this.canvas.addEventListener('mousemove',(e)=>this.onMouseMove(e));this.canvas.addEventListener('mouseup',()=>this.onMouseUp());this.canvas.addEventListener('wheel',(e)=>this.onWheel(e));this.exportPngBtn.addEventListener('click',()=>this.exportPNG());this.shareBtn.addEventListener('click',()=>this.shareView());this.devToggle.addEventListener('click',()=>this.devConsole.classList.toggle('hidden'));} applyUrlParams(){try{const p=new URLSearchParams(window.location.hash.substring(1));if(p.has('cx')&&p.has('cy')&&p.has('z')){this.config.centerX=parseFloat(p.get('cx'));this.config.centerY=parseFloat(p.get('cy'));this.config.zoom=parseFloat(p.get('z'));this.config.maxIter=p.has('i')?parseInt(p.get('i')):100;}}catch(e){console.error('Failed to parse URL params:',e);}} onSliderChange(e){this.config.maxIter=parseInt(e.target.value,10);this.updateUI();this.renderer.draw();} resetView(){this.config={...this.initialConfig};this.updateUI();this.renderer.draw();} onMouseDown(e){this.isDragging=true;this.lastPos={x:e.clientX,y:e.clientY};} onMouseUp(){this.isDragging=false;} onMouseMove(e){if(!this.isDragging)return;const dx=e.clientX-this.lastPos.x;const dy=e.clientY-this.lastPos.y;this.config.centerX-=dx*this.config.zoom;this.config.centerY-=dy*this.config.zoom;this.lastPos={x:e.clientX,y:e.clientY};this.renderer.draw();this.updateUI();} onWheel(e){e.preventDefault();const zf=e.deltaY<0?0.8:1.2;this.config.zoom*=zf;this.renderer.draw();this.updateUI();} updateUI(){this.iterVal.textContent=this.config.maxIter;this.iterSlider.value=this.config.maxIter;this.devCenter.textContent=`${this.config.centerX.toFixed(4)}, ${this.config.centerY.toFixed(4)}`;this.devZoom.textContent=this.config.zoom.toExponential(2);} exportPNG(){const u=this.canvas.toDataURL('image/png');const l=document.createElement('a');l.download='mandelbrot.png';l.href=u;l.click();} shareView(){const p=new URLSearchParams();p.set('cx',this.config.centerX.toFixed(8));p.set('cy',this.config.centerY.toFixed(8));p.set('z',this.config.zoom.toExponential(8));p.set('i',this.config.maxIter);const url=`${window.location.origin}${window.location.pathname}#${p.toString()}`;navigator.clipboard.writeText(url).then(()=>alert('Shareable link copied to clipboard!'),()=>alert('Failed to copy link.'));} }
+        document.addEventListener('DOMContentLoaded',()=>{const c={'Canvas':'simulation-canvas','Slider':'iter-slider','Button':'reset-view-btn'};const l=document.getElementById('quality-check-list');for(const[n,i]of Object.entries(c)){const e=document.getElementById(i);const li=document.createElement('li');li.textContent=`${n}: ${e?'OK':'FAIL'}`;li.className=e?'pass':'fail';l.appendChild(li);}new SimulationController();});
+    </script>
+</body>
+</html>
