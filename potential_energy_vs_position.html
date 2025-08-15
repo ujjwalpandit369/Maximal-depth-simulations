@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potential Energy, Force, and Motion</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --code-bg: #e9e9e9;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --error-color: #dc3545;
+            --force-color: #dc3545;
+            --energy-total-color: #00A000;
+            --energy-potential-color: #007bff;
+            --energy-kinetic-color: #ff8c00;
+            --tangent-color: rgba(255, 100, 100, 0.8);
+        }
+        .theme-dark {
+            --bg-color: #222;
+            --text-color: #eee;
+            --primary-color: #499cff;
+            --secondary-color: #888;
+            --border-color: #555;
+            --canvas-bg: #1a1a1a;
+            --code-bg: #333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 1fr 350px;
+            }
+            .main-content {
+                order: 1;
+            }
+            .sidebar {
+                order: 2;
+            }
+        }
+        header, section, footer {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        h3 { font-size: 1.4rem; }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: "Courier New", Courier, monospace;
+        }
+        pre {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            opacity: 0.85;
+        }
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        #sim-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        .metadata-bar {
+            font-size: 0.8rem;
+            color: var(--secondary-color);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: var(--code-bg);
+        }
+        .warning-box {
+            background-color: var(--warning-color);
+            color: #333;
+            padding: 1rem;
+            border-radius: 5px;
+            border: 1px solid #cba948;
+            margin: 1rem 0;
+        }
+        .error-panel {
+            display: none;
+            background-color: var(--error-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        .dev-console {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+        .dev-console-header {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 5px 5px 0 0;
+        }
+        .dev-console-content {
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+        .suggestion-box {
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+        }
+        .suggestion-box button {
+            background-color: #90caf9;
+            color: #111;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 160px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -80px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        #perf-meter {
+            font-size: 0.8rem; color: var(--secondary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <header>
+                <h1>Potential Energy, Force, and Motion</h1>
+                <p class="subtitle">An interactive simulation linking a potential energy curve to the force on a particle.</p>
+                <div class="metadata-bar">
+                    Estimated Runtime: 5-15 mins | Recommended Device: Desktop | Approx. HTML Size: <span id="html-size"></span> KB
+                </div>
+            </header>
+
+            <div class="suggestion-box">
+                <strong>Quick Tune:</strong>
+                <button onclick="setAudience('beginner')">Audience: Beginner</button>
+                <button onclick="setAudience('intermediate')">Audience: Intermediate</button>
+                <button onclick="setAudience('advanced')">Audience: Advanced</button>
+            </div>
+
+            <section id="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <div id="sim-instructions">
+                    <p><strong>Instructions:</strong>
+                        <ol>
+                            <li><strong>Draw a Potential Energy Curve:</strong> Click and drag on the canvas below to draw a custom U(x) curve.</li>
+                            <li><strong>Set Total Energy:</strong> After drawing, click anywhere on the graph. The vertical position of your click sets the particle's <strong>Total Energy</strong> (green line). The horizontal position sets the particle's starting point.</li>
+                            <li><strong>Run the Simulation:</strong> Use the Play/Pause controls to see the particle move. The force (red arrow) acting on it is determined by the slope of the potential energy curve.</li>
+                        </ol>
+                    </p>
+                </div>
+                <canvas id="sim-canvas" width="800" height="400"></canvas>
+                <div class="controls-grid">
+                    <div class="tooltip">
+                        <button id="play-pause-btn" aria-label="Play/Pause (Space)">Play</button>
+                        <span class="tooltiptext">Shortcut: Space</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="step-btn" class="secondary" aria-label="Step Forward (Right Arrow)">Step</button>
+                        <span class="tooltiptext">Shortcut: &rarr;</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="reset-btn" class="secondary" aria-label="Reset (R)">Reset</button>
+                        <span class="tooltiptext">Shortcut: R</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="export-png-btn" class="secondary" aria-label="Export as PNG (E)">Export PNG</button>
+                        <span class="tooltiptext">Shortcut: E</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="export-json-btn" class="secondary" aria-label="Export Parameters as JSON">Export JSON</button>
+                        <span class="tooltiptext">Save parameters</span>
+                    </div>
+                     <div class="tooltip">
+                        <button id="share-btn" class="secondary" aria-label="Copy Sharable Link">Share Preset</button>
+                         <span class="tooltiptext">Copy link to clipboard</span>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <label for="speed-slider">Speed: <span id="speed-value">1.0</span>x</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" value="1" step="0.1" aria-label="Simulation Speed">
+                </div>
+                <h3>Presets</h3>
+                <div class="controls-grid">
+                    <button id="preset-well-btn">Simple Well</button>
+                    <button id="preset-double-well-btn">Double Well</button>
+                    <button id="preset-hill-btn">Unbound Hill</button>
+                </div>
+                <div id="perf-meter">FPS: 0 | Mem: N/A</div>
+            </section>
+
+            <section id="overview">
+                <h2>One-Paragraph Overview</h2>
+                <p>Imagine a roller coaster. The track's shape represents potential energy: high hills are high potential energy, and low valleys are low potential energy. The force you feel on the roller coaster—what pushes you forward or holds you back—is determined by the steepness of the track at any given point. This simulation visualizes that exact relationship. You can draw any "track" (a potential energy curve, U(x)) you want, and see how a particle moves under the influence of the "force" (F(x)) generated by the slope of that track. It's a fundamental concept in physics that explains everything from planetary orbits to the stability of molecules.</p>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner’s Guide — A Gentle Introduction</h2>
+                <p>Welcome! Let's break down the world of potential energy and forces, step-by-step. Don't worry if these terms are new; we'll use simple analogies to make sense of it all.</p>
+
+                <h3>Step 1: What is Potential Energy? The Roller Coaster Analogy</h3>
+                <p>Think of <strong>Potential Energy (U)</strong> as "stored" energy due to an object's position. Our favorite analogy is a roller coaster.
+                <ul>
+                    <li>When the coaster is at the top of a high hill, it has a lot of potential energy. It's high up and has the *potential* to go very fast.</li>
+                    <li>When the coaster is at the bottom of a valley, its potential energy is low.</li>
+                </ul>
+                In our simulation, the blue line you draw is the roller coaster track. The vertical axis represents the amount of potential energy. A high point on the curve means high potential energy; a low point means low potential energy. The horizontal axis is simply the position, which we call 'x'.</p>
+
+                <h3>Step 2: The Force is the Slope!</h3>
+                <p>Now, what makes the roller coaster move? Gravity, of course, but let's think about the *force* it creates.
+                <ul>
+                    <li>On a <strong>steep downhill</strong> section, you feel a strong force pushing you forward. The coaster accelerates rapidly.</li>
+                    <li>On a <strong>steep uphill</strong> section, you feel a strong force slowing you down (or the lift chain is pulling you up with a strong force).</li>
+                    <li>On a <strong>flat, horizontal</strong> section, there's no force pushing you forward or backward along the track. You just coast.</li>
+                </ul>
+                This is the most important idea of the simulation: <strong>Force is the negative slope of the Potential Energy curve.</strong>
+                <ul>
+                    <li>A steep downward slope (like `\`) means a large <strong>positive force</strong> (pushing to the right).</li>
+                    <li>A steep upward slope (like `/`) means a large <strong>negative force</strong> (pushing to the left).</li>
+                    <li>A zero slope (flat, like `–`) means <strong>zero force</strong>.</li>
+                </ul>
+                Why "negative" slope? It's a convention. Physicists define force as the direction a particle will be pushed to *decrease* its potential energy. A ball on a hill (high potential energy) will be pushed *down* the hill (towards lower potential energy). The slope is positive (going up), but the force is in the negative direction (to the left).
+                In the simulation, you can see this with the red <strong>Force Arrow</strong> on the particle. Notice how it always points "downhill" on the blue curve.</p>
+
+                <h3>Step 3: Total Energy and Motion</h3>
+                <p>A particle has two main types of energy that we care about here:
+                <ol>
+                    <li><strong>Potential Energy (U)</strong>: The blue line. Stored energy due to position.</li>
+                    <li><strong>Kinetic Energy (K)</strong>: The energy of motion. A faster particle has more kinetic energy.</li>
+                </ol>
+                The <strong>Total Energy (E)</strong> is the sum of these two: <code>E = U + K</code>. In a closed system like this, total energy is conserved—it stays constant. This is represented by the solid green line in the simulation.
+                <p>This has a powerful consequence. Since <code>K = E - U</code>, and kinetic energy cannot be negative (you can't have negative speed), a particle can <strong>never</strong> go to a position `x` where its potential energy `U(x)` is greater than its total energy `E`. These are the "forbidden regions". You'll see the particle turn around when it hits the point where the blue line meets the green line. At that exact point, its kinetic energy is zero, it momentarily stops, and the force pulls it back.</p>
+
+                <h3>Step 4: Bound vs. Unbound States</h3>
+                <p>Try the "Simple Well" preset. The particle is trapped! It oscillates back and forth forever. This is a <strong>bound state</strong>. The potential energy "walls" are higher than the particle's total energy, so it can't escape. This is like a planet orbiting a star or an electron bound to an atom.
+                <p>Now try the "Unbound Hill" preset. The particle comes in from one side, goes over the hill, and travels off forever. This is an <strong>unbound state</strong>. The particle has enough total energy to overcome the potential energy barrier and escape to infinity. This is like a comet flying past the sun, never to return.</p>
+                <p>By drawing your own curves, you can create complex systems with multiple wells, creating traps where a particle could be bound, and hills that it might or might not be able to escape, all depending on its total energy.</p>
+            </section>
+
+            <section id="sidebar" class="sidebar">
+                <h2>Parameters & Controls</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Control</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Potential Energy U(x)</td>
+                            <td>Mouse Drag</td>
+                            <td>The potential energy landscape. Defines the force.</td>
+                        </tr>
+                        <tr>
+                            <td>Total Energy E</td>
+                            <td>Mouse Click</td>
+                            <td>The constant total mechanical energy of the particle.</td>
+                        </tr>
+                        <tr>
+                            <td>Particle Mass (m)</td>
+                            <td>Slider</td>
+                            <td>Affects inertia. Higher mass means slower acceleration for a given force.</td>
+                        </tr>
+                        <tr>
+                            <td>Simulation Speed</td>
+                            <td>Slider</td>
+                            <td>Controls the rate of animation, not the physics.</td>
+                        </tr>
+                        <tr>
+                            <td>Show Tangent</td>
+                            <td>Checkbox</td>
+                            <td>Draws the tangent line to the U(x) curve at the particle's position.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="slider-container">
+                    <label for="mass-slider">Particle Mass: <span id="mass-value">1.0</span></label>
+                    <input type="range" id="mass-slider" min="0.1" max="10" value="1" step="0.1" aria-label="Particle Mass">
+                </div>
+                <div>
+                    <input type="checkbox" id="show-tangent-checkbox" checked>
+                    <label for="show-tangent-checkbox">Show Tangent Line</label>
+                </div>
+                 <div>
+                    <input type="checkbox" id="perf-mode-checkbox">
+                    <label for="perf-mode-checkbox">Performance Mode</label>
+                </div>
+                <div>
+                    <input type="checkbox" id="dark-theme-checkbox">
+                    <label for="dark-theme-checkbox">Dark Theme</label>
+                </div>
+            </section>
+
+            <section id="walkthroughs">
+                <h2>Worked Walkthroughs & Micro-Experiments</h2>
+
+                <h3>Walkthrough 1: Making a Potential Well Deeper</h3>
+                <ol>
+                    <li>Load the "Simple Well" preset. The well bottom is around U = 100. Press Play. Note the speed of the particle at the bottom.</li>
+                    <li>Press Reset. Redraw the well, but make it much deeper, say down to U = 50. Keep the total energy line at the same height.</li>
+                    <li>Press Play. <strong>Observation:</strong> The particle moves much faster at the bottom of the deeper well.</li>
+                </ol>
+                <p><strong>Why?</strong> The change in potential energy (from the turning point to the bottom) is larger. Since <code>E = U + K</code> is constant, a bigger drop in `U` must be compensated by a bigger increase in kinetic energy `K`, which means higher speed. It's like rolling a ball down a taller ramp.</p>
+
+                <h3>Walkthrough 2: Changing Particle Mass</h3>
+                <ol>
+                    <li>Load the "Simple Well" preset. Set the mass slider to <strong>1.0</strong>. Press Play and observe the frequency of oscillation.</li>
+                    <li>Press Reset. Now set the mass slider to its maximum value, <strong>10.0</strong>. Keep everything else the same.</li>
+                    <li>Press Play. <strong>Observation:</strong> The particle oscillates much more slowly.</li>
+                </ol>
+                <p><strong>Why?</strong> The force `F = -dU/dx` is the same regardless of mass. But Newton's second law is `a = F/m`. A larger mass `m` means a smaller acceleration `a` for the same force. The particle is more "sluggish" and harder to move, so it takes longer to complete a cycle.</p>
+
+                <h3>Micro-Experiments</h3>
+                <ol>
+                    <li><strong>Escape Velocity:</strong> Load the "Simple Well". Click to set the total energy (green line) just below the top of the well walls. The particle is bound. Now, reset and click to set the total energy just *above* the walls. The particle should now be unbound and escape.</li>
+                    <li><strong>Zero Force Point:</strong> Draw a U-shaped well. Place the particle exactly at the bottom where the curve is flat. What is the force? What does the particle do? (Expected: Force is zero, particle doesn't move. This is a point of *stable equilibrium*).</li>
+                    <li><strong>Unstable Equilibrium:</strong> Draw a hill (an upside-down U). Place the particle precisely at the peak. What is the force? (Expected: Force is zero). Nudge it ever so slightly. What happens? (Expected: The tiniest displacement causes a force that pushes it further away. This is *unstable equilibrium*).</li>
+                    <li><strong>Effect of Damping:</strong> (This sim has no friction, but imagine it did). If there were a small frictional force, what would happen to the particle in the "Simple Well" over time? (Expected: It would gradually lose total energy and spiral down to rest at the bottom of the well).</li>
+                    <li><strong>Non-Linear Oscillation:</strong> A parabolic well (like `x^2`) gives simple harmonic motion (constant period). Draw a well with a flat bottom and steep sides (a "square well"). Does the period of oscillation depend on the total energy? (Expected: Yes. For higher energy, it travels a longer distance at high speed, changing the period).</li>
+                </ol>
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory & Equations</h2>
+                <p>The physics behind this simulation is governed by a few key principles of classical mechanics.</p>
+
+                <h3>1. Force from Potential Energy</h3>
+                <p>The fundamental link between force and potential energy in one dimension is given by the derivative.</p>
+                <code class="equation">F(x) = - (dU(x))/(dx)</code>
+                <p><strong>Plain English:</strong> The force `F` on a particle at position `x` is the negative of the slope of the potential energy graph `U(x)` at that same position.
+                <br><strong>Numeric Example:</strong> Suppose at `x=2`, the potential energy is `U(2)=10 J`. At `x=2.1`, the energy is `U(2.1)=8 J`. The slope `dU/dx` is approximately `(8 - 10) / (2.1 - 2) = -20 J/m`. The force is `F = -(-20) = 20 N` (in the positive x direction).</p>
+
+                <h3>2. Conservation of Energy</h3>
+                <p>Assuming no friction or other non-conservative forces, the total mechanical energy of the particle is constant.</p>
+                <code class="equation">E = K + U(x)</code>
+                <p><strong>Plain English:</strong> The Total Energy `E` (a constant) is the sum of the Kinetic Energy `K` (energy of motion) and the Potential Energy `U(x)` (stored energy of position).
+                <br><strong>Numeric Example:</strong> If a particle has `E = 50 J` and is at a position where `U(x) = 30 J`, its kinetic energy must be `K = 50 - 30 = 20 J`.</p>
+
+                <h3>3. Kinetic Energy and Velocity</h3>
+                <p>Kinetic energy is defined by the particle's mass and velocity.</p>
+                <code class="equation">K = 1/2 m v^2</code>
+                <p><strong>Plain English:</strong> Kinetic energy `K` is one-half the mass `m` times the square of the velocity `v`. This means to get velocity, we can rearrange: `v = sqrt(2K / m)`.
+                <br><strong>Numeric Example:</strong> Using the `K = 20 J` from above, for a particle with mass `m = 4 kg`, the velocity would be `v = sqrt(2 * 20 / 4) = sqrt(10) ≈ 3.16 m/s`.</p>
+
+                <h3>Numerical Method: Euler-Cromer Integration</h3>
+                <p>To animate the particle, we can't solve the equations exactly for an arbitrary `U(x)`. We use a step-by-step numerical method. For each small time step `Δt`:
+                <ol>
+                    <li>Calculate force: `F_i = -dU/dx` at position `x_i`.</li>
+                    <li>Calculate acceleration: `a_i = F_i / m`.</li>
+                    <li>Update velocity: `v_{i+1} = v_i + a_i * Δt`.</li>
+                    <li>Update position: `x_{i+1} = x_i + v_{i+1} * Δt`.</li>
+                </ol>
+                This simple and stable method (called the Euler-Cromer method) generates the particle's trajectory over time.</p>
+            </section>
+
+            <section id="advanced-notes">
+                <h2>Advanced Notes & Extensions</h2>
+                <p><strong>Numerical Stability:</strong> The Euler-Cromer method used here is simple and reasonably stable for oscillating systems. A standard Euler method (`x_{i+1} = x_i + v_i * Δt`) would be unstable, causing the total energy to artificially increase over time. For higher accuracy, one could implement a Verlet or Runge-Kutta (RK4) integrator. This would reduce energy drift over long simulations but requires more calculations per step.</p>
+                <p><strong>Drawing the Curve:</strong> The current simulation uses linear interpolation between user-drawn points. For a smoother potential, one could implement cubic spline or Catmull-Rom spline interpolation. This would create a continuously differentiable `U(x)`, which is more physically realistic, but the code is more complex.</p>
+                <p><strong>Extending to 2D:</strong> The concept extends to two or three dimensions. The potential `U(x, y)` becomes a surface, and the force `F` becomes a vector with components `F_x = -∂U/∂x` and `F_y = -∂U/∂y`. The force vector is the negative of the gradient of the potential: `F = -∇U`. The simulation would involve a particle moving on a 2D potential surface.</p>
+            </section>
+
+            <section id="analogies">
+                <h2>Analogies & Intuition</h2>
+
+                <h3>1. The Physical Analogy: Roller Coaster / Skateboard Park</h3>
+                <p>This is the most direct analogy. The `U(x)` curve is literally the shape of a track. The particle is a car or a skateboarder. Gravity provides the potential.
+                <ul>
+                    <li><strong>Force:</strong> The steepness of the track. A steep downhill gives a strong forward push.</li>
+                    <li><strong>Energy:</strong> The total energy is set by the initial drop-in height. The skateboarder can never reach a height on a ramp greater than their starting height.</li>
+                    <li><strong>Bound State:</strong> A half-pipe. The skater goes back and forth, trapped between the two ramps.</li>
+                    <li><strong>Limitations:</strong> This analogy is almost perfect for the intuition of motion. Its main limitation is that it's tied to gravity in 2D, while potential energy is a more general concept that applies to abstract things like electrostatic or nuclear forces in any dimension.</li>
+                </ul>
+                </p>
+
+                <h3>2. The Visualization Analogy: Heatmap Contour</h3>
+                <p>Imagine the `U(x)` curve is a cross-section of a 2D landscape. Now, imagine this landscape as a temperature map, where low potential energy is "cold" and high potential is "hot".
+                <ul>
+                    <li><strong>Force:</strong> The force is like the flow of heat. Heat always flows from hot to cold, perpendicular to lines of constant temperature. Similarly, the force vector always points from high U to low U, perpendicular to the "equipotential" lines. It points in the direction of the "steepest descent" on the temperature map.</li>
+                    <li><strong>Limitations:</strong> This analogy is more abstract but powerful for multidimensional systems. It disconnects the idea from physical height and connects it to the more general concept of a scalar field gradient, which is what `F = -∇U` truly is.</li>
+                </ul>
+                </p>
+
+                <h3>3. The Economic Analogy: Financial Market Landscape</h3>
+                <p>Think of the `U(x)` curve as a chart of "market resistance" or "difficulty" for a company's growth. The `x`-axis is some metric, like market share.
+                <ul>
+                    <li><strong>Potential Energy:</strong> High `U(x)` represents high barriers to entry, strong competition, or regulatory hurdles. Low `U(x)` represents an open, uncontested market niche.</li>
+                    <li><strong>Force:</strong> The "force" is the market pressure or incentive. The market "pushes" companies away from difficult, high-resistance areas and towards profitable, low-resistance niches. A company at the top of a "resistance hill" will be quickly pushed off by competition unless it has enormous momentum (kinetic energy).</li>
+                    <li><strong>Bound State:</strong> A company might get trapped in a "niche well," where it's profitable (low U), but the barriers to expand into other markets (the walls of the well) are too high.</li>
+                    <li><strong>Limitations:</strong> This is a metaphorical analogy. It's useful for building intuition about systems seeking a minimum state but lacks the rigorous mathematical foundation of the physical examples.</li>
+                </ul>
+                </p>
+
+            </section>
+
+            <section id="faq">
+                <h2>FAQ & Troubleshooting</h2>
+                <dl>
+                    <dt>1. Why can't I draw the curve and see the particle at the same time?</dt>
+                    <dd>The simulation has two modes: "drawing" and "running". First, you define the entire potential landscape (the track). Then, you place the particle and its energy on that landscape to see how it behaves.</dd>
+
+                    <dt>2. Why does the particle turn around at the green line?</dt>
+                    <dd>The green line is the Total Energy. The particle's kinetic energy (motion energy) is the difference between the green line and the blue line (Potential Energy). Where the lines meet, kinetic energy is zero, so the particle stops. Since it can't go higher (that would require negative kinetic energy), the force pulls it back.</dd>
+
+                    <dt>3. What does the red arrow mean?</dt>
+                    <dd>The red arrow represents the force acting on the particle. Its direction shows which way the particle is being pushed, and its length indicates the strength of the push. Notice it always points "downhill" on the blue curve.</dd>
+
+                    <dt>4. What does the particle's mass do?</dt>
+                    <dd>Mass is inertia, or resistance to changes in motion. A more massive particle will accelerate less for the same amount of force, making it seem more "sluggish".</dd>
+
+                    <dt>5. The simulation is running slow. What can I do?</dt>
+                    <dd>Try ticking the "Performance Mode" checkbox. This reduces the number of points in the drawn curve, which speeds up the force calculation. If it still hangs, try drawing simpler curves with fewer wiggles.</dd>
+
+                    <dt>6. The canvas is blank or the simulation froze.</dt>
+                    <dd>This can happen with very complex, jagged user-drawn curves. Try pressing the "Reset" button. If that fails, reload the page. If the problem persists, open your browser's developer console (F12), copy any error messages, and report them.</dd>
+                </dl>
+            </section>
+
+            <footer>
+                <div id="error-panel">
+                    <strong>Self-Check Failed!</strong> Something is broken.
+                    <p id="error-details"></p>
+                    <p>Please try reloading the page. If the problem persists, report the bug with the details above.</p>
+                </div>
+                <div class="dev-console">
+                    <div class="dev-console-header" id="dev-console-toggle">Developer Console (click to expand)</div>
+                    <div class="dev-console-content" id="dev-console-content">
+                        <p>No errors reported.</p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Self-Check ---
+        const selfCheck = () => {
+            const errors = [];
+            if (!document.getElementById('sim-canvas')) errors.push("Simulation canvas not found.");
+            if (!document.getElementById('play-pause-btn')) errors.push("Play/Pause button not found.");
+            if (!document.getElementById('preset-well-btn')) errors.push("Simple Well preset not found.");
+
+            if (errors.length > 0) {
+                const errorPanel = document.getElementById('error-panel');
+                const errorDetails = document.getElementById('error-details');
+                errorDetails.innerHTML = errors.join('<br>');
+                errorPanel.style.display = 'block';
+            }
+        };
+        selfCheck();
+
+        // --- Dev Console ---
+        const devConsoleContent = document.getElementById('dev-console-content');
+        const logToDevConsole = (message, isError = false) => {
+            if (devConsoleContent.innerHTML.includes("No errors reported.")) {
+                devConsoleContent.innerHTML = "";
+            }
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (isError) p.style.color = 'var(--error-color)';
+            devConsoleContent.prepend(p);
+        };
+        window.onerror = function(message, source, lineno, colno, error) {
+            logToDevConsole(`ERROR: ${message} at ${source.split('/').pop()}:${lineno}:${colno}`, true);
+        };
+        document.getElementById('dev-console-toggle').addEventListener('click', () => {
+            const content = document.getElementById('dev-console-content');
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // --- HTML Size ---
+        const estimateHtmlSize = () => {
+            const size = new Blob([document.documentElement.outerHTML]).size;
+            document.getElementById('html-size').textContent = (size / 1024).toFixed(1);
+        };
+        estimateHtmlSize();
+
+        // --- Canvas and Context ---
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Controls ---
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const massSlider = document.getElementById('mass-slider');
+        const massValue = document.getElementById('mass-value');
+        const showTangentCheckbox = document.getElementById('show-tangent-checkbox');
+        const perfModeCheckbox = document.getElementById('perf-mode-checkbox');
+        const darkThemeCheckbox = document.getElementById('dark-theme-checkbox');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const shareBtn = document.getElementById('share-btn');
+
+        const presetWellBtn = document.getElementById('preset-well-btn');
+        const presetDoubleWellBtn = document.getElementById('preset-double-well-btn');
+        const presetHillBtn = document.getElementById('preset-hill-btn');
+
+        // --- Simulation State ---
+        let simState = {
+            isRunning: false,
+            mode: 'draw', // 'draw', 'set_energy', 'run'
+            potentialPoints: [],
+            particle: {
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                mass: 1.0,
+            },
+            totalEnergy: 0,
+            speed: 1.0,
+            showTangent: true,
+            perfMode: false,
+            lastTime: 0,
+            fps: 0,
+        };
+
+        // --- Coordinate Transformation ---
+        const world = { xMin: 0, xMax: 100, yMin: 0, yMax: 200 };
+        const toScreenX = (worldX) => (worldX - world.xMin) / (world.xMax - world.xMin) * canvas.width;
+        const toScreenY = (worldY) => canvas.height - (worldY - world.yMin) / (world.yMax - world.yMin) * canvas.height;
+        const toWorldX = (screenX) => (screenX / canvas.width) * (world.xMax - world.xMin) + world.xMin;
+        const toWorldY = (screenY) => world.yMax - (screenY / canvas.height) * (world.yMax - world.yMin);
+
+        // --- Physics & Interpolation ---
+        const getPotential = (x) => {
+            if (simState.potentialPoints.length < 2) return world.yMin;
+
+            // Find segment
+            for (let i = 0; i < simState.potentialPoints.length - 1; i++) {
+                const p1 = simState.potentialPoints[i];
+                const p2 = simState.potentialPoints[i+1];
+                if (x >= p1.x && x <= p2.x) {
+                    // Linear interpolation
+                    const t = (x - p1.x) / (p2.x - p1.x);
+                    return p1.y * (1 - t) + p2.y * t;
+                }
+            }
+            // Extrapolate flat
+            if (x < simState.potentialPoints[0].x) return simState.potentialPoints[0].y;
+            return simState.potentialPoints[simState.potentialPoints.length - 1].y;
+        };
+
+        const getForce = (x) => {
+            const dx = 0.1; // Small delta for derivative
+            const u1 = getPotential(x - dx);
+            const u2 = getPotential(x + dx);
+            return -(u2 - u1) / (2 * dx);
+        };
+
+        // --- Drawing ---
+        const draw = (time) => {
+            if (simState.lastTime) {
+                const deltaTime = time - simState.lastTime;
+                simState.fps = 1000 / deltaTime;
+            }
+            simState.lastTime = time;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = varToCss('--border-color');
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            // Draw potential energy curve
+            ctx.beginPath();
+            ctx.strokeStyle = varToCss('--energy-potential-color');
+            ctx.lineWidth = 3;
+            if (simState.potentialPoints.length > 0) {
+                ctx.moveTo(toScreenX(simState.potentialPoints[0].x), toScreenY(simState.potentialPoints[0].y));
+                for (let i = 1; i < simState.potentialPoints.length; i++) {
+                    ctx.lineTo(toScreenX(simState.potentialPoints[i].x), toScreenY(simState.potentialPoints[i].y));
+                }
+            }
+            ctx.stroke();
+
+            if (simState.mode === 'run' || simState.mode === 'set_energy') {
+                 // Draw total energy line
+                ctx.beginPath();
+                ctx.strokeStyle = varToCss('--energy-total-color');
+                ctx.lineWidth = 2;
+                ctx.moveTo(0, toScreenY(simState.totalEnergy));
+                ctx.lineTo(canvas.width, toScreenY(simState.totalEnergy));
+                ctx.stroke();
+
+                // Draw kinetic energy shaded area
+                ctx.beginPath();
+                ctx.fillStyle = varToCss('--energy-kinetic-color') + '40'; // Add alpha
+                const startX = toScreenX(world.xMin);
+                const endX = toScreenX(world.xMax);
+                ctx.moveTo(startX, toScreenY(simState.totalEnergy));
+                for(let sx = startX; sx <= endX; sx++) {
+                    const wx = toWorldX(sx);
+                    const potY = getPotential(wx);
+                    const screenPotY = toScreenY(potY);
+                    const screenEnergyY = toScreenY(simState.totalEnergy);
+                    ctx.lineTo(sx, Math.max(screenPotY, screenEnergyY));
+                }
+                ctx.lineTo(endX, toScreenY(simState.totalEnergy));
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw particle
+                const potentialAtParticle = getPotential(simState.particle.x);
+                const screenX = toScreenX(simState.particle.x);
+                const screenY = toScreenY(potentialAtParticle);
+
+                ctx.beginPath();
+                ctx.fillStyle = '#333';
+                ctx.arc(screenX, screenY, 8, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Draw force vector
+                const force = getForce(simState.particle.x);
+                ctx.beginPath();
+                ctx.strokeStyle = varToCss('--force-color');
+                ctx.lineWidth = 3;
+                ctx.moveTo(screenX, screenY);
+                const forceDisplayLength = Math.max(-50, Math.min(50, force * 5));
+                ctx.lineTo(screenX + forceDisplayLength, screenY);
+                // Arrowhead
+                ctx.moveTo(screenX + forceDisplayLength, screenY);
+                ctx.lineTo(screenX + forceDisplayLength - Math.sign(forceDisplayLength)*5, screenY - 5);
+                ctx.moveTo(screenX + forceDisplayLength, screenY);
+                ctx.lineTo(screenX + forceDisplayLength - Math.sign(forceDisplayLength)*5, screenY + 5);
+                ctx.stroke();
+
+                // Draw tangent line
+                if (simState.showTangent) {
+                    const dx = 0.1;
+                    const slope = (getPotential(simState.particle.x + dx) - getPotential(simState.particle.x - dx)) / (2 * dx);
+                    ctx.beginPath();
+                    ctx.strokeStyle = varToCss('--tangent-color');
+                    ctx.lineWidth = 1;
+                    const len = 50;
+                    const angle = Math.atan(slope * (canvas.height/world.yMax) / (canvas.width/world.xMax));
+                    ctx.moveTo(screenX - len * Math.cos(angle), screenY - len * Math.sin(angle));
+                    ctx.lineTo(screenX + len * Math.cos(angle), screenY + len * Math.sin(angle));
+                    ctx.stroke();
+                }
+            }
+            if (simState.isRunning) {
+                requestAnimationFrame(draw);
+            }
+        };
+
+        // --- Simulation Loop ---
+        const update = () => {
+            if (!simState.isRunning) return;
+
+            const dt = 0.05 * simState.speed;
+            const force = getForce(simState.particle.x);
+            const acceleration = force / simState.particle.mass;
+
+            simState.particle.vx += acceleration * dt;
+
+            // Check for energy conservation and turning points
+            const nextPotential = getPotential(simState.particle.x + simState.particle.vx * dt);
+            const kineticEnergy = simState.totalEnergy - nextPotential;
+
+            if (kineticEnergy < 0) {
+                // We've hit a wall, reverse velocity
+                simState.particle.vx *= -0.95; // Small energy loss on bounce
+            }
+
+            simState.particle.x += simState.particle.vx * dt;
+
+            // Boundary conditions
+            if (simState.particle.x > world.xMax || simState.particle.x < world.xMin) {
+                if (simState.particle.x > world.xMax) simState.particle.x = world.xMax;
+                if (simState.particle.x < world.xMin) simState.particle.x = world.xMin;
+                simState.particle.vx = 0;
+            }
+        };
+
+        // --- Event Handlers ---
+        const handlePlayPause = () => {
+            if (simState.mode !== 'run') return;
+            simState.isRunning = !simState.isRunning;
+            playPauseBtn.textContent = simState.isRunning ? 'Pause' : 'Play';
+            if (simState.isRunning) {
+                logToDevConsole("Simulation started.");
+                simState.lastTime = performance.now();
+                requestAnimationFrame(draw);
+                setInterval(update, 1000/200); // High-frequency physics update
+            } else {
+                logToDevConsole("Simulation paused.");
+            }
+        };
+
+        const handleStep = () => {
+            if (simState.isRunning || simState.mode !== 'run') return;
+            update();
+            requestAnimationFrame(draw);
+            logToDevConsole("Stepped simulation.");
+        };
+
+        const resetSimulation = () => {
+            simState.isRunning = false;
+            simState.mode = 'draw';
+            simState.potentialPoints = [];
+            simState.particle = { x: 0, y: 0, vx: 0, vy: 0, mass: parseFloat(massSlider.value) };
+            simState.totalEnergy = 0;
+            playPauseBtn.textContent = 'Play';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            logToDevConsole("Simulation reset.");
+            document.getElementById('sim-instructions').style.display = 'block';
+        };
+
+        const loadPreset = (preset) => {
+            resetSimulation();
+            let points;
+            let energy;
+            let startX;
+            switch(preset) {
+                case 'well':
+                    points = [];
+                    for(let i=0; i<=100; i++) {
+                        const x = i;
+                        const y = 20 * Math.pow((x - 50)/20, 2) + 80;
+                        points.push({x, y});
+                    }
+                    energy = 150;
+                    startX = 20;
+                    break;
+                case 'double-well':
+                    points = [];
+                    for(let i=0; i<=100; i++) {
+                        const x = i;
+                        const y = 0.001 * Math.pow(x-50, 4) - 0.2 * Math.pow(x-50, 2) + 120;
+                        points.push({x, y});
+                    }
+                    energy = 110;
+                    startX = 30;
+                    break;
+                case 'hill':
+                    points = [];
+                    for(let i=0; i<=100; i++) {
+                        const x = i;
+                        const y = 80 * Math.exp(-Math.pow((x-50)/15, 2)) + 60;
+                        points.push({x, y});
+                    }
+                    energy = 150;
+                    startX = 10;
+                    break;
+            }
+            simState.potentialPoints = points;
+            simState.totalEnergy = energy;
+            simState.particle.x = startX;
+            simState.mode = 'run';
+            document.getElementById('sim-instructions').style.display = 'none';
+
+            const potentialAtStart = getPotential(startX);
+            const kineticEnergy = simState.totalEnergy - potentialAtStart;
+            if (kineticEnergy >= 0) {
+                 simState.particle.vx = Math.sqrt(2 * kineticEnergy / simState.particle.mass);
+            } else {
+                 simState.particle.vx = 0; // Should not happen in presets
+            }
+
+            requestAnimationFrame(draw);
+            logToDevConsole(`Loaded preset: ${preset}`);
+        };
+
+        const handleCanvasMouseDown = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (simState.mode === 'draw') {
+                simState.isDrawing = true;
+                simState.potentialPoints = [];
+                canvas.addEventListener('mousemove', handleCanvasMouseMove);
+                canvas.addEventListener('mouseup', handleCanvasMouseUp);
+                logToDevConsole("Started drawing potential curve.");
+            } else if (simState.mode === 'set_energy') {
+                simState.totalEnergy = toWorldY(y);
+                simState.particle.x = toWorldX(x);
+
+                const potentialAtStart = getPotential(simState.particle.x);
+                if (simState.totalEnergy < potentialAtStart) {
+                    alert("Total energy cannot be less than potential energy. Please click higher.");
+                    return;
+                }
+                const kineticEnergy = simState.totalEnergy - potentialAtStart;
+                simState.particle.vx = Math.sqrt(2 * kineticEnergy / simState.particle.mass);
+
+                simState.mode = 'run';
+                document.getElementById('sim-instructions').style.display = 'none';
+                logToDevConsole(`Energy set to ${simState.totalEnergy.toFixed(1)}. Particle at x=${simState.particle.x.toFixed(1)}`);
+                requestAnimationFrame(draw);
+            }
+        };
+
+        const handleCanvasMouseMove = (e) => {
+            if (!simState.isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const worldX = toWorldX(x);
+            const worldY = toWorldY(y);
+
+            // Add point if it's far enough from the last one
+            const lastPoint = simState.potentialPoints[simState.potentialPoints.length - 1];
+            if (!lastPoint || worldX > lastPoint.x) {
+                 // Performance mode reduces point density
+                const minDistance = simState.perfMode ? 2 : 0.5;
+                if (!lastPoint || Math.abs(worldX - lastPoint.x) > minDistance) {
+                    simState.potentialPoints.push({ x: worldX, y: worldY });
+                }
+            }
+            requestAnimationFrame(draw);
+        };
+
+        const handleCanvasMouseUp = () => {
+            simState.isDrawing = false;
+            canvas.removeEventListener('mousemove', handleCanvasMouseMove);
+            canvas.removeEventListener('mouseup', handleCanvasMouseUp);
+            if (simState.potentialPoints.length > 1) {
+                simState.mode = 'set_energy';
+                logToDevConsole("Finished drawing. Now set total energy.");
+            } else {
+                resetSimulation(); // Not a valid curve
+            }
+        };
+
+        // --- Attach Listeners ---
+        playPauseBtn.addEventListener('click', handlePlayPause);
+        stepBtn.addEventListener('click', handleStep);
+        resetBtn.addEventListener('click', resetSimulation);
+
+        speedSlider.addEventListener('input', (e) => {
+            simState.speed = parseFloat(e.target.value);
+            speedValue.textContent = simState.speed.toFixed(1);
+        });
+        massSlider.addEventListener('input', (e) => {
+            simState.particle.mass = parseFloat(e.target.value);
+            massValue.textContent = simState.particle.mass.toFixed(1);
+        });
+        showTangentCheckbox.addEventListener('change', (e) => {
+            simState.showTangent = e.target.checked;
+            if (!simState.isRunning) requestAnimationFrame(draw);
+        });
+        perfModeCheckbox.addEventListener('change', (e) => {
+            simState.perfMode = e.target.checked;
+            logToDevConsole(`Performance mode ${simState.perfMode ? 'enabled' : 'disabled'}.`);
+        });
+        darkThemeCheckbox.addEventListener('change', (e) => {
+            document.body.classList.toggle('theme-dark', e.target.checked);
+            logToDevConsole(`Theme changed to ${e.target.checked ? 'dark' : 'light'}.`);
+            if (!simState.isRunning) requestAnimationFrame(draw);
+        });
+
+        canvas.addEventListener('mousedown', handleCanvasMouseDown);
+
+        presetWellBtn.addEventListener('click', () => loadPreset('well'));
+        presetDoubleWellBtn.addEventListener('click', () => loadPreset('double-well'));
+        presetHillBtn.addEventListener('click', () => loadPreset('hill'));
+
+        exportPngBtn.addEventListener('click', () => {
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'potential_energy_simulation.png';
+            link.href = dataUrl;
+            link.click();
+            logToDevConsole("Exported canvas as PNG.");
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            const data = {
+                potentialPoints: simState.potentialPoints,
+                totalEnergy: simState.totalEnergy,
+                particle: { x: simState.particle.x, mass: simState.particle.mass },
+                world: world,
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'simulation_parameters.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+            logToDevConsole("Exported parameters as JSON.");
+        });
+
+        shareBtn.addEventListener('click', () => {
+            const data = {
+                potentialPoints: simState.potentialPoints,
+                totalEnergy: simState.totalEnergy,
+                particle: { x: simState.particle.x, mass: simState.particle.mass },
+            };
+            const jsonString = JSON.stringify(data);
+            const compressed = btoa(jsonString); // Base64 encode
+            const url = `${window.location.origin}${window.location.pathname}#${compressed}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Sharable link copied to clipboard!');
+                logToDevConsole("Copied sharable link.");
+            }, () => {
+                alert('Failed to copy link.');
+                logToDevConsole("Failed to copy sharable link.", true);
+            });
+        });
+
+        // --- Keyboard Shortcuts ---
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            switch(e.code) {
+                case 'Space': e.preventDefault(); handlePlayPause(); break;
+                case 'ArrowRight': e.preventDefault(); handleStep(); break;
+                case 'KeyR': e.preventDefault(); resetSimulation(); break;
+                case 'KeyE': e.preventDefault(); exportPngBtn.click(); break;
+            }
+        });
+
+        // --- Performance Meter ---
+        const perfMeter = document.getElementById('perf-meter');
+        setInterval(() => {
+            const mem = performance.memory ? ` | Mem: ${(performance.memory.usedJSHeapSize / 1048576).toFixed(1)}MB` : '';
+            perfMeter.textContent = `FPS: ${simState.fps.toFixed(0)}${mem}`;
+        }, 1000);
+
+        // --- Load from URL ---
+        const loadFromUrl = () => {
+            if (window.location.hash) {
+                try {
+                    const compressed = window.location.hash.substring(1);
+                    const jsonString = atob(compressed);
+                    const data = JSON.parse(jsonString);
+
+                    resetSimulation();
+                    simState.potentialPoints = data.potentialPoints;
+                    simState.totalEnergy = data.totalEnergy;
+                    simState.particle.x = data.particle.x;
+                    simState.particle.mass = data.particle.mass;
+                    massSlider.value = data.particle.mass;
+                    massValue.textContent = data.particle.mass.toFixed(1);
+
+                    simState.mode = 'run';
+                    document.getElementById('sim-instructions').style.display = 'none';
+
+                    const potentialAtStart = getPotential(data.particle.x);
+                    const kineticEnergy = data.totalEnergy - potentialAtStart;
+                    if (kineticEnergy >= 0) {
+                        simState.particle.vx = Math.sqrt(2 * kineticEnergy / simState.particle.mass);
+                    } else {
+                        simState.particle.vx = 0;
+                    }
+
+                    requestAnimationFrame(draw);
+                    logToDevConsole("Loaded state from URL hash.");
+
+                } catch (err) {
+                    logToDevConsole("Failed to load state from URL hash.", true);
+                    console.error(err);
+                    resetSimulation();
+                }
+            }
+        };
+
+        // --- Utility ---
+        const varToCss = (varName) => getComputedStyle(document.body).getPropertyValue(varName);
+
+        // --- Initial Draw ---
+        resetSimulation();
+        loadFromUrl();
+        requestAnimationFrame(draw);
+    });
+
+    // Quick tune functions
+    function setAudience(level) {
+        // This is a placeholder. A real implementation would change the text content.
+        alert(`Audience level set to ${level}. Text complexity would be adjusted.`);
+    }
+    </script>
+</body>
+</html>

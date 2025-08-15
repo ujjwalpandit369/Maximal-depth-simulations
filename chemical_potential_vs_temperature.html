@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemical Potential & Phase Transitions</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #1976d2; /* A cool blue for phases */
+            --secondary-color: #78909c;
+            --border-color: #ced4da;
+            --canvas-bg: #ffffff;
+            --code-bg: #e9ecef;
+            --solid-color: #0d47a1;
+            --liquid-color: #4caf50;
+            --gas-color: #f44336;
+            --marker-color: #ffc107;
+        }
+        .theme-dark {
+            --bg-color: #263238;
+            --text-color: #cfd8dc;
+            --primary-color: #64b5f6;
+            --secondary-color: #90a4ae;
+            --border-color: #455a64;
+            --canvas-bg: #37474f;
+            --code-bg: #455a64;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        header, section {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        #sim-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.8 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); text-align: center; margin-bottom: 1rem; }
+        .info-panel {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            background-color: var(--code-bg);
+            text-align: center;
+        }
+        .info-panel h4 { margin-top: 0; }
+        #stable-phase-text { font-size: 1.5rem; font-weight: bold; }
+        .phase-solid { color: var(--solid-color); }
+        .phase-liquid { color: var(--liquid-color); }
+        .phase-gas { color: var(--gas-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chemical Potential vs. Temperature: Phase Transitions</h1>
+            <p class="subtitle">Visualizing how the lowest chemical potential determines the stable phase of matter.</p>
+            <div class="metadata-bar">Estimated Runtime: 5-10 mins | Device: Desktop/Tablet | HTML Size: <span id="html-size"></span> KB</div>
+        </header>
+
+        <section id="simulation-area">
+            <h2>Interactive Plot</h2>
+            <p>The graph below shows the chemical potential (μ) for the solid, liquid, and gas phases of a substance as a function of temperature (T). Use the slider to change the temperature and observe which phase is the most stable (i.e., has the lowest μ).</p>
+            <canvas id="sim-canvas" width="800" height="450"></canvas>
+            <div class="slider-container">
+                <label for="temp-slider">Temperature (K): <span id="temp-value">0</span> K</label>
+                <input type="range" id="temp-slider" min="200" max="450" value="300" step="1">
+            </div>
+            <div class="info-panel">
+                <h4>Stable Phase at <span id="info-temp">300</span> K</h4>
+                <p id="stable-phase-text" class="phase-liquid">LIQUID</p>
+                <p id="info-details">The liquid phase has the lowest chemical potential.</p>
+            </div>
+        </section>
+
+        <section id="overview">
+            <h2>One-Paragraph Overview</h2>
+            <p>Why does ice melt at 0°C and water boil at 100°C? The answer lies in a concept called <strong>chemical potential (μ)</strong>, which can be thought of as a measure of "thermodynamic discomfort." At any given temperature and pressure, a substance will always settle into the phase (solid, liquid, or gas) that has the lowest chemical potential. This simulation plots the chemical potential for all three phases against temperature. You can see that as temperature increases, the "most comfortable" phase changes from solid, to liquid, to gas at the precise moments the curves cross. These crossing points are the melting and boiling points, revealing phase transitions to be a direct consequence of a system minimizing its chemical potential.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner’s Guide — The Unhappiness of Molecules</h2>
+            <h3>Step 1: What is Chemical Potential (μ)?</h3>
+            <p>Imagine every particle in a substance has a level of "unhappiness" or "discomfort." This unhappiness is its <strong>chemical potential (μ)</strong>. A system, like a block of ice or a puddle of water, will always try to arrange itself to achieve the lowest possible total unhappiness for all its particles. This is a fundamental driving force in chemistry and thermodynamics.</p>
+            <p>The key rule is simple: <strong>The stable state of a system is the one with the minimum chemical potential.</strong> If particles have a choice between being in a solid, liquid, or gas phase, they will choose the phase that gives them the lowest μ.</p>
+
+            <h3>Step 2: How Temperature Changes Unhappiness</h3>
+            <p>The chemical potential isn't fixed; it changes with temperature. In this simulation, you can see three distinct curves showing how μ changes for the solid, liquid, and gas phases.
+            <ul>
+                <li><strong>All Slopes are Negative:</strong> Notice all three lines go down as temperature increases. The relationship is <code>dμ/dT = -S</code>, where S is entropy (disorder). Since entropy is always positive, the slope must be negative. Increasing temperature always makes a phase less "unhappy" (lowers its μ), but it does so at different rates.</li>
+                <li><strong>Slopes are Different:</strong> The entropy of a gas is much higher than a liquid, which is higher than a solid (<code>S_gas > S_liquid > S_solid</code>). This means the gas curve has the steepest negative slope, and the solid curve has the shallowest.</li>
+            </ul>
+            </p>
+
+            <h3>Step 3: Following the Lowest Curve</h3>
+            <p>Use the slider and trace the lowest path from left to right:
+            <ol>
+                <li><strong>Low Temperature (e.g., 250 K):</strong> The <strong>blue solid curve</strong> is the lowest on the graph. This means solid is the most stable phase. The substance is ice.</li>
+                <li><strong>The First Crossing (Melting Point):</strong> At about 273 K, the solid (blue) and liquid (green) curves intersect. At this exact point, μ_solid = μ_liquid. Both phases can coexist in equilibrium. This is the <strong>melting point</strong>.</li>
+                <li><strong>Medium Temperature (e.g., 320 K):</strong> Just past the first crossing, the <strong>green liquid curve</strong> is now the lowest. The liquid phase has become the most stable. The substance is water.</li>
+                <li><strong>The Second Crossing (Boiling Point):</strong> At about 373 K, the liquid (green) and gas (red) curves intersect. This is the <strong>boiling point</strong>, where μ_liquid = μ_gas.</li>
+                <li><strong>High Temperature (e.g., 400 K):</strong> Beyond the second crossing, the <strong>red gas curve</strong> is the lowest. The gas phase is now the most stable. The substance is steam.</li>
+            </ol>
+            And that's it! Phase transitions are simply the system "jumping" to a new curve as the temperature changes, always seeking the path of lowest chemical potential.
+            </p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory & Equations</h2>
+            <p>The behavior in this simulation is governed by fundamental thermodynamic relationships, particularly involving the Gibbs free energy (G).</p>
+
+            <h3>1. Chemical Potential and Gibbs Free Energy</h3>
+            <p>For a system with a single type of particle (a pure substance), the chemical potential (μ) is the Gibbs free energy per mole (or per particle).</p>
+            <code class="equation">μ = G/n</code>
+            <p>The Gibbs free energy is defined as `G = H - TS`, where H is enthalpy, T is temperature, and S is entropy. A system at constant temperature and pressure will seek to minimize its Gibbs free energy, which is equivalent to seeking the lowest chemical potential.</p>
+
+            <h3>2. The Slope of the Curves: Relation to Entropy</h3>
+            <p>The fundamental equation for a change in chemical potential is `dμ = -S_m dT + V_m dP`, where `S_m` is the molar entropy and `V_m` is the molar volume. If we assume pressure is constant (e.g., atmospheric pressure), the `dP` term is zero, and we get the crucial relationship for the slope:</p>
+            <code class="equation">(∂μ/∂T)_P = -S_m</code>
+            <p><strong>Plain English:</strong> The slope of the chemical potential vs. temperature graph is equal to the negative of the molar entropy.
+            <br>Since entropy is a measure of disorder, we know that `S_gas > S_liquid > S_solid`. Therefore, the slopes must follow the pattern: `Slope_gas < Slope_liquid < Slope_solid`. (They are more negative for higher entropy phases).</p>
+
+            <h3>3. Phase Equilibrium</h3>
+            <p>A phase transition occurs when two phases can coexist in equilibrium. This happens when their chemical potentials are equal.</p>
+            <code class="equation">μ_phase1(T, P) = μ_phase2(T, P)</code>
+            <p><strong>Plain English:</strong> The melting point is the temperature `T_m` where `μ_solid(T_m) = μ_liquid(T_m)`. The boiling point is the temperature `T_b` where `μ_liquid(T_b) = μ_gas(T_b)`. These are precisely the points where the curves cross in the simulation.</p>
+        </section>
+
+        <footer>
+            <p style="text-align:center; color: var(--secondary-color);">End of simulation series.</p>
+        </footer>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Setup ---
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        document.getElementById('html-size').textContent = (new Blob([document.documentElement.outerHTML]).size / 1024).toFixed(1);
+
+        // --- Controls ---
+        const tempSlider = document.getElementById('temp-slider');
+        const tempValue = document.getElementById('temp-value');
+        const infoTemp = document.getElementById('info-temp');
+        const stablePhaseText = document.getElementById('stable-phase-text');
+        const infoDetails = document.getElementById('info-details');
+
+        // --- Model Parameters for μ(T) = H - T*S ---
+        // These are not real physical values but are tuned to show
+        // phase transitions at Tm=273K and Tb=373K.
+        // H is in J/mol, S is in J/(mol*K)
+        const params = {
+            solid:  { H: 0,     S: 50 },
+            liquid: { H: 6000,  S: 72 },
+            gas:    { H: 47000, S: 190 }
+        };
+        // We know S_gas > S_liquid > S_solid.
+        // At Tm=273, we want mu_s = mu_l => H_s - Tm*S_s = H_l - Tm*S_l => Tm = (H_l-H_s)/(S_l-S_s)
+        // At Tb=373, we want mu_l = mu_g => Tb = (H_g-H_l)/(S_g-S_l)
+        // The values above are chosen to satisfy these roughly.
+
+        const mu = (phase, T) => params[phase].H - T * params[phase].S;
+
+        // --- Coordinate System ---
+        const world = { tMin: 200, tMax: 450, muMin: -40000, muMax: -5000 };
+        const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+        const toScreenX = (t) => padding.left + (t - world.tMin) / (world.tMax - world.tMin) * (canvas.width - padding.left - padding.right);
+        const toScreenY = (m) => (canvas.height - padding.bottom) - (m - world.muMin) / (world.muMax - world.muMin) * (canvas.height - padding.top - padding.bottom);
+
+        // --- Drawing ---
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg');
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            drawAxes();
+            drawCurves();
+            const T = parseFloat(tempSlider.value);
+            drawMarker(T);
+        };
+
+        const drawAxes = () => {
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 1;
+            ctx.font = "12px sans-serif";
+
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top);
+            ctx.lineTo(padding.left, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.textAlign = "right";
+            ctx.fillText("μ (J/mol)", padding.left - 5, padding.top);
+
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(padding.left, canvas.height - padding.bottom);
+            ctx.lineTo(canvas.width - padding.right, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.textAlign = "center";
+            ctx.fillText("Temperature (K)", canvas.width / 2, canvas.height - 10);
+            for (let t = world.tMin; t <= world.tMax; t += 50) {
+                ctx.fillText(t, toScreenX(t), canvas.height - padding.bottom + 5);
+            }
+        };
+
+        const drawCurves = () => {
+            const phases = ['solid', 'liquid', 'gas'];
+            const colors = {
+                solid: getComputedStyle(document.body).getPropertyValue('--solid-color'),
+                liquid: getComputedStyle(document.body).getPropertyValue('--liquid-color'),
+                gas: getComputedStyle(document.body).getPropertyValue('--gas-color'),
+            };
+
+            ctx.lineWidth = 3;
+            ctx.font = "bold 14px sans-serif";
+
+            for (const phase of phases) {
+                ctx.beginPath();
+                ctx.strokeStyle = colors[phase];
+
+                const start_mu = mu(phase, world.tMin);
+                ctx.moveTo(toScreenX(world.tMin), toScreenY(start_mu));
+
+                const end_mu = mu(phase, world.tMax);
+                ctx.lineTo(toScreenX(world.tMax), toScreenY(end_mu));
+                ctx.stroke();
+
+                // Label
+                ctx.fillStyle = colors[phase];
+                ctx.textAlign = "left";
+                ctx.fillText(phase.toUpperCase(), toScreenX(world.tMax - 10), toScreenY(end_mu));
+            }
+        };
+
+        const drawMarker = (T) => {
+            const mu_s = mu('solid', T);
+            const mu_l = mu('liquid', T);
+            const mu_g = mu('gas', T);
+
+            const potentials = {
+                solid: mu_s,
+                liquid: mu_l,
+                gas: mu_g
+            };
+
+            let stablePhase = 'solid';
+            let minMu = mu_s;
+
+            if (mu_l < minMu) {
+                minMu = mu_l;
+                stablePhase = 'liquid';
+            }
+            if (mu_g < minMu) {
+                minMu = mu_g;
+                stablePhase = 'gas';
+            }
+
+            const screenX = toScreenX(T);
+            const screenY = toScreenY(minMu);
+
+            ctx.beginPath();
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--marker-color');
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 2;
+            ctx.arc(screenX, screenY, 8, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            // Update info panel
+            tempValue.textContent = T.toFixed(0);
+            infoTemp.textContent = T.toFixed(0);
+            stablePhaseText.textContent = stablePhase.toUpperCase();
+            stablePhaseText.className = `phase-${stablePhase}`;
+            infoDetails.textContent = `The ${stablePhase} phase has the lowest chemical potential (μ ≈ ${minMu.toFixed(0)} J/mol).`;
+        };
+
+        // --- Event Listeners ---
+        tempSlider.addEventListener('input', draw);
+        document.getElementById('dark-theme-checkbox')?.addEventListener('change', (e) => {
+            document.body.classList.toggle('theme-dark', e.target.checked);
+            draw();
+        });
+
+        // --- Initial Load ---
+        draw();
+    });
+    </script>
+</body>
+</html>

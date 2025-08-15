@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entropy, Energy, and Temperature</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #8f2e56; /* Thermodynamic purple */
+            --secondary-color: #5a6268;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+            --pos-temp-color: #007bff;
+            --neg-temp-color: #dc3545;
+            --inf-temp-color: #6f42c1;
+            --tangent-color: #fd7e14;
+        }
+        .theme-dark {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #e84393;
+            --secondary-color: #95a5a6;
+            --border-color: #34495e;
+            --canvas-bg: #3a506b;
+            --code-bg: #2c3e50;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 1fr 350px;
+            }
+        }
+        header, section, .sidebar {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; margin: 1rem 0; }
+        #sim-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.6 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); text-align: center; margin-bottom: 1rem; }
+        .info-panel {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            border-width: 2px;
+            border-style: solid;
+        }
+        .info-panel h4 { margin-top: 0; }
+        .info-panel p { margin: 0.25rem 0; font-family: monospace; font-size: 1.1rem; }
+        .info-pos { border-color: var(--pos-temp-color); }
+        .info-neg { border-color: var(--neg-temp-color); }
+        .info-inf { border-color: var(--inf-temp-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="main-content">
+            <header>
+                <h1>Entropy, Energy, and Temperature</h1>
+                <p class="subtitle">A thermodynamic simulation linking the statistical definition of temperature to the slope of the Entropy vs. Energy graph.</p>
+                <div class="metadata-bar">Estimated Runtime: 5-10 mins | Device: Desktop/Tablet | HTML Size: <span id="html-size"></span> KB</div>
+            </header>
+
+            <section id="simulation-area">
+                <h2>Interactive Simulation</h2>
+                <p>Use the slider to set the internal energy (U) of a model system. The graph plots the system's entropy (S) for a given energy. The tangent at that point defines the temperature.</p>
+                <canvas id="sim-canvas" width="800" height="500"></canvas>
+                <div id="info-panel" class="info-panel">
+                    <h4>Live Readout</h4>
+                    <p>Energy (U): <strong id="readout-u">0.00</strong></p>
+                    <p>Entropy (S/kₙ): <strong id="readout-s">0.00</strong></p>
+                    <p>Slope (dS/dU): <strong id="readout-slope">...</strong></p>
+                    <p>Temperature (1/slope): <strong id="readout-temp">...</strong></p>
+                </div>
+            </section>
+
+            <section id="overview">
+                <h2>One-Paragraph Overview</h2>
+                <p>In everyday life, we think of temperature as a simple measure of hot or cold. In statistical mechanics, however, temperature has a deeper, more precise definition: it describes how the entropy (disorder) of a system changes when you add a small amount of energy. This simulation visualizes this fundamental relationship by plotting a system's entropy (S) versus its internal energy (U). By selecting a point on this S-U curve, you can see how the slope (dS/dU) directly determines the temperature (T = 1/(dS/dU)). This powerful concept not only explains conventional temperatures but also reveals bizarre phenomena like infinite and even negative absolute temperatures, which are possible in certain physical systems.</p>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner’s Guide — A Deeper Look at Temperature</h2>
+                <h3>Step 1: What is Entropy? The Messy Room Analogy</h3>
+                <p><strong>Entropy (S)</strong> is, simply put, a measure of disorder or randomness. A system with high entropy has many possible ways it can be arranged, while a low-entropy system has very few.
+                <ul>
+                    <li><strong>Low Entropy:</strong> Think of a perfectly tidy room. Every book is on its shelf, every pencil in its cup. There's only one way for the room to be "perfectly tidy." This is a state of low disorder, or low entropy.</li>
+                    <li><strong>High Entropy:</strong> Now, imagine the room is a complete mess. Books are on the floor, on the bed; pencils are everywhere. There are millions of different ways for the room to be "a mess." This is a state of high disorder, or high entropy.</li>
+                </ul>
+                In physics, we talk about the number of "microstates" (arrangements) available to a system. More microstates mean higher entropy.</p>
+
+                <h3>Step 2: The Definition of Temperature You Haven't Seen</h3>
+                <p>We usually think of temperature as related to the average kinetic energy of particles. But a more fundamental definition comes from entropy: <strong>Temperature tells you how much the entropy of a system will increase if you add a little bit of energy.</strong></p>
+                <p>The relationship is <code>1/T = dS/dU</code>. Let's break this down:
+                <ul>
+                    <li><code>dS/dU</code> is the <strong>slope</strong> of the Entropy-Energy graph you see in the simulation.</li>
+                    <li>If the slope is <strong>steep</strong> (large positive value), <code>1/T</code> is large, which means <code>T</code> is small and positive. This happens at low energy. The system is very "grateful" for new energy; adding a little energy unlocks a huge number of new ways to arrange itself, so entropy increases sharply.</li>
+                    <li>If the slope is <strong>shallow</strong> (small positive value), <code>1/T</code> is small, which means <code>T</code> is large and positive. This happens at higher energies. The system is already very disordered, so adding more energy doesn't increase the disorder by as much.</li>
+                </ul>
+                </p>
+
+                <h3>Step 3: Infinite and Negative Temperature?!</h3>
+                <p>This is where things get weird and wonderful. The model in this simulation (a set of magnetic spins) is a special system because it has a <strong>maximum possible energy</strong>—the state where all spins are aligned in the high-energy direction.</p>
+                <ul>
+                    <li><strong>Infinite Temperature (Peak of the curve):</strong> At the very peak of the S-U curve, the slope is zero. This means <code>dS/dU = 0</code>, so <code>1/T = 0</code>. This implies an infinite temperature! At this point, the system is maximally disordered, and adding a little energy doesn't change the entropy at all.</li>
+                    <li><strong>Negative Absolute Temperature (Right side of the curve):</strong> Past the peak, the slope <code>dS/dU</code> becomes negative! This means <code>1/T</code> is negative, and so is T. How is this possible? In this state, the system is highly ordered again, but in a high-energy configuration (most spins are "up"). Adding more energy forces the last few remaining "down" spins to flip "up", actually *decreasing* the number of possible arrangements and thus lowering the entropy. A negative temperature system is bizarrely "hotter than infinity." If you put it in contact with any object at a positive temperature, heat will flow from the negative-temperature system to the positive-temperature one.</li>
+                </ul>
+            </section>
+        </main>
+
+        <aside class="sidebar">
+            <h3>Controls</h3>
+            <div class="slider-container">
+                <label for="energy-slider">Internal Energy (U/ε): <span id="energy-value">0</span></label>
+                <input type="range" id="energy-slider" min="-100" max="100" value="0" step="1">
+            </div>
+            <h3>Presets</h3>
+            <div class="controls-grid">
+                <button id="preset-low-t">Low T</button>
+                <button id="preset-inf-t">Infinite T</button>
+                <button id="preset-neg-t">Negative T</button>
+            </div>
+            <h3>Options & Export</h3>
+            <div>
+                <input type="checkbox" id="dark-theme-checkbox">
+                <label for="dark-theme-checkbox">Dark Theme</label>
+            </div>
+            <div class="controls-grid">
+                 <button id="export-png-btn">Export PNG</button>
+                 <button id="export-json-btn">Export JSON</button>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Setup ---
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        document.getElementById('html-size').textContent = (new Blob([document.documentElement.outerHTML]).size / 1024).toFixed(1);
+
+        // --- Controls ---
+        const energySlider = document.getElementById('energy-slider');
+        const energyValue = document.getElementById('energy-value');
+        const darkThemeCheckbox = document.getElementById('dark-theme-checkbox');
+
+        // --- Readouts ---
+        const infoPanel = document.getElementById('info-panel');
+        const readoutU = document.getElementById('readout-u');
+        const readoutS = document.getElementById('readout-s');
+        const readoutSlope = document.getElementById('readout-slope');
+        const readoutTemp = document.getElementById('readout-temp');
+
+        // --- Model Parameters ---
+        const N = 100; // Number of two-state particles (spins)
+        const epsilon = 1; // Energy unit
+        energySlider.min = -N;
+        energySlider.max = N;
+        energySlider.value = -N / 2;
+
+        // --- S(U) Curve Calculation ---
+        let suCurve = [];
+
+        // Stirling's approximation for ln(n!)
+        const lnFactorial = (n) => {
+            if (n <= 1) return 0;
+            return n * Math.log(n) - n;
+        };
+
+        const calculateEntropy = (U) => {
+            // U = (N_up - N_down) * epsilon
+            // N = N_up + N_down
+            // => N_up = (U/epsilon + N) / 2
+            const N_up = (U / epsilon + N) / 2;
+            const N_down = N - N_up;
+
+            if (N_up < 0 || N_down < 0 || N_up > N || N_down > N || N_up % 1 !== 0) {
+                return 0; // Not a valid state
+            }
+            // S/k_B = ln(Omega) = ln(N!) - ln(N_up!) - ln(N_down!)
+            const lnOmega = lnFactorial(N) - lnFactorial(N_up) - lnFactorial(N_down);
+            return lnOmega > 0 ? lnOmega : 0;
+        };
+
+        const precomputeCurve = () => {
+            suCurve = [];
+            for (let u_int = -N; u_int <= N; u_int += 2) { // Energy changes in steps of 2*epsilon
+                suCurve.push({ u: u_int, s: calculateEntropy(u_int) });
+            }
+        };
+
+        // --- Interpolation and Derivative ---
+        const getS = (u) => {
+            if (suCurve.length < 2) return 0;
+            for (let i = 0; i < suCurve.length - 1; i++) {
+                const p1 = suCurve[i];
+                const p2 = suCurve[i + 1];
+                if (u >= p1.u && u <= p2.u) {
+                    const t = (u - p1.u) / (p2.u - p1.u);
+                    return p1.s * (1 - t) + p2.s * t;
+                }
+            }
+            return 0;
+        };
+
+        const getSlope = (u) => {
+            const du = 2; // Smallest energy step
+            const s1 = getS(u - du);
+            const s2 = getS(u + du);
+            return (s2 - s1) / (2 * du);
+        };
+
+        // --- Coordinate System ---
+        const world = { uMin: -N, uMax: N, sMin: 0, sMax: N * Math.log(2) };
+        const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+        const toScreenX = (u) => padding.left + (u - world.uMin) / (world.uMax - world.uMin) * (canvas.width - padding.left - padding.right);
+        const toScreenY = (s) => (canvas.height - padding.bottom) - (s - world.sMin) / (world.sMax - world.sMin) * (canvas.height - padding.top - padding.bottom);
+
+        // --- Drawing ---
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg');
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+            drawAxes();
+            drawCurve();
+            const u = parseFloat(energySlider.value);
+            drawMarkerAndTangent(u);
+        };
+
+        const drawAxes = () => {
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 1;
+            ctx.font = "12px sans-serif";
+
+            // Y-axis (Entropy)
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top);
+            ctx.lineTo(padding.left, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.textAlign = "right";
+            ctx.fillText("Entropy S/kₙ", padding.left - 5, padding.top);
+
+            // X-axis (Energy)
+            const y0 = toScreenY(0);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y0);
+            ctx.lineTo(canvas.width - padding.right, y0);
+            ctx.stroke();
+            ctx.textAlign = "center";
+            ctx.fillText("Energy U/ε", canvas.width / 2, canvas.height - 10);
+            ctx.fillText("0", toScreenX(0), y0 + 15);
+            ctx.fillText(`${N}`, toScreenX(N), y0 + 15);
+            ctx.fillText(`-${N}`, toScreenX(-N), y0 + 15);
+        };
+
+        const drawCurve = () => {
+            ctx.beginPath();
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--primary-color');
+            ctx.lineWidth = 3;
+            if (suCurve.length > 0) {
+                ctx.moveTo(toScreenX(suCurve[0].u), toScreenY(suCurve[0].s));
+                for (const point of suCurve) {
+                    ctx.lineTo(toScreenX(point.u), toScreenY(point.s));
+                }
+            }
+            ctx.stroke();
+        };
+
+        const drawMarkerAndTangent = (u) => {
+            const s = getS(u);
+            const slope = getSlope(u);
+            const screenX = toScreenX(u);
+            const screenY = toScreenY(s);
+
+            let markerColor;
+            if (Math.abs(slope) < 0.01) markerColor = getComputedStyle(document.body).getPropertyValue('--inf-temp-color');
+            else if (slope < 0) markerColor = getComputedStyle(document.body).getPropertyValue('--neg-temp-color');
+            else markerColor = getComputedStyle(document.body).getPropertyValue('--pos-temp-color');
+
+            ctx.beginPath();
+            ctx.fillStyle = markerColor;
+            ctx.arc(screenX, screenY, 8, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Tangent line
+            ctx.beginPath();
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--tangent-color');
+            ctx.lineWidth = 2;
+            const len = 80;
+            const screenSlope = -slope * (canvas.height / world.sMax) / (canvas.width / (world.uMax - world.uMin));
+            const angle = Math.atan(screenSlope);
+            ctx.moveTo(screenX - len * Math.cos(angle), screenY - len * Math.sin(angle));
+            ctx.lineTo(screenX + len * Math.cos(angle), screenY + len * Math.sin(angle));
+            ctx.stroke();
+        };
+
+        // --- Update UI ---
+        const update = () => {
+            let u = parseFloat(energySlider.value);
+            if (u % 2 !== N % 2) u += 1; // Ensure U and N have same parity for integer N_up
+            energySlider.value = u;
+            energyValue.textContent = u.toFixed(0);
+
+            const s = getS(u);
+            const slope = getSlope(u);
+            let temp;
+            let tempStr;
+
+            if (Math.abs(slope) < 1e-4) {
+                temp = Infinity;
+                tempStr = "∞";
+                infoPanel.className = 'info-panel info-inf';
+            } else {
+                temp = 1 / slope;
+                tempStr = temp.toFixed(2);
+                 if (temp > 0) infoPanel.className = 'info-panel info-pos';
+                 else infoPanel.className = 'info-panel info-neg';
+            }
+
+            readoutU.textContent = u.toFixed(2);
+            readoutS.textContent = s.toFixed(2);
+            readoutSlope.textContent = slope.toFixed(3);
+            readoutTemp.textContent = tempStr;
+
+            requestAnimationFrame(draw);
+        };
+
+        // --- Event Listeners ---
+        energySlider.addEventListener('input', update);
+        darkThemeCheckbox.addEventListener('change', (e) => {
+            document.body.classList.toggle('theme-dark', e.target.checked);
+            draw();
+        });
+
+        document.getElementById('preset-low-t').addEventListener('click', () => { energySlider.value = -N * 0.8; update(); });
+        document.getElementById('preset-inf-t').addEventListener('click', () => { energySlider.value = 0; update(); });
+        document.getElementById('preset-neg-t').addEventListener('click', () => { energySlider.value = N * 0.8; update(); });
+
+        document.getElementById('export-png-btn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'entropy-energy-curve.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+            const data = { energy: energySlider.value, N: N };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], {type: 'application/json'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'entropy_sim_settings.json';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+
+        // --- Initial Load ---
+        precomputeCurve();
+        update();
+    });
+    </script>
+</body>
+</html>

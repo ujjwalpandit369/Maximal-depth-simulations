@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binding Energy Curve & Nuclear Stability</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --text-color: #333;
+            --primary-color: #c2185b; /* Nuclear-themed pink/purple */
+            --secondary-color: #5d4037;
+            --border-color: #ddd;
+            --canvas-bg: #fff;
+            --code-bg: #e9e9e9;
+            --fusion-color: #4caf50;
+            --fission-color: #ff9800;
+            --peak-color: #2196f3;
+            --tangent-color: rgba(220, 53, 69, 0.8);
+        }
+        .theme-dark {
+            --bg-color: #263238;
+            --text-color: #eceff1;
+            --primary-color: #f06292;
+            --secondary-color: #a1887f;
+            --border-color: #546e7a;
+            --canvas-bg: #37474f;
+            --code-bg: #455a64;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .main-layout {
+                grid-template-columns: 1fr 350px;
+            }
+        }
+        header, section, footer, .sidebar {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        h3 { font-size: 1.4rem; }
+        code {
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: "Courier New", Courier, monospace;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        button:hover { opacity: 0.85; }
+        button.secondary { background-color: var(--secondary-color); }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        #sim-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.8 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); text-align: center; margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        th, td { border: 1px solid var(--border-color); padding: 0.75rem; text-align: left; }
+        th { background-color: var(--code-bg); }
+        .error-panel { display: none; background-color: #dc3545; color: white; padding: 1rem; border-radius: 5px; margin: 1rem 0; }
+        .dev-console { background-color: var(--code-bg); border: 1px solid var(--border-color); border-radius: 5px; margin-top: 1rem; }
+        .dev-console-header { padding: 0.5rem 1rem; cursor: pointer; background-color: var(--secondary-color); color: white; border-radius: 5px 5px 0 0; }
+        .dev-console-content { padding: 1rem; font-family: monospace; font-size: 0.8rem; max-height: 150px; overflow-y: auto; display: none; }
+
+        #info-box {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            border-width: 2px;
+            border-style: solid;
+        }
+        #info-box h3 { margin-top: 0; }
+        .info-fusion { border-color: var(--fusion-color); background-color: color-mix(in srgb, var(--fusion-color) 10%, transparent); }
+        .info-fission { border-color: var(--fission-color); background-color: color-mix(in srgb, var(--fission-color) 10%, transparent); }
+        .info-peak { border-color: var(--peak-color); background-color: color-mix(in srgb, var(--peak-color) 10%, transparent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Binding Energy Curve & Nuclear Stability</h1>
+            <p class="subtitle">Exploring why fusion and fission release energy by examining nuclear stability.</p>
+            <div class="metadata-bar">
+                Estimated Runtime: 5-10 mins | Recommended Device: Desktop/Tablet | Approx. HTML Size: <span id="html-size"></span> KB
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <div class="main-content">
+                <section id="simulation-area">
+                    <h2>Interactive Simulation</h2>
+                    <p>Use the slider below to select a nucleus by its <strong>Mass Number (A)</strong>. The graph shows the binding energy per nucleon. Observe the information panel, which explains the implications of the curve's slope at your selected point.</p>
+                    <canvas id="sim-canvas" width="800" height="450"></canvas>
+                    <div id="info-box" class="info-peak">
+                        <h3 id="info-title">Select a Nucleus</h3>
+                        <p id="info-text">Use the slider or click a preset to begin.</p>
+                    </div>
+                </section>
+
+                <section id="overview">
+                    <h2>One-Paragraph Overview</h2>
+                    <p>The stability of an atomic nucleus is measured by its "binding energy per nucleon"—how tightly its protons and neutrons are held together. This simulation displays the famous binding energy curve, which plots this stability against nuclear size. The curve reveals a fundamental secret of the universe: both combining very light nuclei (fusion) and splitting very heavy nuclei (fission) can result in more stable products, releasing enormous amounts of energy in the process. The entire curve shows a drive towards the most stable configuration, which peaks at Iron-56, explaining why stars produce elements up to iron and why nuclear power works.</p>
+                </section>
+
+                <section id="beginners-guide">
+                    <h2>Beginner’s Guide — Understanding Nuclear Stability</h2>
+                    <h3>What is Binding Energy? The LEGO Analogy</h3>
+                    <p>Imagine you have a big box of LEGO bricks. Each brick has its own weight. Now, you build a complex LEGO creation. If you weigh the final creation, you might be surprised to find it weighs *slightly less* than the sum of all the individual bricks you used. Where did the "missing" mass go?</p>
+                    <p>In the bizarre world of nuclear physics, this actually happens! When protons and neutrons (collectively called <strong>nucleons</strong>) bind together to form a nucleus, some of their mass is converted directly into energy. This released energy is the <strong>Binding Energy</strong>. It's the energy that holds the nucleus together. A nucleus with high binding energy is very stable and hard to break apart, just like a well-built LEGO model is sturdy.</p>
+
+                    <h3>Binding Energy *Per Nucleon*</h3>
+                    <p>A big nucleus will naturally have a large total binding energy. To compare the stability of different-sized nuclei fairly, we divide the total binding energy by the number of nucleons (the mass number, A). This gives us the <strong>Binding Energy per Nucleon</strong>, which is what this graph shows. It's a measure of the average stability of each particle in the nucleus.</p>
+
+                    <h3>Reading the Curve: The "Hill of Stability"</h3>
+                    <p>Think of the curve as a "hill of stability." Every nucleus wants to climb higher up this hill to become more stable.
+                    <ul>
+                        <li><strong>The Left Slope (Light Nuclei):</strong> Nuclei on the far left, like hydrogen, are at the bottom of the hill. They can become much more stable by combining, or "fusing," together. When they do this, they move up the steep slope, releasing a lot of energy. This is <strong>fusion</strong>, the power source of the Sun.</li>
+                        <li><strong>The Right Slope (Heavy Nuclei):</strong> Nuclei on the far right, like uranium, are on a gentle downward slope past the peak. They are "too big" to be perfectly stable. They can become more stable by splitting into two smaller nuclei. These smaller pieces will be higher up the curve than the original uranium nucleus. This is <strong>fission</strong>, the process used in nuclear power plants.</li>
+                        <li><strong>The Peak (Iron-56):</strong> At the very top of the hill is Iron-56. It is one of the most stable nuclei in the universe. It has no incentive to fuse or split, as either process would move it *down* the hill of stability. This is why stars can't easily create elements heavier than iron through fusion.</li>
+                    </ul>
+                    </p>
+                </section>
+            </div>
+
+            <div class="sidebar">
+                <h2>Controls & Presets</h2>
+                <div class="slider-container">
+                    <label for="mass-number-slider">Mass Number (A): <span id="mass-number-value">56</span></label>
+                    <input type="range" id="mass-number-slider" min="1" max="240" value="56" step="1" aria-label="Mass Number A">
+                </div>
+                <h3>Presets</h3>
+                <div class="controls-grid">
+                    <button id="preset-h2-btn">H-2</button>
+                    <button id="preset-he4-btn">He-4</button>
+                    <button id="preset-li6-btn">Li-6</button>
+                    <button id="preset-fe56-btn">Fe-56</button>
+                    <button id="preset-u235-btn">U-235</button>
+                </div>
+                <h3>Options</h3>
+                 <div>
+                    <input type="checkbox" id="dark-theme-checkbox">
+                    <label for="dark-theme-checkbox">Dark Theme</label>
+                </div>
+                <h3>Export</h3>
+                <div class="controls-grid">
+                    <button id="export-png-btn" class="secondary">Export PNG</button>
+                    <button id="export-json-btn" class="secondary">Export JSON</button>
+                </div>
+            </div>
+        </div>
+
+        <section id="core-theory">
+            <h2>Core Theory & Equations</h2>
+            <h3>Mass-Energy Equivalence: E = mc²</h3>
+            <p>The source of binding energy is Albert Einstein's most famous equation.</p>
+            <code class="equation">E = Δm c²</code>
+            <p><strong>Plain English:</strong> Energy (E) and mass (m) are two sides of the same coin. A change in mass (Δm) results in a proportional change in energy, multiplied by the square of the speed of light (c²), a huge number.
+            <br><strong>Numeric Example:</strong> The mass of a Helium-4 nucleus is about 4.0026 atomic mass units (u). The mass of its parts (2 protons, 2 neutrons) is about 4.032 u. The mass defect is `Δm = 0.0294 u`. This tiny missing mass, when converted to energy, becomes a whopping 28.3 MeV (Mega-electron Volts) of binding energy.</p>
+
+            <h3>The Semi-Empirical Mass Formula</h3>
+            <p>The shape of the binding energy curve is not arbitrary. It can be remarkably well-described by the <strong>Bethe–Weizsäcker semi-empirical mass formula</strong>. This formula models the nucleus as a liquid drop and includes terms that account for different physical effects:
+            <ul>
+                <li><strong>Volume Term:</strong> Each nucleon is bound to its neighbors. This provides a baseline attraction proportional to the number of nucleons (A).</li>
+                <li><strong>Surface Term:</strong> Nucleons on the surface have fewer neighbors, so they are less tightly bound. This reduces the binding energy, especially for small nuclei with a large surface-area-to-volume ratio.</li>
+                <li><strong>Coulomb Term:</strong> Protons are positively charged and repel each other. This electrostatic repulsion reduces stability, becoming much more significant for heavy nuclei with many protons. This is why the curve slopes downward for heavy nuclei.</li>
+                <li><strong>Asymmetry Term:</strong> Nuclei are most stable when they have roughly equal numbers of protons and neutrons. Having a large excess of one over the other introduces an energy cost.</li>
+            </ul>
+            These competing forces—attraction from the strong nuclear force (volume) versus repulsion from the Coulomb force—are what create the characteristic peak in the curve.</p>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. If splitting heavy nuclei releases energy, where did that energy come from in the first place?</dt>
+                <dd>It was stored in the nucleus as excess mass. Very heavy elements are typically formed in catastrophic cosmic events like supernovae, which provide the immense energy needed to force so many protons together and create them.</dd>
+
+                <dt>2. Why does the curve start at zero?</dt>
+                <dd>A single proton (Hydrogen-1, A=1) has nothing to be bound to. Its binding energy is zero by definition.</dd>
+
+                <dt>3. Is a higher binding energy per nucleon always better?</dt>
+                <dd>Yes, "better" in the sense of being more stable. Systems in nature tend to move from less stable (lower binding energy per nucleon) to more stable (higher binding energy per nucleon) states if a pathway exists.</dd>
+
+                <dt>4. Why doesn't everything just fuse into iron right away?</dt>
+                <dd>Although it's energetically favorable, there is a large energy barrier to overcome. For fusion, you need to slam positively charged nuclei together with enough force to overcome their electrostatic repulsion. This requires immense temperatures and pressures, like those found in the core of a star.</dd>
+
+                <dt>5. The slider is hard to use for specific numbers. How can I be more precise?</dt>
+                <dd>Use the preset buttons for important nuclei like H-2, Fe-56, and U-235. The slider is best for exploring the general trend of the curve.</dd>
+            </dl>
+        </section>
+
+        <footer>
+            <div id="error-panel">...</div>
+            <div class="dev-console">
+                <div class="dev-console-header" id="dev-console-toggle">Developer Console (click to expand)</div>
+                <div class="dev-console-content" id="dev-console-content"><p>No errors reported.</p></div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Self-Check & Dev Console ---
+        const devConsoleContent = document.getElementById('dev-console-content');
+        const logToDevConsole = (message) => {
+            if (devConsoleContent.innerHTML.includes("No errors reported.")) devConsoleContent.innerHTML = "";
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            devConsoleContent.prepend(p);
+        };
+        document.getElementById('dev-console-toggle').addEventListener('click', () => {
+            const content = document.getElementById('dev-console-content');
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        });
+        document.getElementById('html-size').textContent = (new Blob([document.documentElement.outerHTML]).size / 1024).toFixed(1);
+
+        // --- Data ---
+        // A curated set of (A, BE/A in MeV) data points
+        const bindingEnergyData = [
+            {A: 1, BE: 0.0, Z: 1, name: "Hydrogen"},
+            {A: 2, BE: 1.112, Z: 1, name: "Deuterium"},
+            {A: 3, BE: 2.827, Z: 1, name: "Tritium"},
+            {A: 4, BE: 7.074, Z: 2, name: "Helium-4"},
+            {A: 6, BE: 5.332, Z: 3, name: "Lithium-6"},
+            {A: 12, BE: 7.680, Z: 6, name: "Carbon-12"},
+            {A: 16, BE: 7.976, Z: 8, name: "Oxygen-16"},
+            {A: 20, BE: 8.032, Z: 10, name: "Neon-20"},
+            {A: 30, BE: 8.549, Z: 14, name: "Silicon-30"},
+            {A: 40, BE: 8.551, Z: 20, name: "Calcium-40"},
+            {A: 56, BE: 8.790, Z: 26, name: "Iron-56"},
+            {A: 62, BE: 8.795, Z: 28, name: "Nickel-62"},
+            {A: 80, BE: 8.711, Z: 34, name: "Selenium-80"},
+            {A: 100, BE: 8.611, Z: 44, name: "Ruthenium-100"},
+            {A: 120, BE: 8.505, Z: 50, name: "Tin-120"},
+            {A: 140, BE: 8.385, Z: 58, name: "Cerium-140"},
+            {A: 160, BE: 8.243, Z: 66, name: "Dysprosium-160"},
+            {A: 180, BE: 8.093, Z: 74, name: "Tungsten-180"},
+            {A: 200, BE: 7.939, Z: 80, name: "Mercury-200"},
+            {A: 208, BE: 7.867, Z: 82, name: "Lead-208"},
+            {A: 235, BE: 7.591, Z: 92, name: "Uranium-235"},
+            {A: 238, BE: 7.570, Z: 92, name: "Uranium-238"},
+            {A: 240, BE: 7.555, Z: 94, name: "Plutonium-240"}
+        ];
+
+        // --- Canvas and Context ---
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Controls ---
+        const massSlider = document.getElementById('mass-number-slider');
+        const massValue = document.getElementById('mass-number-value');
+        const infoBox = document.getElementById('info-box');
+        const infoTitle = document.getElementById('info-title');
+        const infoText = document.getElementById('info-text');
+
+        // --- State ---
+        let selectedA = 56;
+
+        // --- Coordinate Transformation ---
+        const world = { xMin: 0, xMax: 250, yMin: 0, yMax: 10 };
+        const padding = { top: 30, right: 30, bottom: 50, left: 60 };
+        const toScreenX = (worldX) => padding.left + (worldX - world.xMin) / (world.xMax - world.xMin) * (canvas.width - padding.left - padding.right);
+        const toScreenY = (worldY) => (canvas.height - padding.bottom) - (worldY - world.yMin) / (world.yMax - world.yMin) * (canvas.height - padding.top - padding.bottom);
+        const toWorldX = (screenX) => {
+            const val = (screenX - padding.left) / (canvas.width - padding.left - padding.right) * (world.xMax - world.xMin) + world.xMin;
+            return Math.round(Math.max(world.xMin, Math.min(world.xMax, val)));
+        }
+
+        // --- Interpolation & Derivative ---
+        const getBE = (massNumber) => {
+            if (massNumber <= 1) return 0;
+            for (let i = 0; i < bindingEnergyData.length - 1; i++) {
+                const p1 = bindingEnergyData[i];
+                const p2 = bindingEnergyData[i+1];
+                if (massNumber >= p1.A && massNumber <= p2.A) {
+                    const t = (massNumber - p1.A) / (p2.A - p1.A);
+                    return p1.BE * (1 - t) + p2.BE * t;
+                }
+            }
+            return bindingEnergyData[bindingEnergyData.length - 1].BE;
+        };
+
+        const getSlope = (massNumber) => {
+            const dx = 1;
+            const y1 = getBE(massNumber - dx);
+            const y2 = getBE(massNumber + dx);
+            return (y2 - y1) / (2 * dx);
+        };
+
+        // --- Drawing ---
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg');
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            drawAxes();
+            drawCurve();
+            drawMarkerAndTangent(selectedA);
+        };
+
+        const drawAxes = () => {
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 1;
+            ctx.font = "12px sans-serif";
+
+            // Y-axis
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top);
+            ctx.lineTo(padding.left, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            for (let i = world.yMin; i <= world.yMax; i += 1) {
+                if (i === 0) continue;
+                const y = toScreenY(i);
+                ctx.moveTo(padding.left - 5, y);
+                ctx.lineTo(padding.left, y);
+                ctx.stroke();
+                ctx.fillText(i, padding.left - 10, y);
+            }
+            ctx.save();
+            ctx.translate(20, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.font = "14px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("Binding Energy per Nucleon (MeV)", 0, 0);
+            ctx.restore();
+
+            // X-axis
+            ctx.beginPath();
+            ctx.moveTo(padding.left, canvas.height - padding.bottom);
+            ctx.lineTo(canvas.width - padding.right, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            for (let i = world.xMin; i <= world.xMax; i += 25) {
+                if (i === 0) continue;
+                const x = toScreenX(i);
+                ctx.moveTo(x, canvas.height - padding.bottom);
+                ctx.lineTo(x, canvas.height - padding.bottom + 5);
+                ctx.stroke();
+                ctx.fillText(i, x, canvas.height - padding.bottom + 10);
+            }
+            ctx.font = "14px sans-serif";
+            ctx.fillText("Mass Number (A)", canvas.width / 2, canvas.height - 20);
+        };
+
+        const drawCurve = () => {
+            // Main curve
+            ctx.beginPath();
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--primary-color');
+            ctx.lineWidth = 3;
+            const firstPoint = bindingEnergyData[0];
+            ctx.moveTo(toScreenX(firstPoint.A), toScreenY(firstPoint.BE));
+            for (let i = 1; i < bindingEnergyData.length; i++) {
+                const p = bindingEnergyData[i];
+                ctx.lineTo(toScreenX(p.A), toScreenY(p.BE));
+            }
+            ctx.stroke();
+
+            // Annotations
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.font = "12px sans-serif";
+            const fe56 = bindingEnergyData.find(d => d.A === 56);
+            if (fe56) {
+                const x = toScreenX(fe56.A);
+                const y = toScreenY(fe56.BE);
+                ctx.fillText("Fe-56", x, y - 25);
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            const u235 = bindingEnergyData.find(d => d.A === 235);
+            if (u235) {
+                const x = toScreenX(u235.A);
+                const y = toScreenY(u235.BE);
+                ctx.fillText("U-235", x, y - 15);
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        };
+
+        const drawMarkerAndTangent = (A) => {
+            const be = getBE(A);
+            const slope = getSlope(A);
+            const screenX = toScreenX(A);
+            const screenY = toScreenY(be);
+
+            // Marker
+            let markerColor;
+            if (A >= 180) markerColor = getComputedStyle(document.body).getPropertyValue('--fission-color');
+            else if (A <= 30) markerColor = getComputedStyle(document.body).getPropertyValue('--fusion-color');
+            else markerColor = getComputedStyle(document.body).getPropertyValue('--peak-color');
+
+            ctx.beginPath();
+            ctx.fillStyle = markerColor;
+            ctx.arc(screenX, screenY, 8, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Tangent line
+            ctx.beginPath();
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--tangent-color');
+            ctx.lineWidth = 2;
+            const len = 60; // screen units
+            const screenSlope = -slope * (canvas.height - padding.top - padding.bottom) / world.yMax * world.xMax / (canvas.width - padding.left - padding.right);
+            const angle = Math.atan(screenSlope);
+            ctx.moveTo(screenX - len * Math.cos(angle), screenY - len * Math.sin(angle));
+            ctx.lineTo(screenX + len * Math.cos(angle), screenY + len * Math.sin(angle));
+            ctx.stroke();
+        };
+
+        // --- Update UI ---
+        const update = () => {
+            selectedA = parseInt(massSlider.value);
+            massValue.textContent = selectedA;
+
+            const slope = getSlope(selectedA);
+            const be = getBE(selectedA);
+
+            let title, text, className;
+            if (selectedA >= 180) { // Fission region
+                title = `Heavy Nucleus (A=${selectedA})`;
+                text = `This nucleus is on the right side of the peak. The slope here is <strong>negative</strong>. Splitting it (fission) into smaller nuclei moves the products <strong>uphill</strong> towards the peak, releasing a large amount of energy.`;
+                className = 'info-fission';
+            } else if (selectedA <= 30 && selectedA > 1) { // Fusion region
+                title = `Light Nucleus (A=${selectedA})`;
+                text = `This nucleus is on the left side of the peak. The slope here is <strong>steeply positive</strong>. Combining it (fusion) with another light nucleus moves the product <strong>uphill</strong> towards the peak, releasing a massive amount of energy.`;
+                className = 'info-fusion';
+            } else { // Peak/stable region
+                title = `Stable Nucleus (A=${selectedA})`;
+                text = `This nucleus is near the peak of stability (around A=56-62). The slope is nearly <strong>zero</strong>. Neither fusion nor fission would produce a significant net energy gain.`;
+                className = 'info-peak';
+            }
+
+            infoTitle.textContent = title;
+            infoText.innerHTML = text + `<br><br><strong>Binding Energy:</strong> ${be.toFixed(3)} MeV/nucleon. <strong>Slope:</strong> ${slope.toFixed(4)}`;
+            infoBox.className = '';
+            infoBox.classList.add(className);
+
+            requestAnimationFrame(draw);
+        };
+
+        // --- Event Handlers ---
+        massSlider.addEventListener('input', update);
+
+        document.getElementById('preset-h2-btn').addEventListener('click', () => { massSlider.value = 2; update(); });
+        document.getElementById('preset-he4-btn').addEventListener('click', () => { massSlider.value = 4; update(); });
+        document.getElementById('preset-li6-btn').addEventListener('click', () => { massSlider.value = 6; update(); });
+        document.getElementById('preset-fe56-btn').addEventListener('click', () => { massSlider.value = 56; update(); });
+        document.getElementById('preset-u235-btn').addEventListener('click', () => { massSlider.value = 235; update(); });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const a = toWorldX(x);
+            massSlider.value = a;
+            update();
+        });
+
+        document.getElementById('dark-theme-checkbox').addEventListener('change', (e) => {
+            document.body.classList.toggle('theme-dark', e.target.checked);
+            logToDevConsole(`Theme changed to ${e.target.checked ? 'dark' : 'light'}.`);
+            draw();
+        });
+
+        document.getElementById('export-png-btn').addEventListener('click', () => {
+            const dataUrl = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'binding_energy_curve.png';
+            link.href = dataUrl;
+            link.click();
+            logToDevConsole("Exported canvas as PNG.");
+        });
+
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+            const data = { selectedA: selectedA };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'binding_energy_settings.json';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+            logToDevConsole("Exported parameters as JSON.");
+        });
+
+        // --- Initial Load ---
+        update();
+    });
+    </script>
+</body>
+</html>

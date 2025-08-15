@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I-V Characteristic Curves of Electronic Components</title>
+    <style>
+        :root {
+            --bg-color: #eef2f7;
+            --text-color: #333;
+            --primary-color: #0d47a1; /* Deep blue for electronics */
+            --secondary-color: #6a737d;
+            --border-color: #d1d5da;
+            --canvas-bg: #fff;
+            --code-bg: #f6f8fa;
+            --resistor-color: #4caf50;
+            --diode-color: #f44336;
+            --tangent-color: #ff9800;
+        }
+        .theme-dark {
+            --bg-color: #24292e;
+            --text-color: #c9d1d9;
+            --primary-color: #58a6ff;
+            --secondary-color: #8b949e;
+            --border-color: #444c56;
+            --canvas-bg: #2d333b;
+            --code-bg: #333a42;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+        header, section, .sidebar {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+        .sidebar { order: -1; }
+        @media (min-width: 992px) { .sidebar { order: 0; } }
+
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        h3 { font-size: 1.4rem; }
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: "Courier New", Courier, monospace; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+        button:hover { opacity: 0.85; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 1rem 0; }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; }
+        #sim-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.5 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .metadata-bar { font-size: 0.8rem; color: var(--secondary-color); text-align: center; margin-bottom: 1rem; }
+        .info-panel {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+        .info-panel h4 { margin-top: 0; }
+        .info-panel p { margin: 0.25rem 0; font-family: monospace; }
+        fieldset { border: 1px solid var(--border-color); border-radius: 5px; padding: 1rem; margin-bottom: 1rem; }
+        legend { color: var(--primary-color); font-weight: bold; padding: 0 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h3>Controls</h3>
+            <fieldset>
+                <legend>Component</legend>
+                <div>
+                    <input type="radio" id="resistor-radio" name="component" value="resistor" checked>
+                    <label for="resistor-radio">Ohmic Resistor</label>
+                </div>
+                <div>
+                    <input type="radio" id="diode-radio" name="component" value="diode">
+                    <label for="diode-radio">Diode</label>
+                </div>
+            </fieldset>
+
+            <div id="resistor-controls">
+                <div class="slider-container">
+                    <label for="resistance-slider">Resistance (R): <span id="resistance-value">100</span> Ω</label>
+                    <input type="range" id="resistance-slider" min="10" max="1000" value="100" step="10">
+                </div>
+            </div>
+             <div id="diode-controls" style="display: none;">
+                <p>Using standard silicon diode parameters.</p>
+            </div>
+
+            <div class="slider-container">
+                <label for="voltage-slider">Applied Voltage (V): <span id="voltage-value">0.0</span> V</label>
+                <input type="range" id="voltage-slider" min="-5" max="5" value="0" step="0.01">
+            </div>
+
+            <div class="controls-grid">
+                <button id="sweep-btn">Sweep</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+
+            <h3>Options & Export</h3>
+            <div>
+                <input type="checkbox" id="dark-theme-checkbox">
+                <label for="dark-theme-checkbox">Dark Theme</label>
+            </div>
+            <div class="controls-grid">
+                 <button id="export-png-btn">Export PNG</button>
+                 <button id="export-json-btn">Export JSON</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>I-V Characteristic Curves</h1>
+                <p class="subtitle">Visualizing the relationship between current and voltage for different electronic components.</p>
+                <div class="metadata-bar">
+                    Estimated Runtime: 5-10 mins | Recommended Device: Desktop/Tablet | Approx. HTML Size: <span id="html-size"></span> KB
+                </div>
+            </header>
+
+            <section id="simulation-area">
+                <h2>Interactive Workbench</h2>
+                <p>Select a component and use the slider to apply a voltage. The graph below plots the resulting current, tracing the component's unique I-V curve.</p>
+                <canvas id="sim-canvas" width="750" height="500"></canvas>
+                <div class="info-panel">
+                    <h4>Live Readout</h4>
+                    <p>Voltage (V): <strong id="readout-v">0.00 V</strong></p>
+                    <p>Current (I): <strong id="readout-i">0.00 mA</strong></p>
+                    <p>Static Resistance (V/I): <strong id="readout-r-static">--- Ω</strong></p>
+                    <p>Dynamic Resistance (dV/dI): <strong id="readout-r-dynamic">--- Ω</strong></p>
+                </div>
+            </section>
+
+            <section id="overview">
+                <h2>One-Paragraph Overview</h2>
+                <p>Every electronic component has a unique "fingerprint" that describes how it behaves when electricity passes through it. This fingerprint is its Current-Voltage (I-V) characteristic curve. For some components, like a simple resistor, this relationship is a straight line: double the electrical "pressure" (voltage), and you get double the "flow" (current). For others, like a diode, the relationship is highly non-linear, acting like a one-way street for current. This simulation lets you sweep the voltage across these components and watch their I-V curves get traced out, revealing the fundamental physics that governs every electronic circuit.</p>
+            </section>
+
+            <section id="beginners-guide">
+                <h2>Beginner’s Guide — The Rules of Electrical Flow</h2>
+                <h3>The Water Analogy: Pressure, Flow, and Constriction</h3>
+                <p>Let's imagine electricity as water flowing through pipes.
+                <ul>
+                    <li><strong>Voltage (V):</strong> This is like the water pressure. Higher voltage means more "push" behind the electricity. Measured in Volts (V).</li>
+                    <li><strong>Current (I):</strong> This is the rate of water flow—how much water passes a point per second. Higher current means more charge is flowing. Measured in Amperes (A), or often milliamps (mA, 1/1000th of an Amp).</li>
+                    <li><strong>Resistance (R):</strong> This is like a narrow section or a clog in the pipe that restricts the flow. Higher resistance means it's harder for current to pass through. Measured in Ohms (Ω).</li>
+                </ul>
+                </p>
+
+                <h3>Component 1: The Ohmic Resistor (A Simple Pipe)</h3>
+                <p>An Ohmic resistor is the most basic component. It's like a straight, simple pipe. Its resistance is constant. If you double the water pressure (voltage), the flow rate (current) exactly doubles. This simple, linear relationship is called <strong>Ohm's Law</strong>: <code>V = I × R</code>.</p>
+                <p>On the I-V graph, this creates a perfect <strong>straight line</strong> that passes through the origin (0V, 0A). The slope of this line is related to the resistance. A steeper line means lower resistance (more current for the same voltage), and a shallower line means higher resistance.</p>
+
+                <h3>Component 2: The Diode (A One-Way Valve)</h3>
+                <p>A diode is a semiconductor device that acts like a one-way street for current. It's like a check valve or a turnstile in our water pipe analogy.
+                <ul>
+                    <li><strong>Forward Bias (Positive Voltage):</strong> When you apply a positive voltage in the "correct" direction, the valve opens up. After a small "turn-on" voltage (around 0.7V for silicon diodes), the resistance drops to almost zero, and a large current can flow easily. This is the vertical part of the "hockey stick" curve.</li>
+                    <li><strong>Reverse Bias (Negative Voltage):</strong> When you try to push current through the wrong way with a negative voltage, the valve slams shut. Almost no current can flow (just a tiny, negligible leakage current). This is the flat, horizontal part of the curve along the axis.</li>
+                </ul>
+                This non-linear behavior is crucial for everything from converting AC to DC power to protecting circuits from being connected backwards.</p>
+
+                <h3>Static vs. Dynamic Resistance</h3>
+                <p>In the readout, you'll see two types of resistance.
+                <ul>
+                    <li><strong>Static Resistance (R = V/I):</strong> This is the simple resistance calculated by Ohm's law at a single point. For a resistor, it's constant. For a diode, it changes dramatically depending on the voltage.</li>
+                    <li><strong>Dynamic Resistance (r = dV/dI):</strong> This is the resistance to a *small change* in voltage. It's the slope of the I-V curve at a specific point. For a resistor, it's the same as the static resistance. For a diode in its "on" state, the dynamic resistance is very small, because a tiny change in voltage causes a huge change in current. This is a more advanced concept used in designing circuits with AC signals.</li>
+                </ul>
+                </p>
+            </section>
+
+            <section id="core-theory">
+                <h2>Core Theory & Equations</h2>
+                <h3>1. Ohm's Law (Resistors)</h3>
+                <p>For an ideal Ohmic resistor, the relationship between voltage, current, and resistance is linear and constant.</p>
+                <code class="equation">I = V / R</code>
+                <p><strong>Plain English:</strong> The current (I) flowing through a resistor is directly proportional to the voltage (V) across it and inversely proportional to its resistance (R).
+                <br><strong>Numeric Example:</strong> If you apply a voltage `V = 2 V` across a resistor with `R = 100 Ω`, the current will be `I = 2 V / 100 Ω = 0.02 A` or `20 mA`.</p>
+
+                <h3>2. Shockley Diode Equation</h3>
+                <p>The I-V relationship for a diode is exponential, described by the Shockley diode equation.</p>
+                <code class="equation">I = I_s * (e^(V / (n * V_t)) - 1)</code>
+                <p><strong>Plain English:</strong> The current (I) through a diode depends on the applied voltage (V) in an exponential way.
+                <ul>
+                    <li>`I_s`: The reverse saturation current, a very small constant (e.g., 10⁻⁹ A). It's the tiny leakage current that flows when the diode is reverse-biased.</li>
+                    <li>`V_t`: The thermal voltage, a constant related to temperature (`kT/q`). At room temperature, it's about `25.85 mV`.</li>
+                    <li>`n`: The ideality factor, a constant usually between 1 and 2.</li>
+                </ul>
+                When `V` is positive, the `e^V` term dominates and the current grows exponentially. When `V` is negative, the `e^V` term becomes nearly zero, and `I` is approximately `-I_s` (a very small negative current).
+                <br><strong>Numeric Example:</strong> For `V = 0.7 V` (and typical parameters), `V / (n*V_t)` is large, so `e^(V / (n*V_t))` is huge, leading to a large forward current. For `V = -2 V`, `e^(V / (n*V_t))` is practically zero, so `I ≈ I_s * (0 - 1) = -I_s`, a tiny leakage current.</p>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Setup ---
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        document.getElementById('html-size').textContent = (new Blob([document.documentElement.outerHTML]).size / 1024).toFixed(1);
+
+        // --- Controls ---
+        const componentRadios = document.querySelectorAll('input[name="component"]');
+        const resistanceSlider = document.getElementById('resistance-slider');
+        const resistanceValue = document.getElementById('resistance-value');
+        const voltageSlider = document.getElementById('voltage-slider');
+        const voltageValue = document.getElementById('voltage-value');
+        const sweepBtn = document.getElementById('sweep-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const darkThemeCheckbox = document.getElementById('dark-theme-checkbox');
+
+        // --- Readouts ---
+        const readoutV = document.getElementById('readout-v');
+        const readoutI = document.getElementById('readout-i');
+        const readoutRStatic = document.getElementById('readout-r-static');
+        const readoutRDynamic = document.getElementById('readout-r-dynamic');
+
+        // --- State ---
+        let state = {
+            component: 'resistor', // 'resistor' or 'diode'
+            resistance: 100, // Ohms
+            voltage: 0, // Volts
+            ivPoints: [], // Array of {v, i}
+        };
+
+        // --- Physics Models ---
+        const Vt = 0.02585; // Thermal voltage at 300K
+        const Is = 1e-9; // Reverse saturation current
+        const n_ideality = 1.5;
+
+        const calculateCurrent = (V) => {
+            if (state.component === 'resistor') {
+                return V / state.resistance;
+            } else { // Diode
+                return Is * (Math.exp(V / (n_ideality * Vt)) - 1);
+            }
+        };
+
+        // --- Coordinate System ---
+        let world = { vMin: -5, vMax: 5, iMin: -0.1, iMax: 0.1 }; // V, A
+        const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+
+        const updateWorldBounds = () => {
+            if (state.component === 'resistor') {
+                const maxCurrent = state.voltage / state.resistance;
+                world.vMin = -5;
+                world.vMax = 5;
+                const iMax = Math.max(Math.abs(5 / state.resistance), 0.01);
+                world.iMin = -iMax;
+                world.iMax = iMax;
+            } else { // Diode
+                world.vMin = -5;
+                world.vMax = 1;
+                world.iMin = -1e-6;
+                world.iMax = 0.1; // 100 mA
+            }
+            voltageSlider.min = world.vMin;
+            voltageSlider.max = world.vMax;
+        };
+
+        const toScreenX = (v) => padding.left + (v - world.vMin) / (world.vMax - world.vMin) * (canvas.width - padding.left - padding.right);
+        const toScreenY = (i) => (canvas.height - padding.bottom) - (i - world.iMin) / (world.iMax - world.iMin) * (canvas.height - padding.top - padding.bottom);
+
+        // --- Drawing ---
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--canvas-bg');
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            drawAxes();
+            drawCurve();
+            drawCircuit();
+        };
+
+        const drawAxes = () => {
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 1;
+            ctx.font = "12px sans-serif";
+
+            // Origin
+            const x0 = toScreenX(0);
+            const y0 = toScreenY(0);
+
+            // Y-axis (Current)
+            ctx.beginPath();
+            ctx.moveTo(x0, padding.top);
+            ctx.lineTo(x0, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            for (let i = 0; i < 5; i++) {
+                const iPos = world.iMin + i * (world.iMax - world.iMin) / 4;
+                const iNeg = -iPos;
+                if(Math.abs(iPos) > 1e-4) {
+                    ctx.fillText((iPos*1000).toFixed(0), x0 - 5, toScreenY(iPos));
+                    ctx.fillText((iNeg*1000).toFixed(0), x0 - 5, toScreenY(iNeg));
+                }
+            }
+            ctx.fillText("Current (mA)", x0 - 5, padding.top);
+
+            // X-axis (Voltage)
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y0);
+            ctx.lineTo(canvas.width - padding.right, y0);
+            ctx.stroke();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            for (let v = Math.ceil(world.vMin); v <= Math.floor(world.vMax); v++) {
+                ctx.fillText(v, toScreenX(v), y0 + 5);
+            }
+            ctx.fillText("Voltage (V)", canvas.width - padding.right - 20, y0 + 5);
+        };
+
+        const drawCurve = () => {
+            if (state.ivPoints.length < 2) return;
+            ctx.beginPath();
+            const color = state.component === 'resistor' ? getComputedStyle(document.body).getPropertyValue('--resistor-color') : getComputedStyle(document.body).getPropertyValue('--diode-color');
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.moveTo(toScreenX(state.ivPoints[0].v), toScreenY(state.ivPoints[0].i));
+            for (const point of state.ivPoints) {
+                ctx.lineTo(toScreenX(point.v), toScreenY(point.i));
+            }
+            ctx.stroke();
+
+            // Draw current point marker
+            const lastPoint = state.ivPoints[state.ivPoints.length - 1];
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            ctx.arc(toScreenX(lastPoint.v), toScreenY(lastPoint.i), 6, 0, 2 * Math.PI);
+            ctx.fill();
+        };
+
+        const drawCircuit = () => {
+            const x = canvas.width - 100;
+            const y = padding.top + 50;
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--text-color');
+            ctx.lineWidth = 2;
+
+            // Wires
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y - 30);
+            ctx.lineTo(x + 50, y - 30);
+            ctx.lineTo(x + 50, y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x, y + 50);
+            ctx.lineTo(x, y + 80);
+            ctx.lineTo(x + 50, y + 80);
+            ctx.lineTo(x + 50, y + 50);
+            ctx.stroke();
+
+            // Power supply
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, y + 50);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x - 10, y + 10);
+            ctx.lineTo(x + 10, y + 10);
+            ctx.moveTo(x - 5, y + 18);
+            ctx.lineTo(x + 5, y + 18);
+            ctx.stroke();
+            ctx.fillText("V", x - 20, y + 25);
+
+            // Component
+            if (state.component === 'resistor') {
+                ctx.strokeRect(x + 35, y, 30, 15);
+            } else { // Diode
+                ctx.beginPath();
+                ctx.moveTo(x + 50, y);
+                ctx.lineTo(x + 50, y + 15);
+                ctx.moveTo(x + 35, y + 15);
+                ctx.lineTo(x + 65, y + 15); // Cathode bar
+                ctx.moveTo(x + 50, y + 15);
+                ctx.lineTo(x + 35, y + 30);
+                ctx.lineTo(x + 65, y + 30);
+                ctx.closePath();
+                ctx.stroke();
+            }
+        };
+
+        // --- Update & Event Handlers ---
+        const updateUI = () => {
+            state.voltage = parseFloat(voltageSlider.value);
+            voltageValue.textContent = state.voltage.toFixed(2);
+
+            state.ivPoints.push({
+                v: state.voltage,
+                i: calculateCurrent(state.voltage)
+            });
+            // Keep array size manageable
+            if (state.ivPoints.length > 1000) state.ivPoints.shift();
+
+            const current = state.ivPoints[state.ivPoints.length - 1].i;
+            readoutV.textContent = `${state.voltage.toFixed(2)} V`;
+            readoutI.textContent = `${(current * 1000).toFixed(2)} mA`;
+
+            // Static Resistance
+            if (Math.abs(current) > 1e-9) {
+                const rStatic = state.voltage / current;
+                readoutRStatic.textContent = `${formatResistance(rStatic)} Ω`;
+            } else {
+                readoutRStatic.textContent = '--- Ω';
+            }
+
+            // Dynamic Resistance
+            const dv = 0.001;
+            const i1 = calculateCurrent(state.voltage - dv);
+            const i2 = calculateCurrent(state.voltage + dv);
+            const di = i2 - i1;
+            if (Math.abs(di) > 1e-12) {
+                const rDynamic = (2 * dv) / di;
+                readoutRDynamic.textContent = `${formatResistance(rDynamic)} Ω`;
+            } else {
+                readoutRDynamic.textContent = '--- Ω';
+            }
+
+            requestAnimationFrame(draw);
+        };
+
+        const formatResistance = (r) => {
+            if (r > 1e6) return `${(r/1e6).toFixed(2)} M`;
+            if (r > 1e3) return `${(r/1e3).toFixed(2)} k`;
+            return r.toFixed(2);
+        };
+
+        const reset = () => {
+            state.ivPoints = [];
+            voltageSlider.value = 0;
+            updateWorldBounds();
+            updateUI();
+            requestAnimationFrame(draw);
+        };
+
+        const handleComponentChange = (e) => {
+            state.component = e.target.value;
+            document.getElementById('resistor-controls').style.display = state.component === 'resistor' ? 'block' : 'none';
+            document.getElementById('diode-controls').style.display = state.component === 'diode' ? 'block' : 'none';
+            reset();
+        };
+
+        const handleSweep = () => {
+            reset();
+            let v = world.vMin;
+            const sweepInterval = setInterval(() => {
+                v += (world.vMax - world.vMin) / 200;
+                if (v > world.vMax) {
+                    clearInterval(sweepInterval);
+                    voltageSlider.value = world.vMax;
+                    updateUI();
+                    return;
+                }
+                voltageSlider.value = v;
+                updateUI();
+            }, 10);
+        };
+
+        // --- Attach Listeners ---
+        componentRadios.forEach(radio => radio.addEventListener('change', handleComponentChange));
+        resistanceSlider.addEventListener('input', (e) => {
+            state.resistance = parseFloat(e.target.value);
+            resistanceValue.textContent = state.resistance;
+            reset();
+        });
+        voltageSlider.addEventListener('input', updateUI);
+        sweepBtn.addEventListener('click', handleSweep);
+        resetBtn.addEventListener('click', reset);
+        darkThemeCheckbox.addEventListener('change', (e) => {
+            document.body.classList.toggle('theme-dark', e.target.checked);
+            draw();
+        });
+
+        document.getElementById('export-png-btn').addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'iv_curve.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+            const data = {
+                component: state.component,
+                resistance: state.resistance,
+                ivPoints: state.ivPoints
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], {type: 'application/json'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'iv_data.json';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+
+        // --- Initial Load ---
+        reset();
+    });
+    </script>
+</body>
+</html>
