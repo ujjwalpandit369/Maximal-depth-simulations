@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Poincaré Section</title>
+    <style>
+        :root {
+            --bg-color: #2d3436;
+            --text-color: #dfe6e9;
+            --primary-color: #00b894; /* Green */
+            --secondary-color: #d63031; /* Red */
+            --border-color: #636e72;
+            --canvas-bg: #1d2124;
+            --accent-color: #fdcb6e; /* Yellow */
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:move; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; }
+        #info-panel { padding:1em; text-align:center; }
+        #info-points { font-size: 1.4em; color: var(--accent-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Slicing Through Chaos: The Poincaré Section</h1>
+    <p>A tool to analyze the structure of a 3D strange attractor by looking at its 2D cross-section.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">3D Attractor Flow</p>
+            <canvas id="attractor-canvas"></canvas>
+        </div>
+        <div class="panel">
+            <p class="panel-title">2D Poincaré Section</p>
+            <canvas id="section-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Controls</h3>
+                <button id="start-btn">Start/Pause</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <div class="controls-group">
+                <h3>Poincaré Plane</h3>
+                <label>Plane Position (x): <span id="plane-value">0.0</span></label>
+                <input type="range" id="plane-slider" min="-5" max="5" value="0.0" step="0.1">
+            </div>
+            <div id="info-panel">
+                <h3>Intersection Points</h3>
+                <p id="info-points">0</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Simplifying the Complex</h4>
+        <p>A 3D strange attractor, like the Rössler attractor shown here, creates a continuous, tangled trajectory that never repeats. Analyzing this complex flow can be difficult. The <strong>Poincaré section</strong> is a brilliant technique, invented by Henri Poincaré, to simplify the problem. Instead of looking at the entire flow, we only look at the points where the flow passes through a specific 2D plane.</p>
+        <h4>Step 1: The 3D Flow</h4>
+        <p>The left panel shows the 3D phase space of the <strong>Rössler attractor</strong>, a system of equations that produces a simpler chaotic attractor than the Lorenz system. The red line traces the path of the system's state over time.
+        <br><br>
+        Also shown is a semi-transparent green plane. This is our <strong>Poincaré plane</strong>. You can move its position along the x-axis using the slider in the control panel.
+        </p>
+        <h4>Step 2: Taking a Slice</h4>
+        <p>The right panel shows the 2D Poincaré section itself—it is a view "face-on" of the green plane.
+        <br><br>
+        Click <strong>"Start"</strong>. As the red trajectory in the 3D view evolves, the simulation constantly checks if it has pierced through the green plane. Every time the trajectory passes through the plane *from left to right*, a single yellow dot is plotted on the 2D section plot at the exact point of intersection.
+        </p>
+        <h4>Step 3: Revealing the Structure</h4>
+        <p>Let the simulation run for a while. As thousands of intersection points are collected, a remarkable picture emerges in the 2D section plot. Instead of a random scatter of dots, you will see a complex, one-dimensional, hair-like structure. This is the fractal cross-section of the 3D strange attractor.
+        <br><br>
+        This technique effectively turns a continuous 3D flow into a discrete 2D map. By studying the pattern of points on the Poincaré section, mathematicians can understand the properties of the full 3D attractor, such as its fractal dimension and topological structure, in a much simpler setting. Try moving the plane with the slider to see how the cross-section of the attractor changes.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+
+    // --- Canvas Setup ---
+    const aCanvas = document.getElementById('attractor-canvas');
+    const aCtx = aCanvas.getContext('2d');
+    const sCanvas = document.getElementById('section-canvas');
+    const sCtx = sCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        point: [1, 1, 1],
+        trace: [],
+        sectionPoints: [],
+        planePos: 0.0,
+        running: false,
+        view: { rotX: 0.3, rotY: 0.5, zoom: 35 },
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Rössler System ---
+    const roesslerDerivs = p => {
+        const a=0.2, b=0.2, c=5.7;
+        return [ -p[1] - p[2], p[0] + a*p[1], b + p[2]*(p[0] - c) ];
+    };
+    const rk4Step = (p, dt) => {
+        const k1 = roesslerDerivs(p);
+        const k2_in = p.map((v,i) => v + k1[i]*dt/2);
+        const k2 = roesslerDerivs(k2_in);
+        const k3_in = p.map((v,i) => v + k2[i]*dt/2);
+        const k3 = roesslerDerivs(k3_in);
+        const k4_in = p.map((v,i) => v + k3[i]*dt);
+        const k4 = roesslerDerivs(k4_in);
+        return p.map((v,i) => v + (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])*dt/6);
+    };
+
+    // --- Drawing ---
+    function draw() {
+        drawAttractor();
+        drawSection();
+    }
+
+    function drawAttractor() {
+        const w = aCanvas.getBoundingClientRect().width, h = aCanvas.getBoundingClientRect().height;
+        aCtx.fillStyle = 'rgba(29, 33, 36, 0.1)';
+        aCtx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return { x:w/2*(1+(mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d), y:h/2*(1-(mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d) };
+        };
+
+        // Draw trace
+        aCtx.strokeStyle = 'var(--secondary-color)';
+        aCtx.lineWidth = 1;
+        aCtx.beginPath();
+        simState.trace.forEach((p, i) => {
+            const {x, y} = transform(p);
+            if (i === 0) aCtx.moveTo(x, y); else aCtx.lineTo(x, y);
+        });
+        aCtx.stroke();
+
+        // Draw plane
+        aCtx.fillStyle = 'rgba(0, 184, 148, 0.2)';
+        const plane = [[simState.planePos,-15,-15], [simState.planePos,15,-15], [simState.planePos,15,15], [simState.planePos,-15,15]].map(transform);
+        aCtx.beginPath();
+        plane.forEach((p,i) => i===0 ? aCtx.moveTo(p.x, p.y) : aCtx.lineTo(p.x, p.y));
+        aCtx.closePath();
+        aCtx.fill();
+    }
+
+    function drawSection() {
+        const w = sCanvas.getBoundingClientRect().width, h = sCanvas.getBoundingClientRect().height;
+        sCtx.fillStyle = 'var(--canvas-bg)';
+        sCtx.fillRect(0,0,w,h);
+
+        sCtx.fillStyle = 'var(--accent-color)';
+        simState.sectionPoints.forEach(p => {
+            const x = w/2 + p[1]*15;
+            const y = h/2 - p[2]*10;
+            sCtx.fillRect(x,y,1,1);
+        });
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        if (!simState.running) return;
+        const dt = 0.02;
+        for(let i=0; i<10; i++) { // 10 substeps per frame for accuracy
+            const p_old = simState.point;
+            const p_new = rk4Step(p_old, dt);
+
+            // Check for plane crossing
+            if((p_old[0] < simState.planePos && p_new[0] >= simState.planePos) || (p_old[0] > simState.planePos && p_new[0] <= simState.planePos)){
+                 const t = (simState.planePos - p_old[0]) / (p_new[0] - p_old[0]);
+                 const intersect_y = p_old[1] + (p_new[1] - p_old[1]) * t;
+                 const intersect_z = p_old[2] + (p_new[2] - p_old[2]) * t;
+                 simState.sectionPoints.push([simState.planePos, intersect_y, intersect_z]);
+                 document.getElementById('info-points').textContent = simState.sectionPoints.length;
+            }
+
+            simState.point = p_new;
+            simState.trace.push(p_new);
+        }
+        if(simState.trace.length > 2000) simState.trace.splice(0, simState.trace.length-2000);
+
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function reset() {
+        simState.running = false;
+        simState.point = [Math.random(), Math.random(), Math.random()];
+        simState.trace = [simState.point];
+        simState.sectionPoints = [];
+        document.getElementById('info-points').textContent = 0;
+        document.getElementById('start-btn').textContent = 'Start';
+        draw();
+    }
+
+    function init() {
+        [aCanvas, sCanvas].forEach(c => {
+            const rect = c.getBoundingClientRect();
+            c.width = rect.width; c.height = rect.height;
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            simState.running = !simState.running;
+            document.getElementById('start-btn').textContent = simState.running ? 'Pause' : 'Start';
+            if(simState.running) mainLoop();
+        });
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        document.getElementById('plane-slider').addEventListener('input', e => {
+            simState.planePos = parseFloat(e.target.value);
+            document.getElementById('plane-value').textContent = simState.planePos.toFixed(1);
+            reset();
+        });
+
+        aCanvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        aCanvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+                if(!simState.running) draw();
+            }
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+
+        reset();
+    }
+    init();
+});
+</script>
+</body>
+</html>

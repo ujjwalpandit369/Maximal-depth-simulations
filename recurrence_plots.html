@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recurrence Plots</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --primary-color: #b71c1c; /* Deep Red */
+            --secondary-color: #1a237e; /* Indigo */
+            --border-color: #cfd8dc;
+            --canvas-bg: #ffffff;
+            --accent-color: #ff6f00; /* Amber */
+            --font-family: 'Georgia', serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; }
+        #timeseries-canvas { aspect-ratio: 2/1; }
+        #recurrence-canvas { aspect-ratio: 1/1; image-rendering: pixelated; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { flex:1; min-width:280px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:white; color:var(--primary-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); color:white; cursor:pointer; }
+        #progress-bar { width: 0%; height: 5px; background-color: var(--accent-color); transition: width 0.1s linear; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Recurrence Plots: Visualizing Dynamics</h1>
+    <p>A tool to reveal the hidden temporal patterns and recurrences in a time series from a dynamical system.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">Time Series from Rössler Attractor</p>
+            <canvas id="timeseries-canvas"></canvas>
+            <p class="panel-title" style="margin-top:1em;">Recurrence Plot R(i, j)</p>
+            <canvas id="recurrence-canvas"></canvas>
+            <div id="progress-bar"></div>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Recurrence Parameters</h3>
+                <label>Embedding Dimension (m): <span id="dim-value">3</span></label>
+                <input type="range" id="dim-slider" min="1" max="10" value="3" step="1">
+                <label>Time Delay (τ): <span id="delay-value">8</span></label>
+                <input type="range" id="delay-slider" min="1" max="20" value="8" step="1">
+                <label>Threshold (ε): <span id="thresh-value">0.5</span></label>
+                <input type="range" id="thresh-slider" min="0.1" max="2" value="0.5" step="0.05">
+            </div>
+            <div class="controls-group">
+                <h3>Analysis</h3>
+                <button id="generate-btn">Generate Recurrence Plot</button>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Seeing the Echoes of a System</h4>
+        <p>How can we understand the complex behavior of a dynamical system just by looking at a single stream of data from it? A <strong>Recurrence Plot</strong> is a powerful visualization technique that helps us see when a system returns to a state it has visited before. It reveals hidden patterns and structures in the data.</p>
+        <h4>Step 1: The Time Series</h4>
+        <p>First, we need data. The top-left plot shows a time series—the `x` value over time—generated from the chaotic Rössler attractor. This is the raw data we want to analyze.</p>
+        <h4>Step 2: The Recurrence Plot</h4>
+        <p>The main visualization is the square recurrence plot. Both the horizontal and vertical axes represent time, from the beginning of our data series to the end. A black dot is placed at a coordinate `(i, j)` if the state of the system at time `i` is very close to its state at time `j`. "Closeness" is determined by the "Threshold (ε)" slider.
+        <br><br>
+        Essentially, it's a map of all the "echoes" or "recurrences" in the system's history. The main diagonal `i=j` is always black, because every state is close to itself.
+        </p>
+        <h4>Step 3: Interpreting the Patterns</h4>
+        <p>Click <strong>"Generate Recurrence Plot"</strong>. The resulting pattern of dots is not random; it's a fingerprint of the system's dynamics.
+        <ul>
+            <li><strong>Diagonal Lines:</strong> Lines parallel to the main diagonal indicate that the system is deterministic and that segments of the trajectory are running parallel to each other. This is a hallmark of a regular, periodic system.</li>
+            <li><strong>Fading to the Corner:</strong> If the plot is darker near the main diagonal and fades out towards the top-left and bottom-right corners, it indicates that the system's state is "drifting" over time.</li>
+            <li><strong>Complex, Interrupted Textures:</strong> The small, interrupted diagonal lines and complex geometric textures you see here are characteristic of a <strong>chaotic system</strong>. The system has a definite structure, but it never perfectly repeats, so the diagonal lines are all short.</li>
+        </ul>
+        </p>
+        <h4>Step 4: Reconstruction Parameters</h4>
+        <p>To properly check for recurrences, we often need to "reconstruct" the full state of the system from our single time series. The "Embedding Dimension (m)" and "Time Delay (τ)" sliders control this process. By changing these parameters, you can sometimes reveal clearer structures in the recurrence plot. This technique is fundamental to modern time series analysis.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const tsCanvas = document.getElementById('timeseries-canvas');
+    const tsCtx = tsCanvas.getContext('2d');
+    const rpCanvas = document.getElementById('recurrence-canvas');
+    const rpCtx = rpCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        timeSeries: [],
+        recurrenceData: null,
+        params: { dim: 3, delay: 8, threshold: 0.5 },
+    };
+
+    // --- Time Series Generation (Rössler System) ---
+    function generateTimeSeries() {
+        simState.timeSeries = [];
+        let p = [0.1, 0.1, 0.1];
+        const a=0.2, b=0.2, c=5.7;
+        const dt = 0.05;
+        const roesslerDerivs = pt => [-pt[1]-pt[2], pt[0]+a*pt[1], b+pt[2]*(pt[0]-c)];
+
+        for(let i=0; i<4000; i++){ // Generate 4000 points
+            // Simplified Euler integrator for speed
+            const derivs = roesslerDerivs(p);
+            p = p.map((v,idx) => v + derivs[idx]*dt);
+            if(i > 1000) { // Discard transient
+                 simState.timeSeries.push(p);
+            }
+        }
+    }
+
+    // --- Recurrence Plot Calculation ---
+    function runAnalysis() {
+        const N = 500; // Use a subset of the time series for performance
+        const { dim, delay, threshold } = simState.params;
+        const series = simState.timeSeries.slice(0, N + dim*delay);
+
+        // 1. Reconstruct phase space vectors
+        const vectors = [];
+        for(let i=0; i<N; i++){
+            const vec = [];
+            for(let j=0; j<dim; j++){
+                vec.push(series[i + j*delay][0]); // Using x-component
+            }
+            vectors.push(vec);
+        }
+
+        // 2. Calculate recurrence matrix
+        const w = rpCanvas.width, h = rpCanvas.height;
+        const imgData = rpCtx.createImageData(w,h);
+        const progressBar = document.getElementById('progress-bar');
+
+        let j = 0;
+        function calculateRow() {
+            for(let i=0; i<N; i++){
+                let dist2 = 0;
+                for(let k=0; k<dim; k++){
+                    dist2 += Math.pow(vectors[i][k] - vectors[j][k], 2);
+                }
+                if (Math.sqrt(dist2) < threshold) {
+                    const canvasX = Math.floor(i/N*w);
+                    const canvasY = Math.floor(j/N*h);
+                    const idx = (canvasY * w + canvasX) * 4;
+                    imgData.data[idx] = 0;
+                    imgData.data[idx+1] = 0;
+                    imgData.data[idx+2] = 0;
+                    imgData.data[idx+3] = 255;
+                }
+            }
+            j++;
+            progressBar.style.width = `${j/N*100}%`;
+            if (j < N) {
+                requestAnimationFrame(calculateRow);
+            } else {
+                 rpCtx.putImageData(imgData, 0, 0);
+            }
+        }
+
+        rpCtx.fillStyle = 'var(--canvas-bg)';
+        rpCtx.fillRect(0,0,w,h);
+        calculateRow();
+    }
+
+    // --- Drawing ---
+    function drawTimeSeries() {
+        const w = tsCanvas.width, h = tsCanvas.height;
+        tsCtx.fillStyle = 'var(--canvas-bg)';
+        tsCtx.fillRect(0,0,w,h);
+
+        if(simState.timeSeries.length < 2) return;
+        const series = simState.timeSeries.map(p => p[0]);
+        const min = Math.min(...series), max = Math.max(...series);
+
+        tsCtx.strokeStyle = 'var(--secondary-color)';
+        tsCtx.lineWidth = 1;
+        tsCtx.beginPath();
+        series.forEach((val, i) => {
+            const x = i/series.length * w;
+            const y = h - (val-min)/(max-min) * h * 0.9 - h*0.05;
+            i===0 ? tsCtx.moveTo(x,y) : tsCtx.lineTo(x,y);
+        });
+        tsCtx.stroke();
+    }
+
+    // --- Event Handling & Init ---
+    function init() {
+        const rect = rpCanvas.getBoundingClientRect();
+        [tsCanvas, rpCanvas].forEach(c => {
+            const r = c.getBoundingClientRect();
+            c.width = r.width; c.height = r.height;
+        });
+
+        document.getElementById('generate-btn').addEventListener('click', runAnalysis);
+        document.querySelectorAll('.controls-sidebar input').forEach(slider => {
+            slider.addEventListener('input', e => {
+                const id = e.target.id.split('-')[0];
+                simState.params[id] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = simState.params[id].toFixed(id==='threshold' ? 2 : 0);
+            });
+        });
+
+        generateTimeSeries();
+        drawTimeSeries();
+    }
+    init();
+});
+</script>
+</body>
+</html>

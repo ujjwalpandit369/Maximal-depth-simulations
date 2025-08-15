@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyapunov Fractals</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #e0e0e0;
+            --primary-color: #c792ea; /* Lavender */
+            --secondary-color: #89ddff; /* Light Blue */
+            --border-color: #333;
+            --canvas-bg: #000;
+            --accent-color: #ffcb6b; /* Gold */
+            --font-family: 'Fira Code', 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; position: relative; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:zoom-in; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); color:#1e1e1e; cursor:pointer; }
+        button:hover { filter:brightness(120%); }
+        #progress-bar { width: 0%; height: 5px; background-color: var(--accent-color); transition: width 0.1s linear; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Lyapunov Fractals</h1>
+    <p style="text-align:center;">Exploring the boundary between order and chaos in the logistic map.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Parameter Space (A vs B)</p>
+            <canvas id="main-canvas"></canvas>
+            <div id="progress-bar"></div>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Define Sequence</h3>
+                <label for="sequence-input">Sequence (e.g., A, B, AB, AABB):</label>
+                <input type="text" id="sequence-input" value="AB">
+            </div>
+            <div class="controls-group">
+                <h3>2. Generate</h3>
+                <button id="generate-btn">Generate Fractal</button>
+                 <p style="font-size:0.8em; text-align:center;">Generation is computationally intensive and may take a few seconds.</p>
+            </div>
+            <div class="controls-group">
+                <h3>3. Explore</h3>
+                 <p style="font-size:0.9em;">Use mouse wheel to zoom, drag to pan. Generation will restart.</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Mapping the Edge of Chaos</h4>
+        <p>You may have seen the bifurcation diagram of the logistic map, `x → r·x·(1-x)`. A <strong>Lyapunov Fractal</strong> is a different, 2D view into its behavior. Instead of a single growth parameter `r`, we use a sequence of two parameters, `A` and `B`, to control the map's iteration.</p>
+        <h4>Step 1: The Parameter Space</h4>
+        <p>The image is a map of a "parameter space."
+        <ul>
+            <li>The horizontal axis represents the value of parameter `A`, from 2 to 4.</li>
+            <li>The vertical axis represents the value of parameter `B`, from 2 to 4.</li>
+        </ul>
+        Each pixel on the image corresponds to a specific pair of `(A, B)` values.
+        </p>
+        <h4>Step 2: The Sequence and the Exponent</h4>
+        <p>We iterate the logistic map, but at each step, we cycle through the `r` parameter according to the user-defined sequence. For the default sequence "AB", the map iterates as:
+        <br>
+        `x₁ = A·x₀(1-x₀)`
+        <br>
+        `x₂ = B·x₁(1-x₁)`
+        <br>
+        `x₃ = A·x₂(1-x₂)`
+        <br>
+        ...and so on. For each `(A, B)` pair, we calculate the <strong>Lyapunov Exponent (λ)</strong>. This number measures the rate of separation of infinitesimally close trajectories—it's a precise measure of how chaotic the system is.
+        </p>
+        <h4>Step 3: From Exponent to Color</h4>
+        <p>The color of each pixel is determined by the calculated Lyapunov exponent:
+        <ul>
+            <li><span style="color:var(--secondary-color)">■</span> <strong>Blue/Teal regions (λ < 0):</strong> These are regions of <strong>order</strong>. For these `(A, B)` values, the system converges to a stable, periodic orbit.</li>
+            <li><span style="color:var(--accent-color)">■</span> <strong>Gold/Yellow regions (λ > 0):</strong> These are regions of <strong>chaos</strong>. For these `(A, B)` values, the system is unpredictable and exhibits sensitive dependence on initial conditions.</li>
+        </ul>
+        The intricate, feathery boundary between these two regimes is the Lyapunov fractal. It has an incredibly complex and beautiful structure. Try changing the sequence to "AABB" or "BBA" and see how the map of chaos changes. Use your mouse wheel to zoom in and see the infinite detail.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let simState = {
+        sequence: 'AB',
+        view: { cx: 3.0, cy: 3.0, scale: 2.0 }, // center x, center y, width
+        rendering: false
+    };
+
+    let renderID = 0;
+
+    function generateFractal() {
+        const currentRenderID = ++renderID;
+        simState.rendering = true;
+
+        const w = canvas.width, h = canvas.height;
+        const imgData = ctx.createImageData(w, h);
+        const { cx, cy, scale } = simState.view;
+        const seq = simState.sequence.toUpperCase().split('').map(c => c === 'A' ? 0 : 1);
+        if (seq.length === 0) return;
+
+        const SettleSteps = 200;
+        const CalcSteps = 400;
+
+        const progressBar = document.getElementById('progress-bar');
+
+        let y = 0;
+        function renderRow() {
+            if (currentRenderID !== renderID) return; // Stop if a new render was requested
+
+            for (let x = 0; x < w; x++) {
+                const a = cx - scale/2 + (x/w)*scale;
+                const b = cy - scale/2 + (y/h)*scale;
+                const r_params = [a, b];
+
+                let lyapunov_sum = 0;
+                let x_n = 0.5;
+
+                // Settle
+                for(let i=0; i<SettleSteps; i++){
+                    const r = r_params[seq[i % seq.length]];
+                    x_n = r * x_n * (1-x_n);
+                }
+
+                // Calculate
+                for(let i=0; i<CalcSteps; i++){
+                    const r = r_params[seq[i % seq.length]];
+                    x_n = r * x_n * (1-x_n);
+                    const term = Math.log(Math.abs(r * (1 - 2*x_n)));
+                    if(isFinite(term)) lyapunov_sum += term;
+                }
+
+                const lambda = lyapunov_sum / CalcSteps;
+
+                // Color mapping
+                let r=0,g=0,bl=0;
+                if (lambda > 0) { // Chaos
+                    r = 255 * Math.min(1, lambda);
+                    g = 203;
+                    bl = 107;
+                } else { // Order
+                    r = 137 * Math.abs(lambda);
+                    g = 221 * Math.abs(lambda);
+                    bl = 255;
+                }
+
+                const idx = (y * w + x) * 4;
+                imgData.data[idx] = r;
+                imgData.data[idx+1] = g;
+                imgData.data[idx+2] = bl;
+                imgData.data[idx+3] = 255;
+            }
+
+            ctx.putImageData(imgData, 0, 0, 0, y, w, 1);
+            progressBar.style.width = `${(y+1)/h * 100}%`;
+
+            y++;
+            if (y < h) {
+                requestAnimationFrame(renderRow);
+            } else {
+                simState.rendering = false;
+            }
+        }
+        renderRow();
+    }
+
+    function init() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+
+        document.getElementById('generate-btn').addEventListener('click', () => {
+            simState.sequence = document.getElementById('sequence-input').value;
+            generateFractal();
+        });
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const worldX = simState.view.cx - simState.view.scale/2 + (mouseX/rect.width)*simState.view.scale;
+            const worldY = simState.view.cy - simState.view.scale/2 + (mouseY/rect.height)*simState.view.scale;
+
+            const zoomFactor = e.deltaY < 0 ? 0.8 : 1.25;
+            simState.view.scale *= zoomFactor;
+            simState.view.cx = worldX;
+            simState.view.cy = worldY;
+
+            generateFractal();
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            simState.mouse.down = true;
+            simState.mouse.x = e.clientX;
+            simState.mouse.y = e.clientY;
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+        canvas.addEventListener('mousemove', e => {
+            if(simState.mouse.down){
+                const dx = e.clientX - simState.mouse.x;
+                const dy = e.clientY - simState.mouse.y;
+                simState.view.cx -= dx / canvas.width * simState.view.scale;
+                simState.view.cy -= dy / canvas.height * simState.view.scale;
+                simState.mouse.x = e.clientX;
+                simState.mouse.y = e.clientY;
+                generateFractal();
+            }
+        });
+
+        generateFractal();
+    }
+    init();
+});
+</script>
+</body>
+</html>

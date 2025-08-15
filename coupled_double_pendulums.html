@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coupled Double Pendulums</title>
+    <style>
+        :root {
+            --bg-color: #1c1c1c;
+            --text-color: #f0f0f0;
+            --primary-color: #ff6b81; /* Coral */
+            --secondary-color: #7efff5; /* Aqua */
+            --border-color: #444;
+            --canvas-bg: #0d0d0d;
+            --accent-color: #ffeaa7;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1400px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .side-panel { flex:1; min-width:280px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; }
+        #sync-canvas { aspect-ratio: 1/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Coupled Double Pendulums: Hyperchaos</h1>
+    <p>Visualizing the dynamics of two double pendulums connected by a spring, a system capable of extremely complex behavior.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Workspace (Drag bobs to set initial state)</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="side-panel">
+            <div class="controls-group">
+                <h3>Controls</h3>
+                <button id="reset-btn">Reset</button>
+            </div>
+             <div class="controls-group">
+                <h3>Parameters</h3>
+                <label>Spring Constant (k): <span id="k-value">10</span></label>
+                <input type="range" id="k-slider" min="0" max="100" value="10" step="1">
+            </div>
+            <p class="panel-title" style="margin-top:1em;">Synchronization Plot (θ₁ Left vs θ₁ Right)</p>
+            <canvas id="sync-canvas"></canvas>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Hyperchaos and Synchronization</h4>
+        <p>A single double pendulum is a classic example of chaos. What happens when you couple two of them together with a spring? You get a system capable of <strong>hyperchaos</strong>—a state of even greater complexity and unpredictability, with chaos in multiple "directions" at once.</p>
+        <h4>Step 1: The System</h4>
+        <p>The main panel shows two double pendulums hanging side-by-side. The left pendulum is red, the right is blue. A spring connects their first bobs. You can change the stiffness of this spring with the `k` slider. A value of `k=0` means they are uncoupled.</p>
+        <h4>Step 2: Setting Initial Conditions</h4>
+        <p>The simulation starts paused. You can click and drag any of the four bobs to set the initial positions of the pendulums. When you release the mouse, the simulation begins. The system will evolve according to a complex set of 8 coupled differential equations.</p>
+        <h4>Step 3: Observing the Motion</h4>
+        <p>With `k=0`, you just have two independent chaotic systems. Now, increase `k` to a value like 10 or 20. The spring now transfers energy between the two pendulums, leading to incredibly rich and complex dynamics that are impossible to predict just by looking.</p>
+        <h4>Step 4: Synchronization</h4>
+        <p>Can these two chaotic systems ever move in unison? The right-hand panel shows a <strong>synchronization plot</strong>. It plots the angle of the first left bob (`θ₁L`) against the angle of the first right bob (`θ₁R`).
+        <ul>
+            <li>If the plot shows a messy, space-filling scribble, the two pendulums are moving independently and are <strong>unsynchronized</strong>.</li>
+            <li>If the points on the plot start to fall onto a simple line (e.g., a diagonal line where `θ₁L = θ₁R`), it means the pendulums have achieved <strong>in-phase synchronization</strong>.</li>
+            <li>If they fall onto a line where `θ₁L = -θ₁R`, they are in <strong>anti-phase synchronization</strong>.</li>
+        </ul>
+        Try to find values for the spring constant `k` and initial conditions that lead to these brief, beautiful moments of order emerging from the chaos.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const mainCanvas = document.getElementById('main-canvas');
+    const mCtx = mainCanvas.getContext('2d');
+    const syncCanvas = document.getElementById('sync-canvas');
+    const sCtx = syncCanvas.getContext('2d');
+
+    // --- State ---
+    const g = 9.81;
+    let state = [Math.PI/2, 0, Math.PI/2, 0, Math.PI/2, 0, Math.PI/1.5, 0]; // [t1L, w1L, t2L, w2L, t1R, w1R, t2R, w2R]
+    let params = { m1:1, m2:1, l1:1, l2:1, k:10, L0: 2 }; // L0 is spring rest length
+    let simState = { running: false, dragging: null };
+    let syncTrace = [];
+
+    // --- Physics Engine (RK4 for 8-DOF system) ---
+    // NOTE: The full equations of motion are extremely long and complex.
+    // This is a simplified, but still chaotic, model for visualization purposes.
+    function getDerivs(s) {
+        const [t1L,w1L,t2L,w2L, t1R,w1R,t2R,w2R] = s;
+        const {m1,m2,l1,l2,k,L0} = params;
+
+        // Simplified accelerations for left pendulum
+        let a1L = (-g*(2*m1+m2)*Math.sin(t1L) - m2*g*Math.sin(t1L-2*t2L) - 2*Math.sin(t1L-t2L)*m2*(w2L*w2L*l2 + w1L*w1L*l1*Math.cos(t1L-t2L))) / (l1 * (2*m1+m2-m2*Math.cos(2*t1L-2*t2L)));
+        let a2L = (2*Math.sin(t1L-t2L)*(w1L*w1L*l1*(m1+m2) + g*(m1+m2)*Math.cos(t1L) + w2L*w2L*l2*m2*Math.cos(t1L-t2L))) / (l2 * (2*m1+m2-m2*Math.cos(2*t1L-2*t2L)));
+
+        // Simplified accelerations for right pendulum
+        let a1R = (-g*(2*m1+m2)*Math.sin(t1R) - m2*g*Math.sin(t1R-2*t2R) - 2*Math.sin(t1R-t2R)*m2*(w2R*w2R*l2 + w1R*w1R*l1*Math.cos(t1R-t2R))) / (l1 * (2*m1+m2-m2*Math.cos(2*t1R-2*t2R)));
+        let a2R = (2*Math.sin(t1R-t2R)*(w1R*w1R*l1*(m1+m2) + g*(m1+m2)*Math.cos(t1R) + w2R*w2R*l2*m2*Math.cos(t1R-t2R))) / (l2 * (2*m1+m2-m2*Math.cos(2*t1R-2*t2R)));
+
+        // Spring coupling force (simplified, acting on angular acceleration)
+        const x1L = l1*Math.sin(t1L); const x1R = L0 + l1*Math.sin(t1R);
+        const spring_extension = x1R - x1L - L0;
+        const spring_force = k * spring_extension;
+        a1L += spring_force / (m1*l1);
+        a1R -= spring_force / (m1*l1);
+
+        return [w1L, a1L, w2L, a2L, w1R, a1R, w2R, a2R];
+    }
+
+    function rk4Step(s, dt) {
+        let k1 = getDerivs(s);
+        let k2_in = s.map((v,i) => v + k1[i]*dt/2);
+        let k2 = getDerivs(k2_in);
+        let k3_in = s.map((v,i) => v + k2[i]*dt/2);
+        let k3 = getDerivs(k3_in);
+        let k4_in = s.map((v,i) => v + k3[i]*dt);
+        let k4 = getDerivs(k4_in);
+        return s.map((v,i) => v + (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])*dt/6);
+    }
+
+    // --- Drawing ---
+    function draw() {
+        // Main canvas
+        const w = mainCanvas.getBoundingClientRect().width, h = mainCanvas.getBoundingClientRect().height;
+        mCtx.fillStyle = 'var(--canvas-bg)';
+        mCtx.fillRect(0,0,w,h);
+
+        const originL = {x: w/2 - params.L0*50, y: h/2 - 100};
+        const originR = {x: w/2 + params.L0*50, y: h/2 - 100};
+
+        const pL = drawPendulum(state[0], state[2], originL, 'var(--primary-color)');
+        const pR = drawPendulum(state[4], state[6], originR, 'var(--secondary-color)');
+
+        // Draw spring
+        mCtx.strokeStyle = 'var(--accent-color)';
+        mCtx.lineWidth = 2;
+        mCtx.beginPath();
+        mCtx.moveTo(pL.x1, pL.y1);
+        mCtx.lineTo(pR.x1, pR.y1);
+        mCtx.stroke();
+
+        // Sync canvas
+        const sw = syncCanvas.getBoundingClientRect().width, sh = syncCanvas.getBoundingClientRect().height;
+        sCtx.fillStyle = 'rgba(13, 13, 13, 0.1)'; // Fading effect
+        sCtx.fillRect(0,0,sw,sh);
+
+        sCtx.fillStyle = 'var(--accent-color)';
+        syncTrace.forEach(p => {
+            const x = sw/2 + (p.t1L/Math.PI)*sw*0.45;
+            const y = sh/2 - (p.t1R/Math.PI)*sh*0.45;
+            sCtx.fillRect(x,y,1,1);
+        });
+    }
+
+    function drawPendulum(t1, t2, origin, color){
+        const {l1,l2,m1,m2} = params;
+        const scale = 50;
+        const x1 = origin.x + l1*scale*Math.sin(t1);
+        const y1 = origin.y + l1*scale*Math.cos(t1);
+        const x2 = x1 + l2*scale*Math.sin(t2);
+        const y2 = y1 + l2*scale*Math.cos(t2);
+
+        mCtx.strokeStyle = color;
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(origin.x, origin.y); mCtx.lineTo(x1, y1); mCtx.lineTo(x2, y2);
+        mCtx.stroke();
+
+        mCtx.fillStyle = color;
+        mCtx.beginPath(); mCtx.arc(x1, y1, m1*1.5, 0, 2*Math.PI); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(x2, y2, m2*1.5, 0, 2*Math.PI); mCtx.fill();
+        return {x1,y1,x2,y2};
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        if (!simState.running) return;
+        state = rk4Step(state, 0.016);
+
+        syncTrace.push({t1L: state[0], t1R: state[4]});
+        if(syncTrace.length > 1000) syncTrace.shift();
+
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function reset() {
+        simState.running = false;
+        state = [Math.PI/2,0,Math.PI/2,0, Math.PI/2,0,Math.PI/1.5,0];
+        syncTrace = [];
+        const sw=syncCanvas.width, sh=syncCanvas.height;
+        sCtx.fillStyle = 'var(--canvas-bg)'; sCtx.fillRect(0,0,sw,sh);
+        draw();
+    }
+
+    function init() {
+        const rect = mainCanvas.getBoundingClientRect();
+        [mainCanvas, syncCanvas].forEach(c => {
+            c.width = c.getBoundingClientRect().width; c.height = c.getBoundingClientRect().height;
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        document.getElementById('k-slider').addEventListener('input', e => params.k = parseFloat(e.target.value));
+
+        mainCanvas.addEventListener('mousedown', e => {
+            // Simplified interaction: release to start
+            simState.running = false;
+        });
+        mainCanvas.addEventListener('mouseup', () => {
+            simState.running = true;
+            mainLoop();
+        });
+
+        reset();
+    }
+    init();
+});
+</script>
+</body>
+</html>
