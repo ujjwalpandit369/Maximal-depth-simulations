@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elastic Potential Energy: The Bouncing Ball</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #5cb85c; /* Green for nature/gravity */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --energy-gpe: #4a90e2; /* Blue for height/sky */
+            --energy-ke: #f5a623;  /* Orange for motion */
+            --energy-epe: #d0021b;  /* Red for stored/elastic */
+            --energy-lost: #888;   /* Gray for lost energy */
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 400px;
+        }
+
+        #visuals-flex-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        #main-canvas {
+            flex: 1;
+            min-width: 200px;
+            height: 400px;
+            background-color: #111;
+            border-radius: 4px;
+        }
+
+        #energy-pie-chart {
+            flex: 1;
+            min-width: 200px;
+            height: 250px;
+            text-align: center;
+        }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        button, .preset-button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover, .preset-button:hover { background-color: #4a9d4a; }
+
+        #main-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--secondary-color); }
+        th { background-color: #333; }
+        code { background-color: #333; padding: 0.2em 0.4em; border-radius: 3px; }
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+
+        .legend { list-style: none; padding: 0; margin-top: 1rem; }
+        .legend li { display: flex; align-items: center; margin-bottom: 0.5rem; }
+        .legend-color { width: 20px; height: 20px; margin-right: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Elastic Potential Energy: The Bouncing Ball</h1>
+        <p>A simulation of a bouncing ball, focusing on energy transformations.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop/Mobile</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Ever wonder where the "bounce" in a bouncing ball comes from? This simulation reveals the physics behind it by tracking the ball's energy. As the ball falls, its energy of position—<strong>Gravitational Potential Energy</strong>—is converted into energy of motion, or <strong>Kinetic Energy</strong>. Upon impact, the ball deforms, and this energy is momentarily stored as <strong>Elastic Potential Energy</strong>, like in a compressed spring. The ball then springs back, converting this stored energy back into kinetic energy to launch itself upwards. By adjusting the ball's "bounciness," you can see how energy is lost in this process, explaining why a real ball never bounces back to its original height.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Energy in a Bounce</h2>
+            <p>Let's break down the journey of a bouncing ball, one form of energy at a time. The key idea is that energy isn't created or destroyed, just transformed from one type to another.</p>
+
+            <h4>Step 1: The Three Main Energies</h4>
+            <p>Our simulation tracks three key types of energy, which are visualized in the pie chart:</p>
+            <ul>
+                <li><strong style="color:var(--energy-gpe);">Gravitational Potential Energy (GPE):</strong> This is energy stored due to the ball's height. The higher the ball, the more GPE it has. Think of it as the "potential" to fall.</li>
+                <li><strong style="color:var(--energy-ke);">Kinetic Energy (KE):</strong> This is the energy of motion. The faster the ball moves, the more KE it has. It's zero at the very peak of its bounce when it momentarily stops.</li>
+                <li><strong style="color:var(--energy-epe);">Elastic Potential Energy (EPE):</strong> This is energy stored in a deformed object, like a stretched rubber band or a compressed spring. For our ball, this energy appears only during the instant it's squashed against the ground.</li>
+            </ul>
+            <p>There is also a fourth category: <strong style="color:var(--energy-lost);">Lost Energy</strong>. In a real bounce, some energy is converted into heat and sound, which is why the ball doesn't bounce forever. This is shown as the gray part of the pie chart.</p>
+
+            <h4>Step 2: The Energy Transformation Cycle</h4>
+            <p>Watch the pie chart as the simulation runs. You'll see a repeating cycle:</p>
+            <ol>
+                <li><strong>At the top (start):</strong> The ball is held still at its maximum height. It has no motion (zero KE) and is not compressed (zero EPE). The pie chart is <strong>100% GPE</strong>.</li>
+                <li><strong>Falling:</strong> As the ball falls, its height decreases, so its GPE is converted into KE. It speeds up. You'll see the GPE slice shrink and the KE slice grow.</li>
+                <li><strong>Just before impact:</strong> The ball is at its lowest height (almost zero GPE) and moving at its fastest speed. The pie chart is nearly <strong>100% KE</strong>.</li>
+                <li><strong>Maximum compression:</strong> The ball hits the ground and squashes. For a split second, it stops moving (zero KE). All its energy is stored in its deformed shape. The chart briefly flashes to <strong>100% EPE</strong>. This is the "source" of the bounce!</li>
+                <li><strong>Rising:</strong> The ball springs back into shape, pushing off the ground. The stored EPE is converted back into KE, launching it upwards.</li>
+                <li><strong>Back to the top:</strong> As the ball rises, it slows down, converting its KE back into GPE. It reaches a new, slightly lower peak, and the cycle repeats.</li>
+            </ol>
+
+            <h4>Step 3: The "Bounciness" Slider (Coefficient of Restitution)</h4>
+            <p>This slider controls how much energy is lost during the bounce. A value of <strong>1.0</strong> represents a "perfectly elastic" collision—no energy is lost, and the ball would bounce forever. A value of <strong>0.0</strong> represents a "perfectly inelastic" collision, where the ball hits the ground and doesn't bounce at all (like a lump of clay). A typical bouncy ball might have a value around 0.8.</p>
+
+            <h4>Step 4: Using the Simulation</h4>
+            <p>Simply use the sliders to set the initial <strong>Drop Height</strong> and the <strong>Bounciness</strong>, then press <strong>Play</strong>. Watch the ball and the pie chart to see the energy transformations in action. Use the <strong>Reset</strong> button to try new values.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div id="main-controls"></div>
+                <div id="parameter-sliders"></div>
+                <div id="presets"></div>
+                <div id="export-buttons">
+                    <h4>Export & Share</h4>
+                    <button id="export-png" title="Save current view as a PNG image">Export PNG</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <div id="visuals-flex-container">
+                    <canvas id="main-canvas"></canvas>
+                    <div id="energy-pie-chart">
+                         <canvas id="pie-chart-canvas" width="200" height="200"></canvas>
+                         <ul class="legend">
+                            <li><span class="legend-color" style="background-color: var(--energy-gpe);"></span> Gravitational PE</li>
+                            <li><span class="legend-color" style="background-color: var(--energy-ke);"></span> Kinetic Energy</li>
+                            <li><span class="legend-color" style="background-color: var(--energy-epe);"></span> Elastic PE</li>
+                            <li><span class="legend-color" style="background-color: var(--energy-lost);"></span> Lost Energy</li>
+                         </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Units</th><th>Default</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Drop Height</td>
+                        <td>% of max height</td>
+                        <td>90</td>
+                        <td>10 - 100</td>
+                        <td>The initial height from which the ball is released. Determines the initial GPE.</td>
+                    </tr>
+                    <tr>
+                        <td>Bounciness (Coefficient of Restitution)</td>
+                        <td>Dimensionless</td>
+                        <td>0.8</td>
+                        <td>0.0 - 1.0</td>
+                        <td>Controls how much kinetic energy is retained after a bounce. 1.0 is perfect, 0.0 is no bounce.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4>Worked Example: Energy Loss</h4>
+            <p>The Coefficient of Restitution (COR) relates the ball's speed just before and just after impact: <code>v_after = v_before * COR</code>.</p>
+            <p>Since Kinetic Energy is <code>KE = 0.5 * m * v²</code>, the kinetic energy after the bounce is:</p>
+            <p><code>KE_after = 0.5 * m * (v_before * COR)² = (0.5 * m * v_before²) * COR² = KE_before * COR²</code></p>
+            <p>If a ball with <strong>100 Joules</strong> of KE hits the ground with a COR of <strong>0.8</strong>, the KE it has immediately after bouncing is:</p>
+            <p><code>KE_after = 100 * 0.8² = 100 * 0.64 = <strong>64 Joules</strong></code>. 36 Joules of energy were lost to heat and sound.</p>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <div class="preset-example">
+                <h4>1. The "Superball" (Highly Bouncy)</h4>
+                <p><strong>Parameters:</strong> <code>{"bounciness": 0.95, "dropHeight": 90}</code></p>
+                <p><strong>Observation:</strong> The ball will lose very little height on each bounce. The "Lost Energy" slice of the pie chart will grow very slowly.</p>
+                <button class="preset-button" data-preset="superball">Load Superball</button>
+            </div>
+            <div class="preset-example">
+                <h4>2. The "Lump of Clay" (No Bounce)</h4>
+                <p><strong>Parameters:</strong> <code>{"bounciness": 0.0, "dropHeight": 90}</code></p>
+                <p><strong>Observation:</strong> The ball will fall, deform, and stop. All of its initial GPE is converted to KE, and then all of that is lost on impact. The pie chart will quickly turn entirely gray.</p>
+                <button class="preset-button" data-preset="clay">Load Clay</button>
+            </div>
+            <div class="preset-example">
+                <h4>3. A Typical Tennis Ball</h4>
+                <p><strong>Parameters:</strong> <code>{"bounciness": 0.7, "dropHeight": 100}</code></p>
+                <p><strong>Observation:</strong> This is a realistic bounce. The ball returns to a little over half its original height after the first bounce, and each subsequent bounce is noticeably lower.</p>
+                <button class="preset-button" data-preset="tennis">Load Tennis Ball</button>
+            </div>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Where does the "lost" energy go?</dt>
+                <dd>In the real world, it's converted mostly into heat (the ball and the ground get slightly warmer) and sound waves (you hear the "thump" of the bounce).</dd>
+                <dt>2. Why does the pie chart flash red (Elastic PE) so quickly?</dt>
+                <dd>The process of the ball compressing and decompressing happens incredibly fast, typically in just a few milliseconds. This simulation slows it down slightly so you can see it.</dd>
+                <dt>3. What is a "coefficient of restitution"?</dt>
+                <dd>It's a number between 0 and 1 that measures the "bounciness" of a collision. It's the ratio of the final to initial relative speed between two objects after they collide.</dd>
+                <dt>4. Can the bounciness ever be 1.0 in real life?</dt>
+                <dd>No. Every real-world collision loses some energy. A bounciness of 1.0 (a perfectly elastic collision) is a theoretical ideal, like a frictionless surface. Some things get close, like the collision between two steel ball bearings.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const config = {
+            g: 0.2, // gravity
+            dt: 1,
+            ballRadius: 20,
+            springK: 0.1, // for bounce deformation
+        };
+        let state = {
+            y: 0, vy: 0,
+            dropHeight: 90, // as percentage
+            cor: 0.8, // coefficient of restitution
+            ballState: 'falling', // falling, compressing, decompressing
+            deformation: 0,
+            totalEnergy: 0,
+            lostEnergy: 0,
+            isRunning: false,
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const pieCanvas = document.getElementById('pie-chart-canvas');
+        const pieCtx = pieCanvas.getContext('2d');
+        let dropHeightSlider, corSlider, playPauseBtn, resetBtn;
+        const floorY = canvas.height - config.ballRadius;
+
+        // --- INITIALIZATION ---
+        function setup() {
+            createControls();
+            addEventListeners();
+            reset();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function createControls() {
+            const controlsParent = document.getElementById('main-controls');
+            playPauseBtn = document.createElement('button');
+            playPauseBtn.textContent = 'Play';
+            resetBtn = document.createElement('button');
+            resetBtn.textContent = 'Reset';
+            controlsParent.append(playPauseBtn, resetBtn);
+
+            const slidersParent = document.getElementById('parameter-sliders');
+            dropHeightSlider = createSlider('dropHeight', 'Drop Height', 10, 100, 1, state.dropHeight, slidersParent);
+            corSlider = createSlider('cor', 'Bounciness', 0, 1, 0.01, state.cor, slidersParent);
+        }
+
+        function addEventListeners() {
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            resetBtn.addEventListener('click', reset);
+            dropHeightSlider.slider.addEventListener('input', e => { state.dropHeight = parseFloat(e.target.value); reset(); });
+            corSlider.slider.addEventListener('input', e => { state.cor = parseFloat(e.target.value); reset(); });
+            document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click', handlePreset));
+            document.getElementById('export-png').addEventListener('click', exportPNG);
+        }
+
+        // --- CORE SIMULATION ---
+        function mainLoop() {
+            if (state.isRunning) update();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function update() {
+            const ball = state;
+
+            if (ball.ballState === 'falling' || ball.ballState === 'decompressing') {
+                ball.vy += config.g * config.dt;
+                ball.y += ball.vy * config.dt;
+            }
+
+            if (ball.ballState === 'falling' && ball.y >= floorY) {
+                ball.y = floorY;
+                ball.ballState = 'compressing';
+                const energyToLose = (ball.totalEnergy - ball.lostEnergy) * (1 - ball.cor * ball.cor);
+                ball.lostEnergy += energyToLose;
+            }
+
+            if (ball.ballState === 'compressing') {
+                const springForce = config.springK * ball.deformation;
+                ball.vy -= springForce;
+                ball.deformation += ball.vy;
+                if(ball.vy <= 0) {
+                    ball.vy = 0;
+                    ball.ballState = 'decompressing';
+                }
+            }
+
+            if (ball.ballState === 'decompressing') {
+                 const springForce = config.springK * ball.deformation;
+                 ball.vy -= springForce;
+                 ball.deformation += ball.vy;
+                 if(ball.deformation <= 0) {
+                     ball.deformation = 0;
+                     ball.vy = -ball.vy; // Should be scaled by COR already implicitly
+                     ball.ballState = 'falling';
+                     if (ball.vy < 0.1 && ball.y > floorY - 2) {
+                         state.isRunning = false;
+                         playPauseBtn.textContent = 'Play';
+                     }
+                 }
+            }
+        }
+
+        function getEnergies() {
+            const ball = state;
+            const currentTotal = ball.totalEnergy - ball.lostEnergy;
+            let gpe = 0, ke = 0, epe = 0;
+
+            if (ball.ballState === 'compressing' || ball.ballState === 'decompressing') {
+                epe = currentTotal;
+                ke = 0; gpe = 0;
+            } else {
+                epe = 0;
+                gpe = config.g * (floorY - ball.y);
+                if (gpe < 0) gpe = 0;
+                ke = currentTotal - gpe;
+                if (ke < 0) ke = 0;
+            }
+
+            // Normalize to prevent rounding errors
+            const sum = gpe + ke + epe;
+            if (sum > 0) {
+                gpe = (gpe/sum) * currentTotal;
+                ke = (ke/sum) * currentTotal;
+                epe = (epe/sum) * currentTotal;
+            }
+
+            return { gpe, ke, epe, lost: ball.lostEnergy };
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw floor
+            ctx.strokeStyle = '#FFF';
+            ctx.beginPath();
+            ctx.moveTo(0, floorY + config.ballRadius);
+            ctx.lineTo(canvas.width, floorY + config.ballRadius);
+            ctx.stroke();
+
+            // Draw ball
+            let ballHeight = config.ballRadius * 2;
+            let ballWidth = config.ballRadius * 2;
+            if (state.ballState === 'compressing' || state.ballState === 'decompressing') {
+                const compressionRatio = state.deformation / (config.ballRadius * 1.5);
+                ballHeight = config.ballRadius * 2 * (1 - compressionRatio);
+                ballWidth = config.ballRadius * 2 * (1 + compressionRatio);
+            }
+            ctx.fillStyle = 'var(--primary-color)';
+            ctx.beginPath();
+            ctx.ellipse(canvas.width / 2, state.y + config.ballRadius - (config.ballRadius*2 - ballHeight)/2, ballWidth/2, ballHeight/2, 0, 0, 2 * Math.PI);
+            ctx.fill();
+
+            drawPieChart();
+        }
+
+        function drawPieChart() {
+            const energies = getEnergies();
+            const { width, height } = pieCanvas;
+            const radius = Math.min(width, height) / 2 - 10;
+            pieCtx.clearRect(0, 0, width, height);
+            pieCtx.save();
+            pieCtx.translate(width / 2, height / 2);
+
+            let startAngle = -Math.PI / 2;
+            const segments = [
+                { value: energies.gpe, color: 'var(--energy-gpe)' },
+                { value: energies.ke, color: 'var(--energy-ke)' },
+                { value: energies.epe, color: 'var(--energy-epe)' },
+                { value: energies.lost, color: 'var(--energy-lost)' },
+            ];
+
+            segments.forEach(seg => {
+                if (seg.value <= 0) return;
+                const sliceAngle = (seg.value / state.totalEnergy) * 2 * Math.PI;
+                pieCtx.fillStyle = seg.color;
+                pieCtx.beginPath();
+                pieCtx.moveTo(0, 0);
+                pieCtx.arc(0, 0, radius, startAngle, startAngle + sliceAngle);
+                pieCtx.closePath();
+                pieCtx.fill();
+                startAngle += sliceAngle;
+            });
+            pieCtx.restore();
+        }
+
+        // --- UI HANDLERS ---
+        function createSlider(id, label, min, max, step, value, parent) {
+            const container = document.createElement('div');
+            container.className = 'slider-container';
+            const labelEl = document.createElement('label');
+            labelEl.htmlFor = id;
+            labelEl.innerHTML = `${label}: <span>${value}</span>`;
+            const slider = document.createElement('input');
+            slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+            slider.addEventListener('input', () => labelEl.querySelector('span').textContent = slider.value);
+            container.append(labelEl, slider);
+            if (parent) parent.appendChild(container);
+            return { container, slider, label: labelEl };
+        }
+
+        function reset() {
+            state.isRunning = false;
+            playPauseBtn.textContent = 'Play';
+            state.ballState = 'falling';
+            state.vy = 0;
+            state.y = floorY - (floorY * (state.dropHeight / 100));
+            state.deformation = 0;
+            state.totalEnergy = config.g * (floorY - state.y);
+            state.lostEnergy = 0;
+        }
+
+        function togglePlayPause() {
+            state.isRunning = !state.isRunning;
+            playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play';
+        }
+
+        function handlePreset(e) {
+            const preset = e.target.dataset.preset;
+            if (preset === 'superball') {
+                corSlider.slider.value = 0.95;
+                dropHeightSlider.slider.value = 90;
+            } else if (preset === 'clay') {
+                corSlider.slider.value = 0.0;
+                dropHeightSlider.slider.value = 90;
+            } else if (preset === 'tennis') {
+                corSlider.slider.value = 0.7;
+                dropHeightSlider.slider.value = 100;
+            }
+            // Manually trigger input event to update label and state
+            corSlider.slider.dispatchEvent(new Event('input'));
+            dropHeightSlider.slider.dispatchEvent(new Event('input'));
+            state.cor = parseFloat(corSlider.slider.value);
+            state.dropHeight = parseFloat(dropHeightSlider.slider.value);
+            reset();
+            togglePlayPause();
+        }
+
+        function exportPNG() {
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = canvas.width + pieCanvas.width;
+            exportCanvas.height = canvas.height;
+            const exportCtx = exportCanvas.getContext('2d');
+            exportCtx.fillStyle = '#1a1a1a';
+            exportCtx.fillRect(0,0,exportCanvas.width, exportCanvas.height);
+            exportCtx.drawImage(canvas, 0, 0);
+            exportCtx.drawImage(pieCanvas, canvas.width, 100);
+
+            const link = document.createElement('a');
+            link.download = `bouncing-ball-sim-${Date.now()}.png`;
+            link.href = exportCanvas.toDataURL();
+            link.click();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

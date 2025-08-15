@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravitational Potential Energy: Orbits</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #4a90e2; /* A nice blue for space */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --danger-color: #d9534f;
+            --success-color: #5cb85c;
+            --energy-ke: #f5a623; /* Orange for Kinetic */
+            --energy-pe: #4a90e2; /* Blue for Potential */
+            --energy-tme: #7ed321; /* Green for Total */
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            font-weight: 300;
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.2rem; }
+
+        section {
+            background-color: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        #simulation-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #simulation-controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+
+        #simulation-visuals {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            min-width: 400px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background-color: #111;
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+
+        #charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .chart-container {
+            flex: 1;
+            min-width: 250px;
+            background-color: var(--control-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .slider-container {
+            margin-bottom: 1rem;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+
+        button, .preset-button {
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button:hover, .preset-button:hover {
+            background-color: #357ABD;
+        }
+
+        #main-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--secondary-color);
+        }
+        th { background-color: #333; }
+
+        code { background-color: #333; padding: 0.2em 0.4em; border-radius: 3px; }
+        pre { background-color: #333; padding: 1rem; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+
+        /* High Contrast Mode */
+        body.high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #ffc107;
+        }
+        body.high-contrast button, body.high-contrast .preset-button {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+        body.high-contrast canvas { border: 1px solid #fff; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gravitational Potential Energy: Orbits</h1>
+        <p>A simulation of a satellite orbiting a planet, visualizing its energy.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 40 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>This simulation explores the dance between motion and gravity. A satellite orbits a central planet, its path dictated by the invisible tether of gravitational force. We visualize this relationship through the concepts of energy. Kinetic Energy is the energy of motion, while Gravitational Potential Energy is stored energy due to the satellite's position in the gravitational field. Together, they form the Total Mechanical Energy, which for a stable orbit, remains constant. You can directly interact with the simulation to launch a satellite and see how its initial position and velocity determine its orbital path and its energy budget, learning firsthand the conditions for a stable orbit versus an escape into deep space.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Orbital Energy</h2>
+            <p>Welcome to your own orbital mechanics laboratory! This guide will introduce the fundamental concepts of energy in the context of a satellite orbiting a planet.</p>
+
+            <h4>Step 1: What is Energy? Two Key Types</h4>
+            <p>In physics, energy is a quantity that allows things to "do work" or cause change. For our satellite, we care about two main types:</p>
+            <ul>
+                <li><strong>Kinetic Energy (KE):</strong> The energy of motion. The faster the satellite moves, the more kinetic energy it has. If it stops, its KE is zero. We will color this <strong style="color:var(--energy-ke);">orange</strong>.</li>
+                <li><strong>Gravitational Potential Energy (PE):</strong> This is "stored" energy an object has due to its position in a gravitational field. The farther the satellite is from the planet, the higher its potential energy. It's called "potential" because it can be converted into kinetic energy. If the satellite falls closer to the planet, its PE decreases, and its KE (speed) increases. We will color this <strong style="color:var(--energy-pe);">blue</strong>.</li>
+            </ul>
+
+            <h4>Step 2: The Potential Energy "Well"</h4>
+            <p>Gravity is an attractive force. This means you have to *add* energy (do work) to pull the satellite away from the planet. Because of this, we say the satellite is "trapped" in the planet's gravitational field. A great way to visualize this is as a "potential energy well."</p>
+            <p><strong>Visualization Analogy: The Gravity Funnel.</strong> Imagine space is a stretched rubber sheet. A heavy planet in the center creates a deep funnel-shaped depression. A small marble (our satellite) rolling on this sheet will be drawn towards the center. The marble is "in the well." The depth of the marble in the funnel represents its Potential Energy. To get the marble farther away, you have to push it up the steep sides of the funnel, giving it more potential energy. This simulation shows this "well" as a graph. The satellite's position on this curve tells you its PE at any moment.</p>
+
+            <h4>Step 3: Total Mechanical Energy (TME) - The Magic Number</h4>
+            <p>The Total Mechanical Energy is simply the sum of the other two: <strong>TME = KE + PE</strong>. In an ideal orbit with no friction or other forces, this number is <strong>conserved</strong>—it never changes! We will color this <strong style="color:var(--energy-tme);">green</strong>.</p>
+            <p>Watch the energy bar chart. As the satellite moves in an elliptical orbit, it speeds up when it gets closer to the planet and slows down as it moves farther away. You'll see the KE (orange) and PE (blue) bars go up and down, trading energy back and forth. But the TME (green) bar will remain perfectly still. This conservation of energy is one of the most fundamental principles in physics.</p>
+
+            <h4>Step 4: Escaping the Well</h4>
+            <p>What happens if you give the satellite a huge amount of kinetic energy? You can "climb" all the way out of the potential well. By convention, we say the potential energy is zero at an infinite distance from the planet. This means that when the satellite is in the well, its PE is negative! If you give the satellite enough kinetic energy to make its Total Mechanical Energy greater than or equal to zero, it has enough energy to escape the planet's gravity and fly off into space forever. This is called an "unbound" or "hyperbolic" orbit. The simulation shows a line at TME = 0, representing this "escape energy" threshold.</p>
+
+            <h4>Step 5: How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Click and Drag:</strong> Click anywhere on the main black canvas to place the satellite.</li>
+                <li><strong>Set Velocity:</strong> After placing it, drag your mouse away from the satellite. An arrow will appear. This arrow represents the initial velocity—its direction and length determine the satellite's starting speed. Release the mouse to launch!</li>
+                <li><strong>Use the Controls:</strong> Play/Pause the simulation, step through it frame by frame, or reset it. Use the slider to change the mass of the planet and see how that affects the orbit.</li>
+                <li><strong>Try the Presets:</strong> The easiest way to start is to click the preset buttons for a perfect circular orbit, an elliptical one, or an escape trajectory.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <p>Click and drag on the main canvas to set the satellite's position and initial velocity.</p>
+                <div id="main-controls"></div>
+                <div id="parameter-sliders"></div>
+                <div id="presets"></div>
+                <div id="export-buttons">
+                    <h4>Export & Share</h4>
+                    <button id="export-png" title="Save current view as a PNG image">Export PNG</button>
+                    <button id="export-json" title="Save current parameters as a JSON file">Export JSON</button>
+                </div>
+                <div id="accessibility-controls">
+                    <h4>Accessibility & Performance</h4>
+                    <label><input type="checkbox" id="perf-toggle"> Performance Mode (shorter trail)</label>
+                    <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="450"></canvas>
+                <div id="charts-container">
+                    <div id="energy-well-chart" class="chart-container"></div>
+                    <div id="energy-bar-chart" class="chart-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="parameters-summary">
+            <h2>Parameters & Controls</h2>
+            <p>The physics of the orbit is primarily determined by the planet's mass and the satellite's initial conditions.</p>
+            <table>
+                <thead>
+                    <tr><th>Parameter</th><th>Units</th><th>Default</th><th>Range</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Planet Mass</td>
+                        <td>10<sup>24</sup> kg</td>
+                        <td>600</td>
+                        <td>100 - 2000</td>
+                        <td>Controls the strength of the gravitational field. A more massive planet creates a deeper potential well.</td>
+                    </tr>
+                    <tr>
+                        <td>Initial Position</td>
+                        <td>pixels</td>
+                        <td>User-defined</td>
+                        <td>Canvas area</td>
+                        <td>Set by clicking. Determines the initial potential energy.</td>
+                    </tr>
+                    <tr>
+                        <td>Initial Velocity</td>
+                        <td>pixels/sec</td>
+                        <td>User-defined</td>
+                        <td>User-defined</td>
+                        <td>Set by dragging. Determines the initial kinetic energy.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h4>Worked Example: Calculating Energy</h4>
+            <p>The two key energy equations are:</p>
+            <p><code>Potential Energy (PE) = -G * M * m / r</code></p>
+            <p><code>Kinetic Energy (KE) = 0.5 * m * v²</code></p>
+            <p>Let's say our planet's mass (M) is 600 units, the satellite's mass (m) is 1 unit, G is 1000 (scaled for the simulation), and we place the satellite at a distance (r) of 150 pixels with a velocity (v) of 3 units.</p>
+            <p><code>PE = -1000 * 600 * 1 / 150 = <strong>-4000</strong></code> energy units.</p>
+            <p><code>KE = 0.5 * 1 * 3² = <strong>4.5</strong></code> energy units.</p>
+            <p><code>Total Energy = -4000 + 4.5 = <strong>-3995.5</strong></code>. Since the total energy is negative, this will be a bound (elliptical or circular) orbit.</p>
+        </section>
+
+        <section id="try-these-examples">
+            <h2>Try These Examples</h2>
+            <div class="preset-example">
+                <h4>1. Stable Circular Orbit</h4>
+                <p><strong>Observation:</strong> The satellite moves at a constant speed. The distance to the planet never changes. On the energy charts, both the KE and PE bars will be constant, as is the position of the dot on the potential well curve.</p>
+                <button class="preset-button" data-preset="circular">Load Circular Orbit</button>
+            </div>
+            <div class="preset-example">
+                <h4>2. Elliptical Orbit</h4>
+                <p><strong>Observation:</strong> The satellite speeds up as it gets closer to the planet and slows down as it moves away. Watch the KE and PE bars trade places: as one goes up, the other goes down, while the Total Energy bar remains fixed.</p>
+                <button class="preset-button" data-preset="elliptical">Load Elliptical Orbit</button>
+            </div>
+            <div class="preset-example">
+                <h4>3. Escape Trajectory (Hyperbolic)</h4>
+                <p><strong>Observation:</strong> The satellite is moving so fast that the planet's gravity cannot capture it. It follows a curved path past the planet and flies off, never to return. The Total Energy will be positive.</p>
+                <button class="preset-button" data-preset="escape">Load Escape Trajectory</button>
+            </div>
+        </section>
+
+        <section id="faq">
+            <h2>FAQ & Troubleshooting</h2>
+            <dl>
+                <dt>1. Why is Potential Energy negative?</dt>
+                <dd>It's a convention. We define the potential energy to be zero when the satellite is infinitely far away. Since gravity is attractive, you have to *add* energy to move the satellite away from the planet. To get to zero from its current state, you must add energy, which implies its current state must be negative.</dd>
+                <dt>2. How do I get a perfectly circular orbit?</dt>
+                <dd>A circular orbit requires a very specific velocity, perpendicular to the line connecting the satellite and planet. The required speed `v` is `sqrt(G*M/r)`. The "Circular Orbit" preset does this for you. Trying to set it by hand is tricky but possible!</dd>
+                <dt>3. Why does the satellite speed up when it gets closer to the planet?</dt>
+                <dd>This is conservation of energy in action! As the satellite "falls" closer to the planet, its potential energy decreases. Since total energy must be constant, that "lost" potential energy is converted into kinetic energy, meaning a higher speed.</dd>
+                <dt>4. The satellite flew off the screen. What happened?</dt>
+                <dd>You gave it too much initial velocity! Its total energy was positive, meaning it had enough energy to escape the planet's gravitational well. This is an "unbound" or "hyperbolic" orbit.</dd>
+                <dt>5. The simulation is running slow.</dt>
+                <dd>Try checking the "Performance Mode" box. This reduces the length of the satellite's trail, which is the most computationally expensive part of the drawing process.</dd>
+                <dt>6. The canvas is blank or not responding.</dt>
+                <dd>Try reloading the page to reset everything. If the problem persists, open your browser's developer console (usually F12) and check for any error messages. Reporting these errors can help fix bugs.</dd>
+            </dl>
+        </section>
+
+        <section id="quality-check">
+            <h2>Quality Check</h2>
+            <div id="quality-check-panel"></div>
+        </section>
+
+        <div id="developer-console-container">
+            <details>
+                <summary>Developer Console</summary>
+                <pre id="developer-console"></pre>
+            </details>
+        </div>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const config = {
+            G: 1000,
+            dt: 0.1,
+            satelliteMass: 1,
+            maxTrailLength: 1000,
+            perfTrailLength: 200,
+        };
+        let state = {
+            planetMass: 600,
+            satellite: { x: 0, y: 0, vx: 0, vy: 0 },
+            trail: [],
+            isRunning: false,
+            speed: 1,
+            energies: { ke: 0, pe: 0, tme: 0 },
+            isPlacing: true, // true: setting position, false: setting velocity
+            isDragging: false,
+            dragStart: { x: 0, y: 0 },
+            isPerfMode: false,
+            isHighContrast: false,
+        };
+        let fps = 0, lastFrameTime = 0;
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const wellCanvas = document.createElement('canvas');
+        const barCanvas = document.createElement('canvas');
+        document.getElementById('energy-well-chart').appendChild(wellCanvas);
+        document.getElementById('energy-bar-chart').appendChild(barCanvas);
+        const wellCtx = wellCanvas.getContext('2d');
+        const barCtx = barCanvas.getContext('2d');
+
+        const devConsole = document.getElementById('developer-console');
+        const qualityCheckPanel = document.getElementById('quality-check-panel');
+
+        let planetMassSlider, speedSlider, playPauseBtn, stepBtn, resetBtn;
+
+        // --- INITIALIZATION ---
+        function setup() {
+            log('Initializing...');
+            runQualityCheck();
+
+            document.getElementById('energy-well-chart').insertAdjacentHTML('afterbegin', '<h4>Potential Energy Well U(r)</h4>');
+            document.getElementById('energy-bar-chart').insertAdjacentHTML('afterbegin', '<h4>Energy Budget</h4>');
+            wellCanvas.width = 300; wellCanvas.height = 200;
+            barCanvas.width = 300; barCanvas.height = 200;
+
+            createControls();
+            addEventListeners();
+            reset();
+            requestAnimationFrame(mainLoop);
+            log('Initialization complete.');
+        }
+
+        function log(message) {
+            devConsole.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+            devConsole.scrollTop = devConsole.scrollHeight;
+        }
+
+        function runQualityCheck() {
+            const checks = [
+                { el: 'main-canvas', name: 'Main Canvas' },
+                { el: 'simulation-controls', name: 'Controls Container' },
+                { el: 'presets', name: 'Presets Section' }
+            ];
+            let allPassed = true;
+            let report = 'Quality Check Report:\n';
+            checks.forEach(check => {
+                const found = document.getElementById(check.el);
+                report += `- ${check.name}: ${found ? 'OK' : 'FAIL'}\n`;
+                if (!found) allPassed = false;
+            });
+            qualityCheckPanel.textContent = report;
+            qualityCheckPanel.style.color = allPassed ? 'var(--success-color)' : 'var(--danger-color)';
+        }
+
+        function createControls() {
+            const controlsParent = document.getElementById('main-controls');
+            playPauseBtn = createButton('play-pause', 'Play (Space)', togglePlayPause, controlsParent);
+            stepBtn = createButton('step', 'Step (→)', step, controlsParent);
+            resetBtn = createButton('reset', 'Reset (r)', reset, controlsParent);
+
+            const slidersParent = document.getElementById('parameter-sliders');
+            planetMassSlider = createSlider('planetMass', 'Planet Mass', 100, 2000, 50, state.planetMass, slidersParent);
+            speedSlider = createSlider('speed', 'Speed', 0.1, 10, 0.1, state.speed, slidersParent);
+        }
+
+        function addEventListeners() {
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', handleMouseLeave);
+
+            planetMassSlider.slider.addEventListener('input', e => {
+                state.planetMass = parseFloat(e.target.value);
+                planetMassSlider.label.querySelector('span').textContent = state.planetMass;
+            });
+            speedSlider.slider.addEventListener('input', e => { state.speed = parseFloat(e.target.value); });
+
+            document.querySelectorAll('.preset-button').forEach(btn => btn.addEventListener('click', handlePreset));
+            document.getElementById('export-png').addEventListener('click', exportPNG);
+            document.getElementById('export-json').addEventListener('click', exportJSON);
+            document.getElementById('perf-toggle').addEventListener('change', e => { state.isPerfMode = e.target.checked; });
+            document.getElementById('contrast-toggle').addEventListener('change', e => {
+                state.isHighContrast = e.target.checked;
+                document.body.classList.toggle('high-contrast', state.isHighContrast);
+            });
+            window.addEventListener('keydown', handleKeydown);
+        }
+
+        // --- CORE SIMULATION ---
+        function mainLoop(timestamp) {
+            fps = 1000 / (timestamp - lastFrameTime);
+            lastFrameTime = timestamp;
+
+            if (state.isRunning) {
+                for (let i = 0; i < state.speed; i++) {
+                    update();
+                }
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function update() {
+            const sat = state.satellite;
+            const dx = canvas.width / 2 - sat.x;
+            const dy = canvas.height / 2 - sat.y;
+            const r = Math.sqrt(dx * dx + dy * dy);
+
+            if (r < 10) { // Collision
+                state.isRunning = false;
+                return;
+            }
+
+            const F = config.G * state.planetMass * config.satelliteMass / (r * r);
+            const ax = F * (dx / r) / config.satelliteMass;
+            const ay = F * (dy / r) / config.satelliteMass;
+
+            sat.vx += ax * config.dt;
+            sat.vy += ay * config.dt;
+            sat.x += sat.vx * config.dt;
+            sat.y += sat.vy * config.dt;
+
+            state.trail.push({ x: sat.x, y: sat.y });
+            const maxTrail = state.isPerfMode ? config.perfTrailLength : config.maxTrailLength;
+            if (state.trail.length > maxTrail) state.trail.shift();
+
+            // Update energies
+            const v2 = sat.vx * sat.vx + sat.vy * sat.vy;
+            state.energies.pe = -config.G * state.planetMass * config.satelliteMass / r;
+            state.energies.ke = 0.5 * config.satelliteMass * v2;
+            state.energies.tme = state.energies.pe + state.energies.ke;
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = state.isHighContrast ? '#000' : '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawTrail();
+            drawPlanet();
+            drawSatellite();
+            if (state.isDragging && !state.isPlacing) drawVelocityArrow();
+
+            drawWellChart();
+            drawBarChart();
+        }
+
+        function drawPlanet() {
+            ctx.fillStyle = state.isHighContrast ? '#FF0' : '#4a90e2';
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 10, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawSatellite() {
+            ctx.fillStyle = state.isHighContrast ? '#FFF' : '#e0e0e0';
+            ctx.beginPath();
+            ctx.arc(state.satellite.x, state.satellite.y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function drawTrail() {
+            ctx.strokeStyle = state.isHighContrast ? '#FFF' : '#888';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            state.trail.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+            ctx.stroke();
+        }
+
+        function drawVelocityArrow() {
+            ctx.strokeStyle = ctx.fillStyle = 'var(--energy-ke)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(state.satellite.x, state.satellite.y);
+            ctx.lineTo(state.dragStart.x, state.dragStart.y);
+            ctx.stroke();
+            // Arrowhead
+            const angle = Math.atan2(state.dragStart.y - state.satellite.y, state.dragStart.x - state.satellite.x);
+            ctx.beginPath();
+            ctx.moveTo(state.dragStart.x, state.dragStart.y);
+            ctx.lineTo(state.dragStart.x - 10 * Math.cos(angle - Math.PI / 6), state.dragStart.y - 10 * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(state.dragStart.x - 10 * Math.cos(angle + Math.PI / 6), state.dragStart.y - 10 * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawWellChart() {
+            const { width, height } = wellCanvas;
+            wellCtx.fillStyle = state.isHighContrast ? '#000' : '#222';
+            wellCtx.fillRect(0, 0, width, height);
+
+            wellCtx.strokeStyle = state.isHighContrast ? '#FFF' : 'var(--energy-pe)';
+            wellCtx.lineWidth = 2;
+            wellCtx.beginPath();
+            const maxR = Math.sqrt((canvas.width/2)**2 + (canvas.height/2)**2);
+            for (let i = 0; i < width; i++) {
+                const r = (i / width) * maxR;
+                if (r < 10) continue;
+                const pe = -config.G * state.planetMass * config.satelliteMass / r;
+                const y = height - (pe - (-config.G * state.planetMass * config.satelliteMass / 10)) / 100;
+                i === 0 ? wellCtx.moveTo(i, y) : wellCtx.lineTo(i, y);
+            }
+            wellCtx.stroke();
+
+            // Draw current position
+            const dx = canvas.width / 2 - state.satellite.x;
+            const dy = canvas.height / 2 - state.satellite.y;
+            const r = Math.sqrt(dx * dx + dy * dy);
+            const x_pos = (r/maxR) * width;
+            const y_pos = height - (state.energies.pe - (-config.G * state.planetMass * config.satelliteMass / 10)) / 100;
+            wellCtx.fillStyle = 'var(--energy-tme)';
+            wellCtx.beginPath();
+            wellCtx.arc(x_pos, y_pos, 5, 0, 2*Math.PI);
+            wellCtx.fill();
+        }
+
+        function drawBarChart() {
+            const { width, height } = barCanvas;
+            const { ke, pe, tme } = state.energies;
+            barCtx.fillStyle = state.isHighContrast ? '#000' : '#222';
+            barCtx.fillRect(0, 0, width, height);
+
+            const maxEnergy = config.G * state.planetMass * 1.5;
+            const scale = height / (2 * maxEnergy);
+            const zeroY = height / 2;
+
+            function drawBar(label, value, color, index) {
+                const x = (index * (width / 3)) + 15;
+                const barHeight = value * scale;
+                barCtx.fillStyle = color;
+                barCtx.fillRect(x, zeroY, 40, -barHeight);
+                barCtx.fillStyle = state.isHighContrast ? '#000' : '#FFF';
+                barCtx.textAlign = 'center';
+                barCtx.fillText(label, x + 20, height - 5);
+            }
+
+            drawBar('KE', ke, 'var(--energy-ke)', 0);
+            drawBar('PE', pe, 'var(--energy-pe)', 1);
+            drawBar('TME', tme, 'var(--energy-tme)', 2);
+
+            // Draw escape energy line
+            barCtx.strokeStyle = '#d9534f';
+            barCtx.lineWidth = 1;
+            barCtx.setLineDash([5, 3]);
+            barCtx.beginPath();
+            barCtx.moveTo(0, zeroY);
+            barCtx.lineTo(width, zeroY);
+            barCtx.stroke();
+            barCtx.setLineDash([]);
+        }
+
+        // --- UI HANDLERS ---
+        function createButton(id, text, onClick, parent) {
+            const button = document.createElement('button');
+            button.id = id; button.textContent = text; button.addEventListener('click', onClick);
+            if (parent) parent.appendChild(button);
+            return button;
+        }
+
+        function createSlider(id, label, min, max, step, value, parent) {
+            const container = document.createElement('div');
+            container.className = 'slider-container';
+            const labelEl = document.createElement('label');
+            labelEl.htmlFor = id;
+            labelEl.innerHTML = `${label}: <span>${value}</span>`;
+            const slider = document.createElement('input');
+            slider.type = 'range'; slider.id = id; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+            container.append(labelEl, slider);
+            if (parent) parent.appendChild(container);
+            return { container, slider, label: labelEl };
+        }
+
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+            };
+        }
+
+        function handleMouseDown(e) {
+            state.isDragging = true;
+            const pos = getMousePos(e);
+            if (state.isPlacing) {
+                state.satellite.x = pos.x;
+                state.satellite.y = pos.y;
+                state.trail = [{x: pos.x, y: pos.y}];
+                state.isRunning = false;
+                playPauseBtn.textContent = 'Play (Space)';
+            }
+            state.dragStart = pos;
+        }
+
+        function handleMouseMove(e) {
+            if (!state.isDragging) return;
+            const pos = getMousePos(e);
+            if (state.isPlacing) {
+                state.satellite.x = pos.x;
+                state.satellite.y = pos.y;
+                state.trail = [{x: pos.x, y: pos.y}];
+            } else { // setting velocity
+                state.dragStart = pos;
+            }
+        }
+
+        function handleMouseUp(e) {
+            if (!state.isDragging) return;
+            state.isDragging = false;
+            if (state.isPlacing) {
+                state.isPlacing = false;
+            } else {
+                const pos = getMousePos(e);
+                state.satellite.vx = (state.satellite.x - pos.x) * 0.05;
+                state.satellite.vy = (state.satellite.y - pos.y) * 0.05;
+                state.isPlacing = true;
+                state.isRunning = true;
+                playPauseBtn.textContent = 'Pause (Space)';
+            }
+        }
+
+        function handleMouseLeave() {
+            if (state.isDragging) {
+                state.isDragging = false;
+                state.isPlacing = true;
+            }
+        }
+
+        function reset() {
+            log('Resetting simulation...');
+            state.isRunning = false;
+            state.isPlacing = true;
+            state.isDragging = false;
+            state.satellite = { x: canvas.width / 2 - 150, y: canvas.height / 2, vx: 0, vy: -2 };
+            state.trail = [];
+            playPauseBtn.textContent = 'Play (Space)';
+            update(); // to calculate initial energy
+        }
+
+        function togglePlayPause() {
+            if (state.isPlacing) return;
+            state.isRunning = !state.isRunning;
+            playPauseBtn.textContent = state.isRunning ? 'Pause (Space)' : 'Play (Space)';
+        }
+
+        function step() {
+            if (state.isRunning || state.isPlacing) return;
+            update();
+        }
+
+        function handlePreset(e) {
+            const preset = e.target.dataset.preset;
+            log(`Loading preset: ${preset}`);
+            state.isPlacing = true; // allow placement logic to run
+            if (preset === 'circular') {
+                const r = 150;
+                const v = Math.sqrt(config.G * state.planetMass / r);
+                state.satellite = { x: canvas.width / 2, y: canvas.height / 2 - r, vx: v, vy: 0 };
+            } else if (preset === 'elliptical') {
+                state.satellite = { x: canvas.width / 2 - 150, y: canvas.height / 2, vx: 0, vy: -2.5 };
+            } else if (preset === 'escape') {
+                 state.satellite = { x: canvas.width / 2 - 200, y: canvas.height / 2 + 100, vx: 3.5, vy: -1 };
+            }
+            state.trail = [{x: state.satellite.x, y: state.satellite.y}];
+            state.isPlacing = false;
+            state.isRunning = true;
+            playPauseBtn.textContent = 'Pause (Space)';
+        }
+
+        function handleKeydown(e) {
+            if (document.activeElement.type === 'range') return;
+            if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+            else if (e.code === 'ArrowRight') { e.preventDefault(); step(); }
+            else if (e.code === 'KeyR') { e.preventDefault(); reset(); }
+        }
+
+        function exportPNG() {
+            const link = document.createElement('a');
+            link.download = `gravity-sim-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        function exportJSON() {
+            const data = JSON.stringify({
+                planetMass: state.planetMass,
+                satellite: state.satellite,
+            }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `gravity-preset.json`;
+            link.click();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
