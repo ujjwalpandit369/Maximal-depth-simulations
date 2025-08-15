@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supernova Light Curves: Standardizable Candles</title>
+    <style>
+        :root {
+            --bg-color: #1a2531;
+            --text-color: #ecf0f1;
+            --primary-color: #3498db; /* Space blue */
+            --secondary-color: #e74c3c; /* Supernova red */
+            --border-color: #5d6d7e;
+            --canvas-bg: #0d1217;
+            --accent-color: #f1c40f; /* Star yellow */
+            --font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .high-contrast { /* Already high contrast, but provide an alternative */
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #5dade2;
+            --secondary-color: #ff5733;
+            --border-color: #7f8c8d;
+            --canvas-bg: #111;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; font-weight: 400; }
+        h1 { color: var(--accent-color); }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; }
+        .controls-sidebar { flex: 1; min-width: 280px; background-color: rgba(0,0,0,0.2); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; aspect-ratio: 1.6/1; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input, select { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: #34495e; color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--primary-color); cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(120%); }
+        button.secondary { background-color: var(--secondary-color); }
+        #results-display { background: rgba(0,0,0,0.2); border-top: 3px solid var(--accent-color); padding: 15px; text-align: left; border-radius: 8px; }
+        #results-display h3 { margin: 0 0 10px 0; border: none; text-align: center; color: var(--accent-color); }
+        #results-display p { margin: 0.5em 0; font-size: 0.95em; }
+        #results-display .value { font-weight: bold; color: var(--text-color); float: right; }
+        #chi2-fit { text-align: center; font-size: 0.9em; color: var(--secondary-color); }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Supernova Light Curves: Cosmic Distance Ladders</h1>
+        <p>Fit a model to supernova data to reveal its true brightness and measure its distance across the universe.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <p class="panel-title">Light Curve (Brightness vs. Time)</p>
+                <canvas id="main-canvas"></canvas>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group">
+                    <h3>1. Observe a Supernova</h3>
+                    <button id="generate-btn" class="secondary">Generate New Supernova Data</button>
+                </div>
+                <div class="controls-group">
+                    <h3>2. Fit the Light Curve Model</h3>
+                    <label for="peak-time-slider">Peak Time (t₀): <span id="peak-time-value">20</span> days</label>
+                    <input type="range" id="peak-time-slider" min="0" max="40" value="20" step="0.5">
+                    <label for="peak-mag-slider">Peak Apparent Mag (mₐₚₚ): <span id="peak-mag-value">18.0</span></label>
+                    <input type="range" id="peak-mag-slider" min="15" max="22" value="18" step="0.05">
+                    <label for="stretch-slider">Stretch Factor (s): <span id="stretch-value">1.0</span></label>
+                    <input type="range" id="stretch-slider" min="0.7" max="1.3" value="1.0" step="0.01">
+                    <p id="chi2-fit">Goodness of Fit (χ²): --</p>
+                </div>
+
+                <div id="results-display">
+                    <h3>3. Derived Properties</h3>
+                    <p>Inferred Absolute Mag (M): <span class="value" id="abs-mag-value">--</span></p>
+                    <p>Distance Modulus (m-M): <span class="value" id="dist-mod-value">--</span></p>
+                    <hr style="border-color: var(--border-color);">
+                    <p><b>Calculated Distance:</b> <span class="value" id="distance-value">--</span></p>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome, Cosmic Detective!</h4>
+            <p>How do we measure the vast distances to other galaxies? One of the most powerful tools is a special type of exploding star called a <strong>Type Ia Supernova</strong>. This simulation shows you how they work.</p>
+
+            <h4>Step 1: The Light Curve</h4>
+            <p>When a Type Ia supernova explodes, it gets incredibly bright and then fades over several weeks. The graph you see is its <strong>light curve</strong>, which plots its brightness over time.
+            <ul>
+                <li>The horizontal axis is <strong>Time</strong> in days.</li>
+                <li>The vertical axis is <strong>Apparent Magnitude</strong>. This is how bright the supernova <em>appears</em> from Earth. <strong>Warning:</strong> The magnitude scale is inverted—a smaller number means a brighter object!</li>
+            </ul>
+            The blue dots are the data points an astronomer might collect with a telescope.
+            </p>
+
+            <h4>Step 2: The "Standard Candle" Problem</h4>
+            <p>At first, astronomers thought all Type Ia supernovae exploded with the exact same intrinsic brightness. They thought they were "standard candles"—if you know how bright something truly is, you can figure out how far away it is based on how dim it appears.
+            <br><br>
+            But they discovered this wasn't quite true. Some are intrinsically a bit brighter than others. Click the "Generate New Supernova Data" button a few times. You'll see different supernovae with different peak brightnesses. This was a problem!</p>
+
+            <h4>Step 3: The Phillips Relation - A Cosmic Rosetta Stone</h4>
+            <p>In the 1990s, astronomers led by Mark Phillips made a breakthrough discovery: the <em>shape</em> of the light curve is related to its true brightness.
+            <ul>
+                <li>Intrinsically <strong>brighter</strong> supernovae fade <strong>more slowly</strong>.</li>
+                <li>Intrinsically <strong>dimmer</strong> supernovae fade <strong>more quickly</strong>.</li>
+            </ul>
+            This is the key! We can use the shape to "standardize" the candle.
+            </p>
+
+            <h4>Step 4: Fit the Curve</h4>
+            <p>Your job is to be the astronomer. Use the three sliders to fit the red model curve to the blue data points.
+            <ol>
+                <li>Adjust <strong>Peak Time</strong> to line up the peak of the curve with the data's peak time.</li>
+                <li>Adjust <strong>Peak Apparent Mag</strong> to match the height of the peak.</li>
+                <li>Adjust the <strong>Stretch Factor (s)</strong>. This is the crucial one. A value `s > 1` means the supernova fades slowly (a "stretched" curve). A value `s < 1` means it fades quickly. Adjust `s` to match the shape of the decline.</li>
+            </ol>
+            Try to get the "Goodness of Fit" number as low as possible.
+            </p>
+
+            <h4>Step 5: The Results</h4>
+            <p>Once you have a good fit, look at the "Derived Properties" box. Based on the "Stretch Factor" you found, the simulation calculates the <strong>Inferred Absolute Magnitude (M)</strong>—the supernova's true brightness.
+            <br><br>
+            Now that it knows the true brightness (M) and the apparent brightness (m), it can calculate the <strong>Distance Modulus</strong> and the final <strong>Distance</strong> in Megaparsecs (Mpc). One Mpc is over 3 million light-years! You've just measured the distance to a galaxy millions of light-years away. This technique was used to discover that the expansion of the universe is accelerating, a discovery that won the Nobel Prize in Physics in 2011.</p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>The Light Curve Model</h3>
+            <p>A Type Ia supernova light curve is complex, but can be modeled by a template function that is adjusted by a "stretch" parameter, `s`. A simplified model for the magnitude `m(t)` at time `t` after peak can be written based on a template magnitude `M_template`.</p>
+            <p><em>Equation:</em> `m(t) = m_peak + M_template( (t - t_peak) / s )`</p>
+            <p>Where `s` is the stretch factor. If `s > 1`, time is effectively slowed down, making the decline slower. If `s < 1`, the decline is faster.</p>
+
+            <h3>The Phillips Relation</h3>
+            <p>This is an empirical relationship that connects the stretch factor `s` (or a similar shape parameter like Δm₁₅, the decline in magnitude 15 days after peak) to the absolute magnitude `M` at peak brightness.</p>
+            <p><em>Equation:</em> `M_peak = M_ref + α &middot; (s - 1)`</p>
+            <p>Where `M_ref` is the absolute magnitude for a standard supernova with `s=1` (typically around -19.3), and `α` is a correlation coefficient (the "alpha" parameter, typically negative).</p>
+            <p><em>Plain English:</em> Start with a reference brightness. If the supernova is stretched (s > 1), it's intrinsically brighter, so we adjust M downwards (brighter). If it's fast-declining (s < 1), it's intrinsically dimmer, so we adjust M upwards (dimmer).</p>
+
+            <h3>The Distance Modulus</h3>
+            <p>This is the fundamental equation connecting apparent magnitude (m), absolute magnitude (M), and distance (d) in parsecs.</p>
+            <p><em>Equation:</em> `μ = m - M = 5 &middot; log₁₀(d) - 5`</p>
+            <p>By measuring `m` (from the light curve peak) and inferring `M` (using the Phillips relation), we can solve for `d`.</p>
+            <p><em>Solved for distance:</em> `d = 10 ^ ((m - M + 5) / 5)` parsecs.</p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const generateBtn = document.getElementById('generate-btn');
+        const sliders = {
+            peakTime: document.getElementById('peak-time-slider'),
+            peakMag: document.getElementById('peak-mag-slider'),
+            stretch: document.getElementById('stretch-slider'),
+        };
+        const values = {
+            peakTime: document.getElementById('peak-time-value'),
+            peakMag: document.getElementById('peak-mag-value'),
+            stretch: document.getElementById('stretch-value'),
+            chi2: document.getElementById('chi2-fit'),
+            absMag: document.getElementById('abs-mag-value'),
+            distMod: document.getElementById('dist-mod-value'),
+            distance: document.getElementById('distance-value'),
+        };
+
+        const ctx = canvas.getContext('2d');
+
+        // --- Simulation State & Parameters ---
+        const phillips = { M_ref: -19.3, alpha: -1.5 }; // M = M_ref + alpha(s-1)
+
+        let simState = {
+            data: [], // {time, mag}
+            fitParams: { peakTime: 20, peakMag: 18.0, stretch: 1.0 }
+        };
+
+        // --- Light Curve Template (simplified) ---
+        // A function that returns magnitude relative to peak at a given phase (t/s)
+        function templateLC(phase) {
+            if (phase < -5) return 10; // Faint before explosion
+            if (phase <= 0) { // Rising part
+                return -2.5 * Math.log10(Math.exp(-(phase+2.5)/2.5));
+            } else { // Declining part
+                const d1 = 6.0 * Math.exp(-phase / 8.0);
+                const d2 = 1.2 * Math.exp(-phase / 50.0);
+                return 0.9 * Math.log10(d1+d2);
+            }
+        }
+
+        const getModelMag = (time, p) => p.peakMag + templateLC((time - p.peakTime) / p.stretch);
+
+        // --- Initialization ---
+        function init() {
+            setupCanvas();
+            attachEventListeners();
+            generateNewData();
+            requestAnimationFrame(animationLoop);
+        }
+
+        function setupCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        window.addEventListener('resize', setupCanvas);
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            generateBtn.addEventListener('click', generateNewData);
+            Object.values(sliders).forEach(s => s.addEventListener('input', updateFitParams));
+
+            document.querySelector('.collapsible').addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                if (content.style.maxHeight) content.style.maxHeight = null;
+                else content.style.maxHeight = content.scrollHeight + 'px';
+            });
+        }
+
+        function updateFitParams() {
+            simState.fitParams = {
+                peakTime: parseFloat(sliders.peakTime.value),
+                peakMag: parseFloat(sliders.peakMag.value),
+                stretch: parseFloat(sliders.stretch.value),
+            };
+        }
+
+        function generateNewData() {
+            // 1. Generate a "true" supernova
+            const trueStretch = 0.8 + Math.random() * 0.4;
+            const trueAbsMag = phillips.M_ref + phillips.alpha * (trueStretch - 1);
+            const trueDistance = 50 + Math.random() * 200; // 50-250 Mpc
+            const distMod = 5 * Math.log10(trueDistance * 1e6) - 5;
+            const truePeakAppMag = trueAbsMag + distMod;
+
+            // 2. Generate mock data points with some noise
+            simState.data = [];
+            const timePoints = [-10, -5, 0, 5, 10, 15, 20, 30, 40, 50, 60, 80];
+            const truePeakTime = 10 + Math.random() * 20;
+
+            timePoints.forEach(t => {
+                const trueTime = t + truePeakTime;
+                const trueMag = truePeakAppMag + templateLC(t / trueStretch);
+                const noise = (Math.random() - 0.5) * 0.2; // Add some scatter
+                simState.data.push({ time: trueTime, mag: trueMag + noise });
+            });
+
+            // 3. Reset sliders to a neutral position
+            sliders.peakTime.value = 20;
+            sliders.peakMag.value = truePeakAppMag.toFixed(2); // Give a hint
+            sliders.stretch.value = 1.0;
+            updateFitParams();
+        }
+
+        function calculateFit() {
+            if (simState.data.length === 0) return 0;
+            let chi2 = 0;
+            simState.data.forEach(p => {
+                const modelMag = getModelMag(p.time, simState.fitParams);
+                const error = 0.1; // Assume constant error for simplicity
+                chi2 += Math.pow((p.mag - modelMag) / error, 2);
+            });
+            return chi2 / simState.data.length; // Return reduced chi-squared
+        }
+
+        function updateUI() {
+            values.peakTime.textContent = simState.fitParams.peakTime.toFixed(1);
+            values.peakMag.textContent = simState.fitParams.peakMag.toFixed(2);
+            values.stretch.textContent = simState.fitParams.stretch.toFixed(2);
+
+            const chi2 = calculateFit();
+            values.chi2.textContent = `Goodness of Fit (χ²): ${chi2.toFixed(2)}`;
+
+            // Derive properties from fit
+            const inferredAbsMag = phillips.M_ref + phillips.alpha * (simState.fitParams.stretch - 1);
+            const distMod = simState.fitParams.peakMag - inferredAbsMag;
+            const distance = Math.pow(10, (distMod + 5) / 5) / 1e6; // in Mpc
+
+            values.absMag.textContent = inferredAbsMag.toFixed(2);
+            values.distMod.textContent = distMod.toFixed(2);
+            values.distance.textContent = `${distance.toFixed(1)} Mpc`;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+            ctx.clearRect(0, 0, w, h);
+
+            const timeRange = {min: 0, max: 100};
+            const magRange = {min: 22, max: 15}; // Inverted!
+
+            const toCanvas = (time, mag) => ({
+                x: w * (time - timeRange.min) / (timeRange.max - timeRange.min),
+                y: h * (mag - magRange.min) / (magRange.max - magRange.min)
+            });
+
+            // Draw grid and axes
+            ctx.strokeStyle = 'var(--border-color)';
+            ctx.fillStyle = 'var(--border-color)';
+            ctx.lineWidth = 0.5;
+            ctx.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+            // Time ticks
+            for (let t = timeRange.min; t <= timeRange.max; t += 10) {
+                const {x, y} = toCanvas(t, magRange.min);
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+                ctx.fillText(`${t}d`, x + 2, h - 5);
+            }
+            // Mag ticks
+            for (let m = magRange.min; m >= magRange.max; m--) {
+                const {x, y} = toCanvas(timeRange.min, m);
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+                ctx.fillText(`${m}`, 5, y - 2);
+            }
+            ctx.fillText('Apparent Magnitude (m)', 5, 12);
+
+            // Draw data points
+            ctx.fillStyle = 'var(--primary-color)';
+            simState.data.forEach(p => {
+                const {x, y} = toCanvas(p.time, p.mag);
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw model curve
+            ctx.strokeStyle = 'var(--secondary-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i <= w; i++) {
+                const time = timeRange.min + (i / w) * (timeRange.max - timeRange.min);
+                const mag = getModelMag(time, simState.fitParams);
+                const {x, y} = toCanvas(time, mag);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        // --- Main Loop ---
+        function animationLoop() {
+            updateUI();
+            draw();
+            requestAnimationFrame(animationLoop);
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

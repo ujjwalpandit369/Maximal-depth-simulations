@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Donnan Equilibrium</title>
+    <style>
+        :root {
+            --bg-color: #eaf2f8;
+            --text-color: #17202a;
+            --primary-color: #2e86c1; /* Blue for water/solution */
+            --secondary-color: #e74c3c; /* Red for protein */
+            --border-color: #aed6f1;
+            --canvas-bg: #ffffff;
+            --na-color: #27ae60; /* Green */
+            --cl-color: #f1c40f; /* Yellow */
+            --font-family: 'Verdana', sans-serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #5dade2;
+            --secondary-color: #e74c3c;
+            --border-color: #aed6f1;
+            --canvas-bg: #1a1a1a;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; }
+        .controls-sidebar { flex: 1; min-width: 280px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 2px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; aspect-ratio: 2/1; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input, select { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--primary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        button.secondary { background-color: var(--secondary-color); }
+        #results-display { background: #fff; border: 2px solid var(--primary-color); padding: 15px; text-align: center; border-radius: 8px; }
+        #results-display h3 { margin: 0 0 10px 0; border: none; }
+        #potential-value { font-size: 1.8em; font-weight: bold; color: var(--secondary-color); }
+        .concentration-table { width: 100%; text-align: center; margin-top: 1em; font-size: 0.9em; }
+        .concentration-table th, .concentration-table td { padding: 5px; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Donnan Equilibrium</h1>
+        <p>Discover how charged, non-permeable molecules create an ion imbalance and an electrical potential across a semi-permeable membrane.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <p class="panel-title">Compartments with Semi-Permeable Membrane</p>
+                <canvas id="main-canvas"></canvas>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group">
+                    <h3>Initial Conditions</h3>
+                    <label for="salt-slider">Salt [NaCl] (mM): <span id="salt-value">100</span></label>
+                    <input type="range" id="salt-slider" min="10" max="200" value="100" step="10">
+                    <label for="protein-slider">Protein [P⁻] (mM): <span id="protein-value">50</span></label>
+                    <input type="range" id="protein-slider" min="0" max="100" value="50" step="5">
+                </div>
+                <div class="controls-group">
+                    <h3>Simulation Control</h3>
+                    <button id="run-btn" class="secondary">Run to Equilibrium</button>
+                    <button id="reset-btn">Reset to Initial</button>
+                </div>
+                <div id="results-display">
+                    <h3>Donnan Potential</h3>
+                    <div id="potential-value">0.0 mV</div>
+                </div>
+                <div class="concentration-table">
+                     <h3>Concentrations (mM)</h3>
+                     <table border="1">
+                        <thead><tr><th>Ion</th><th>Compartment 1 (Inside)</th><th>Compartment 2 (Outside)</th></tr></thead>
+                        <tbody>
+                            <tr><td>Na⁺</td><td id="c1-na">100</td><td id="c2-na">100</td></tr>
+                            <tr><td>Cl⁻</td><td id="c1-cl">100</td><td id="c2-cl">100</td></tr>
+                            <tr><td>P⁻</td><td id="c1-p">50</td><td id="c2-p">0</td></tr>
+                        </tbody>
+                     </table>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to the Cellular Balancing Act!</h4>
+            <p>Our bodies' cells are filled with charged proteins that can't escape. But small ions like sodium (Na⁺) and chloride (Cl⁻) can pass in and out. How does the cell maintain balance? It uses a clever trick of physics called the Donnan Equilibrium.</p>
+
+            <h4>Step 1: The Setup</h4>
+            <p>The animation shows two compartments separated by a membrane. Think of "Compartment 1" as <em>inside</em> a cell and "Compartment 2" as <em>outside</em>.
+            <ul>
+                <li><span style="color:var(--secondary-color)">■</span> Red squares are large, negatively charged Proteins (P⁻). They are trapped inside Compartment 1.</li>
+                <li><span style="color:var(--na-color)">●</span> Green circles are positive Sodium ions (Na⁺).</li>
+                <li><span style="color:var(--cl-color)">●</span> Yellow circles are negative Chloride ions (Cl⁻).</li>
+            </ul>
+            Both Na⁺ and Cl⁻ can pass freely through the membrane.
+            </p>
+
+            <h4>Step 2: Initial State</h4>
+            <p>Use the sliders to set up the starting conditions. Let's start with Salt [NaCl] at 100 and Protein [P⁻] at 50. Click "Reset". Initially, the salt concentration is the same on both sides. But notice Compartment 1 has a lot of extra negative charge because of the proteins.</p>
+
+            <h4>Step 3: The Drive for Balance</h4>
+            <p>The system wants to achieve two types of balance simultaneously:
+            <ol>
+                <li><strong>Charge Balance:</strong> Each compartment tries to be electrically neutral (total positive charges = total negative charges).</li>
+                <li><strong>Concentration Balance:</strong> The ions *want* to be equally concentrated on both sides.</li>
+            </ol>
+            These two goals are in conflict! To neutralize the negative proteins, you might think positive Na⁺ ions should rush in. But that would create a huge concentration imbalance.
+            </p>
+
+            <h4>Step 4: Reaching Equilibrium</h4>
+            <p>Click the red <strong>"Run to Equilibrium"</strong> button. Watch the ions move!
+            <br><br>
+            What happens? To balance the protein's negative charge, some negative Cl⁻ ions are pushed *out* of Compartment 1. To maintain charge neutrality, some positive Na⁺ ions are pulled *into* Compartment 1.
+            </p>
+
+            <h4>Step 5: The Final State</h4>
+            <p>When the animation stops, look at the result:
+            <ul>
+                <li><strong>Unequal Ions:</strong> The concentrations of Na⁺ and Cl⁻ are no longer equal across the membrane! There is more Na⁺ inside and more Cl⁻ outside.</li>
+                <li><strong>Donnan Potential:</strong> Because of this slight imbalance of charged ions, a small electrical voltage, the <strong>Donnan Potential</strong>, is created across the membrane. You can see its value in the results box.</li>
+            </ul>
+            This is the clever compromise the system makes. It can't achieve perfect concentration balance, so it creates a small electrical potential instead to keep everything stable. This very principle is fundamental to how our nerves and muscles work!</p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>The Donnan Equilibrium Condition</h3>
+            <p>For a system with permeable cations (C⁺) and anions (A⁻) and non-permeable anions (P⁻) in compartment 1 ("in"), the equilibrium state must satisfy the condition that the product of the concentrations of the permeable ions inside equals the product of their concentrations outside.</p>
+            <p><em>Equation:</em> `[C⁺]ᵢₙ &middot; [A⁻]ᵢₙ = [C⁺]ₒᵤₜ &middot; [A⁻]ₒᵤₜ`</p>
+            <p>This arises from the fact that at equilibrium, the electrochemical potential for each permeable ion must be the same across the membrane.</p>
+
+            <h3>Maintaining Electroneutrality</h3>
+            <p>In parallel, each compartment must remain electrically neutral.
+            <br><em>Inside:</em> `[C⁺]ᵢₙ = [A⁻]ᵢₙ + [P⁻]ᵢₙ`
+            <br><em>Outside:</em> `[C⁺]ₒᵤₜ = [A⁻]ₒᵤₜ`</p>
+
+            <h3>Calculating Equilibrium</h3>
+            <p>We can solve these equations. Let `x = [A⁻]ᵢₙ` at equilibrium. From electroneutrality, `[C⁺]ᵢₙ = x + [P⁻]ᵢₙ`.
+            If the initial salt concentration on both sides was `C_s`, then by conservation of ions, `[A⁻]ₒᵤₜ = 2C_s - x`.
+            Since `[C⁺]ₒᵤₜ = [A⁻]ₒᵤₜ`, we can substitute into the Donnan condition:
+            <br>`(x + [P⁻]ᵢₙ) &middot; x = (2C_s - x) &middot; (2C_s - x)`
+            <br>This can be solved as a quadratic equation for `x` to find the final concentration of the anion inside, from which all other concentrations can be derived.</p>
+
+            <h3>The Donnan Potential (E_D)</h3>
+            <p>The resulting electrical potential across the membrane can be calculated with the Nernst equation for any of the permeable ions.</p>
+            <p><em>Equation (for a cation like Na⁺):</em></p>
+            <pre>E_D = (RT/zF) &middot; ln([C⁺]ₒᵤₜ / [C⁺]ᵢₙ)</pre>
+            <p>Where `R` is the gas constant, `T` is temperature, `z` is the ion's charge (+1 for Na⁺), and `F` is the Faraday constant. At room temperature, RT/F is approx. 26.7 mV for z=1.</p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const saltSlider = document.getElementById('salt-slider');
+        const proteinSlider = document.getElementById('protein-slider');
+        const saltValueSpan = document.getElementById('salt-value');
+        const proteinValueSpan = document.getElementById('protein-value');
+        const runBtn = document.getElementById('run-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const potentialValueDiv = document.getElementById('potential-value');
+        const concTds = {
+            c1_na: document.getElementById('c1-na'), c2_na: document.getElementById('c2-na'),
+            c1_cl: document.getElementById('c1-cl'), c2_cl: document.getElementById('c2-cl'),
+            c1_p: document.getElementById('c1-p'),   c2_p: document.getElementById('c2-p'),
+        };
+
+        const ctx = canvas.getContext('2d');
+
+        // --- Simulation State & Parameters ---
+        const R = 8.314; // Gas constant
+        const T = 298;   // Temperature in K (25 C)
+        const F = 96485; // Faraday constant
+        const z = 1;     // charge of Na+/Cl-
+
+        let simState = {
+            initial: { salt: 100, protein: 50 },
+            current: {},
+            target: {},
+            particles: [],
+            animation: { running: false, progress: 0 }
+        };
+
+        // --- Initialization ---
+        function init() {
+            setupCanvas();
+            attachEventListeners();
+            resetSimulation();
+            requestAnimationFrame(animationLoop);
+        }
+
+        function setupCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        window.addEventListener('resize', setupCanvas);
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            saltSlider.addEventListener('input', e => {
+                simState.initial.salt = parseFloat(e.target.value);
+                saltValueSpan.textContent = simState.initial.salt;
+                if (!simState.animation.running) resetSimulation();
+            });
+            proteinSlider.addEventListener('input', e => {
+                simState.initial.protein = parseFloat(e.target.value);
+                proteinValueSpan.textContent = simState.initial.protein;
+                if (!simState.animation.running) resetSimulation();
+            });
+            runBtn.addEventListener('click', runEquilibrium);
+            resetBtn.addEventListener('click', resetSimulation);
+
+            document.getElementById('contrast-toggle').addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) content.style.maxHeight = null;
+                    else content.style.maxHeight = content.scrollHeight + 'px';
+                });
+            });
+        }
+
+        function resetSimulation() {
+            simState.animation.running = false;
+            simState.animation.progress = 0;
+            const { salt, protein } = simState.initial;
+            simState.current = {
+                c1_na: salt, c1_cl: salt, c1_p: protein,
+                c2_na: salt, c2_cl: salt,
+                potential: 0
+            };
+            simState.target = { ...simState.current };
+            createParticles();
+            updateUI();
+        }
+
+        function runEquilibrium() {
+            if (simState.animation.running) return;
+
+            const C_s = simState.initial.salt;
+            const C_p = simState.initial.protein;
+
+            // Solve for final concentrations
+            // (x + P) * x = (2C - x)^2  where x = [Cl-]in
+            // x^2 + Px = 4C^2 - 4Cx + x^2
+            // Px + 4Cx = 4C^2
+            // x(P + 4C) = 4C^2 => x = 4C^2 / (P + 4C)
+            let cl_in, na_in, cl_out, na_out;
+            if (C_s === 0 && C_p > 0) { // Special case, no salt
+                cl_in = 0; na_in = C_p; cl_out = 0; na_out = 0;
+            } else if (C_p === 0) { // No protein, no effect
+                cl_in = C_s; na_in = C_s; cl_out = C_s; na_out = C_s;
+            } else {
+                cl_in = (4 * C_s * C_s) / (C_p + 4 * C_s);
+                na_in = cl_in + C_p;
+                cl_out = 2 * C_s - cl_in;
+                na_out = cl_out;
+            }
+
+            simState.target = {
+                c1_na: na_in, c1_cl: cl_in, c1_p: C_p,
+                c2_na: na_out, c2_cl: cl_out,
+            };
+
+            // Calculate potential from Cl- ratio
+            simState.target.potential = (R * T / (z * F)) * Math.log(cl_out / cl_in) * 1000; // in mV
+
+            simState.animation.running = true;
+            simState.animation.progress = 0;
+        }
+
+        function updateUI() {
+            Object.keys(concTds).forEach(key => {
+                if(concTds[key]) concTds[key].textContent = simState.current[key]?.toFixed(1) || '0.0';
+            });
+            potentialValueDiv.textContent = `${simState.current.potential.toFixed(1)} mV`;
+        }
+
+        function createParticles() {
+            simState.particles = [];
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+            const particleScale = 0.5;
+
+            const addParticles = (count, type, compartment) => {
+                for (let i = 0; i < count * particleScale; i++) {
+                    const x_min = (compartment === 1) ? 10 : w / 2 + 10;
+                    const x_max = (compartment === 1) ? w / 2 - 10 : w - 10;
+                    simState.particles.push({
+                        x: x_min + Math.random() * (x_max - x_min),
+                        y: 10 + Math.random() * (h - 20),
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        type: type,
+                        compartment: compartment
+                    });
+                }
+            };
+
+            addParticles(simState.current.c1_na, 'na', 1);
+            addParticles(simState.current.c1_cl, 'cl', 1);
+            addParticles(simState.current.c1_p, 'p', 1);
+            addParticles(simState.current.c2_na, 'na', 2);
+            addParticles(simState.current.c2_cl, 'cl', 2);
+        }
+
+        // --- Animation Loop ---
+        function animationLoop() {
+            if (simState.animation.running) {
+                simState.animation.progress = Math.min(1, simState.animation.progress + 0.01);
+
+                // Interpolate concentrations
+                for (const key in simState.target) {
+                    const start = simState.initial[key.substring(3)] || simState.current[key]; // a bit tricky
+                    const initialVal = (key.startsWith('c1') ? simState.initial : simState.initial)[key.substring(3)];
+                     const startVal = key.startsWith('c1') ? (key.includes('p') ? simState.initial.protein : simState.initial.salt) : simState.initial.salt;
+
+                    if (key === 'c1_p') {
+                        simState.current.c1_p = simState.initial.protein;
+                    } else if (key !== 'potential') {
+                        const startConc = (key.startsWith('c1_')) ? simState.initial.salt : simState.initial.salt;
+                        simState.current[key] = startConc + (simState.target[key] - startConc) * simState.animation.progress;
+                    }
+                }
+                simState.current.potential = simState.target.potential * simState.animation.progress;
+
+                if (simState.animation.progress >= 1) {
+                    simState.animation.running = false;
+                    simState.current = {...simState.target}; // Snap to final values
+                    simState.initial = {salt: (simState.current.c1_na + simState.current.c2_na)/2, protein: simState.current.c1_p}
+                }
+                createParticles(); // Re-create particles based on interpolated concentrations
+            }
+
+            draw();
+            updateUI();
+            requestAnimationFrame(animationLoop);
+        }
+
+        function draw() {
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw membrane
+            ctx.strokeStyle = 'var(--border-color)';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(w / 2, 0);
+            ctx.lineTo(w / 2, h);
+            ctx.stroke();
+
+            // Draw particles
+            simState.particles.forEach(p => {
+                // Animate movement
+                p.x += p.vx * 0.5;
+                p.y += p.vy * 0.5;
+
+                // Bounce off walls
+                const x_min = (p.compartment === 1) ? 0 : w / 2;
+                const x_max = (p.compartment === 1) ? w / 2 : w;
+                if (p.x < x_min || p.x > x_max) p.vx *= -1;
+                if (p.y < 0 || p.y > h) p.vy *= -1;
+
+                let size = 5;
+                switch (p.type) {
+                    case 'na': ctx.fillStyle = 'var(--na-color)'; break;
+                    case 'cl': ctx.fillStyle = 'var(--cl-color)'; break;
+                    case 'p': ctx.fillStyle = 'var(--secondary-color)'; size = 8; break;
+                }
+
+                if (p.type === 'p') {
+                    ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, size / 2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

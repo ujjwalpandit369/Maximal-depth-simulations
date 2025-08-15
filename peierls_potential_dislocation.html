@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peierls Potential for Dislocations</title>
+    <style>
+        :root {
+            --bg-color: #f2f4f4;
+            --text-color: #212f3c;
+            --primary-color: #af7ac5; /* Purple for potential energy */
+            --secondary-color: #5dade2; /* Blue for crystal */
+            --border-color: #aab7b8;
+            --canvas-bg: #ffffff;
+            --stress-color: #e67e22;
+            --dislocation-color: #c0392b;
+            --font-family: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #c39bd3;
+            --secondary-color: #85c1e9;
+            --border-color: #aab7b8;
+            --canvas-bg: #1a1a1a;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; font-weight: 400; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; }
+        .controls-sidebar { flex: 1; min-width: 250px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; margin-bottom: 1em; }
+        #lattice-canvas { aspect-ratio: 2/1; }
+        #potential-canvas { aspect-ratio: 2/1; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--primary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        #info-display { background: #fff; border-left: 5px solid var(--primary-color); padding: 10px; margin-top: 1em; font-size: 0.9em;}
+        #info-display p { margin: 0.2em 0; }
+        #info-display .value { font-weight: bold; color: var(--primary-color); float: right; }
+        #info-status { font-weight: bold; text-align: center; margin-top: 5px; padding: 5px; border-radius: 3px; }
+        #info-status.pinned { background-color: #e9f0fa; color: #21618c; }
+        #info-status.moving { background-color: #fdebd0; color: #784212; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dislocation Motion and the Peierls Potential</h1>
+        <p>Explore the energy landscape that a dislocation must navigate to move through a crystal, and the stress required to overcome the Peierls barrier.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <p class="panel-title">Crystal Lattice with Edge Dislocation</p>
+                <canvas id="lattice-canvas"></canvas>
+                <p class="panel-title">Peierls Potential Energy Landscape</p>
+                <canvas id="potential-canvas"></canvas>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group">
+                    <h3>Apply Shear Stress (τ)</h3>
+                    <label for="stress-slider">Stress: <span id="stress-value">0.0</span></label>
+                    <input type="range" id="stress-slider" min="0" max="100" value="0" step="1">
+                    <button id="reset-btn">Reset Dislocation</button>
+                </div>
+                <div id="info-display">
+                    <p>Peierls Stress (τₚ): <span class="value" id="info-peierls-stress">--</span></p>
+                    <p>Applied Stress (τ): <span class="value" id="info-applied-stress">--</span></p>
+                    <div id="info-status" class="pinned">PINNED</div>
+                </div>
+                <div class="controls-group" style="margin-top: 1em;">
+                    <h3>Settings</h3>
+                    <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to the Crystal Maze!</h4>
+            <p>Why are metals bendy? It's because of tiny defects in their crystal structure called <strong>dislocations</strong>. Imagine a rug that's too big for a room. To move it, you don't shove the whole thing at once; you create a small wrinkle and push the wrinkle across. A dislocation is like that wrinkle in a crystal, and its movement is how materials deform.</p>
+
+            <h4>Step 1: The Setup</h4>
+            <p>You see two panels:
+            <ul>
+                <li><strong>Top Panel (Crystal Lattice):</strong> This is a simplified view of atoms in a crystal. Notice the extra half-row of atoms pushed into the top. The end of this half-row is the "edge dislocation" (marked with ⊥).</li>
+                <li><strong>Bottom Panel (Potential Energy):</strong> This graph shows the dislocation's energy as it moves. It's not a smooth ride! The crystal's atomic structure creates a bumpy energy landscape, called the <strong>Peierls Potential</strong>. The dislocation is most stable in the "valleys."</li>
+            </ul>
+            The red dot on the energy graph shows the dislocation's current position and energy.
+            </p>
+
+            <h4>Step 2: The Energy Barrier</h4>
+            <p>To move the dislocation from one valley to the next, it must be pushed "uphill" over the energy peak. This peak is called the <strong>Peierls Barrier</strong>. The dislocation naturally wants to stay in the low-energy valleys.</p>
+
+            <h4>Step 3: Applying Stress</h4>
+            <p>How do we force the dislocation to move? We apply an external <strong>shear stress (τ)</strong>, using the slider. As you increase the stress, watch the bottom graph. The whole energy landscape begins to "tilt" downwards to the right.
+            <br><br>
+            The applied stress does work on the dislocation, adding a linear term ` -τbx` to the potential energy. This tilting makes the next valley to the right even lower (more attractive) and lowers the barrier from the left.
+            </p>
+
+            <h4>Step 4: Overcoming the Barrier</h4>
+            <p>Keep increasing the stress. You will reach a critical point where the "valley" the dislocation is sitting in disappears entirely! The potential curve becomes a continuous downhill slope.
+            <br><br>
+            At this point, the dislocation is unstable and will spontaneously "jump" to the next valley. You'll see this happen in both animations simultaneously: the red dot will slide to the next minimum, and the crystal lattice in the top panel will shift, moving the defect one atomic space to the right.
+            <br><br>
+            The minimum stress required to make this happen is called the <strong>Peierls Stress (τₚ)</strong>. This is a fundamental property of a material that determines its intrinsic resistance to deformation.
+            </p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>The Peierls Potential</h3>
+            <p>The potential energy of a dislocation as it moves through a periodic lattice can be modeled by a sinusoidal function.</p>
+            <p><em>Equation:</em> `U_p(x) = (U_max / 2) &middot; (1 - cos(2πx / b))`</p>
+            <p>Where `U_max` is the height of the energy barrier, `x` is the position of the dislocation, and `b` is the lattice spacing (the period of the potential).</p>
+
+            <h3>Effect of Applied Stress</h3>
+            <p>An applied shear stress `τ` exerts a force `F = τb` on a unit length of the dislocation. This force does work, which adds a potential energy term to the system.</p>
+            <p><em>Equation:</em> `U_stress(x) = -F &middot; x = -τbx`</p>
+            <p>The total potential energy is the sum of the Peierls potential and the stress potential:</p>
+            <p><em>Total Potential:</em> `U_total(x) = U_p(x) + U_stress(x)`</p>
+            <p>The `-τbx` term creates the "tilt" you see in the simulation.</p>
+
+            <h3>The Peierls Stress (τₚ)</h3>
+            <p>The dislocation can move when the applied stress is large enough to eliminate the local energy minimum where the dislocation rests. This occurs when the force from the applied stress is equal to the maximum restoring force from the Peierls potential. The restoring force is `F_p = -dU_p/dx`.</p>
+            <p><em>Force Balance:</em> `F_stress = max|F_p(x)|`
+            <br>
+            `τ_p &middot; b = max|-d/dx [ (U_max / 2) &middot; (1 - cos(2πx / b)) ]|`
+            <br>
+            `τ_p &middot; b = max| (U_max / 2) &middot; (2π/b) &middot; sin(2πx/b) |`
+            <br>
+            The maximum value of `sin` is 1, so:
+            <br>
+            `τ_p &middot; b = π &middot; U_max / b`
+            </p>
+            <p><em>Final Equation:</em> `τ_p = π &middot; U_max / b²`</p>
+            <p>This is the theoretical minimum stress required to move the dislocation at absolute zero temperature.</p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const latticeCanvas = document.getElementById('lattice-canvas');
+        const potentialCanvas = document.getElementById('potential-canvas');
+        const stressSlider = document.getElementById('stress-slider');
+        const stressValueSpan = document.getElementById('stress-value');
+        const resetBtn = document.getElementById('reset-btn');
+        const info = {
+            peierlsStress: document.getElementById('info-peierls-stress'),
+            appliedStress: document.getElementById('info-applied-stress'),
+            status: document.getElementById('info-status'),
+        };
+
+        const lCtx = latticeCanvas.getContext('2d');
+        const pCtx = potentialCanvas.getContext('2d');
+
+        // --- Simulation State & Parameters ---
+        const params = {
+            U_max: 5, // Energy barrier height
+            b: 1,     // Lattice spacing (period)
+            peierlsStress: 0
+        };
+        params.peierlsStress = (Math.PI * params.U_max) / (params.b * params.b);
+        stressSlider.max = params.peierlsStress * 1.5;
+
+        let simState = {
+            appliedStress: 0,
+            dislocationPos: 0, // In world coords
+            isMoving: false,
+            animProgress: 0,
+            targetPos: 0
+        };
+
+        // --- Potential Functions ---
+        const U_peierls = (x) => (params.U_max / 2) * (1 - Math.cos(2 * Math.PI * x / params.b));
+        const U_total = (x) => U_peierls(x) - simState.appliedStress * params.b * x;
+
+        // --- Initialization ---
+        function init() {
+            setupCanvases();
+            attachEventListeners();
+            updateUI();
+            requestAnimationFrame(animationLoop);
+        }
+
+        function setupCanvases() {
+            [latticeCanvas, potentialCanvas].forEach(canvas => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.getContext('2d').scale(dpr, dpr);
+            });
+        }
+
+        window.addEventListener('resize', setupCanvases);
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            stressSlider.addEventListener('input', e => {
+                const newStress = parseFloat(e.target.value);
+                // Check for jump condition
+                if (!simState.isMoving && newStress >= params.peierlsStress && simState.appliedStress < params.peierlsStress) {
+                    simState.isMoving = true;
+                    simState.animProgress = 0;
+                    simState.targetPos = simState.dislocationPos + params.b;
+                }
+                simState.appliedStress = newStress;
+            });
+            resetBtn.addEventListener('click', () => {
+                simState.isMoving = false;
+                simState.dislocationPos = 0;
+                stressSlider.value = 0;
+                simState.appliedStress = 0;
+            });
+            document.getElementById('contrast-toggle').addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) content.style.maxHeight = null;
+                    else content.style.maxHeight = content.scrollHeight + 'px';
+                });
+            });
+        }
+
+        function updateUI() {
+            stressValueSpan.textContent = simState.appliedStress.toFixed(1);
+            info.peierlsStress.textContent = params.peierlsStress.toFixed(1);
+            info.appliedStress.textContent = simState.appliedStress.toFixed(1);
+            if (simState.isMoving) {
+                info.status.textContent = 'MOVING';
+                info.status.className = 'moving';
+            } else {
+                info.status.textContent = 'PINNED';
+                info.status.className = 'pinned';
+            }
+        }
+
+        // --- Drawing Functions ---
+        function drawLattice() {
+            const w = latticeCanvas.getBoundingClientRect().width;
+            const h = latticeCanvas.getBoundingClientRect().height;
+            lCtx.clearRect(0, 0, w, h);
+
+            const atomRadius = 5;
+            const spacing = 40;
+            const rows = Math.ceil(h / spacing) + 1;
+            const cols = Math.ceil(w / spacing) + 1;
+
+            const dislocationOffset = (simState.dislocationPos % params.b) / params.b;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    let x = c * spacing;
+                    let y = r * spacing;
+
+                    // Apply dislocation strain field (simplified)
+                    const isTopHalf = r < rows / 2;
+                    const isExtraPlane = c > cols / 2 - 2 && c < cols / 2 + 2;
+
+                    if (isTopHalf) {
+                        const dx = -dislocationOffset * spacing;
+                        if (isExtraPlane) {
+                            x += dx;
+                        } else if (c >= cols / 2 + 2) {
+                             x -= spacing;
+                        }
+                    }
+
+                    lCtx.fillStyle = 'var(--secondary-color)';
+                    lCtx.beginPath();
+                    lCtx.arc(x, y, atomRadius, 0, 2*Math.PI);
+                    lCtx.fill();
+                }
+            }
+
+            // Draw dislocation symbol ⊥
+            const symbolX = w / 2 - dislocationOffset * spacing;
+            const symbolY = h / 2 - spacing/2;
+            lCtx.strokeStyle = 'var(--dislocation-color)';
+            lCtx.lineWidth = 3;
+            lCtx.beginPath();
+            lCtx.moveTo(symbolX, symbolY - 10);
+            lCtx.lineTo(symbolX, symbolY + 10);
+            lCtx.moveTo(symbolX - 10, symbolY + 10);
+            lCtx.lineTo(symbolX + 10, symbolY + 10);
+            lCtx.stroke();
+        }
+
+        function drawPotential() {
+            const w = potentialCanvas.getBoundingClientRect().width;
+            const h = potentialCanvas.getBoundingClientRect().height;
+            pCtx.clearRect(0, 0, w, h);
+
+            const xRange = { min: -0.5, max: 2.5 };
+            const yRange = { min: -15, max: 15 };
+
+            const toCanvas = (wx, wy) => ({
+                x: w * (wx - xRange.min) / (xRange.max - xRange.min),
+                y: h * (1 - (wy - yRange.min) / (yRange.max - yRange.min))
+            });
+
+            // Draw axes
+            pCtx.strokeStyle = 'var(--border-color)';
+            pCtx.lineWidth = 1;
+            const {x_zero, y_zero} = toCanvas(0, 0);
+            pCtx.beginPath();
+            pCtx.moveTo(0, y_zero); pCtx.lineTo(w, y_zero); // x-axis
+            pCtx.moveTo(x_zero, 0); pCtx.lineTo(x_zero, h); // y-axis
+            pCtx.stroke();
+
+            // Draw total potential curve
+            pCtx.strokeStyle = 'var(--primary-color)';
+            pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            for (let i = 0; i <= w; i++) {
+                const wx = xRange.min + (i / w) * (xRange.max - xRange.min);
+                const wy = U_total(wx);
+                const {x, y} = toCanvas(wx, wy);
+                if (i === 0) pCtx.moveTo(x, y);
+                else pCtx.lineTo(x, y);
+            }
+            pCtx.stroke();
+
+            // Draw dislocation particle
+            const particleX_world = simState.dislocationPos;
+            const particleY_world = U_total(particleX_world);
+            const {x, y} = toCanvas(particleX_world, particleY_world);
+
+            pCtx.fillStyle = 'var(--dislocation-color)';
+            pCtx.beginPath();
+            pCtx.arc(x, y, 8, 0, 2*Math.PI);
+            pCtx.fill();
+        }
+
+        // --- Main Animation Loop ---
+        function animationLoop() {
+            if (simState.isMoving) {
+                simState.animProgress += 0.05; // speed of jump
+                simState.dislocationPos = (1 - simState.animProgress) * (simState.targetPos - params.b) + simState.animProgress * simState.targetPos;
+                if (simState.animProgress >= 1) {
+                    simState.isMoving = false;
+                    simState.dislocationPos = simState.targetPos;
+                    // To prevent re-triggering, reduce stress slightly after jump
+                    simState.appliedStress = params.peierlsStress * 0.95;
+                    stressSlider.value = simState.appliedStress;
+                }
+            }
+
+            updateUI();
+            drawLattice();
+            drawPotential();
+            requestAnimationFrame(animationLoop);
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

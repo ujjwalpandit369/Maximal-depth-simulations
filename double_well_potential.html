@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Double-Well Potential: Classical vs. Quantum</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-color: #333;
+            --primary-color: #2c3e50; /* Dark blue/grey for a serious tone */
+            --secondary-color: #e74c3c; /* Contrasting red */
+            --border-color: #bdc3c7;
+            --canvas-bg: #ffffff;
+            --potential-color: #2c3e50;
+            --energy-color: #2980b9;
+            --wave-color: #c0392b;
+            --font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #ecf0f1;
+            --secondary-color: #e74c3c;
+            --border-color: #7f8c8d;
+            --canvas-bg: #1a1a1a;
+            --potential-color: #bdc3c7;
+            --energy-color: #3498db;
+            --wave-color: #e74c3c;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 0.3em; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; }
+        .controls-sidebar { flex: 1; min-width: 250px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; aspect-ratio: 1.5/1; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input, select { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--secondary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        .toggle-buttons button { background-color: var(--secondary-color); opacity: 0.6; }
+        .toggle-buttons button.active { background-color: var(--primary-color); opacity: 1.0; }
+        #info-display { background: #fff; border-left: 5px solid var(--primary-color); padding: 10px; margin-top: 1em; font-size: 0.9em;}
+        #info-display p { margin: 0.2em 0; }
+        #info-display .value { font-weight: bold; color: var(--primary-color); float: right; }
+        #info-display #info-outcome { font-weight: bold; text-align: center; margin-top: 5px; padding: 5px; border-radius: 3px; }
+        #info-outcome.trapped { background-color: #eafaf1; color: #1d6a43; }
+        #info-outcome.tunneling { background-color: #fdebd0; color: #784212; }
+        #info-outcome.free { background-color: #e9f0fa; color: #21618c; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Double-Well Potential</h1>
+        <p>Explore how a particle behaves in a double-well potential, contrasting the predictable classical world with the probabilistic quantum realm.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <p class="panel-title">Potential Energy V(x)</p>
+                <canvas id="main-canvas"></canvas>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group toggle-buttons">
+                    <h3>1. Choose a View</h3>
+                    <button id="view-classical" class="active">Classical View</button>
+                    <button id="view-quantum">Quantum View</button>
+                </div>
+                <div class="controls-group">
+                    <h3>2. Set Total Energy</h3>
+                    <label for="energy-slider">Energy (E): <span id="energy-value">0</span></label>
+                    <input type="range" id="energy-slider" min="-5" max="15" value="0" step="0.1">
+                </div>
+                <div id="quantum-controls" class="controls-group toggle-buttons" style="display: none;">
+                    <h3>3. Select Quantum State</h3>
+                    <button id="state-ground" class="active">Ground State (ψ₀)</button>
+                    <button id="state-excited">1st Excited State (ψ₁)</button>
+                </div>
+                <div id="info-display">
+                    <p>Barrier Height: <span class="value" id="info-barrier">--</span></p>
+                    <p>Particle Energy: <span class="value" id="info-energy">--</span></p>
+                    <div id="info-outcome" class="trapped">--</div>
+                    <div id="quantum-info" style="display:none; margin-top: 10px;">
+                        <p>E₀ (Ground): <span class="value" id="info-e0">--</span></p>
+                        <p>E₁ (Excited): <span class="value" id="info-e1">--</span></p>
+                    </div>
+                </div>
+                 <div class="controls-group" style="margin-top: 1em;">
+                    <h3>Settings</h3>
+                    <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to a Tale of Two Worlds!</h4>
+            <p>Imagine a skateboarder in a valley. They can ride back and forth, but they can't get to the next valley unless they have enough energy to get over the hill in between. This is the classical world we know. But in the weird world of quantum mechanics, particles can sometimes "tunnel" right through hills! This simulation lets you see both worlds.</p>
+
+            <h4>Step 1: The Classical World</h4>
+            <p>Make sure you're in <strong>"Classical View"</strong>. The U-shaped curve is the "potential well"—our valley. The blue ball is our "particle" (our skateboarder). The blue horizontal line represents the particle's <strong>Total Energy</strong>. You can change this with the slider.</p>
+            <p>Set the energy slider to a low value, like <strong>-2</strong>, so the blue energy line is below the top of the central "hill". Notice the particle is trapped in one of the two wells. It moves back and forth, but it never has enough energy to get over the barrier and into the other well. This is <strong>Classical Trapping</strong>.</p>
+            <p>Now, increase the energy to a high value, like <strong>+10</strong>, so the blue line is above the central hill. The particle now has enough energy to travel freely across both wells.</p>
+
+            <h4>Step 2: The Quantum World</h4>
+            <p>Now for the weird part. Click the <strong>"Quantum View"</strong> button. The classical particle disappears and is replaced by a red wave. This is the particle's <strong>wavefunction (ψ)</strong>, which tells us the probability of finding the particle at any given position.</p>
+            <p>Set the energy slider back to a low value, like <strong>-2</strong>. In the classical world, the particle was trapped. But look at the wavefunction! It's a single wave spread across <em>both</em> wells. Even though the particle's energy is less than the barrier height, the wave "leaks" through the center. This means there is a probability of finding the particle on the other side. This is <strong>Quantum Tunneling</strong>!</p>
+
+            <h4>Step 3: Split Energles</h4>
+            <p>In the quantum world, energy is "quantized"—it can only take on specific values. For the double well, the two lowest allowed energies are shown as thin red lines (E₀ and E₁). Notice they are very close together. This is called <strong>energy splitting</strong>. If the two wells were infinitely far apart, they would have the same ground state energy. But because they are close enough for the particle to tunnel, this single level splits into two: a symmetric state (ψ₀, the ground state) and an anti-symmetric state (ψ₁, the first excited state). You can switch between them using the buttons in the "Quantum Controls" section.</p>
+            <p>This simulation shows a core mystery of quantum mechanics: particles are also waves, and this wavelike nature allows them to do things that seem impossible in our everyday classical world.</p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>The Potential V(x)</h3>
+            <p>The double-well potential is modeled by a quartic polynomial, a common and simple representation.</p>
+            <p><em>Equation:</em> `V(x) = a·x⁴ - b·x²`</p>
+            <p>Where `a` and `b` are positive constants that determine the shape of the wells. The `x⁴` term provides the confinement at large distances, and the `-x²` term creates the dip in the center, which is then pushed up by the `x⁴` term to form the barrier.</p>
+
+            <h3>Classical Mechanics</h3>
+            <p>A classical particle's total energy `E` is the sum of its kinetic energy (KE) and potential energy `V(x)`.
+            <br><em>Equation:</em> `E = KE + V(x) = ½mv² + V(x)`
+            <br>Classically allowed regions are where `KE ≥ 0`, which means `E ≥ V(x)`. The particle's velocity becomes zero and it turns around at points where `E = V(x)`.</p>
+
+            <h3>Quantum Mechanics</h3>
+            <p>A quantum particle is described by a wavefunction `ψ(x)` which is a solution to the Time-Independent Schrödinger Equation:</p>
+            <pre style="text-align:center; font-size:1.1em;">(-ħ²/2m) · (d²ψ/dx²) + V(x)ψ = Eψ</pre>
+            <p>Where `ħ` is the reduced Planck's constant.
+            <ul>
+                <li>Solutions `ψ(x)` only exist for specific, discrete energy values `E`, called eigenvalues.</li>
+                <li>The probability of finding the particle at position `x` is given by `|ψ(x)|²`.</li>
+                <li><strong>Tunneling:</strong> In regions where `E < V(x)` (classically forbidden), the Schrödinger equation still has real, exponentially decaying solutions. This means `|ψ(x)|²` is non-zero inside the barrier, leading to a finite probability of the particle appearing on the other side.</li>
+                <li><strong>Energy Splitting:</strong> The two lowest-energy solutions (`ψ₀` and `ψ₁`) can be approximated by symmetric and anti-symmetric combinations of the ground-state wavefunctions of the individual wells. The energy difference `ΔE = E₁ - E₀` is related to the tunneling probability. A higher or wider barrier leads to a smaller `ΔE`.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const canvas = document.getElementById('main-canvas');
+        const viewClassicalBtn = document.getElementById('view-classical');
+        const viewQuantumBtn = document.getElementById('view-quantum');
+        const energySlider = document.getElementById('energy-slider');
+        const energyValueSpan = document.getElementById('energy-value');
+        const quantumControls = document.getElementById('quantum-controls');
+        const stateGroundBtn = document.getElementById('state-ground');
+        const stateExcitedBtn = document.getElementById('state-excited');
+        const info = {
+            barrier: document.getElementById('info-barrier'),
+            energy: document.getElementById('info-energy'),
+            outcome: document.getElementById('info-outcome'),
+            quantumInfo: document.getElementById('quantum-info'),
+            e0: document.getElementById('info-e0'),
+            e1: document.getElementById('info-e1'),
+        };
+        const contrastToggle = document.getElementById('contrast-toggle');
+
+        const ctx = canvas.getContext('2d');
+
+        // --- Simulation State & Parameters ---
+        const potential = { a: 1, b: 10, barrierHeight: 0 };
+        potential.barrierHeight = -potential.b * potential.b / (4 * potential.a);
+
+        // Pre-calculated/approximated quantum values
+        const quantum = { E0: -2.45, E1: -2.35 };
+
+        let simState = {
+            view: 'classical', // 'classical' or 'quantum'
+            quantumState: 'ground', // 'ground' or 'excited'
+            energy: 0,
+            particle: { x: -2.5, v: 0.1 }, // Classical particle state
+            lastTime: 0,
+        };
+
+        // Potential function V(x) = ax^4 - bx^2
+        const V = (x) => potential.a * Math.pow(x, 4) - potential.b * Math.pow(x, 2);
+
+        // --- Initialization ---
+        function init() {
+            setupCanvas();
+            attachEventListeners();
+            selectView('classical');
+            simState.energy = parseFloat(energySlider.value);
+            simState.lastTime = performance.now();
+            requestAnimationFrame(animationLoop);
+        }
+
+        function setupCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+        }
+
+        window.addEventListener('resize', setupCanvas);
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            viewClassicalBtn.addEventListener('click', () => selectView('classical'));
+            viewQuantumBtn.addEventListener('click', () => selectView('quantum'));
+
+            energySlider.addEventListener('input', e => {
+                simState.energy = parseFloat(e.target.value);
+            });
+
+            stateGroundBtn.addEventListener('click', () => selectQuantumState('ground'));
+            stateExcitedBtn.addEventListener('click', () => selectQuantumState('excited'));
+
+            contrastToggle.addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) content.style.maxHeight = null;
+                    else content.style.maxHeight = content.scrollHeight + 'px';
+                });
+            });
+        }
+
+        function selectView(viewName) {
+            simState.view = viewName;
+            viewClassicalBtn.classList.toggle('active', viewName === 'classical');
+            viewQuantumBtn.classList.toggle('active', viewName === 'quantum');
+            quantumControls.style.display = viewName === 'quantum' ? 'block' : 'none';
+            info.quantumInfo.style.display = viewName === 'quantum' ? 'block' : 'none';
+        }
+
+        function selectQuantumState(stateName) {
+            simState.quantumState = stateName;
+            stateGroundBtn.classList.toggle('active', stateName === 'ground');
+            stateExcitedBtn.classList.toggle('active', stateName === 'excited');
+        }
+
+        function updateUI() {
+            energyValueSpan.textContent = simState.energy.toFixed(1);
+            info.barrier.textContent = V(0).toFixed(1);
+            info.energy.textContent = simState.energy.toFixed(1);
+            info.e0.textContent = quantum.E0.toFixed(2);
+            info.e1.textContent = quantum.E1.toFixed(2);
+
+            let outcomeText = '';
+            info.outcome.className = '';
+            if (simState.energy < V(0)) {
+                if (simState.view === 'classical') {
+                    outcomeText = 'Classically Trapped';
+                    info.outcome.classList.add('trapped');
+                } else {
+                    outcomeText = 'Quantum Tunneling Possible';
+                    info.outcome.classList.add('tunneling');
+                }
+            } else {
+                outcomeText = 'Classically Free';
+                info.outcome.classList.add('free');
+            }
+            info.outcome.textContent = outcomeText;
+        }
+
+        // --- Classical Physics Update ---
+        function updateClassicalParticle(dt) {
+            const mass = 10; // Arbitrary mass for animation feel
+            const currentV = V(simState.particle.x);
+            let ke = simState.energy - currentV;
+
+            if (ke < 0) { // Hit a turning point
+                ke = 0;
+                simState.particle.v *= -1; // Reverse direction
+                // Nudge particle away from wall to prevent getting stuck
+                simState.particle.x += Math.sign(simState.particle.v) * 0.01;
+            }
+
+            const speed = Math.sqrt(2 * ke / mass);
+            simState.particle.v = Math.sign(simState.particle.v) * speed;
+            simState.particle.x += simState.particle.v * dt;
+        }
+
+        // --- Quantum Wavefunction (Approximation) ---
+        function getWavefunction(x, state) {
+            const wellPos = 2.2; // Position of the wells
+            const width = 1.5;   // Width parameter for the gaussian
+            const psi_left = Math.exp(-width * Math.pow(x + wellPos, 2));
+            const psi_right = Math.exp(-width * Math.pow(x - wellPos, 2));
+
+            if (state === 'ground') {
+                return (psi_left + psi_right); // Symmetric
+            } else { // excited
+                return (psi_right - psi_left); // Anti-symmetric
+            }
+        }
+
+        // --- Drawing Functions ---
+        function draw() {
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+            ctx.clearRect(0, 0, w, h);
+
+            const xRange = 10; // from -5 to 5
+            const yRange = 30; // from -10 to 20
+
+            const toCanvas = (wx, wy) => ({
+                x: w * (wx + xRange / 2) / xRange,
+                y: h * (1 - (wy + 10) / yRange)
+            });
+
+            // Draw potential curve V(x)
+            ctx.strokeStyle = 'var(--potential-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i <= w; i++) {
+                const wx = (i / w) * xRange - xRange / 2;
+                const wy = V(wx);
+                const {x, y} = toCanvas(wx, wy);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw total energy line
+            ctx.strokeStyle = 'var(--energy-color)';
+            ctx.lineWidth = 2;
+            const energyY = toCanvas(0, simState.energy).y;
+            ctx.beginPath();
+            ctx.moveTo(0, energyY);
+            ctx.lineTo(w, energyY);
+            ctx.stroke();
+
+            if (simState.view === 'classical') {
+                drawClassicalView(toCanvas);
+            } else {
+                drawQuantumView(toCanvas);
+            }
+        }
+
+        function drawClassicalView(toCanvas) {
+            const {x, y} = toCanvas(simState.particle.x, V(simState.particle.x));
+            const energyY = toCanvas(0, simState.energy).y;
+
+            // Draw particle only if its potential energy is below total energy
+            if (y > energyY) {
+                ctx.fillStyle = 'var(--energy-color)';
+                ctx.beginPath();
+                ctx.arc(x, energyY, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function drawQuantumView(toCanvas) {
+            // Draw energy levels E0 and E1
+            ctx.strokeStyle = 'rgba(231, 76, 60, 0.5)';
+            ctx.lineWidth = 1.5;
+            const e0_y = toCanvas(0, quantum.E0).y;
+            const e1_y = toCanvas(0, quantum.E1).y;
+            ctx.beginPath();
+            ctx.moveTo(0, e0_y); ctx.lineTo(canvas.getBoundingClientRect().width, e0_y);
+            ctx.moveTo(0, e1_y); ctx.lineTo(canvas.getBoundingClientRect().width, e1_y);
+            ctx.stroke();
+
+            // Draw wavefunction
+            const state = simState.quantumState;
+            const baseEnergy = (state === 'ground') ? quantum.E0 : quantum.E1;
+            const baseLineY = toCanvas(0, baseEnergy).y;
+
+            ctx.fillStyle = 'rgba(192, 57, 43, 0.3)';
+            ctx.strokeStyle = 'var(--wave-color)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            let maxPsi = 0;
+            const w = canvas.getBoundingClientRect().width;
+            const xRange = 10;
+
+            // First pass to find max value for normalization
+            for (let i = 0; i <= w; i++) {
+                const wx = (i / w) * xRange - xRange / 2;
+                maxPsi = Math.max(maxPsi, Math.abs(getWavefunction(wx, state)));
+            }
+
+            for (let i = 0; i <= w; i++) {
+                const wx = (i / w) * xRange - xRange / 2;
+                const psi = getWavefunction(wx, state);
+                const plotPsi = (psi / maxPsi) * 40; // Scale for visibility
+                const {x, y} = toCanvas(wx, baseEnergy);
+                const finalY = y - plotPsi;
+                if (i === 0) ctx.moveTo(x, finalY);
+                else ctx.lineTo(x, finalY);
+            }
+            ctx.stroke();
+
+            // Fill area under |ψ|^2
+            const {x_start, y_start} = toCanvas(-xRange/2, baseEnergy);
+            ctx.lineTo(toCanvas(xRange/2, baseEnergy).x, y_start);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // --- Main Animation Loop ---
+        function animationLoop(timestamp) {
+            const dt = (timestamp - simState.lastTime) / 1000;
+            simState.lastTime = timestamp;
+
+            if (simState.view === 'classical') {
+                updateClassicalParticle(Math.min(dt, 0.05)); // Cap dt to prevent instability
+            }
+
+            updateUI();
+            draw();
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>
