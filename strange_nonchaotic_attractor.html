@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strange Nonchaotic Attractors</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --primary-color: #00695c; /* Dark Cyan */
+            --secondary-color: #546e7a;
+            --border-color: #b2dfdb;
+            --canvas-bg: #fff;
+            --attractor-color: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 2fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%; height: auto;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        #attractor-canvas { aspect-ratio: 1.5/1; }
+        #lyapunov-canvas { aspect-ratio: 1.5/1; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Strange Nonchaotic Attractors (SNAs)</h1>
+            <p class="subtitle">A simulation of an attractor that is geometrically strange but dynamically non-chaotic.</p>
+        </header>
+
+        <section>
+             <div class="sim-layout">
+                <div>
+                    <h3>Attractor Phase Space</h3>
+                    <div class="canvas-container"><canvas id="attractor-canvas"></canvas></div>
+                </div>
+                <div>
+                    <h3>Lyapunov Exponent Convergence</h3>
+                    <div class="canvas-container"><canvas id="lyapunov-canvas"></canvas></div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <button id="start-stop-btn">Start</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Strange but Not Chaotic</h2>
+            <h3>A New Class of Attractor</h3>
+            <p>In the study of dynamical systems, we often classify attractors into simple types: point attractors (a pendulum coming to rest), limit cycles (a predator-prey system), and strange attractors (like the Hénon or Lorenz maps). Strange attractors have two key properties: they are geometrically "strange" (fractal) and dynamically "chaotic" (they show sensitive dependence on initial conditions).</p>
+            <p>However, there exists a more subtle class of attractors: <strong>Strange Nonchaotic Attractors (SNAs)</strong>. These objects have the complex, fractal geometry of a strange attractor, but they lack the defining dynamic property of chaos.</p>
+            <ul>
+                <li><strong>Strange:</strong> The plot on the left shows the attractor for this system. If you could zoom in, you would find it has a fractal structure—it is not a simple point or a smooth curve.</li>
+                <li><strong>Nonchaotic:</strong> The plot on the right shows the calculated <strong>Lyapunov exponent</strong>. This value measures the average exponential rate at which nearby trajectories separate. For a chaotic system, this exponent must be positive. For this SNA, you can see the calculation converging to a value that is <strong>negative</strong>, proving that nearby trajectories do not diverge and the system is not chaotic.</li>
+            </ul>
+            <p>SNAs are a fascinating intermediate state between predictable order and full-blown chaos, typically arising in systems that are driven by multiple, incommensurate frequencies (quasiperiodically forced).</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const attractorCanvas = document.getElementById('attractor-canvas');
+        const aCtx = attractorCanvas.getContext('2d');
+        const lyapunovCanvas = document.getElementById('lyapunov-canvas');
+        const lCtx = lyapunovCanvas.getContext('2d');
+        const startStopBtn = document.getElementById('start-stop-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let state = {
+            r: 3.8, A: 0.1,
+            omega: (Math.sqrt(5) - 1) / 2,
+            x: 0.5, theta: 0.5,
+            x_shadow: 0.5 + 1e-10, // For Lyapunov
+            lyapunov_sum: 0,
+            iterations: 0,
+            lyapunov_history: [],
+            isRunning: false
+        };
+
+        function step() {
+            // Main trajectory
+            const x_next = state.r * state.x * (1-state.x) + state.A * Math.cos(2 * Math.PI * state.theta);
+            const theta_next = (state.theta + state.omega) % 1.0;
+
+            // Shadow trajectory
+            const x_shadow_next = state.r * state.x_shadow * (1-state.x_shadow) + state.A * Math.cos(2 * Math.PI * state.theta);
+
+            let dist_initial = Math.abs(state.x - state.x_shadow);
+            let dist_final = Math.abs(x_next - x_shadow_next);
+
+            if (dist_initial > 1e-9) {
+                state.lyapunov_sum += Math.log(dist_final / dist_initial);
+                state.iterations++;
+            }
+
+            // Rescale shadow trajectory
+            state.x = x_next;
+            state.theta = theta_next;
+            state.x_shadow = x_next + (x_shadow_next - x_next) / dist_final * 1e-10;
+
+            if (state.iterations % 50 === 0) {
+                 const current_lyap = state.lyapunov_sum / state.iterations;
+                 state.lyapunov_history.push(current_lyap);
+                 if (state.lyapunov_history.length > 500) state.lyapunov_history.shift();
+            }
+        }
+
+        function draw() {
+            drawAttractor();
+            drawLyapunov();
+        }
+
+        function drawAttractor() {
+            const w = attractorCanvas.width, h = attractorCanvas.height;
+            if (state.iterations === 1) { // Clear on first real step
+                 aCtx.fillStyle = 'var(--canvas-bg)';
+                 aCtx.fillRect(0,0,w,h);
+            }
+
+            const x = state.theta * w;
+            const y = h - state.x * h;
+
+            aCtx.fillStyle = 'rgba(0,0,0,0.2)';
+            aCtx.fillRect(x, y, 1, 1);
+        }
+
+        function drawLyapunov() {
+            const w = lyapunovCanvas.width, h = lyapunovCanvas.height;
+            lCtx.clearRect(0,0,w,h);
+            lCtx.fillStyle = '#fff';
+            lCtx.fillRect(0,0,w,h);
+
+            const maxVal = 0.1;
+            const minVal = -0.8;
+
+            const toScreen = (i, val) => ({
+                x: (i / state.lyapunov_history.length) * w,
+                y: h - (val - minVal) / (maxVal - minVal) * h
+            });
+
+            // Zero line
+            lCtx.strokeStyle = '#ccc';
+            const zeroY = toScreen(0,0).y;
+            lCtx.beginPath(); lCtx.moveTo(0, zeroY); lCtx.lineTo(w, zeroY); lCtx.stroke();
+
+            lCtx.strokeStyle = 'var(--primary-color)';
+            lCtx.lineWidth = 2;
+            lCtx.beginPath();
+            state.lyapunov_history.forEach((val, i) => {
+                const p = toScreen(i, val);
+                if (i === 0) lCtx.moveTo(p.x, p.y);
+                else lCtx.lineTo(p.x, p.y);
+            });
+            lCtx.stroke();
+        }
+
+        let animationFrameId;
+        function loop() {
+            if (!state.isRunning) return;
+            for(let i=0; i<200; i++) step();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function reset() {
+            state.isRunning = false;
+            startStopBtn.textContent = 'Start';
+            cancelAnimationFrame(animationFrameId);
+            state.x = 0.5; state.theta = 0.5; state.x_shadow = 0.5 + 1e-10;
+            state.lyapunov_sum = 0; state.iterations = 0; state.lyapunov_history = [];
+            aCtx.clearRect(0,0,attractorCanvas.width, attractorCanvas.height);
+            lCtx.clearRect(0,0,lyapunovCanvas.width, lyapunovCanvas.height);
+        }
+
+        startStopBtn.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            startStopBtn.textContent = state.isRunning ? "Stop" : "Start";
+            if (state.isRunning) loop();
+        });
+        resetBtn.addEventListener('click', reset);
+
+        function init() {
+            [attractorCanvas, lyapunovCanvas].forEach(c => {
+                c.width = c.offsetWidth;
+                c.height = c.offsetHeight;
+            });
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

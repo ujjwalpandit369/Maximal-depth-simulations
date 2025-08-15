@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arnold's Cat Map</title>
+    <style>
+        :root {
+            --bg-color: #f7f7f7;
+            --text-color: #333;
+            --primary-color: #ff5722; /* Orange for chaos */
+            --secondary-color: #607d8b;
+            --border-color: #ffccbc;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 512px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            image-rendering: pixelated;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Arnold's Cat Map</h1>
+            <p class="subtitle">A visualization of a chaotic, area-preserving map on a torus.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Chaotic Mixing and Recurrence</h2>
+            <p>Press "Iterate" to apply the map. Watch the image scramble, but continue iterating to see a surprise!</p>
+            <canvas id="sim-canvas"></canvas>
+            <div>
+                <button id="iterate-btn">Iterate</button>
+                <button id="animate-btn">Auto-Iterate</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <h3>Iteration: <span id="iter-count">0</span></h3>
+            <p id="recurrence-msg" style="font-weight:bold; color:var(--primary-color);"></p>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Kneading Spacetime</h2>
+            <h3>The Map</h3>
+            <p>Arnold's Cat Map is a simple transformation that powerfully demonstrates chaotic behavior. It takes every pixel of the image and moves it to a new location on a "torus"—a square with wrap-around boundaries (like the screen in the classic game 'Asteroids'). The rule for moving a pixel from `(x, y)` to its new location `(x', y')` is simple:</p>
+            <pre>x' = (2x + y) mod N
+y' = (x + y) mod N</pre>
+            <p>Where `N` is the width of the image.</p>
+            <h3>Chaotic Mixing</h3>
+            <p>Despite the simplicity of the rule, its effects are profound. After just a few iterations, the image is stretched, sheared, and folded until it becomes completely unrecognizable. Any two points that were initially close together are rapidly separated and end up in completely different parts of the image. This is a key feature of chaos known as <strong>sensitive dependence on initial conditions</strong>.</p>
+            <h3>Poincaré Recurrence</h3>
+            <p>Here is the magic. If you keep iterating the map, eventually the original image will reappear perfectly unharmed! This is a result of the <strong>Poincaré Recurrence Theorem</strong>. Since the map is just a permutation of a finite number of pixels, the sequence of states must eventually repeat. For the cat map, this recurrence time can be calculated and is often surprisingly short. For the `256x256` image used here, the image will return after <strong>192</strong> iterations.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const iterateBtn = document.getElementById('iterate-btn');
+        const animateBtn = document.getElementById('animate-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const iterCountEl = document.getElementById('iter-count');
+        const recurrenceMsgEl = document.getElementById('recurrence-msg');
+
+        const N = 256; // Must be power of 2 for original cat image
+        canvas.width = N;
+        canvas.height = N;
+
+        let originalImageData = null;
+        let currentImageData = null;
+        let iteration = 0;
+        let isAnimating = false;
+        let animationId;
+
+        function drawCat() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = N;
+            tempCanvas.height = N;
+            const tCtx = tempCanvas.getContext('2d');
+
+            tCtx.fillStyle = '#fff';
+            tCtx.fillRect(0,0,N,N);
+
+            // Simple cat face
+            tCtx.fillStyle = '#333';
+            tCtx.beginPath();
+            tCtx.arc(N/2, N/2, N*0.4, 0, 2*Math.PI);
+            tCtx.fill();
+
+            tCtx.fillStyle = 'yellow';
+            tCtx.beginPath();
+            tCtx.arc(N*0.35, N*0.4, N*0.08, 0, 2*Math.PI);
+            tCtx.arc(N*0.65, N*0.4, N*0.08, 0, 2*Math.PI);
+            tCtx.fill();
+
+            tCtx.fillStyle = '#000';
+            tCtx.beginPath();
+            tCtx.arc(N*0.35, N*0.4, N*0.04, 0, 2*Math.PI);
+            tCtx.arc(N*0.65, N*0.4, N*0.04, 0, 2*Math.PI);
+            tCtx.fill();
+
+            tCtx.fillStyle = 'pink';
+            tCtx.beginPath();
+            tCtx.moveTo(N/2, N*0.55);
+            tCtx.lineTo(N/2 - 10, N*0.65);
+            tCtx.lineTo(N/2 + 10, N*0.65);
+            tCtx.closePath();
+            tCtx.fill();
+
+            return tCtx.getImageData(0, 0, N, N);
+        }
+
+        function iterateMap() {
+            const sourceData = currentImageData.data;
+            const newData = new Uint8ClampedArray(sourceData.length);
+
+            for (let y = 0; y < N; y++) {
+                for (let x = 0; x < N; x++) {
+                    const newX = (2 * x + y) % N;
+                    const newY = (x + y) % N;
+
+                    const oldIndex = (y * N + x) * 4;
+                    const newIndex = (newY * N + newX) * 4;
+
+                    newData[newIndex] = sourceData[oldIndex];
+                    newData[newIndex + 1] = sourceData[oldIndex + 1];
+                    newData[newIndex + 2] = sourceData[oldIndex + 2];
+                    newData[newIndex + 3] = sourceData[oldIndex + 3];
+                }
+            }
+            currentImageData.data.set(newData);
+            iteration++;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            ctx.putImageData(currentImageData, 0, 0);
+            iterCountEl.textContent = iteration;
+            if (iteration === 192) { // Recurrence time for N=256
+                 recurrenceMsgEl.textContent = "Recurrence! The original image has returned.";
+                 stopAnimation();
+            } else {
+                 recurrenceMsgEl.textContent = "";
+            }
+        }
+
+        function reset() {
+            stopAnimation();
+            iteration = 0;
+            originalImageData = drawCat();
+            currentImageData = new ImageData(
+                new Uint8ClampedArray(originalImageData.data),
+                originalImageData.width,
+                originalImageData.height
+            );
+            updateDisplay();
+        }
+
+        function stopAnimation() {
+            isAnimating = false;
+            animateBtn.textContent = "Auto-Iterate";
+            if(animationId) clearInterval(animationId);
+        }
+
+        iterateBtn.addEventListener('click', () => {
+            stopAnimation();
+            iterateMap();
+        });
+
+        resetBtn.addEventListener('click', reset);
+
+        animateBtn.addEventListener('click', () => {
+            isAnimating = !isAnimating;
+            if (isAnimating) {
+                animateBtn.textContent = "Stop";
+                animationId = setInterval(iterateMap, 50);
+            } else {
+                stopAnimation();
+            }
+        });
+
+        reset();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronization: The Kuramoto Model</title>
+    <style>
+        :root {
+            --bg-color: #f3f9f3;
+            --text-color: #1b5e20;
+            --primary-color: #2e7d32; /* Green for biology/synchrony */
+            --secondary-color: #616161;
+            --border-color: #a5d6a7;
+            --canvas-bg: #fff;
+            --order-param-color: #f57f17;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #e8f5e9; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        @media (min-width: 600px) {
+            .controls { grid-template-columns: 1fr 1fr; }
+        }
+        .info-panel { margin-top: 1rem; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Synchronization of Oscillators: The Kuramoto Model</h1>
+            <p class="subtitle">A simulation of how large populations can spontaneously synchronize.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>The Oscillator Circle</h2>
+            <p>Adjust the coupling strength `K`. Past a critical point, the oscillators will start to synchronize.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div class="info-panel">
+                Order Parameter `r`: <strong id="order-param-val">0.00</strong>
+            </div>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="n-slider">Number of Oscillators (N): <span id="n-val">200</span></label>
+                    <input type="range" id="n-slider" min="10" max="500" value="200" step="10">
+                </div>
+                <div class="slider-container">
+                    <label for="k-slider">Coupling Strength (K): <span id="k-val">0.0</span></label>
+                    <input type="range" id="k-slider" min="0" max="5.0" value="0.0" step="0.1">
+                </div>
+            </div>
+            <div>
+                <button id="start-stop-btn">Start</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Emergence of Order</h2>
+            <h3>Fireflies, Neurons, and Clapping</h3>
+            <p>Have you ever seen a field of fireflies start to flash in unison? Or been part of an audience whose clapping spontaneously falls into a single rhythm? This phenomenon, where large groups of independent "oscillators" synchronize their behavior, is widespread in nature. The Kuramoto model is a beautifully simple mathematical model created to understand how this happens.</p>
+            <h3>The Model</h3>
+            <p>The simulation shows a group of oscillators, each represented by a dot on a circle.
+            <ul>
+                <li><strong>Each Oscillator has its own "opinion":</strong> Every oscillator has a natural frequency `ω` at which it would prefer to rotate around the circle. These frequencies are chosen randomly from a distribution.</li>
+                <li><strong>They are "socially influenced":</strong> The oscillators are coupled together. Each one is influenced by the phase of every other oscillator. The strength of this influence is the <strong>Coupling Strength, K</strong>.</li>
+            </ul>
+            </p>
+            <h3>The Phase Transition to Synchrony</h3>
+            <p>Use the slider for `K` to explore the system's behavior.
+            <ol>
+                <li><strong>Low K:</strong> When the coupling is weak, each oscillator mostly listens to its own natural frequency. They are spread out all over the circle, and the system is disordered. The orange <strong>order parameter</strong> vector in the center is very short, indicating no overall synchrony.</li>
+                <li><strong>Increasing K:</strong> As you increase `K`, the oscillators begin to "pull" on each other more strongly.</li>
+                <li><strong>Critical Point (K ≈ 1.2-1.6):</strong> At a specific critical value of `K`, a phase transition occurs! A small cluster of oscillators suddenly locks in phase. This creates a stronger collective signal, which rapidly pulls in more and more oscillators. You will see the order parameter vector grow dramatically in length.</li>
+                <li><strong>High K:</strong> For strong coupling, almost all oscillators are locked together, rotating at the same average frequency, despite their different natural frequencies.</li>
+            </ol>
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const nSlider = document.getElementById('n-slider');
+        const kSlider = document.getElementById('k-slider');
+        const nVal = document.getElementById('n-val');
+        const kVal = document.getElementById('k-val');
+        const orderParamVal = document.getElementById('order-param-val');
+        const startStopBtn = document.getElementById('start-stop-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let state = {
+            N: 200, K: 0.0,
+            phases: new Float32Array(500),
+            omegas: new Float32Array(500),
+            isRunning: false,
+            orderParam: { r: 0, psi: 0 }
+        };
+
+        function reset() {
+            state.isRunning = false;
+            startStopBtn.textContent = 'Start';
+            cancelAnimationFrame(animationFrameId);
+
+            state.N = parseInt(nSlider.value);
+            state.K = parseFloat(kSlider.value);
+            nVal.textContent = state.N;
+            kVal.textContent = state.K.toFixed(1);
+
+            for (let i = 0; i < state.N; i++) {
+                state.phases[i] = Math.random() * 2 * Math.PI;
+                // Gaussian-like distribution of natural frequencies
+                state.omegas[i] = (Math.random() + Math.random() + Math.random() - 1.5) * 2;
+            }
+            draw();
+        }
+
+        function step() {
+            const dt = 0.01;
+            const K_over_N = state.K / state.N;
+            const d_theta = new Float32Array(state.N);
+
+            // Calculate sum term for all oscillators first
+            let sum_sin = 0, sum_cos = 0;
+            for(let i=0; i<state.N; i++) {
+                sum_cos += Math.cos(state.phases[i]);
+                sum_sin += Math.sin(state.phases[i]);
+            }
+
+            // Update each phase
+            for (let i = 0; i < state.N; i++) {
+                const phase_i = state.phases[i];
+                const coupling_term = sum_cos * Math.sin(phase_i) - sum_sin * Math.cos(phase_i);
+                d_theta[i] = (state.omegas[i] + K_over_N * coupling_term) * dt;
+            }
+
+            for (let i = 0; i < state.N; i++) {
+                state.phases[i] = (state.phases[i] + d_theta[i]) % (2 * Math.PI);
+            }
+
+            // Update order parameter
+            state.orderParam.r = Math.hypot(sum_cos/state.N, sum_sin/state.N);
+            state.orderParam.psi = Math.atan2(sum_sin, sum_cos);
+        }
+
+        function draw() {
+            const w = canvas.width, h = canvas.height;
+            const centerX = w / 2, centerY = h / 2;
+            const radius = w / 2 - 10;
+            ctx.clearRect(0,0,w,h);
+
+            // Draw circle
+            ctx.strokeStyle = '#ccc';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            // Draw oscillators
+            ctx.fillStyle = 'var(--primary-color)';
+            for (let i = 0; i < state.N; i++) {
+                const x = centerX + radius * Math.cos(state.phases[i]);
+                const y = centerY + radius * Math.sin(state.phases[i]);
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, 2*Math.PI);
+                ctx.fill();
+            }
+
+            // Draw order parameter
+            const r = state.orderParam.r * radius;
+            const psi = state.orderParam.psi;
+            ctx.strokeStyle = 'var(--order-param-color)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + r * Math.cos(psi), centerY + r * Math.sin(psi));
+            ctx.stroke();
+            ctx.lineWidth = 1;
+
+            orderParamVal.textContent = state.orderParam.r.toFixed(3);
+        }
+
+        let animationFrameId;
+        function loop() {
+            if (!state.isRunning) return;
+            step();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        startStopBtn.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            startStopBtn.textContent = state.isRunning ? "Stop" : "Start";
+            if (state.isRunning) loop();
+        });
+
+        resetBtn.addEventListener('click', reset);
+        nSlider.addEventListener('input', reset);
+        kSlider.addEventListener('input', () => {
+            state.K = parseFloat(kSlider.value);
+            kVal.textContent = state.K.toFixed(1);
+        });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
