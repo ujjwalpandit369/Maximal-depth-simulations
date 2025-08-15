@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hénon Map</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #d81b60; /* Pink/Red for attractors */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Hénon Map & Strange Attractors</h1>
+            <p class="subtitle">A simulation of one of the first strange attractors to be discovered.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>The Hénon Attractor</h2>
+            <p>Click to add an initial point, or drag to zoom into a region.</p>
+            <canvas id="sim-canvas" width="600" height="600"></canvas>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="a-slider">Parameter a: <span id="a-val">1.40</span></label>
+                    <input type="range" id="a-slider" min="0" max="2.0" value="1.4" step="0.01">
+                </div>
+                <div class="slider-container">
+                    <label for="b-slider">Parameter b: <span id="b-val">0.30</span></label>
+                    <input type="range" id="b-slider" min="0" max="1.0" value="0.3" step="0.01">
+                </div>
+            </div>
+            <div>
+                <button id="run-btn">Run Iterations</button>
+                <button id="clear-btn">Clear</button>
+                <button id="reset-zoom-btn">Reset Zoom</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Shape of Chaos</h2>
+            <h3>Attractors: Where Systems Settle</h3>
+            <p>A dynamical system is any system that evolves over time according to a fixed rule. An <strong>attractor</strong> is a set of states that the system tends to evolve towards, regardless of where it starts. A swinging pendulum, for example, has a simple "point attractor"—it always settles to rest at the bottom. The predator-prey system we saw earlier has a "limit cycle" attractor—it settles into an endless loop.</p>
+            <h3>Strange Attractors</h3>
+            <p>The Hénon map produces a <strong>strange attractor</strong>. This is an attractor that has a <strong>fractal structure</strong>. No matter how closely you zoom in on a piece of the Hénon attractor, you will find more structure. It is made of infinitely many fine, parallel strands. Use the zoom tool (click and drag a rectangle) to see this for yourself.</p>
+            <p>This fractal nature is a hallmark of chaos. The system's trajectory is confined to the attractor, but its movement within the attractor is aperiodic and highly sensitive to initial conditions. The Hénon map generates this complexity through a simple process of repeatedly stretching and folding the space of points, much like kneading dough.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const aSlider = document.getElementById('a-slider');
+        const bSlider = document.getElementById('b-slider');
+        const aVal = document.getElementById('a-val');
+        const bVal = document.getElementById('b-val');
+        const runBtn = document.getElementById('run-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const resetZoomBtn = document.getElementById('reset-zoom-btn');
+
+        let state = {
+            a: 1.4, b: 0.3,
+            initialPoints: [],
+            world: { xMin: -1.5, xMax: 1.5, yMin: -0.5, yMax: 0.5 },
+            isZooming: false,
+            zoomRect: {}
+        };
+
+        function henonMap(p) {
+            return {
+                x: 1 - state.a * p.x * p.x + p.y,
+                y: state.b * p.x
+            };
+        }
+
+        function run(numIterations) {
+            if (state.initialPoints.length === 0) {
+                state.initialPoints.push({x:0.1, y:0.1});
+            }
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            state.initialPoints.forEach(p0 => {
+                let p = { ...p0 };
+                for(let i=0; i<numIterations; i++) {
+                    p = henonMap(p);
+                    const screen = toScreen(p);
+                    if (screen.x >= 0 && screen.x < canvas.width && screen.y >= 0 && screen.y < canvas.height) {
+                         const idx = (Math.floor(screen.y) * canvas.width + Math.floor(screen.x)) * 4;
+                         imageData.data[idx] = 255;
+                         imageData.data[idx+1] = 255;
+                         imageData.data[idx+2] = 255;
+                         imageData.data[idx+3] = 255;
+                    }
+                }
+            });
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function toScreen(p) {
+            const { xMin, xMax, yMin, yMax } = state.world;
+            return {
+                x: (p.x - xMin) / (xMax - xMin) * canvas.width,
+                y: canvas.height - (p.y - yMin) / (yMax - yMin) * canvas.height
+            };
+        }
+
+        function toWorld(p) {
+            const { xMin, xMax, yMin, yMax } = state.world;
+            return {
+                x: (p.x / canvas.width) * (xMax - xMin) + xMin,
+                y: ((canvas.height - p.y) / canvas.height) * (yMax - yMin) + yMin
+            };
+        }
+
+        function clear() {
+            state.initialPoints = [];
+            ctx.fillStyle = 'var(--canvas-bg)';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+
+        function resetZoom() {
+            state.world = { xMin: -1.5, xMax: 1.5, yMin: -0.5, yMax: 0.5 };
+            clear();
+        }
+
+        runBtn.addEventListener('click', () => run(50000));
+        clearBtn.addEventListener('click', clear);
+        resetZoomBtn.addEventListener('click', resetZoom);
+
+        aSlider.addEventListener('input', e => { state.a = parseFloat(e.target.value); aVal.textContent = state.a.toFixed(2); clear(); });
+        bSlider.addEventListener('input', e => { state.b = parseFloat(e.target.value); bVal.textContent = state.b.toFixed(2); clear(); });
+
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            state.isZooming = true;
+            state.zoomRect.x1 = e.clientX - rect.left;
+            state.zoomRect.y1 = e.clientY - rect.top;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+             if (!state.isZooming) return;
+             const rect = canvas.getBoundingClientRect();
+             state.zoomRect.x2 = e.clientX - rect.left;
+             state.zoomRect.y2 = e.clientY - rect.top;
+             // Draw temp zoom box
+             clear(); run(1000); // Redraw background
+             ctx.strokeStyle = 'red';
+             ctx.strokeRect(state.zoomRect.x1, state.zoomRect.y1, state.zoomRect.x2 - state.zoomRect.x1, state.zoomRect.y2 - state.zoomRect.y1);
+        });
+
+        canvas.addEventListener('mouseup', e => {
+            state.isZooming = false;
+            const p1_scr = {x: state.zoomRect.x1, y: state.zoomRect.y1};
+            const p2_scr = {x: state.zoomRect.x2, y: state.zoomRect.y2};
+
+            if (Math.hypot(p1_scr.x - p2_scr.x, p1_scr.y - p2_scr.y) < 10) {
+                 // It's a click, not a drag
+                 const p_world = toWorld(p1_scr);
+                 state.initialPoints.push(p_world);
+                 run(10000);
+            } else {
+                // It's a zoom
+                const p1_world = toWorld(p1_scr);
+                const p2_world = toWorld(p2_scr);
+                state.world.xMin = Math.min(p1_world.x, p2_world.x);
+                state.world.xMax = Math.max(p1_world.x, p2_world.x);
+                state.world.yMin = Math.min(p1_world.y, p2_world.y);
+                state.world.yMax = Math.max(p1_world.y, p2_world.y);
+                clear();
+                run(50000);
+            }
+        });
+
+        resetZoom();
+    });
+    </script>
+</body>
+</html>

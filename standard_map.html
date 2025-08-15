@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Standard Map</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #c2185b; /* Chaos Pink */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #fce4ec; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Standard Map (Chirikov-Taylor Map)</h1>
+            <p class="subtitle">A phase space visualization of a simple model for Hamiltonian chaos.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Phase Space Explorer</h2>
+            <p>Set the chaos parameter `K` and click on the phase space to start a trajectory.</p>
+            <canvas id="sim-canvas" width="600" height="600"></canvas>
+            <div class="slider-container">
+                <label for="k-slider">Chaos Parameter (K): <span id="k-val">0.50</span></label>
+                <input type="range" id="k-slider" min="0" max="4.0" value="0.5" step="0.01">
+            </div>
+            <div>
+                <button id="clear-btn">Clear Trajectories</button>
+            </div>
+            <div>
+                <strong>Presets:</strong>
+                <button id="preset-regular">Regular (K=0.5)</button>
+                <button id="preset-mixed">Mixed (K=0.97)</button>
+                <button id="preset-chaotic">Chaotic (K=2.5)</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: From Order to Chaos</h2>
+            <h3>The Kicked Rotor and Phase Space</h3>
+            <p>The Standard Map is a simple mathematical model that describes a "kicked rotor"—think of a pendulum that is periodically kicked with a certain strength. The state of this system at any time is described by two variables: its angle `x` and its momentum `p`. The graph in the simulation is the <strong>phase space</strong>, where every point corresponds to a unique state `(x, p)`. Both the angle and momentum are periodic (they "wrap around"), so the phase space is actually the surface of a torus.</p>
+            <p>By clicking on the phase space, you set an initial state. The simulation then iterates the Standard Map equations thousands of times, plotting each new state. The resulting path is the trajectory of the system through its phase space.</p>
+            <h3>The Role of the Chaos Parameter, K</h3>
+            <p>The parameter `K` represents the strength of the "kicks." By adjusting `K`, you can see a beautiful transition from regular, predictable motion to widespread chaos.
+            <ul>
+                <li><strong>Low K (e.g., K < 0.8):</strong> The system is regular. Trajectories are confined to smooth, closed curves called <strong>KAM tori</strong>. A particle started on one of these curves will stay on it forever.</li>
+                <li><strong>Medium K (e.g., K ≈ 0.97):</strong> This is the most interesting regime. Some KAM tori (those with "more irrational" winding numbers, like the golden ratio) break up and are replaced by a "chaotic sea" where trajectories wander erratically. However, within this sea, stable <strong>islands</strong> remain, surrounded by their own sets of nested KAM tori. The phase space is a complex, fractal mixture of order and chaos.</li>
+                <li><strong>High K (e.g., K > 2.0):</strong> Most of the KAM tori have been destroyed, and the chaotic sea covers nearly the entire phase space. Almost any initial point will lead to a trajectory that wanders over the whole space.</li>
+            </ul>
+            This transition is a universal feature of many physical systems and is explained by the celebrated Kolmogorov-Arnold-Moser (KAM) theorem.
+            </p>
+        </section>
+
+        <section id="core-theory">
+            <h2>The Standard Map Equations</h2>
+            <p>The map iterates a point `(p_n, x_n)` in the phase space to the next point `(p_{n+1}, x_{n+1})` according to the following equations:</p>
+            <pre>p_{n+1} = p_n + K * sin(x_n)
+x_{n+1} = x_n + p_{n+1}</pre>
+            <p>Both `p` and `x` are taken modulo `2π`. The map is area-preserving, which is a key feature of Hamiltonian systems.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const kSlider = document.getElementById('k-slider');
+        const kVal = document.getElementById('k-val');
+        const clearBtn = document.getElementById('clear-btn');
+
+        let trajectories = [];
+        let K = 0.5;
+        const TWO_PI = 2 * Math.PI;
+
+        function runTrajectory(x0, p0, color) {
+            let x = x0;
+            let p = p0;
+            const trajectory = { points: [], color: color };
+
+            for (let i = 0; i < 20000; i++) {
+                p = (p + K * Math.sin(x)) % TWO_PI;
+                x = (x + p) % TWO_PI;
+                if (p < 0) p += TWO_PI;
+                if (x < 0) x += TWO_PI;
+                trajectory.points.push({x, p});
+            }
+            trajectories.push(trajectory);
+            draw();
+        }
+
+        function draw() {
+            const w = canvas.width, h = canvas.height;
+            const imageData = ctx.createImageData(w, h);
+            const data = imageData.data;
+
+            trajectories.forEach(traj => {
+                const color = hexToRgb(traj.color);
+                traj.points.forEach(point => {
+                    const i = Math.floor(point.x / TWO_PI * w);
+                    const j = Math.floor((1 - point.p / TWO_PI) * h);
+                    const idx = (j * w + i) * 4;
+                    data[idx] = color.r;
+                    data[idx+1] = color.g;
+                    data[idx+2] = color.b;
+                    data[idx+3] = 255;
+                });
+            });
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        const colors = ["#e91e63", "#2196f3", "#4caf50", "#ffeb3b", "#ff9800", "#9c27b0"];
+        let colorIndex = 0;
+
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width * TWO_PI;
+            const p = (1 - (e.clientY - rect.top) / rect.height) * TWO_PI;
+            const color = colors[colorIndex % colors.length];
+            colorIndex++;
+            runTrajectory(x, p, color);
+        });
+
+        function clearCanvas() {
+            trajectories = [];
+            colorIndex = 0;
+            ctx.fillStyle = 'var(--canvas-bg)';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+
+        kSlider.addEventListener('input', e => {
+            K = parseFloat(e.target.value);
+            kVal.textContent = K.toFixed(2);
+            clearCanvas();
+        });
+        clearBtn.addEventListener('click', clearCanvas);
+
+        document.getElementById('preset-regular').addEventListener('click', () => { kSlider.value = 0.5; kSlider.dispatchEvent(new Event('input'));});
+        document.getElementById('preset-mixed').addEventListener('click', () => { kSlider.value = 0.9716; kSlider.dispatchEvent(new Event('input'));});
+        document.getElementById('preset-chaotic').addEventListener('click', () => { kSlider.value = 2.5; kSlider.dispatchEvent(new Event('input'));});
+
+        clearCanvas();
+    });
+    </script>
+</body>
+</html>

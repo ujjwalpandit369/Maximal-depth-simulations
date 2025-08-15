@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Magnetic Pendulum</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #bf360c;
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+        #progress-bar {
+            width: 100%; max-width: 600px; margin: 0.5rem auto;
+            height: 10px; border: 1px solid var(--border-color); border-radius: 5px;
+            background-color: #eee; display: none;
+        }
+        #progress {
+            width: 0%; height: 100%; background-color: var(--primary-color);
+            border-radius: 5px; transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Magnetic Pendulum</h1>
+            <p class="subtitle">A demonstration of fractal basin boundaries and chaos.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Basins of Attraction</h2>
+            <p>Press "Generate Basins" to color each starting position based on which magnet the pendulum eventually settles on. Click a point to see its trajectory.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div id="progress-bar"><div id="progress"></div></div>
+            <div>
+                <button id="generate-btn">Generate Basins</button>
+                <button id="clear-btn">Clear</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Beauty of Unpredictability</h2>
+            <h3>The Setup</h3>
+            <p>Imagine a pendulum swinging over a table with three strong magnets. The pendulum is pulled towards the center by gravity and slowed down by friction (damping), but it's also pulled towards each of the three magnets. The combination of these forces creates a complex and chaotic system.</p>
+            <h3>Basins of Attraction</h3>
+            <p>The pendulum will eventually come to rest over one of the three magnets. The "basin of attraction" for a magnet is the set of all starting points that will lead the pendulum to that specific magnet. In the simulation, we color each starting point on the grid according to its final destination.</p>
+            <h3>Fractal Boundaries</h3>
+            <p>The result is not a simple map with clean borders. Instead, the boundaries between the colored regions are <strong>fractals</strong>. This means they have infinite detail and complexity. If you were to zoom in on a boundary between the red and blue regions, you would find that it's not a simple line, but is interwoven with points from the green region. No matter how deep you zoom, this complexity remains.</p>
+            <p>This is a profound visual demonstration of <strong>sensitive dependence on initial conditions</strong>, a hallmark of chaos. It means that in the boundary regions, a minuscule change in the starting position can lead to a completely different final outcome, making long-term prediction impossible.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const generateBtn = document.getElementById('generate-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const progress = document.getElementById('progress');
+        const progressBar = document.getElementById('progress-bar');
+
+        const w = canvas.width, h = canvas.height;
+        const magnets = [
+            { x: w/2, y: h/2 - 150, color: 'rgba(211, 47, 47, 0.8)' },
+            { x: w/2 - 130, y: h/2 + 75, color: 'rgba(21, 101, 192, 0.8)' },
+            { x: w/2 + 130, y: h/2 + 75, color: 'rgba(56, 142, 60, 0.8)' }
+        ];
+
+        let worker = null;
+
+        function drawSetup() {
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,w,h);
+            magnets.forEach(m => {
+                ctx.fillStyle = m.color;
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, 15, 0, 2*Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function runSingleTrajectory(x0, y0) {
+            drawSetup();
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+
+            let x=x0, y=y0, vx=0, vy=0;
+            const damping = 0.05;
+            const mag_strength = 20000;
+            const restore_k = 0.1;
+
+            for(let i=0; i<10000; i++) {
+                let fx = -restore_k * (x - w/2) - damping * vx;
+                let fy = -restore_k * (y - h/2) - damping * vy;
+
+                magnets.forEach(m => {
+                    const dx = m.x - x;
+                    const dy = m.y - y;
+                    const dist_sq = dx*dx + dy*dy + 50*50; // Add softening factor
+                    const dist_4 = dist_sq * dist_sq;
+                    fx += mag_strength * dx / dist_4;
+                    fy += mag_strength * dy / dist_4;
+                });
+
+                vx += fx * 0.01; vy += fy * 0.01;
+                x += vx; y += vy;
+
+                ctx.lineTo(x,y);
+                if (Math.hypot(vx, vy) < 0.001) break;
+            }
+            ctx.stroke();
+        }
+
+        function generateBasins() {
+            if (worker) worker.terminate();
+
+            progressBar.style.display = 'block';
+            progress.style.width = '0%';
+            generateBtn.disabled = true;
+            generateBtn.textContent = "Generating...";
+
+            const workerCode = `
+                const magnets = ${JSON.stringify(magnets)};
+                self.onmessage = function(e) {
+                    const { y_start, y_end, width, height } = e.data;
+                    const imageData = new Uint8ClampedArray((y_end - y_start) * width * 4);
+
+                    for (let j = y_start; j < y_end; j++) {
+                        for (let i = 0; i < width; i++) {
+                            let x=${i}, y=${j}, vx=0, vy=0;
+                            const damping = 0.05;
+                            const mag_strength = 20000;
+                            const restore_k = 0.1;
+                            let final_magnet = -1;
+
+                            for(let iter=0; iter<10000; iter++) {
+                                let fx = -restore_k * (x - width/2) - damping * vx;
+                                let fy = -restore_k * (y - height/2) - damping * vy;
+
+                                magnets.forEach(m => {
+                                    const dx = m.x - x;
+                                    const dy = m.y - y;
+                                    const dist_sq = dx*dx + dy*dy + 50*50;
+                                    const dist_4 = dist_sq * dist_sq;
+                                    fx += mag_strength * dx / dist_4;
+                                    fy += mag_strength * dy / dist_4;
+                                });
+
+                                vx += fx * 0.01; vy += fy * 0.01;
+                                x += vx; y += vy;
+
+                                if (Math.hypot(vx, vy) < 0.001) {
+                                    let min_dist_sq = Infinity;
+                                    magnets.forEach((m, idx) => {
+                                        const d2 = Math.hypot(x-m.x, y-m.y);
+                                        if(d2 < min_dist_sq) {
+                                            min_dist_sq = d2;
+                                            final_magnet = idx;
+                                        }
+                                    });
+                                    break;
+                                }
+                            }
+
+                            const idx = ((j - y_start) * width + i) * 4;
+                            if(final_magnet !== -1) {
+                                const color = magnets[final_magnet].color.match(/\\d+/g).map(Number);
+                                imageData[idx] = color[0];
+                                imageData[idx+1] = color[1];
+                                imageData[idx+2] = color[2];
+                                imageData[idx+3] = 200;
+                            }
+                        }
+                    }
+                    self.postMessage({imageData, y_start}, [imageData.buffer]);
+                }
+            `;
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            worker = new Worker(URL.createObjectURL(blob));
+
+            const num_workers = navigator.hardwareConcurrency || 4;
+            const rows_per_worker = Math.ceil(h / num_workers);
+            let rows_done = 0;
+
+            worker.onmessage = function(e) {
+                const { imageData, y_start } = e.data;
+                const imgDataObj = new ImageData(imageData, w, y_end - y_start);
+                ctx.putImageData(imgDataObj, 0, y_start);
+                rows_done += (y_end - y_start);
+                progress.style.width = `${(rows_done / h) * 100}%`;
+                if(rows_done >= h) {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = "Generate Basins";
+                }
+            };
+
+            drawSetup();
+            for(let i=0; i<num_workers; i++) {
+                const y_start = i * rows_per_worker;
+                const y_end = Math.min((i+1) * rows_per_worker, h);
+                if(y_start < y_end) {
+                    worker.postMessage({y_start, y_end, width: w, height: h});
+                }
+            }
+        }
+
+        generateBtn.addEventListener('click', generateBasins);
+        clearBtn.addEventListener('click', () => {
+            if(worker) worker.terminate();
+            worker = null;
+            progressBar.style.display = 'none';
+            generateBtn.disabled = false;
+            generateBtn.textContent = "Generate Basins";
+            drawSetup();
+        });
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            runSingleTrajectory(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        function init() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+            drawSetup();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

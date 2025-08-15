@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dripping Faucet: Route to Chaos</title>
+    <style>
+        :root {
+            --bg-color: #e3f2fd;
+            --text-color: #1a237e;
+            --primary-color: #1565c0; /* Water blue */
+            --secondary-color: #546e7a;
+            --border-color: #90caf9;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 2fr 1fr; }
+        }
+        #return-map-canvas {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        #faucet-canvas {
+            width: 100%; max-width: 200px; margin: 0 auto; height: auto; aspect-ratio: 1/1.5;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Dripping Faucet Experiment</h1>
+            <p class="subtitle">A simulation showing the period-doubling route to chaos.</p>
+        </header>
+
+        <section>
+            <div class="sim-layout">
+                <div>
+                    <h3>Return Map (Tₙ₊₁ vs Tₙ)</h3>
+                    <canvas id="return-map-canvas"></canvas>
+                </div>
+                <div style="text-align:center;">
+                    <h3>Faucet</h3>
+                    <canvas id="faucet-canvas"></canvas>
+                </div>
+            </div>
+            <div class="controls" style="text-align:center; margin-top: 1rem;">
+                 <div class="slider-container">
+                    <label for="flow-rate-slider">Flow Rate (r): <span id="flow-rate-val">3.5</span></label>
+                    <input type="range" id="flow-rate-slider" min="3.4" max="4.0" value="3.5" step="0.001">
+                </div>
+                <button id="start-stop-btn">Start</button>
+                <button id="clear-btn">Clear Map</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Onset of Chaos</h2>
+            <h3>The Return Map</h3>
+            <p>While watching a dripping faucet seems simple, the time interval between successive drips can exhibit incredibly complex, chaotic behavior. Instead of plotting the drip time versus chronological time, chaos theory uses a more powerful tool: the <strong>return map</strong>. The graph on the left plots the time interval of the next drip (`Tₙ₊₁`) against the time interval of the previous drip (`Tₙ`). This reveals the underlying structure of the dynamics.</p>
+            <h3>The Period-Doubling Cascade</h3>
+            <p>Use the slider to slowly increase the flow rate and observe the return map.
+            <ol>
+                <li><strong>Low Flow Rate (r ≈ 3.4):</strong> The drips are periodic. Every drip takes the same amount of time, so `Tₙ₊₁ = Tₙ`. The return map shows only a <strong>single point</strong>.</li>
+                <li><strong>Increased Flow Rate (r ≈ 3.5):</strong> The system undergoes a <strong>bifurcation</strong>. The dripping pattern now alternates between a short interval and a long interval. The return map now shows <strong>two points</strong>. This is a period-2 cycle.</li>
+                <li><strong>Higher Flow Rate (r ≈ 3.55):</strong> The two points split into <strong>four points</strong>. The system now has a period-4 cycle.</li>
+                <li><strong>The Cascade:</strong> As you continue to increase `r`, this period-doubling repeats (8 points, 16 points, etc.), with the bifurcations happening faster and faster. This is a universal route to chaos, discovered by Mitchell Feigenbaum.</li>
+                <li><strong>Chaos (r > 3.57):</strong> Past a certain point, the system becomes chaotic. The time between drips never exactly repeats, but it is not completely random. The points on the return map trace out a complex, folded structure known as a <strong>strange attractor</strong>.</li>
+            </ol>
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mapCanvas = document.getElementById('return-map-canvas');
+        const mCtx = mapCanvas.getContext('2d');
+        const faucetCanvas = document.getElementById('faucet-canvas');
+        const fCtx = faucetCanvas.getContext('2d');
+        const flowSlider = document.getElementById('flow-rate-slider');
+        const flowVal = document.getElementById('flow-rate-val');
+        const startStopBtn = document.getElementById('start-stop-btn');
+        const clearBtn = document.getElementById('clear-btn');
+
+        let state = {
+            r: 3.5,
+            x: 0.5, // Represents drop mass, from 0 to 1
+            last_T: 0,
+            time_since_drip: 0,
+            isRunning: false,
+            points: []
+        };
+
+        let audioCtx;
+        function playDripSound() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+
+        function step() {
+            // This is a conceptual model using the logistic map to drive the dripping intervals
+            state.x = state.r * state.x * (1 - state.x);
+            state.time_since_drip++;
+
+            // Drip condition, based on the logistic map's value
+            if (state.x > 0.95) {
+                playDripSound();
+                const T_current = state.time_since_drip;
+                if (state.last_T > 0) {
+                    state.points.push({ T_n: state.last_T, T_n1: T_current });
+                    if (state.points.length > 2000) state.points.shift();
+                }
+                state.last_T = T_current;
+                state.time_since_drip = 0;
+            }
+        }
+
+        function draw() {
+            drawFaucet();
+            drawReturnMap();
+        }
+
+        function drawFaucet() {
+            const w = faucetCanvas.width, h = faucetCanvas.height;
+            fCtx.clearRect(0,0,w,h);
+            // Faucet body
+            fCtx.fillStyle = '#aaa';
+            fCtx.fillRect(w/2 - 10, 0, 20, h*0.4);
+            fCtx.fillRect(w/2 - 20, h*0.4, 40, 15);
+            // Drop
+            const dropRadius = Math.min(h*0.2, 5 + state.x * 20);
+            fCtx.fillStyle = 'var(--primary-color)';
+            fCtx.beginPath();
+            fCtx.arc(w/2, h*0.4 + 15 + dropRadius, dropRadius, 0, 2*Math.PI);
+            fCtx.fill();
+        }
+
+        function drawReturnMap() {
+            const w = mapCanvas.width, h = mapCanvas.height;
+            mCtx.globalAlpha = 0.1;
+            mCtx.fillStyle = '#fff';
+            mCtx.fillRect(0,0,w,h);
+            mCtx.globalAlpha = 1.0;
+
+            const maxT = 60;
+            const toScreen = (tn, tn1) => ({
+                x: (tn / maxT) * w,
+                y: h - (tn1 / maxT) * h
+            });
+
+            mCtx.fillStyle = 'rgba(0,0,0,0.5)';
+            state.points.forEach(p => {
+                const scr = toScreen(p.T_n, p.T_n1);
+                mCtx.fillRect(scr.x, scr.y, 2, 2);
+            });
+        }
+
+        let animationFrameId;
+        function loop() {
+            if (!state.isRunning) return;
+            for(let i=0; i<10; i++) step(); // Run multiple steps per frame
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function clear() {
+            state.points = [];
+            state.x = 0.5;
+            state.last_T = 0;
+            state.time_since_drip = 0;
+            const w = mapCanvas.width, h = mapCanvas.height;
+            mCtx.clearRect(0,0,w,h);
+            draw();
+        }
+
+        startStopBtn.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            startStopBtn.textContent = state.isRunning ? "Stop" : "Start";
+            if (state.isRunning) {
+                if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                loop();
+            }
+        });
+        clearBtn.addEventListener('click', clear);
+        flowSlider.addEventListener('input', e => {
+            state.r = parseFloat(e.target.value);
+            flowVal.textContent = state.r.toFixed(3);
+            clear();
+        });
+
+        function init() {
+            [mapCanvas, faucetCanvas].forEach(c => {
+                c.width = c.offsetWidth;
+                c.height = c.offsetHeight;
+            });
+            state.r = parseFloat(flowSlider.value);
+            flowVal.textContent = state.r.toFixed(3);
+            draw();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
