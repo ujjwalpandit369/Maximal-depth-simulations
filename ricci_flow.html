@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ricci Flow</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #e67e22; /* Orange for energy/heat */
+            --secondary-color: #3498db;
+            --border-color: #34495e;
+            --canvas-bg: #1a2531;
+            --accent-color: #f1c40f;
+            --font-family: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:move; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--border-color); background-color:#566573; color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; border:none; transition:background-color 0.2s; }
+        button:hover { filter:brightness(120%); }
+        #info-panel { padding:1em; text-align:center; }
+        #info-panel #time-value { font-size: 1.4em; color: var(--accent-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Evolving Geometry with Ricci Flow</h1>
+    <p style="text-align:center;">Watch as a bumpy, irregular surface smooths itself out into a perfect sphere using a "heat equation for geometry."</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">2D Manifold Evolving in Time</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Simulation Control</h3>
+                <button id="start-btn">Start Flow</button>
+                <button id="reset-btn">Reset to Bumpy Shape</button>
+            </div>
+            <div class="controls-group">
+                <h3>Parameters</h3>
+                <label>Flow Speed: <span id="speed-value">1.0</span>x</label>
+                <input type="range" id="speed-slider" min="0.1" max="5" value="1.0" step="0.1">
+            </div>
+            <div id="info-panel">
+                <h3>Time Elapsed</h3>
+                <p id="time-value">0.00</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Smoothing out the Wrinkles of Spacetime</h4>
+        <p>Imagine you have a crumpled piece of metal, and you heat it up. The heat will flow from the hot spots to the cold spots, eventually making the temperature uniform. <strong>Ricci Flow</strong> is a powerful mathematical tool that does something remarkably similar, but for the geometry of a shape itself. It's like a "heat equation for spacetime."</p>
+        <h4>Step 1: The Bumpy Manifold</h4>
+        <p>The simulation begins with a "bumpy" sphere. This is our 2D manifold with an irregular geometry. The colors represent the <strong>Gaussian curvature</strong> at each point:
+        <ul>
+            <li><span style="color:#e74c3c">■</span> <strong>Red areas</strong> are regions of high positive curvature (like the tip of a sharp bump). Think of these as "hot spots."</li>
+            <li><span style="color:#3498db">■</span> <strong>Blue areas</strong> are regions of negative curvature (like the inside of a saddle shape). Think of these as "cold spots."</li>
+        </ul>
+        A perfect sphere would have the same, uniform positive curvature everywhere.
+        </p>
+        <h4>Step 2: Start the Flow</h4>
+        <p>Click the <strong>"Start Flow"</strong> button. The shape begins to evolve. The Ricci flow equation is running, changing the shape's metric at every point.
+        <br><br>
+        Watch the surface. You'll see the sharp, red, high-curvature bumps shrink and flatten out. The saddle-like blue regions will become less pronounced. The "heat" of curvature is flowing from the hot spots to the cold spots, averaging itself out across the entire surface.
+        </p>
+        <h4>Step 3: The Sphere</h4>
+        <p>As the animation continues, the shape will become smoother and smoother, looking more and more like a perfect sphere. This is the endpoint of the Ricci flow for any shape that is topologically a sphere. The flow drives the geometry towards its most uniform, "perfect" state.
+        <br><br>
+        (Note: Un-normalized Ricci flow would also shrink the sphere to a point. This simulation uses a "normalized" flow that keeps the total surface area constant so we can observe the change in shape.)
+        </p>
+        <h4>Why is this important?</h4>
+        <p>This process of simplifying and uniformizing geometry is incredibly powerful. In the early 2000s, the mathematician Grigori Perelman used Ricci flow as the central tool in his proof of the <strong>Poincaré Conjecture</strong>, one of the most famous and difficult problems in the history of mathematics. He showed how to use the flow to understand and classify 3D shapes, solving a problem that had stood for over a century.</p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o);return o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+    const Vec3={dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],cross:(a,b,o)=>{o[0]=a[1]*b[2]-a[2]*b[1];o[1]=a[2]*b[0]-a[0]*b[2];o[2]=a[0]*b[1]-a[1]*b[0];return o},normalize:v=>{const l=Math.hypot(...v)||1;return[v[0]/l,v[1]/l,v[2]/l]},scale:(v,s)=>[v[0]*s,v[1]*s,v[2]*s],add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]}};
+
+    // --- Canvas & State ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    let simState = {
+        playing: false, time: 0, speed: 1,
+        view: { rotX: 0.5, rotY: 0.5, zoom: 5 },
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Mesh Data Structure ---
+    const mesh = { verts: [], faces: [], neighbors: [], curvature: [], initialArea: 0 };
+
+    function createBumpySphere(detail) {
+        mesh.verts = []; mesh.faces = [];
+        for (let i = 0; i <= detail; i++) {
+            for (let j = 0; j <= detail; j++) {
+                const u = j/detail * 2*Math.PI, v = i/detail * Math.PI;
+                const r = 1.5 + 0.2*Math.sin(5*u)*Math.sin(4*v) + 0.1*Math.cos(8*u);
+                mesh.verts.push([r*Math.cos(u)*Math.sin(v), r*Math.cos(v), r*Math.sin(u)*Math.sin(v)]);
+                if(i<detail && j<detail){
+                    const p1=i*(detail+1)+j, p2=p1+1, p3=(i+1)*(detail+1)+j, p4=p3+1;
+                    mesh.faces.push([p1,p2,p4], [p1,p4,p3]);
+                }
+            }
+        }
+
+        mesh.neighbors = Array(mesh.verts.length).fill(0).map(() => new Set());
+        mesh.faces.forEach(face => {
+            for(let i=0; i<3; i++){
+                mesh.neighbors[face[i]].add(face[(i+1)%3]);
+                mesh.neighbors[face[i]].add(face[(i+2)%3]);
+            }
+        });
+        mesh.initialArea = calculateArea();
+    }
+
+    function calculateArea() {
+        let area = 0;
+        mesh.faces.forEach(face => {
+            const v0=mesh.verts[face[0]], v1=mesh.verts[face[1]], v2=mesh.verts[face[2]];
+            const a = Vec3.sub(v1,v0), b = Vec3.sub(v2,v0);
+            area += 0.5 * Math.hypot(...Vec3.cross(a,b,[]));
+        });
+        return area;
+    }
+
+    // --- Ricci Flow Step (simplified discrete version) ---
+    function ricciStep(dt) {
+        // 1. Calculate Gaussian curvature at each vertex (angle defect)
+        mesh.curvature = Array(mesh.verts.length).fill(0);
+        for(let i=0; i<mesh.verts.length; i++){
+            const p0 = mesh.verts[i];
+            let angle_sum = 0;
+            const n_list = Array.from(mesh.neighbors[i]);
+            for(let j=0; j<n_list.length; j++){
+                const p1 = mesh.verts[n_list[j]];
+                const p2 = mesh.verts[n_list[(j+1) % n_list.length]];
+                const v1 = Vec3.normalize(Vec3.sub(p1, p0));
+                const v2 = Vec3.normalize(Vec3.sub(p2, p0));
+                angle_sum += Math.acos(Math.max(-1, Math.min(1, Vec3.dot(v1, v2))));
+            }
+            mesh.curvature[i] = (2*Math.PI - angle_sum);
+        }
+
+        // 2. Move vertices along their normals, proportional to curvature
+        const newVerts = mesh.verts.map((v,i) => {
+            const normal = Vec3.normalize(v); // For sphere-like shape
+            const displacement = Vec3.scale(normal, -mesh.curvature[i] * dt * simState.speed);
+            return Vec3.add(v, displacement);
+        });
+        mesh.verts = newVerts;
+
+        // 3. Normalize area
+        const currentArea = calculateArea();
+        const scale = Math.sqrt(mesh.initialArea / currentArea);
+        mesh.verts = mesh.verts.map(v => Vec3.scale(v, scale));
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 100, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return { x:w/2*(1+(mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d), y:h/2*(1-(mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d), z:d };
+        };
+
+        // Draw faces with curvature coloring
+        const maxK = Math.max(...mesh.curvature.map(Math.abs)) || 1;
+        mesh.faces.forEach(face => {
+            const p = face.map(i => mesh.verts[i]);
+            const avg_k = (mesh.curvature[face[0]]+mesh.curvature[face[1]]+mesh.curvature[face[2]])/3;
+            const t = Math.max(-1, Math.min(1, avg_k / maxK));
+            const color = (t > 0) ? `rgba(231, 76, 60, ${t})` : `rgba(52, 152, 219, ${-t})`;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            p.map(transform).forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y));
+            ctx.closePath();
+            ctx.fill();
+        });
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        if (!simState.playing) return;
+        ricciStep(0.01);
+        simState.time += 0.01;
+        simState.view.rotY += 0.002;
+        document.getElementById('time-value').textContent = simState.time.toFixed(2);
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function init() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w * window.devicePixelRatio; ctx.canvas.height = h * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        createBumpySphere(24);
+        ricciStep(0); // Initial curvature calculation
+        draw();
+
+        document.getElementById('start-btn').addEventListener('click', () => { if(!simState.playing) { simState.playing = true; mainLoop(); } });
+        document.getElementById('reset-btn').addEventListener('click', () => { simState.playing = false; simState.time = 0; createBumpySphere(24); ricciStep(0); draw(); });
+        document.getElementById('speed-slider').addEventListener('input', e => simState.speed = parseFloat(e.target.value));
+
+        canvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+                if(!simState.playing) draw();
+            }
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+    }
+    init();
+});
+</script>
+</body>
+</html>

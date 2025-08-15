@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adinkras: Visualizing Supersymmetry</title>
+    <style>
+        :root {
+            --bg-color: #fdfefe;
+            --text-color: #17202a;
+            --primary-color: #27ae60; /* Green for SUSY */
+            --secondary-color: #8e44ad;
+            --border-color: #d5dbdb;
+            --canvas-bg: #ffffff;
+            --accent-color: #f39c12;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1000px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:pointer; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:white; color:var(--primary-color); box-sizing:border-box; font-family:inherit; cursor:pointer; }
+        button.active { background-color:var(--primary-color); color:white; font-weight:bold; }
+        #info-panel { background:#fff; border-left:4px solid var(--primary-color); padding:1em; text-align:center; min-height: 80px; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Adinkras: A Visual Language for Supersymmetry</h1>
+    <p>Explore the structure of supersymmetry representations using elegant, colorful graphs.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Adinkra Diagram</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Select a Multiplet</h3>
+                <button id="model-chiral" class="active">Chiral Multiplet (N=2)</button>
+                <button id="model-vector">Vector Multiplet (N=4)</button>
+            </div>
+            <div class="controls-group">
+                <h3>2. Interact</h3>
+                <p style="font-size:0.9em;">Click a node (a field) to select it. Then click a colored edge (a SUSY operator) to see the transformation.</p>
+            </div>
+            <div id="info-panel">
+                <h3>Transformation</h3>
+                <p id="info-text">Select a field to begin.</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Drawing Supersymmetry</h4>
+        <p><strong>Supersymmetry (SUSY)</strong> is a proposed extension of the Standard Model of particle physics that relates two fundamental classes of particles: bosons (force-carriers, like photons) and fermions (matter particles, like electrons). It predicts that for every boson, there is a corresponding fermion partner, and vice-versa. The mathematics behind this is very complex. <strong>Adinkras</strong> are a recent invention that provides a simple, graphical way to represent these relationships.</p>
+        <h4>How to Read an Adinkra</h4>
+        <p>An Adinkra is a graph with a few simple rules:
+        <ul>
+            <li><strong>Nodes:</strong> The circles represent the fields in a supersymmetry "multiplet."
+                <br>○ White circles are <strong>bosons</strong>.
+                <br>● Black circles are <strong>fermions</strong>.
+            </li>
+            <li><strong>Height:</strong> The vertical level of a node represents its mass dimension.</li>
+            <li><strong>Edges:</strong> The lines represent the action of the supersymmetry operators, called `Q`. Each color corresponds to a different `Q` operator.</li>
+            <li><strong>Line Style:</strong> A dashed line indicates a negative sign in the underlying algebraic relation, while a solid line indicates a positive sign.</li>
+        </ul>
+        </p>
+        <h4>Interacting with the Algebra</h4>
+        <p>This simulation lets you perform the supersymmetry transformations visually.
+        <ol>
+            <li><strong>Select a field:</strong> Click on any node (a circle). It will be highlighted. The info panel will show which field you've selected.</li>
+            <li><strong>Select an operator:</strong> Now click on one of the colored edges connected to your selected node. This represents applying a `Q` operator.</li>
+            <li><strong>See the result:</strong> The node at the other end of the edge will be highlighted, and the info panel will show the full transformation, like `Q₂(φ) = ψ₁`.</li>
+        </ol>
+        Notice that a `Q` operator always connects a boson (white) to a fermion (black), visually enforcing the core principle of supersymmetry. You can also see that from any given node, each color of edge appears exactly once.
+        </p>
+        <h4>The Square of a Q</h4>
+        <p>A fundamental rule of supersymmetry is that applying the same `Q` operator twice is related to a time derivative (a translation in time). `Q² = i∂/∂t`. While this simulation doesn't show time evolution, the graph structure reflects this: if you start at a node, follow a red line to a second node, and then follow the red line from that second node, you will always end up on a node directly above or below your starting point.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    const infoText = document.getElementById('info-text');
+
+    // --- Adinkra Definitions ---
+    const adinkras = {
+        chiral: {
+            nodes: [
+                { id: 'phi', label: 'ϕ', type: 'boson', level: 0 },
+                { id: 'psi1', label: 'ψ₁', type: 'fermion', level: 1 },
+                { id: 'psi2', label: 'ψ₂', type: 'fermion', level: 1 },
+                { id: 'F', label: 'F', type: 'boson', level: 2 },
+            ],
+            edges: [
+                { n1: 'phi', n2: 'psi1', q: 1, dashed: false },
+                { n1: 'phi', n2: 'psi2', q: 2, dashed: false },
+                { n1: 'psi1', n2: 'F', q: 2, dashed: true },
+                { n1: 'psi2', n2: 'F', q: 1, dashed: false },
+            ]
+        },
+        vector: {
+            nodes: [
+                { id: 'A1', label: 'A₁', type: 'boson', level: 0 },
+                { id: 'A2', label: 'A₂', type: 'boson', level: 0 },
+                { id: 'A3', label: 'A₃', type: 'boson', level: 0 },
+                { id: 'lam1', label: 'λ₁', type: 'fermion', level: 1 },
+                { id: 'lam2', label: 'λ₂', type: 'fermion', level: 1 },
+                { id: 'lam3', label: 'λ₃', type: 'fermion', level: 1 },
+                { id: 'lam4', label: 'λ₄', type: 'fermion', level: 1 },
+                { id: 'sigma', label: 'σ', type: 'boson', level: 2 },
+            ],
+            edges: [
+                {n1:'A1',n2:'lam1',q:1,dashed:true},{n1:'A1',n2:'lam2',q:2,dashed:true},{n1:'A1',n2:'lam3',q:3,dashed:false},{n1:'A1',n2:'lam4',q:4,dashed:false},
+                {n1:'A2',n2:'lam1',q:2,dashed:false},{n1:'A2',n2:'lam2',q:1,dashed:false},{n1:'A2',n2:'lam3',q:4,dashed:true},{n1:'A2',n2:'lam4',q:3,dashed:true},
+                {n1:'A3',n2:'lam1',q:3,dashed:true},{n1:'A3',n2:'lam2',q:4,dashed:false},{n1:'A3',n2:'lam3',q:1,dashed:false},{n1:'A3',n2:'lam4',q:2,dashed:true},
+                {n1:'lam1',n2:'sigma',q:4,dashed:true},{n1:'lam2',n2:'sigma',q:3,dashed:false},{n1:'lam3',n2:'sigma',q:2,dashed:false},{n1:'lam4',n2:'sigma',q:1,dashed:true}
+            ]
+        }
+    };
+
+    let state = {
+        model: 'chiral',
+        selectedNode: null,
+        resultNode: null,
+    };
+
+    // --- Layout & Drawing ---
+    function layoutAndDraw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.clearRect(0,0,w,h);
+
+        const model = adinkras[state.model];
+        const levels = [...new Set(model.nodes.map(n => n.level))].sort();
+        const levelYs = {};
+        levels.forEach((l, i) => levelYs[l] = h - (i+1)*(h/(levels.length+1)));
+
+        const nodesByLevel = {};
+        model.nodes.forEach(n => {
+            if(!nodesByLevel[n.level]) nodesByLevel[n.level] = [];
+            nodesByLevel[n.level].push(n);
+        });
+
+        const nodeCoords = {};
+        Object.keys(nodesByLevel).forEach(level => {
+            const nodes = nodesByLevel[level];
+            nodes.forEach((n, i) => {
+                nodeCoords[n.id] = { x: (i+1)*(w/(nodes.length+1)), y: levelYs[level] };
+            });
+        });
+
+        // Draw edges
+        const qColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
+        model.edges.forEach(edge => {
+            const p1 = nodeCoords[edge.n1];
+            const p2 = nodeCoords[edge.n2];
+            ctx.strokeStyle = qColors[edge.q - 1];
+            ctx.lineWidth = 3;
+            ctx.setLineDash(edge.dashed ? [8, 8] : []);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+
+        // Draw nodes
+        model.nodes.forEach(node => {
+            const p = nodeCoords[node.id];
+            ctx.fillStyle = (node.type === 'boson') ? 'white' : 'black';
+            ctx.strokeStyle = 'var(--text-color)';
+            if (state.selectedNode === node.id) ctx.strokeStyle = 'var(--accent-color)';
+            if (state.resultNode === node.id) ctx.strokeStyle = 'var(--secondary-color)';
+            ctx.lineWidth = (state.selectedNode === node.id || state.resultNode === node.id) ? 4 : 2;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 15, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = (node.type === 'boson') ? 'black' : 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '14px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+            ctx.fillText(node.label, p.x, p.y);
+        });
+    }
+
+    // --- Event Handling ---
+    function handleCanvasClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left, y = e.clientY - rect.top;
+
+        const model = adinkras[state.model];
+        const coords = getNodeCoords(model);
+
+        if (state.selectedNode) { // Node already selected, look for an edge
+            let clickedEdge = null;
+            model.edges.forEach(edge => {
+                if (edge.n1 === state.selectedNode || edge.n2 === state.selectedNode) {
+                    const p1 = coords[edge.n1], p2 = coords[edge.n2];
+                    const dist = Math.abs((p2.y-p1.y)*x - (p2.x-p1.x)*y + p2.x*p1.y - p2.y*p1.x) / Math.hypot(p2.y-p1.y, p2.x-p1.x);
+                    if (dist < 8) clickedEdge = edge;
+                }
+            });
+            if(clickedEdge){
+                state.resultNode = (clickedEdge.n1 === state.selectedNode) ? clickedEdge.n2 : clickedEdge.n1;
+                const startNode = model.nodes.find(n => n.id === state.selectedNode);
+                const endNode = model.nodes.find(n => n.id === state.resultNode);
+                infoText.textContent = `Q${clickedEdge.q}(${startNode.label}) = ${endNode.label}`;
+            }
+        } else { // No node selected, look for a node
+            let clickedNode = null;
+            Object.keys(coords).forEach(id => {
+                const p = coords[id];
+                if (Math.hypot(x - p.x, y - p.y) < 15) clickedNode = id;
+            });
+            if (clickedNode) {
+                state.selectedNode = clickedNode;
+                state.resultNode = null;
+                const node = model.nodes.find(n => n.id === clickedNode);
+                infoText.textContent = `Selected field ${node.label}. Now select an operator (edge).`;
+            }
+        }
+        layoutAndDraw();
+    }
+
+    function getNodeCoords(model){
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        const levels = [...new Set(model.nodes.map(n => n.level))].sort();
+        const levelYs = {};
+        levels.forEach((l, i) => levelYs[l] = h - (i+1)*(h/(levels.length+1)));
+        const nodesByLevel = {};
+        model.nodes.forEach(n => {
+            if(!nodesByLevel[n.level]) nodesByLevel[n.level] = [];
+            nodesByLevel[n.level].push(n);
+        });
+        const nodeCoords = {};
+        Object.keys(nodesByLevel).forEach(level => {
+            const nodes = nodesByLevel[level];
+            nodes.forEach((n, i) => {
+                nodeCoords[n.id] = { x: (i+1)*(w/(nodes.length+1)), y: levelYs[level] };
+            });
+        });
+        return nodeCoords;
+    }
+
+    function init() {
+        document.querySelectorAll('.controls-group button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.controls-group button.active').classList.remove('active');
+                btn.classList.add('active');
+                state.model = btn.id.substring(6);
+                state.selectedNode = null;
+                state.resultNode = null;
+                infoText.textContent = 'Select a field to begin.';
+                layoutAndDraw();
+            });
+        });
+        canvas.addEventListener('click', handleCanvasClick);
+        layoutAndDraw();
+    }
+    init();
+});
+</script>
+</body>
+</html>
