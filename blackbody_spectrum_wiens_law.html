@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Slopes: The Blackbody Spectrum and Wien's Law</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #f5a623; /* A fiery orange */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; }
+
+        #readouts { text-align: left; background-color: #111; padding: 1rem; border-radius: 4px; }
+        #readouts p { margin: 0.5rem 0; font-size: 1.1rem; }
+        #readouts span { font-weight: bold; }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        #temp-label { display: flex; justify-content: space-between; align-items: center; }
+        #temp-color-box { width: 30px; height: 30px; border-radius: 4px; border: 1px solid #555; }
+        input[type="range"] { width: 100%; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Graph Slopes: The Blackbody Spectrum and Wien's Law</h1>
+        <p>A simulation of a blackbody radiation spectrum.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 22 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why does a piece of metal glow red, then orange, then white as it gets hotter? The answer lies in blackbody radiation, the light emitted by any object due to its temperature. This simulation plots the spectrum of this radiation, showing its intensity at different wavelengths. The primary control is the object's temperature. As you increase the temperature, you'll see two key changes, first described by <strong>Planck's Law</strong>: the object emits more energy at all wavelengths, and the peak of the spectrum shifts to shorter, bluer wavelengths. This shift is described by <strong>Wien's Displacement Law</strong>, which you can verify yourself using the simulation's readouts.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Thermal Radiation</h2>
+            <p>Let's look at the light emitted by hot objects.</p>
+
+            <h4>Step 1: What is a Blackbody?</h4>
+            <p>In physics, a "blackbody" is a perfect absorber and emitter of radiation. It doesn't reflect any light. The light it gives off is purely a product of its own temperature. Stars, a glowing poker, or the filament in a lightbulb are all good approximations of a blackbody.</p>
+
+            <h4>Step 2: The Radiation Spectrum</h4>
+            <p>The graph shows the "spectrum" of the emitted light. The horizontal axis is the <strong>wavelength (λ)</strong> of the light. The colored band shows the part of the spectrum that is visible to the human eye. The vertical axis is the <strong>intensity</strong>, or how bright the light is at that specific wavelength.</p>
+            <p>The curve shows that a hot object doesn't just emit one color, but a whole range of them. The "peak" of the curve is the wavelength where the object is emitting the most light.</p>
+
+            <h4>Step 3: The Effect of Temperature (The Main Event)</h4>
+            <p>Use the temperature slider to see how the spectrum changes. This is the most important part of the simulation.</p>
+            <ul>
+                <li><strong>Getting Brighter:</strong> As you increase the temperature, the entire curve gets much taller. This means hotter objects radiate significantly more energy. This is known as the Stefan-Boltzmann law (total energy is proportional to T⁴).</li>
+                <li><strong>Changing Color (Wien's Law):</strong> As you increase the temperature, the peak of the curve shifts to the <strong>left</strong>, towards shorter wavelengths. This is <strong>Wien's Displacement Law</strong>. A relatively cool object (like a 3000 K star) will have its peak in the red or infrared, appearing reddish. A very hot object (like a 10,000 K star) will have its peak in the blue or ultraviolet, appearing blue-white. The color swatch next to the temperature slider shows the approximate color your eye would see.</li>
+            </ul>
+
+            <h4>Step 4: Verifying Wien's Law</h4>
+            <p>Wien's Law states that the peak wavelength (λ<sub>max</sub>) multiplied by the temperature (T) is always equal to a constant value (`λ_max * T = b`). Check the readouts below the graph. As you change the temperature, you will see λ<sub>max</sub> change, but the value for "Wien's Constant Check" should remain the same, proving the law!</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                <div class="slider-container">
+                    <div id="temp-label">
+                        <label for="temp-slider">Temperature (T)</label>
+                        <div id="temp-color-box"></div>
+                    </div>
+                    <input type="range" id="temp-slider" min="1000" max="12000" value="5800" step="100">
+                </div>
+                <div id="readouts">
+                    <p>Temperature: <span id="temp-readout">5800</span> K</p>
+                    <p>Peak Wavelength (λ<sub>max</sub>): <span id="lambda-readout">500</span> nm</p>
+                    <p>Wien's Constant Check (λ<sub>max</sub> * T): <span id="wien-readout">2.90e6</span></p>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            temperature: 5800, // Kelvin, default to sun's surface temp
+        };
+        // Physical constants for Planck's Law (simplified for visualization)
+        const h = 6.626e-34;
+        const c = 3.0e8;
+        const k = 1.38e-23;
+        const c1 = 2 * Math.PI * h * c * c;
+        const c2 = h * c / k;
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const tempSlider = document.getElementById('temp-slider');
+        const tempReadout = document.getElementById('temp-readout');
+        const lambdaReadout = document.getElementById('lambda-readout');
+        const wienReadout = document.getElementById('wien-readout');
+        const tempColorBox = document.getElementById('temp-color-box');
+
+        // --- PADDING & COORDINATES ---
+        const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+        const chartWidth = canvas.width - padding.left - padding.right;
+        const chartHeight = canvas.height - padding.top - padding.bottom;
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            draw();
+        }
+
+        function addEventListeners() {
+            tempSlider.addEventListener('input', () => {
+                state.temperature = parseFloat(tempSlider.value);
+                draw();
+            });
+        }
+
+        // --- CORE LOGIC ---
+        function planck(lambda_nm, T) {
+            const lambda = lambda_nm * 1e-9; // convert nm to m
+            const val = c2 / (lambda * T);
+            if (val > 100) return 0; // Avoid overflow for exp(val)
+            return c1 / (lambda**5 * (Math.exp(val) - 1));
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawAxes();
+
+            const spectrumData = [];
+            let maxIntensity = 0;
+            let peakLambda = 0;
+
+            for (let i = 1; i <= chartWidth; i++) {
+                const lambda = (i / chartWidth) * 2000; // Plot from 0 to 2000 nm
+                const intensity = planck(lambda, state.temperature);
+                spectrumData.push({lambda, intensity});
+                if (intensity > maxIntensity) {
+                    maxIntensity = intensity;
+                    peakLambda = lambda;
+                }
+            }
+
+            drawCurve(spectrumData, maxIntensity);
+            drawPeakMarker(peakLambda, maxIntensity);
+            updateReadouts(peakLambda);
+        }
+
+        function drawAxes() {
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, padding.top);
+            ctx.lineTo(padding.left, canvas.height - padding.bottom);
+            ctx.lineTo(canvas.width - padding.right, canvas.height - padding.bottom);
+            ctx.stroke();
+
+            ctx.fillStyle = '#aaa';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Wavelength (nm)', canvas.width / 2, canvas.height - 10);
+
+            ctx.save();
+            ctx.translate(15, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Spectral Radiance', 0, 0);
+            ctx.restore();
+
+            // Draw visible spectrum
+            const visible_start_nm = 400;
+            const visible_end_nm = 700;
+            const visible_start_x = padding.left + (visible_start_nm / 2000) * chartWidth;
+            const visible_end_x = padding.left + (visible_end_nm / 2000) * chartWidth;
+            const gradient = ctx.createLinearGradient(visible_start_x, 0, visible_end_x, 0);
+            gradient.addColorStop(0, 'violet');
+            gradient.addColorStop(0.25, 'blue');
+            gradient.addColorStop(0.5, 'green');
+            gradient.addColorStop(0.75, 'yellow');
+            gradient.addColorStop(1, 'red');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(visible_start_x, canvas.height-padding.bottom, visible_end_x - visible_start_x, 5);
+        }
+
+        function drawCurve(data, maxIntensity) {
+            ctx.strokeStyle = 'var(--primary-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            data.forEach((point, i) => {
+                const x = padding.left + (point.lambda / 2000) * chartWidth;
+                const y = canvas.height - padding.bottom - (point.intensity / maxIntensity) * chartHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        function drawPeakMarker(lambda, maxIntensity) {
+            const x = padding.left + (lambda / 2000) * chartWidth;
+            const y = canvas.height - padding.bottom - (maxIntensity / maxIntensity) * chartHeight;
+
+            ctx.strokeStyle = 'white';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, canvas.height - padding.bottom);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, 2*Math.PI);
+            ctx.fill();
+        }
+
+        function updateReadouts(peakLambda) {
+            tempReadout.textContent = `${state.temperature} K`;
+            lambdaReadout.textContent = `${Math.round(peakLambda)} nm`;
+            const wienCheck = peakLambda * state.temperature;
+            wienReadout.textContent = `${wienCheck.toExponential(2)} nm·K`;
+            tempColorBox.style.backgroundColor = blackbodyTtoRGB(state.temperature);
+        }
+
+        // --- COLOR CONVERSION UTILITY ---
+        // This is a simplified algorithm to get an approximate RGB color from a blackbody temperature
+        function blackbodyTtoRGB(temp) {
+            temp /= 100;
+            let r, g, b;
+            // Red
+            if (temp <= 66) { r = 255; }
+            else { r = 329.698727446 * (temp - 60)**-0.1332047592; }
+            // Green
+            if (temp <= 66) { g = 99.4708025861 * Math.log(temp) - 161.1195681661; }
+            else { g = 288.1221695283 * (temp - 60)**-0.0755148492; }
+            // Blue
+            if (temp >= 66) { b = 255; }
+            else if (temp <= 19) { b = 0; }
+            else { b = 138.5177312231 * Math.log(temp - 10) - 305.0447927307; }
+
+            r = Math.max(0, Math.min(255, r));
+            g = Math.max(0, Math.min(255, g));
+            b = Math.max(0, Math.min(255, b));
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
