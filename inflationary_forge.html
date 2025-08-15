@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Inflationary Forge</title>
+    <style>
+        /* Final Styles */
+    </style>
+</head>
+<body>
+    <header><h1>The Inflationary Forge</h1></header>
+    <main>
+        <section id="simulation-area">
+            <div id="controls">
+                <div class="control-group">
+                    <label>View Mode:</label>
+                    <button class="view-btn" data-mode="curvature">Curvature</button>
+                    <button class="view-btn" data-mode="monopoles">Monopoles</button>
+                </div>
+                <div class="control-group">
+                    <label>Initial Curvature (Ω<sub>k</sub>): <span id="omega-val">10</span></label>
+                    <input type="range" id="omega-slider" min="-20" max="20" value="10">
+                </div>
+                <div class="control-group">
+                    <label>Initial Monopole Density: 1e<span id="mono-val">10</span></label>
+                    <input type="range" id="mono-slider" min="1" max="20" value="10">
+                </div>
+                <div class="control-group">
+                    <label>Inflationary E-folds (N): <span id="efolds-val">0</span></label>
+                    <input type="range" id="efolds-slider" min="0" max="100" value="0">
+                </div>
+                <button id="inflate-btn">Trigger Inflation</button>
+            </div>
+            <div id="visualization"><canvas id="main-canvas" width="600" height="400"></canvas></div>
+            <div id="data-panels">
+                <div id="report-card"></div>
+            </div>
+        </section>
+        <!-- ... -->
+    </main>
+    <script>
+        class UniverseState { /* ... */ }
+        class InflationEngine { /* ... */ }
+        class InflationRenderer { /* ... */ }
+
+        class SimulationController {
+            constructor() {
+                this.universe = new UniverseState({ initial_Omega_k: 10, initial_monopole_density: 1e10 });
+                this.engine = new InflationEngine(this.universe);
+                this.canvas = document.getElementById('main-canvas');
+                this.renderer = new InflationRenderer(this.canvas);
+
+                this.bindElements();
+                this.addEventListeners();
+                this.updateAndDraw();
+            }
+
+            bindElements() {
+                this.viewBtns = document.querySelectorAll('.view-btn');
+                this.omegaSlider = document.getElementById('omega-slider');
+                this.monoSlider = document.getElementById('mono-slider');
+                this.efoldsSlider = document.getElementById('efolds-slider');
+                this.inflateBtn = document.getElementById('inflate-btn');
+                this.reportCard = document.getElementById('report-card');
+                // ... value spans
+            }
+
+            addEventListeners() {
+                this.viewBtns.forEach(btn => btn.addEventListener('click', (e) => {
+                    this.renderer.mode = e.target.dataset.mode;
+                    this.updateAndDraw();
+                }));
+                this.efoldsSlider.addEventListener('input', (e) => this.runInflation(e));
+                this.inflateBtn.addEventListener('click', (e) => this.runInflation(e));
+                // ... other sliders
+            }
+
+            runInflation(e) {
+                const N = parseInt(this.efoldsSlider.value, 10);
+                const results = this.engine.inflate(N);
+                this.updateReportCard(results);
+                this.updateAndDraw();
+            }
+
+            updateReportCard(results) {
+                let html = '<h3>Cosmological Report Card</h3>';
+                html += `<p>Flatness Problem: ${results.flatness_solved ? '✅ Solved' : '❌ Unsolved'}</p>`;
+                html += `<p>Monopole Problem: ${results.monopole_solved ? '✅ Solved' : '❌ Unsolved'}</p>`;
+                this.reportCard.innerHTML = html;
+            }
+
+            updateAndDraw() {
+                this.renderer.draw(this.universe);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => new SimulationController());
+    </script>
+</body>
+</html>

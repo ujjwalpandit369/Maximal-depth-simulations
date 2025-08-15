@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Metastable Equilibrium</title>
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #fd7e14; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        #simulation-area { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        canvas { border: 1px solid var(--border-color); }
+        #controls { margin-top: 10px; }
+        #seed-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+    </style>
+</head>
+<body>
+    <header><h1>Metastable Equilibrium: The Supersaturated Solution</h1><p class="subtitle">Visualizing crystallization from a supersaturated solution.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="600" height="600"></canvas></div>
+            <div id="controls">
+                <label for="concentration-slider">Concentration: <span id="concentration-val">0.60</span></label>
+                <input type="range" id="concentration-slider" min="0.1" max="0.8" step="0.01" value="0.6">
+                <button id="seed-btn">Add Seed Crystal</button>
+            </div>
+        </section>
+        <!-- All text content sections -->
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"><p>Dissolved: <span id="dev-dissolved">N/A</span></p></div></div>
+    </footer>
+    <script>
+        // Final, complete script
+        class Particle { constructor(x, y, state = 'dissolved') { this.x = x; this.y = y; this.vx = (Math.random() - 0.5); this.vy = (Math.random() - 0.5); this.state = state; } }
+        class SolutionEngine { constructor(config) { this.config = config; this.particles = []; this.saturationPoint = 0.5; this.initParticles(); } initParticles() { this.particles = []; const count = this.config.particleCount * this.config.concentration; for (let i = 0; i < count; i++) { this.particles.push(new Particle(Math.random() * this.config.width, Math.random() * this.config.height)); } } addSeedCrystal() { if (this.config.concentration <= this.saturationPoint) return; const seed = this.particles.find(p => p.state === 'dissolved'); if (seed) { seed.state = 'crystal'; seed.x = this.config.width / 2; seed.y = this.config.height - 20; } } step() { const crystals = this.particles.filter(p => p.state === 'crystal'); const dissolved = this.particles.filter(p => p.state === 'dissolved'); const currentConcentration = dissolved.length / this.config.particleCount; if (crystals.length > 0 && currentConcentration > this.saturationPoint) { dissolved.forEach(p_d => { const isClose = crystals.some(p_c => Math.sqrt((p_d.x - p_c.x)**2 + (p_d.y - p_c.y)**2) < 25); if (isClose && Math.random() > 0.95) { p_d.state = 'crystal'; p_d.x = crystals[0].x + (Math.random() - 0.5) * crystals.length * 0.6; p_d.y = crystals[0].y - crystals.length * 0.1; } }); } for (const p of dissolved) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > this.config.width) p.vx *= -1; if (p.y < 0 || p.y > this.config.height) p.vy *= -1; } } }
+        class SolutionRenderer { constructor(c, e) { this.canvas = c; this.ctx = c.getContext('2d'); this.engine = e; } draw() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); this.ctx.fillStyle = 'rgba(200, 220, 255, 0.3)'; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); for (const p of this.engine.particles) { this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI); this.ctx.fillStyle = p.state === 'dissolved' ? 'rgba(0, 100, 255, 0.7)' : 'rgba(100, 200, 255, 1)'; this.ctx.fill(); } } }
+        class SimulationController { constructor() { this.canvas = document.getElementById('simulation-canvas'); this.config = { width: 600, height: 600, particleCount: 800, concentration: 0.6 }; this.engine = new SolutionEngine(this.config); this.renderer = new SolutionRenderer(this.canvas, this.engine); this.bindElements(); this.addEventListeners(); this.updateUI(); this.animate(); } bindElements() { for (const id of ['concentration-slider', 'concentration-val', 'seed-btn', 'export-png-btn', 'dev-console-toggle', 'dev-console', 'dev-dissolved']) { this[id.replace(/-(\w)/g, (m, g) => g.toUpperCase())] = document.getElementById(id); } } addEventListeners() { this.concentrationSlider.addEventListener('input', (e) => this.onSliderChange(e)); this.seedBtn.addEventListener('click', () => this.engine.addSeedCrystal()); this.exportPngBtn.addEventListener('click', () => this.exportPNG()); this.devConsoleToggle.addEventListener('click', () => this.devConsole.classList.toggle('hidden')); } onSliderChange(e) { this.config.concentration = parseFloat(e.target.value); this.engine = new SolutionEngine(this.config); this.renderer.engine = this.engine; this.updateUI(); } updateUI() { this.concentrationVal.textContent = this.config.concentration.toFixed(2); this.concentrationSlider.value = this.config.concentration; this.seedBtn.disabled = this.config.concentration <= this.engine.saturationPoint; const dissolvedCount = this.engine.particles.filter(p => p.state === 'dissolved').length; this.devDissolved.textContent = dissolvedCount; } animate() { this.engine.step(); this.renderer.draw(); this.updateUI(); requestAnimationFrame(() => this.animate()); } exportPNG() { const url = this.canvas.toDataURL('image/png'); const link = document.createElement('a'); link.download = 'supersaturated_solution.png'; link.href = url; link.click(); } }
+        document.addEventListener('DOMContentLoaded', () => { const checks = { 'Canvas': 'simulation-canvas', 'Concentration Slider': 'concentration-slider', 'Seed Button': 'seed-btn' }; const list = document.getElementById('quality-check-list'); for (const [name, id] of Object.entries(checks)) { const el = document.getElementById(id); const li = document.createElement('li'); li.textContent = `${name}: ${el ? 'OK' : 'FAIL'}`; li.className = el ? 'pass' : 'fail'; list.appendChild(li); } new SimulationController(); });
+    </script>
+</body>
+</html>
