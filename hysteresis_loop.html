@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hysteresis Loop</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #bf360c; /* Deep orange for magnetism */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.2 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .slider-container { margin-top: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; font-weight: bold; }
+        input[type="range"] { width: 100%; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+            margin-right: 0.5rem;
+        }
+        button:hover { opacity: 0.85; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Graph Slopes: The Hysteresis Loop</h1>
+            <p class="subtitle">A simulation of the magnetization of a ferromagnetic material.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div class="canvas-container">
+                    <canvas id="domains-canvas"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="mh-curve-canvas"></canvas>
+                </div>
+            </div>
+            <div class="slider-container">
+                <label for="h-slider">External Magnetic Field (H): <span id="h-value">0</span></label>
+                <input type="range" id="h-slider" min="-100" max="100" value="0" step="1">
+            </div>
+             <div style="margin-top: 1rem;">
+                <button id="animate-btn">Animate Loop</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The "Memory" of Magnets</h2>
+            <h3>Magnetic Domains</h3>
+            <p>A ferromagnetic material like iron is composed of tiny regions called <strong>magnetic domains</strong>. Within each domain, the atomic magnetic moments are aligned, making it a tiny, powerful magnet. However, in an unmagnetized piece of iron, the domains are randomly oriented, so their magnetic effects cancel each other out. The animation on the left shows a simplified view of these domains.</p>
+
+            <h3>The Hysteresis Loop</h3>
+            <p>The graph on the right plots the material's overall <strong>Magnetization (M)</strong> versus the <strong>External Field (H)</strong> you apply with the slider.
+            <ol>
+                <li><strong>Initial Magnetization:</strong> Starting from H=0, as you increase H, the domains aligned with the field grow and others flip to align. M increases rapidly.</li>
+                <li><strong>Saturation:</strong> Eventually, nearly all domains are aligned. The material is saturated, and M no longer increases much with H.</li>
+                <li><strong>Remanence:</strong> Now, decrease H back to zero. Notice that M does not go back to zero! The domains are "sticky" and tend to stay aligned. This leftover magnetization is called <strong>remanence</strong>. The material is now a permanent magnet.</li>
+                <li><strong>Coercivity:</strong> To force the magnetization back to zero, you must apply a negative field. The strength of the reverse field needed to wipe out the remanent magnetization is called <strong>coercivity</strong>.</li>
+            </ol>
+            As you sweep the field back and forth, you trace out a complete "hysteresis loop." The "fatness" of this loop is characteristic of the material. "Hard" magnetic materials (for permanent magnets) have a wide loop, while "soft" materials (for transformers) have a very thin loop.
+            </p>
+            <h3>Energy Loss</h3>
+            <p>It takes energy to change the orientation of the magnetic domains against their "stickiness." This energy is dissipated as heat in the material. The area enclosed by the hysteresis loop is directly proportional to the energy lost per cycle. This is why transformers, which rapidly cycle the magnetic field in their iron cores, are designed with materials that have very "thin" hysteresis loops to minimize energy waste.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const domainsCanvas = document.getElementById('domains-canvas');
+        const dCtx = domainsCanvas.getContext('2d');
+        const mhCanvas = document.getElementById('mh-curve-canvas');
+        const mhCtx = mhCanvas.getContext('2d');
+        const hSlider = document.getElementById('h-slider');
+        const hValue = document.getElementById('h-value');
+        const animateBtn = document.getElementById('animate-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- Hysteresis Model Parameters ---
+        const M_sat = 1.0; // Saturation magnetization
+        const H_c = 30;    // Coercivity
+        const M_r = 0.6;   // Remanence
+        const initial_slope = 0.1;
+
+        let state = {
+            H: 0,
+            M: 0,
+            path: [{H: 0, M: 0}],
+            isIncreasing: true
+        };
+
+        // Phenomenological model for M(H)
+        function calculateM(H_new) {
+            const H_old = state.H;
+            const M_old = state.M;
+            const direction = Math.sign(H_new - H_old);
+
+            if (direction === 0) return M_old;
+
+            let M_new;
+            if (direction > 0) { // Increasing H
+                 // Upper branch of the loop
+                const M_anh = M_sat * Math.tanh((H_new + H_c) * 0.05);
+                M_new = M_anh + (M_old - M_anh) * Math.exp(-(H_new-H_old)*0.1);
+            } else { // Decreasing H
+                // Lower branch of the loop
+                const M_anh = M_sat * Math.tanh((H_new - H_c) * 0.05);
+                M_new = M_anh + (M_old - M_anh) * Math.exp((H_new-H_old)*-0.1);
+            }
+            return Math.max(-M_sat, Math.min(M_sat, M_new));
+        }
+
+        // --- M-H Curve Drawing ---
+        function drawMhCurve() {
+            const w = mhCanvas.width, h = mhCanvas.height;
+            mhCtx.clearRect(0, 0, w, h);
+
+            const world = { hMin: -100, hMax: 100, mMin: -1.2, mMax: 1.2 };
+            const toScreen = (h_val, m_val) => ({
+                x: (h_val - world.hMin) / (world.hMax - world.hMin) * w,
+                y: h - (m_val - world.mMin) / (world.mMax - world.mMin) * h
+            });
+
+            // Axes
+            const origin = toScreen(0, 0);
+            mhCtx.strokeStyle = '#aaa';
+            mhCtx.lineWidth = 1;
+            mhCtx.beginPath();
+            mhCtx.moveTo(0, origin.y); mhCtx.lineTo(w, origin.y);
+            mhCtx.moveTo(origin.x, 0); mhCtx.lineTo(origin.x, h);
+            mhCtx.stroke();
+            mhCtx.fillStyle = '#333';
+            mhCtx.font = `${w*0.04}px sans-serif`;
+            mhCtx.fillText("H (External Field)", w * 0.6, origin.y - 10);
+            mhCtx.fillText("M (Magnetization)", origin.x + 10, 20);
+
+            // Path
+            mhCtx.strokeStyle = 'var(--primary-color)';
+            mhCtx.lineWidth = 3;
+            mhCtx.beginPath();
+            const startPoint = toScreen(state.path[0].H, state.path[0].M);
+            mhCtx.moveTo(startPoint.x, startPoint.y);
+            for(let i=1; i<state.path.length; i++) {
+                const p = toScreen(state.path[i].H, state.path[i].M);
+                mhCtx.lineTo(p.x, p.y);
+            }
+            mhCtx.stroke();
+
+            // Current point
+            const currentPoint = toScreen(state.H, state.M);
+            mhCtx.fillStyle = 'red';
+            mhCtx.beginPath();
+            mhCtx.arc(currentPoint.x, currentPoint.y, 6, 0, 2 * Math.PI);
+            mhCtx.fill();
+        }
+
+        // --- Domain Drawing ---
+        const domainGridSize = 20;
+        let domainAngles = [];
+
+        function initDomains() {
+            domainAngles = [];
+            for (let i = 0; i < domainGridSize * domainGridSize; i++) {
+                domainAngles.push(Math.random() * 2 * Math.PI);
+            }
+        }
+
+        function drawDomains() {
+            const w = domainsCanvas.width, h = domainsCanvas.height;
+            dCtx.clearRect(0, 0, w, h);
+            const cellSize = w / domainGridSize;
+
+            const M_norm = (state.M / M_sat + 1) / 2; // Normalize M to 0-1
+            const alignmentFactor = Math.abs(state.M);
+
+            for (let i = 0; i < domainGridSize; i++) {
+                for (let j = 0; j < domainGridSize; j++) {
+                    const index = i * domainGridSize + j;
+
+                    // Angle tends towards H field direction based on M
+                    const targetAngle = state.H >= 0 ? 0 : Math.PI;
+                    const randomPart = (domainAngles[index] - targetAngle) * (1 - alignmentFactor);
+                    const angle = targetAngle + randomPart;
+
+                    const centerX = (j + 0.5) * cellSize;
+                    const centerY = (i + 0.5) * cellSize;
+
+                    dCtx.save();
+                    dCtx.translate(centerX, centerY);
+                    dCtx.rotate(angle);
+
+                    // Arrow color based on alignment with H
+                    const alignment = Math.cos(angle - (state.H >= 0 ? 0 : Math.PI)); // -1 to 1
+                    const colorVal = Math.round(128 + alignment * 127);
+                    dCtx.fillStyle = `rgb(${colorVal}, 100, ${255-colorVal})`;
+
+                    dCtx.beginPath();
+                    dCtx.moveTo(-cellSize * 0.4, 0);
+                    dCtx.lineTo(cellSize * 0.2, -cellSize * 0.2);
+                    dCtx.lineTo(cellSize * 0.2, -cellSize * 0.1);
+                    dCtx.lineTo(cellSize * 0.4, 0);
+                    dCtx.lineTo(cellSize * 0.2, cellSize * 0.1);
+                    dCtx.lineTo(cellSize * 0.2, cellSize * 0.2);
+                    dCtx.closePath();
+                    dCtx.fill();
+
+                    dCtx.restore();
+                }
+            }
+        }
+
+        // --- Main Update Function ---
+        function update(H_new) {
+            hSlider.value = H_new;
+            hValue.textContent = H_new;
+
+            state.M = calculateM(H_new);
+            state.path.push({ H: H_new, M: state.M });
+            if (state.path.length > 500) {
+                state.path.shift();
+            }
+            state.H = H_new;
+
+            drawMhCurve();
+            drawDomains();
+        }
+
+        function reset() {
+            state = { H: 0, M: 0, path: [{H: 0, M: 0}], isIncreasing: true };
+            initDomains();
+            update(0);
+        }
+
+        let animationId;
+        function animateLoop() {
+            if (animationId) {
+                clearInterval(animationId);
+                animationId = null;
+                animateBtn.textContent = "Animate Loop";
+                return;
+            }
+            animateBtn.textContent = "Stop Animation";
+            let h = state.H;
+            let direction = 1;
+            animationId = setInterval(() => {
+                h += direction * 2;
+                if (h >= 100) direction = -1;
+                if (h <= -100) direction = 1;
+                update(h);
+            }, 20);
+        }
+
+        // --- Event Listeners ---
+        hSlider.addEventListener('input', (e) => update(parseInt(e.target.value)));
+        resetBtn.addEventListener('click', reset);
+        animateBtn.addEventListener('click', animateLoop);
+
+        // --- Initial Load ---
+        function init() {
+            domainsCanvas.width = domainsCanvas.offsetWidth;
+            domainsCanvas.height = domainsCanvas.offsetHeight;
+            mhCanvas.width = mhCanvas.offsetWidth;
+            mhCanvas.height = mhCanvas.offsetHeight;
+            reset();
+        }
+
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

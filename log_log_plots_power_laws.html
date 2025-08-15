@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log-Log Plots & Power Laws</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #28a745; /* Green for data/success */
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --code-bg: #e9ecef;
+            --data-point-color: #007bff;
+            --fit-line-color: #dc3545;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+        header, section, .sidebar {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+        .sidebar { order: -1; }
+        @media (min-width: 992px) { .sidebar { order: 0; } }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        code { background-color: var(--code-bg); padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }
+        pre { background-color: var(--code-bg); padding: 1rem; border-radius: 5px; overflow-x: auto; }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            margin-top: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        button.secondary { background-color: var(--secondary-color); }
+        button:hover { opacity: 0.85; }
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+        }
+        #plot-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.25 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .info-panel {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <h3>Data Input</h3>
+            <p>Enter data as 'x, y' pairs, one per line.</p>
+            <textarea id="data-input" placeholder="1, 2&#10;2, 8&#10;3, 18&#10;4, 32&#10;5, 50"></textarea>
+            <button id="plot-btn">Plot Data</button>
+
+            <h3>Sample Data</h3>
+            <button id="sample-x2" class="secondary">y = x²</button>
+            <button id="sample-x-1" class="secondary">y = 1/x</button>
+            <button id="sample-kepler" class="secondary">Kepler's 3rd Law (T² ∝ R³)</button>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Log-Log Plots and Power Laws</h1>
+                <p class="subtitle">A tool for identifying power-law relationships in data.</p>
+            </header>
+
+            <section id="plot-area">
+                <h2>Plot</h2>
+                <canvas id="plot-canvas" width="700" height="560"></canvas>
+                <button id="toggle-scale-btn">Switch to Log-Log Plot</button>
+                <div id="info-panel" class="info-panel">
+                    <h3>Log-Log Analysis</h3>
+                    <p id="fit-equation"></p>
+                    <p><strong>Slope (Exponent 'a'): <span id="slope-value"></span></strong></p>
+                    <p><strong>Y-Intercept (log₁₀(k)): <span id="intercept-value"></span></strong></p>
+                    <p>This implies that <strong>k ≈ <span id="k-value"></span></strong>.</p>
+                </div>
+            </section>
+
+            <section id="guide">
+                <h2>Guide: The Power of Log-Log Plots</h2>
+                <h3>What is a Power Law?</h3>
+                <p>A power law is a relationship between two quantities where one is proportional to a fixed power of the other. The general form is:</p>
+                <pre>y = k * xᵃ</pre>
+                <p>Here, 'a' is the <strong>exponent</strong> and 'k' is a constant of proportionality. These relationships are everywhere in science and nature:
+                <ul>
+                    <li>The area of a square vs. its side length: <code>Area = s²</code> (a = 2, k = 1)</li>
+                    <li>The force of gravity vs. distance: <code>F = G(m₁m₂)/r² = k * r⁻²</code> (a = -2)</li>
+                    <li>Kepler's Third Law of planetary motion: <code>T² ∝ R³</code> or <code>T ∝ R¹·⁵</code> (a = 1.5)</li>
+                </ul>
+                On a standard linear plot, these relationships appear as curves, making it difficult to determine the exponent 'a' just by looking.
+                </p>
+                <h3>The "Magic" of Logarithms</h3>
+                <p>Logarithms have a wonderful property: they turn multiplication into addition and powers into multiplication. Let's take the base-10 logarithm of both sides of the power-law equation:</p>
+                <pre>log(y) = log(k * xᵃ)</pre>
+                <p>Using the rules of logarithms, this becomes:</p>
+                <pre>log(y) = log(k) + log(xᵃ)</pre>
+                <p>And finally:</p>
+                <pre>log(y) = a * log(x) + log(k)</pre>
+                <p>This is the equation of a <strong>straight line</strong>, <code>Y = mX + c</code>, where:
+                <ul>
+                    <li><code>Y = log(y)</code></li>
+                    <li><code>m = a</code> (the slope is the exponent!)</li>
+                    <li><code>X = log(x)</code></li>
+                    <li><code>c = log(k)</code> (the y-intercept is the log of the constant)</li>
+                </ul>
+                So, if a set of data follows a power law, plotting it on a <strong>log-log scale</strong> will reveal a straight line. The slope of that line gives you the exponent 'a' directly. This is one of the most powerful tools for data analysis in science.
+                </p>
+                <h3>How to Use This Tool</h3>
+                <ol>
+                    <li><strong>Load Data:</strong> Use one of the sample data buttons or enter your own 'x,y' data in the text box.</li>
+                    <li><strong>Plot:</strong> Click "Plot Data". You will see the data on a standard linear scale. Notice it forms a curve.</li>
+                    <li><strong>Switch Scale:</strong> Click "Switch to Log-Log Plot". The axes will change to a logarithmic scale (10⁰, 10¹, 10², etc.).</li>
+                    <li><strong>Analyze:</strong> Observe how the curved data has transformed into a straight line. The tool automatically fits a line to this data and calculates the slope, which is the power-law exponent 'a'. The analysis appears below the plot.</li>
+                </ol>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('plot-canvas');
+        const ctx = canvas.getContext('2d');
+        const dataInput = document.getElementById('data-input');
+        const plotBtn = document.getElementById('plot-btn');
+        const toggleScaleBtn = document.getElementById('toggle-scale-btn');
+        const infoPanel = document.getElementById('info-panel');
+        const slopeValue = document.getElementById('slope-value');
+        const interceptValue = document.getElementById('intercept-value');
+        const kValue = document.getElementById('k-value');
+        const fitEquation = document.getElementById('fit-equation');
+
+        let state = {
+            data: [],
+            isLogLog: false,
+            fit: null
+        };
+
+        const SAMPLES = {
+            'x2': "1, 1\n2, 4\n3, 9\n4, 16\n5, 25\n6, 36\n7, 49",
+            'x-1': "1, 10\n2, 5\n3, 3.33\n4, 2.5\n5, 2\n10, 1",
+            'kepler': "1, 1\n1.52, 1.88\n5.2, 11.86\n9.58, 29.45\n19.22, 84.01" // Planet dist (AU), period (yr)
+        };
+
+        document.getElementById('sample-x2').addEventListener('click', () => { dataInput.value = SAMPLES['x2']; plotData(); });
+        document.getElementById('sample-x-1').addEventListener('click', () => { dataInput.value = SAMPLES['x-1']; plotData(); });
+        document.getElementById('sample-kepler').addEventListener('click', () => { dataInput.value = SAMPLES['kepler']; plotData(); });
+
+        function parseData() {
+            const lines = dataInput.value.trim().split('\n');
+            const data = [];
+            for (const line of lines) {
+                const parts = line.split(/[,;\s]+/).map(Number);
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
+                    data.push({ x: parts[0], y: parts[1] });
+                }
+            }
+            return data;
+        }
+
+        function linearRegression(logData) {
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            const n = logData.length;
+            if (n < 2) return null;
+
+            for (const p of logData) {
+                sumX += p.logX;
+                sumY += p.logY;
+                sumXY += p.logX * p.logY;
+                sumX2 += p.logX * p.logX;
+            }
+
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+
+            return { slope, intercept };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (state.data.length === 0) return;
+
+            if (state.isLogLog) {
+                drawLogLog();
+                infoPanel.style.display = 'block';
+            } else {
+                drawLinear();
+                infoPanel.style.display = 'none';
+            }
+        }
+
+        function getBounds(data, isLog) {
+            const vals = isLog ? data.map(p => ({x: Math.log10(p.x), y: Math.log10(p.y)})) : data;
+            const x = vals.map(p => p.x);
+            const y = vals.map(p => p.y);
+            return {
+                xMin: Math.min(...x), xMax: Math.max(...x),
+                yMin: Math.min(...y), yMax: Math.max(...y)
+            };
+        }
+
+        function drawLinear() {
+            const bounds = getBounds(state.data, false);
+            const padding = 60;
+            const toScreen = (p) => ({
+                x: padding + (p.x - bounds.xMin) / (bounds.xMax - bounds.xMin) * (canvas.width - 2 * padding),
+                y: (canvas.height - padding) - (p.y - bounds.yMin) / (bounds.yMax - bounds.yMin) * (canvas.height - 2 * padding)
+            });
+            drawAxes(bounds, toScreen, false);
+            drawDataPoints(state.data, toScreen);
+        }
+
+        function drawLogLog() {
+            const logData = state.data.map(p => ({...p, logX: Math.log10(p.x), logY: Math.log10(p.y)}));
+            const bounds = { xMin: Math.floor(Math.min(...logData.map(p=>p.logX))), xMax: Math.ceil(Math.max(...logData.map(p=>p.logX))),
+                             yMin: Math.floor(Math.min(...logData.map(p=>p.logY))), yMax: Math.ceil(Math.max(...logData.map(p=>p.logY))) };
+
+            const padding = 60;
+            const toScreen = (p) => ({
+                x: padding + (Math.log10(p.x) - bounds.xMin) / (bounds.xMax - bounds.xMin) * (canvas.width - 2 * padding),
+                y: (canvas.height - padding) - (Math.log10(p.y) - bounds.yMin) / (bounds.yMax - bounds.yMin) * (canvas.height - 2 * padding)
+            });
+
+            drawAxes(bounds, toScreen, true);
+            drawDataPoints(state.data, toScreen);
+
+            if (state.fit) {
+                ctx.strokeStyle = varToCss('--fit-line-color');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const x1 = Math.pow(10, bounds.xMin);
+                const y1 = Math.pow(10, state.fit.slope * bounds.xMin + state.fit.intercept);
+                ctx.moveTo(toScreen({x: x1, y: y1}).x, toScreen({x: x1, y: y1}).y);
+                const x2 = Math.pow(10, bounds.xMax);
+                const y2 = Math.pow(10, state.fit.slope * bounds.xMax + state.fit.intercept);
+                ctx.lineTo(toScreen({x: x2, y: y2}).x, toScreen({x: x2, y: y2}).y);
+                ctx.stroke();
+            }
+        }
+
+        function drawAxes(bounds, toScreen, isLog) {
+             ctx.strokeStyle = varToCss('--secondary-color');
+             ctx.fillStyle = varToCss('--text-color');
+             ctx.lineWidth = 1;
+             ctx.font = "12px sans-serif";
+
+             const xMin = bounds.xMin, xMax = bounds.xMax;
+             const yMin = bounds.yMin, yMax = bounds.yMax;
+
+             // Y Axis
+             ctx.beginPath();
+             ctx.moveTo(toScreen({x: xMin, y: yMin}).x, toScreen({x: xMin, y: yMin}).y);
+             ctx.lineTo(toScreen({x: xMin, y: yMax}).x, toScreen({x: xMin, y: yMax}).y);
+             ctx.stroke();
+             // X Axis
+             ctx.beginPath();
+             ctx.moveTo(toScreen({x: xMin, y: yMin}).x, toScreen({x: xMin, y: yMin}).y);
+             ctx.lineTo(toScreen({x: xMax, y: yMin}).x, toScreen({x: xMax, y: yMin}).y);
+             ctx.stroke();
+
+             ctx.textAlign = "center";
+             for(let i=0; i<5; i++) {
+                 const val = xMin + i/4 * (xMax - xMin);
+                 const label = isLog ? `10^${val.toFixed(1)}` : val.toFixed(1);
+                 ctx.fillText(label, toScreen({x: val, y: yMin}).x, toScreen({x: val, y: yMin}).y + 15);
+             }
+             ctx.textAlign = "right";
+             for(let i=0; i<5; i++) {
+                 const val = yMin + i/4 * (yMax - yMin);
+                 const label = isLog ? `10^${val.toFixed(1)}` : val.toFixed(1);
+                 ctx.fillText(label, toScreen({x: xMin, y: val}).x - 5, toScreen({x: xMin, y: val}).y);
+             }
+        }
+
+        function drawDataPoints(data, toScreen) {
+            ctx.fillStyle = varToCss('--data-point-color');
+            for(const point of data) {
+                const screenPos = toScreen(point);
+                ctx.beginPath();
+                ctx.arc(screenPos.x, screenPos.y, 5, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function plotData() {
+            state.data = parseData();
+            if(state.data.length < 2) {
+                alert("Please enter at least 2 valid data points (positive x,y).");
+                return;
+            }
+            const logData = state.data.map(p => ({ logX: Math.log10(p.x), logY: Math.log10(p.y) }));
+            state.fit = linearRegression(logData);
+
+            if (state.fit) {
+                const { slope, intercept } = state.fit;
+                slopeValue.textContent = slope.toFixed(3);
+                interceptValue.textContent = intercept.toFixed(3);
+                kValue.textContent = Math.pow(10, intercept).toFixed(3);
+                fitEquation.textContent = `log(y) = ${slope.toFixed(3)} * log(x) + ${intercept.toFixed(3)}`;
+            }
+            draw();
+        }
+
+        function toggleScale() {
+            state.isLogLog = !state.isLogLog;
+            toggleScaleBtn.textContent = state.isLogLog ? 'Switch to Linear Plot' : 'Switch to Log-Log Plot';
+            draw();
+        }
+
+        function varToCss(varName) {
+            return getComputedStyle(document.body).getPropertyValue(varName);
+        }
+
+        plotBtn.addEventListener('click', plotData);
+        toggleScaleBtn.addEventListener('click', toggleScale);
+
+        // Initial plot
+        dataInput.value = SAMPLES['x2'];
+        plotData();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nash Equilibrium: The Prisoner's Dilemma</title>
+    <style>
+        :root {
+            --bg-color: #f7f9fc;
+            --text-color: #333;
+            --primary-color: #3498db; /* Blue for strategy */
+            --secondary-color: #555;
+            --border-color: #e1e4e8;
+            --table-header-bg: #f1f8ff;
+            --cooperate-color: #2ecc71;
+            --defect-color: #e74c3c;
+            --highlight-color: #f1c40f;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+        header, section {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.6rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            .game-area {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .payoff-matrix {
+            border-collapse: collapse;
+            width: 100%;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        .payoff-matrix th, .payoff-matrix td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+        }
+        .payoff-matrix th {
+            background-color: var(--table-header-bg);
+        }
+        .payoff-matrix .player-choice {
+            font-weight: bold;
+        }
+        .payoff-matrix .p1-payoff { color: var(--cooperate-color); font-weight: bold; }
+        .payoff-matrix .p2-payoff { color: var(--defect-color); font-weight: bold; }
+        .payoff-matrix td.highlight {
+            background-color: color-mix(in srgb, var(--highlight-color) 30%, transparent);
+            box-shadow: 0 0 0 3px var(--highlight-color);
+        }
+
+        .controls button {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        #cooperate-btn { background-color: var(--cooperate-color); }
+        #defect-btn { background-color: var(--defect-color); }
+
+        .results-area h3 { margin-bottom: 0.5rem; }
+        #round-result { font-size: 1.1rem; margin-bottom: 1rem; }
+        #total-scores { font-weight: bold; }
+        #history-log {
+            font-family: monospace;
+            height: 120px;
+            overflow-y: auto;
+            background-color: #fdfdfd;
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        select, .game-mode-toggle {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Nash Equilibrium in Game Theory</h1>
+            <p class="subtitle">An interactive simulation of the Prisoner's Dilemma.</p>
+        </header>
+
+        <section class="game-area">
+            <div class="strategy-area">
+                <h2>The Payoff Matrix</h2>
+                <p>You are <strong>Player 1</strong>. Your payoff is shown in <span style="color:var(--cooperate-color); font-weight:bold;">green</span>. The computer's is in <span style="color:var(--defect-color); font-weight:bold;">red</span>.</p>
+                <table class="payoff-matrix" id="payoff-matrix">
+                    <thead>
+                        <tr>
+                            <th colspan="2" rowspan="2"></th>
+                            <th colspan="2">Player 2 (Computer)</th>
+                        </tr>
+                        <tr>
+                            <th class="player-choice">Cooperate</th>
+                            <th class="player-choice">Defect</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th rowspan="2" valign="middle">Player 1 (You)</th>
+                            <th class="player-choice">Cooperate</th>
+                            <td data-p1="cooperate" data-p2="cooperate">(<span class="p1-payoff">3</span>, <span class="p2-payoff">3</span>)</td>
+                            <td data-p1="cooperate" data-p2="defect">(<span class="p1-payoff">0</span>, <span class="p2-payoff">5</span>)</td>
+                        </tr>
+                        <tr>
+                            <th class="player-choice">Defect</th>
+                            <td data-p1="defect" data-p2="cooperate">(<span class="p1-payoff">5</span>, <span class="p2-payoff">0</span>)</td>
+                            <td data-p1="defect" data-p2="defect">(<span class="p1-payoff">1</span>, <span class="p2-payoff">1</span>)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p><small>This is a non-zero-sum game. The goal is not to "beat" the opponent, but to maximize your own score.</small></p>
+            </div>
+            <div class="controls-area">
+                <h2>Play the Game</h2>
+                <label for="ai-strategy">Opponent's Strategy:</label>
+                <select id="ai-strategy">
+                    <option value="tit_for_tat">Tit-for-Tat</option>
+                    <option value="always_defect">Always Defect</option>
+                    <option value="always_cooperate">Always Cooperate</option>
+                    <option value="random">Random</option>
+                </select>
+                <div class="controls">
+                    <button id="cooperate-btn">Cooperate</button>
+                    <button id="defect-btn">Defect</button>
+                    <button id="reset-btn" style="background-color: var(--secondary-color);">Reset Game</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-area">
+            <h2>Results</h2>
+             <div class="game-area">
+                <div>
+                    <h3>Round Result</h3>
+                    <p id="round-result">Make your move to start the game.</p>
+                    <h3>Total Score</h3>
+                    <p id="total-scores">Your Score: 0 | Opponent's Score: 0</p>
+                </div>
+                <div>
+                    <h3>History (Round, You, Opponent)</h3>
+                    <div id="history-log"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Prisoner's Dilemma and Nash Equilibrium</h2>
+            <h3>The Story</h3>
+            <p>Imagine two partners in crime are arrested and held in separate interrogation rooms. They can't communicate. The prosecutor offers each the same deal:
+            <ul>
+                <li>If you betray your partner (<strong>Defect</strong>) and they stay silent (<strong>Cooperate</strong>), you go free (5 points) and they get a long sentence (0 points).</li>
+                <li>If you both stay silent (<strong>Cooperate</strong>), you both get a short sentence (3 points each).</li>
+                <li>If you both betray each other (<strong>Defect</strong>), you both get a medium sentence (1 point each).</li>
+            </ul>
+            What should you do? This is the Prisoner's Dilemma.
+            </p>
+
+            <h3>Rational Choice and Nash Equilibrium</h3>
+            <p>Let's think about it from your perspective, without knowing what your partner will do:
+            <ul>
+                <li><strong>Case 1: Your partner Cooperates.</strong> Your best move is to Defect (you get 5 points instead of 3).</li>
+                <li><strong>Case 2: Your partner Defects.</strong> Your best move is still to Defect (you get 1 point instead of 0).</li>
+            </ul>
+            In both cases, your "rational" self-interested choice is to Defect. Since your partner is also rational, they will reason the same way. The inevitable result is that you both Defect and end up with a measly 1 point each.
+            </p>
+            <p>This outcome, <strong>(Defect, Defect)</strong>, is the <strong>Nash Equilibrium</strong>. It's a state where no player can improve their outcome by *unilaterally* changing their choice. If you are both defecting, and you decide to switch to Cooperate, your outcome gets worse (from 1 to 0). The paradox is that this "stable" equilibrium is worse for both of you than if you had both cooperated.</p>
+
+            <h3>The Iterated Game: The Emergence of Cooperation</h3>
+            <p>What if you play the game repeatedly with the same opponent? Things change. Now, your actions have consequences for future rounds. This is where strategies like <strong>Tit-for-Tat</strong> shine.
+            <ul>
+                <li><strong>Tit-for-Tat:</strong> This strategy is simple:
+                    1. Cooperate on the first round.
+                    2. On every subsequent round, do whatever your opponent did on the *previous* round.
+                </li>
+            </ul>
+            Tit-for-Tat is considered a "nice" strategy because it starts by cooperating, "retaliatory" because it immediately punishes defection, and "forgiving" because it will return to cooperation as soon as the opponent does. Try playing against the Tit-for-Tat AI. You'll find that mutual cooperation is often the most profitable long-term strategy.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const PAYOFFS = {
+            cooperate: { cooperate: [3, 3], defect: [0, 5] },
+            defect:    { cooperate: [5, 0], defect: [1, 1] }
+        };
+
+        const cooperateBtn = document.getElementById('cooperate-btn');
+        const defectBtn = document.getElementById('defect-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const aiStrategySelect = document.getElementById('ai-strategy');
+
+        const roundResultEl = document.getElementById('round-result');
+        const totalScoresEl = document.getElementById('total-scores');
+        const historyLogEl = document.getElementById('history-log');
+        const matrixEl = document.getElementById('payoff-matrix');
+
+        let gameState = {
+            playerScore: 0,
+            aiScore: 0,
+            round: 0,
+            playerHistory: [],
+            aiHistory: [],
+            aiStrategy: 'tit_for_tat'
+        };
+
+        function resetGame() {
+            gameState = {
+                playerScore: 0,
+                aiScore: 0,
+                round: 0,
+                playerHistory: [],
+                aiHistory: [],
+                aiStrategy: aiStrategySelect.value
+            };
+            updateDisplays();
+            roundResultEl.textContent = 'Make your move to start the game.';
+            historyLogEl.innerHTML = '';
+            clearHighlight();
+        }
+
+        function getAiMove() {
+            const strategy = gameState.aiStrategy;
+            const lastPlayerMove = gameState.playerHistory[gameState.playerHistory.length - 1];
+
+            switch(strategy) {
+                case 'tit_for_tat':
+                    return gameState.round === 0 ? 'cooperate' : lastPlayerMove;
+                case 'always_defect':
+                    return 'defect';
+                case 'always_cooperate':
+                    return 'cooperate';
+                case 'random':
+                    return Math.random() < 0.5 ? 'cooperate' : 'defect';
+                default:
+                    return 'cooperate';
+            }
+        }
+
+        function playRound(playerMove) {
+            const aiMove = getAiMove();
+            const [playerPayoff, aiPayoff] = PAYOFFS[playerMove][aiMove];
+
+            gameState.round++;
+            gameState.playerScore += playerPayoff;
+            gameState.aiScore += aiPayoff;
+            gameState.playerHistory.push(playerMove);
+            gameState.aiHistory.push(aiMove);
+
+            updateDisplays(playerMove, aiMove, playerPayoff, aiPayoff);
+        }
+
+        function updateDisplays(playerMove, aiMove, playerPayoff, aiPayoff) {
+            if (playerMove) {
+                roundResultEl.innerHTML = `You chose <strong>${playerMove}</strong>. The opponent chose <strong>${aiMove}</strong>.<br>You get ${playerPayoff} points. Opponent gets ${aiPayoff} points.`;
+
+                const historyItem = document.createElement('div');
+                historyItem.textContent = `Round ${gameState.round}: You(${playerMove}), Opponent(${aiMove})`;
+                historyLogEl.prepend(historyItem);
+
+                highlightCell(playerMove, aiMove);
+            }
+
+            totalScoresEl.textContent = `Your Score: ${gameState.playerScore} | Opponent's Score: ${gameState.aiScore}`;
+        }
+
+        function highlightCell(p1Move, p2Move) {
+            clearHighlight();
+            const cell = matrixEl.querySelector(`td[data-p1="${p1Move}"][data-p2="${p2Move}"]`);
+            if (cell) {
+                cell.classList.add('highlight');
+            }
+        }
+
+        function clearHighlight() {
+            matrixEl.querySelectorAll('td').forEach(td => td.classList.remove('highlight'));
+        }
+
+        cooperateBtn.addEventListener('click', () => playRound('cooperate'));
+        defectBtn.addEventListener('click', () => playRound('defect'));
+        resetBtn.addEventListener('click', resetGame);
+        aiStrategySelect.addEventListener('change', (e) => {
+            gameState.aiStrategy = e.target.value;
+            resetGame();
+        });
+
+        resetGame();
+    });
+    </script>
+</body>
+</html>

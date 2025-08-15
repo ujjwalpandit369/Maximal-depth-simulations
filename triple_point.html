@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Triple Point</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f9;
+            --text-color: #333;
+            --primary-color: #8e44ad; /* Purple for thermodynamics */
+            --secondary-color: #7f8c8d;
+            --border-color: #e4e7ed;
+            --canvas-bg: #fff;
+            --solid-color: rgba(52, 152, 219, 0.2);
+            --liquid-color: rgba(46, 204, 113, 0.2);
+            --gas-color: rgba(241, 196, 15, 0.2);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            position: relative;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        @media (min-width: 768px) {
+            .controls { grid-template-columns: 1fr 1fr; }
+        }
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+        }
+        button:hover { opacity: 0.85; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Equilibrium: The Triple Point</h1>
+            <p class="subtitle">A simulation of the unique conditions where solid, liquid, and gas coexist.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div class="canvas-container">
+                    <canvas id="phase-diagram-canvas"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="container-canvas"></canvas>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="temp-slider">Temperature: <span id="temp-value">273</span> K</label>
+                    <input type="range" id="temp-slider" min="250" max="350" value="273" step="0.5">
+                </div>
+                <div class="slider-container">
+                    <label for="pressure-slider">Pressure: <span id="pressure-value">611</span> Pa</label>
+                    <input type="range" id="pressure-slider" min="100" max="2000" value="611" step="1">
+                </div>
+            </div>
+             <div style="text-align: center; margin-top: 1rem;">
+                <button id="jump-tp-btn">Jump to Triple Point</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: A Map of Matter</h2>
+            <h3>The P-T Phase Diagram</h3>
+            <p>The graph on the left is a <strong>Pressure-Temperature (P-T) phase diagram</strong>. Think of it as a map for a substance. If you know the temperature and pressure, you can find your location on the map, and the color of that region tells you the substance's phase of matter (solid, liquid, or gas).</p>
+            <ul>
+                <li><strong>Phase Boundaries:</strong> The lines on the map are the phase boundaries. If you are exactly on a line, two phases can coexist in equilibrium (e.g., ice and water at the melting point).</li>
+                <li><strong>The Triple Point:</strong> There is one unique point on this map where all three boundary lines meet. This is the <strong>triple point</strong>. At this specific combination of temperature and pressure, all three phases—solid, liquid, and gas—can coexist in a stable equilibrium. For water, this happens at 273.16 K (0.01 °C) and a pressure of 611.657 Pa (about 0.006 atmospheres).</li>
+            </ul>
+            <h3>The Container View</h3>
+            <p>The animation on the right shows a microscopic view of particles in a container under the conditions you've set with the sliders.
+            <ul>
+                <li><strong>Solid:</strong> Particles are locked into a vibrating crystal lattice.</li>
+                <li><strong>Liquid:</strong> Particles are close together but flow past one another.</li>
+                <li><strong>Gas:</strong> Particles move rapidly and randomly, filling the container.</li>
+                <li><strong>Triple Point:</strong> When you set the sliders to the triple point, you'll see a representation of all three phases at once: a solid block, a liquid pool, and gas particles, all stable together.</li>
+            </ul>
+            </p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory</h2>
+            <p>The lines on a P-T phase diagram are not arbitrary. Their slopes are governed by the <strong>Clausius-Clapeyron relation</strong>, which relates the pressure change to the temperature change along a coexistence curve.</p>
+            <pre>dP/dT = L / (T * ΔV)</pre>
+            <p>Where:
+            <ul>
+                <li><code>dP/dT</code> is the slope of the phase boundary.</li>
+                <li><code>L</code> is the latent heat of the transformation (e.g., heat of fusion or vaporization).</li>
+                <li><code>T</code> is the temperature.</li>
+                <li><code>ΔV</code> is the change in specific volume during the transformation.</li>
+            </ul>
+            For most substances, the solid-liquid boundary has a positive slope because the solid is denser than the liquid (ΔV is positive). Water is a famous exception; ice is less dense than water, so its solid-liquid line has a slight negative slope.</p>
+            <p>The triple point is invariant, as described by the <strong>Gibbs phase rule</strong>, `F = C - P + 2`. For a single-component system (C=1) with three phases in equilibrium (P=3), the number of degrees of freedom `F = 1 - 3 + 2 = 0`. This means there are zero degrees of freedom—it can only exist at one specific point of temperature and pressure.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Setup ---
+        const pdCanvas = document.getElementById('phase-diagram-canvas');
+        const pdCtx = pdCanvas.getContext('2d');
+        const containerCanvas = document.getElementById('container-canvas');
+        const containerCtx = containerCanvas.getContext('2d');
+
+        // --- Controls ---
+        const tempSlider = document.getElementById('temp-slider');
+        const tempValue = document.getElementById('temp-value');
+        const pressureSlider = document.getElementById('pressure-slider');
+        const pressureValue = document.getElementById('pressure-value');
+        const jumpTpBtn = document.getElementById('jump-tp-btn');
+
+        // --- Model Parameters ---
+        const TP = { T: 273.16, P: 611.6 }; // Triple Point
+        const CP = { T: 330, P: 1800 }; // Critical Point (stylized)
+
+        // --- Phase Diagram Logic ---
+        function getPhase(T, P) {
+            if (Math.abs(T - TP.T) < 1 && Math.abs(P - TP.P) < 50) {
+                return 'TRIPLE_POINT';
+            }
+            // Simplified boundaries
+            const fusionSlope = -200; // Negative slope for water-like substance
+            const fusionP = TP.P + fusionSlope * (T - TP.T);
+
+            const vaporizationSlope = 15;
+            const vaporizationP = TP.P * Math.exp(vaporizationSlope * (1/TP.T - 1/T));
+
+            if (T > CP.T || P > CP.P) return 'GAS'; // Simplified supercritical fluid region
+
+            if (P > fusionP && P > vaporizationP) return 'LIQUID';
+            if (P < vaporizationP && T > TP.T) return 'GAS';
+            if (P < fusionP && T < TP.T) return 'GAS'; // Sublimation
+            return 'SOLID';
+        }
+
+        function drawPhaseDiagram() {
+            const w = pdCanvas.width, h = pdCanvas.height;
+            pdCtx.clearRect(0, 0, w, h);
+
+            // World to screen mapping
+            const world = { tMin: 250, tMax: 350, pMin: 100, pMax: 2000 };
+            const toScreen = (t, p) => ({
+                x: (t - world.tMin) / (world.tMax - world.tMin) * w,
+                y: h - (p - world.pMin) / (world.pMax - world.pMin) * h
+            });
+
+            // Shade regions
+            pdCtx.globalAlpha = 0.5;
+            for (let i = 0; i < w; i++) {
+                for (let j = 0; j < h; j++) {
+                    const t = world.tMin + (i/w) * (world.tMax - world.tMin);
+                    const p = world.pMin + (1 - j/h) * (world.pMax - world.pMin);
+                    const phase = getPhase(t, p);
+                    if (phase === 'SOLID') pdCtx.fillStyle = 'var(--solid-color)';
+                    else if (phase === 'LIQUID') pdCtx.fillStyle = 'var(--liquid-color)';
+                    else if (phase === 'GAS') pdCtx.fillStyle = 'var(--gas-color)';
+                    else continue;
+                    pdCtx.fillRect(i, j, 1, 1);
+                }
+            }
+            pdCtx.globalAlpha = 1.0;
+
+            // Draw axes
+            pdCtx.strokeStyle = '#333';
+            pdCtx.fillStyle = '#333';
+            pdCtx.font = `${w * 0.04}px sans-serif`;
+            pdCtx.fillText("Temperature (K)", w * 0.3, h * 0.98);
+            pdCtx.save();
+            pdCtx.translate(w * 0.05, h * 0.6);
+            pdCtx.rotate(-Math.PI / 2);
+            pdCtx.fillText("Pressure (Pa)", 0, 0);
+            pdCtx.restore();
+
+            // Draw TP and marker
+            const tpScreen = toScreen(TP.T, TP.P);
+            pdCtx.fillStyle = 'red';
+            pdCtx.beginPath();
+            pdCtx.arc(tpScreen.x, tpScreen.y, 5, 0, 2 * Math.PI);
+            pdCtx.fill();
+            pdCtx.fillText("TP", tpScreen.x + 10, tpScreen.y);
+
+            const currentT = parseFloat(tempSlider.value);
+            const currentP = parseFloat(pressureSlider.value);
+            const markerScreen = toScreen(currentT, currentP);
+            pdCtx.fillStyle = 'black';
+            pdCtx.strokeStyle = 'white';
+            pdCtx.lineWidth = 2;
+            pdCtx.beginPath();
+            pdCtx.arc(markerScreen.x, markerScreen.y, 7, 0, 2 * Math.PI);
+            pdCtx.fill();
+            pdCtx.stroke();
+        }
+
+        // --- Container Animation Logic ---
+        let particles = [];
+        function setupParticles() {
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push({
+                    x: Math.random(), y: Math.random(),
+                    vx: (Math.random() - 0.5) * 0.01,
+                    vy: (Math.random() - 0.5) * 0.01,
+                    phase: 'gas'
+                });
+            }
+        }
+
+        function updateAndDrawContainer() {
+            const w = containerCanvas.width, h = containerCanvas.height;
+            containerCtx.clearRect(0, 0, w, h);
+
+            const T = parseFloat(tempSlider.value);
+            const P = parseFloat(pressureSlider.value);
+            const phase = getPhase(T, P);
+
+            particles.forEach((p, i) => {
+                let targetX, targetY, speed, color;
+
+                // Determine target state based on phase
+                if (phase === 'SOLID') {
+                    const gridSize = 10;
+                    const spacing = 0.05;
+                    targetX = 0.5 + ((i % gridSize) - gridSize/2) * spacing;
+                    targetY = 0.9 - (Math.floor(i / gridSize)) * spacing;
+                    p.x += (targetX - p.x) * 0.1 + (Math.random() - 0.5) * 0.005;
+                    p.y += (targetY - p.y) * 0.1 + (Math.random() - 0.5) * 0.005;
+                    color = 'rgba(52, 152, 219, 0.8)';
+                } else if (phase === 'LIQUID') {
+                    p.vy += 0.0001; // Gravity
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.y > 0.95) { p.y = 0.95; p.vy *= -0.5; }
+                    if (p.x < 0.1 || p.x > 0.9) { p.vx *= -1; }
+                    color = 'rgba(46, 204, 113, 0.8)';
+                } else if (phase === 'GAS') {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.y < 0.05 || p.y > 0.95) { p.vy *= -1; }
+                    if (p.x < 0.05 || p.x > 0.95) { p.vx *= -1; }
+                    color = 'rgba(231, 76, 60, 0.8)';
+                } else { // Triple Point
+                    const phase_idx = i % 3;
+                    if (phase_idx === 0) { // Solid
+                         const gridSize = 6;
+                         const spacing = 0.05;
+                         targetX = 0.5 + ((i/3 % gridSize) - gridSize/2) * spacing;
+                         targetY = 0.9 - (Math.floor((i/3) / gridSize)) * spacing;
+                         p.x += (targetX - p.x) * 0.1 + (Math.random() - 0.5) * 0.005;
+                         p.y += (targetY - p.y) * 0.1 + (Math.random() - 0.5) * 0.005;
+                         color = 'rgba(52, 152, 219, 0.8)';
+                    } else if (phase_idx === 1) { // Liquid
+                        p.vy += 0.0001;
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        if (p.y > 0.7) { p.y = 0.7; p.vy *= -0.5; }
+                        if (p.y < 0.5) { p.y = 0.5; p.vy *= -0.5; }
+                        if (p.x < 0.1 || p.x > 0.9) { p.vx *= -1; }
+                        color = 'rgba(46, 204, 113, 0.8)';
+                    } else { // Gas
+                         p.x += p.vx;
+                         p.y += p.vy;
+                         if (p.y < 0.05 || p.y > 0.45) { p.vy *= -1; }
+                         if (p.x < 0.05 || p.x > 0.95) { p.vx *= -1; }
+                         color = 'rgba(231, 76, 60, 0.8)';
+                    }
+                }
+
+                // Draw particle
+                containerCtx.fillStyle = color;
+                containerCtx.beginPath();
+                containerCtx.arc(p.x * w, p.y * h, 5, 0, 2 * Math.PI);
+                containerCtx.fill();
+            });
+
+            requestAnimationFrame(updateAndDrawContainer);
+        }
+
+        function handleSliderChange() {
+            tempValue.textContent = parseFloat(tempSlider.value).toFixed(1);
+            pressureValue.textContent = parseFloat(pressureSlider.value).toFixed(0);
+            drawPhaseDiagram();
+        }
+
+        // --- Event Listeners ---
+        tempSlider.addEventListener('input', handleSliderChange);
+        pressureSlider.addEventListener('input', handleSliderChange);
+        jumpTpBtn.addEventListener('click', () => {
+            tempSlider.value = TP.T;
+            pressureSlider.value = TP.P;
+            handleSliderChange();
+        });
+
+        // --- Initial Load ---
+        function init() {
+            pdCanvas.width = pdCanvas.offsetWidth;
+            pdCanvas.height = pdCanvas.offsetHeight;
+            containerCanvas.width = containerCanvas.offsetWidth;
+            containerCanvas.height = containerCanvas.offsetHeight;
+
+            setupParticles();
+            handleSliderChange();
+            updateAndDrawContainer();
+        }
+
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
