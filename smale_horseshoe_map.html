@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Horseshoe Map (Smale Horseshoe)</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A chaos red */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --point-color: #f5a623;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-wrap: wrap; gap: 1.5rem; min-width: 400px; justify-content: space-around;}
+
+        .viz-box { flex: 1; min-width: 300px; text-align: center; }
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color);}
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 1rem; }
+        button:hover { background-color: #c0392b; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Horseshoe Map (Smale Horseshoe)</h1>
+        <p>A visualization of the stretching and folding action of a foundational chaotic map.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>The Smale horseshoe map is a cornerstone of modern chaos theory. It captures the essential mechanisms that lead to complex dynamics in a simple, geometric way. The simulation shows how the map takes a square region of phase space, squeezes it in one direction, stretches it in another, and then folds it into a horseshoe shape to place it back over the original square. The key question is, which points that start in the square remain in the square after this transformation? By applying the map repeatedly, you will see that the set of points that never leave the square forms an infinitely complex, fractal "dust," a structure known as a Cantor set.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to the Horseshoe</h2>
+
+            <h4>Step 1: The Transformation</h4>
+            <p>The left canvas, "The Action," animates the three steps of the horseshoe map:</p>
+            <ol>
+                <li><strong>Squeeze:</strong> The initial square of points is squeezed vertically into a tall, thin rectangle.</li>
+                <li><strong>Stretch:</strong> At the same time, it is stretched horizontally into a long, thin strip. Note that this transformation preserves the area of the initial square.</li>
+                <li><strong>Fold:</strong> This long strip is then bent into a "U" or horseshoe shape.</li>
+            </ol>
+            <p>Finally, this horseshoe is placed back on top of the original square's location.</p>
+
+            <h4>Step 2: What's Left?</h4>
+            <p>The right canvas, "The Invariant Set," shows the result of this action. It only displays the points that started in the square and also ended up back inside the square after the transformation. Notice that the result is two vertical strips. The points in the middle "bend" of the horseshoe have been mapped outside the original square and are discarded.</p>
+
+            <h4>Step 3: Infinite Repetition and Fractals</h4>
+            <p>What happens if we apply the map again, but only to the points that survived the first step? Click "Apply Map" again. The two vertical strips are themselves squeezed, stretched, and folded. The points that survive this second step now form four, even thinner vertical strips.</p>
+            <p>If you could repeat this process infinitely many times, the set of points that *never* leave the square would be a fractal. Looking along the horizontal direction, the points form a <strong>Cantor set</strong>—an infinite "dust" of points with zero total length. This infinitely complex structure, created by a simple, deterministic map, is a hallmark of chaos.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Press "Apply Map" to perform one iteration of the stretch-and-fold action.</p>
+                 <button id="apply-btn">Apply Map</button>
+                 <button id="reset-btn">Reset</button>
+            </div>
+            <div id="simulation-visuals">
+                <div class="viz-box">
+                    <h4>The Action</h4>
+                    <canvas id="action-canvas" width="400" height="400"></canvas>
+                </div>
+                <div class="viz-box">
+                    <h4>The Invariant Set</h4>
+                    <canvas id="result-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            points: [],
+            animState: 'idle', // idle, squeezing, stretching, folding
+            animProgress: 0,
+        };
+        const lambda = 4.0; // Stretch factor
+        const mu = 0.15;   // Squeeze factor
+
+        // --- DOM ELEMENTS ---
+        const actionCanvas = document.getElementById('action-canvas');
+        const aCtx = actionCanvas.getContext('2d');
+        const resultCanvas = document.getElementById('result-canvas');
+        const rCtx = resultCanvas.getContext('2d');
+        const applyBtn = document.getElementById('apply-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            resetBtn.addEventListener('click', resetSimulation);
+            applyBtn.addEventListener('click', () => {
+                if (state.animState === 'idle') {
+                    state.animState = 'squeezing';
+                    state.animProgress = 0;
+                }
+            });
+        }
+
+        function resetSimulation() {
+            state.points = [];
+            const n = 20;
+            for (let i = 0; i <= n; i++) {
+                for (let j = 0; j <= n; j++) {
+                    state.points.push({ x: i/n, y: j/n });
+                }
+            }
+            state.animState = 'idle';
+            state.animProgress = 0;
+        }
+
+        // --- CORE LOGIC ---
+        function horseshoeMap(p) {
+            // 1. Squeeze and Stretch
+            let p1 = { x: lambda * p.x, y: mu * p.y };
+            // 2. Fold
+            if (p1.x < 1) {
+                return { x: p1.x, y: p1.y };
+            } else {
+                return { x: 2 - p1.x, y: 1 - p1.y };
+            }
+        }
+
+        function updateAnimation() {
+            if (state.animState === 'idle') return;
+
+            state.animProgress += 0.02;
+            if (state.animProgress >= 1) {
+                state.animProgress = 1;
+                if (state.animState === 'squeezing') state.animState = 'stretching';
+                else if (state.animState === 'stretching') state.animState = 'folding';
+                else if (state.animState === 'folding') {
+                    state.animState = 'idle';
+                    // Apply map to the points for the next iteration
+                    state.points = state.points.map(horseshoeMap);
+                }
+                state.animProgress = 0;
+            }
+        }
+
+        function mainLoop() {
+            updateAnimation();
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawActionCanvas();
+            drawResultCanvas();
+        }
+
+        function drawActionCanvas() {
+            aCtx.fillStyle = '#111';
+            aCtx.fillRect(0, 0, actionCanvas.width, actionCanvas.height);
+            aCtx.save();
+            // Center and scale to a 200x200 box
+            aCtx.translate(actionCanvas.width/2, actionCanvas.height/2);
+            aCtx.scale(200, 200);
+            aCtx.translate(-0.5, -0.5);
+
+            drawUnitSquare(aCtx);
+
+            aCtx.fillStyle = 'var(--point-color)';
+            let pointsToDraw = state.points;
+
+            if (state.animState === 'squeezing') {
+                const t = state.animProgress;
+                pointsToDraw = state.points.map(p => ({
+                    x: p.x,
+                    y: p.y * (1 - t) + (p.y * mu) * t
+                }));
+            } else if (state.animState === 'stretching') {
+                const t = state.animProgress;
+                 pointsToDraw = state.points.map(p => ({
+                    x: (p.x) * (1-t) + (p.x * lambda) * t,
+                    y: p.y * mu
+                }));
+            } else if (state.animState === 'folding') {
+                const t = state.animProgress;
+                pointsToDraw = state.points.map(p => {
+                    const p1 = { x: lambda * p.x, y: mu * p.y };
+                    if (p1.x < 1) { // Left part, no fold
+                        const p_start = {x: p1.x, y: p1.y};
+                        const p_end = horseshoeMap(p);
+                        return {x: p_start.x, y: p_start.y}; // No fold animation for this part
+                    } else { // Right part, fold
+                        const p_mid = { x: p1.x, y: 1 - p1.y };
+                        const p_end = { x: 2 - p1.x, y: 1 - p1.y };
+                        return { x: p_mid.x * (1-t) + p_end.x * t, y: p_mid.y };
+                    }
+                });
+            }
+
+            pointsToDraw.forEach(p => {
+                aCtx.beginPath();
+                aCtx.arc(p.x, p.y, 0.015, 0, 2*Math.PI);
+                aCtx.fill();
+            });
+            aCtx.restore();
+        }
+
+        function drawResultCanvas() {
+            rCtx.fillStyle = '#111';
+            rCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+            rCtx.save();
+            rCtx.translate(resultCanvas.width/2, resultCanvas.height/2);
+            rCtx.scale(200, 200);
+            rCtx.translate(-0.5, -0.5);
+
+            drawUnitSquare(rCtx);
+
+            rCtx.fillStyle = 'var(--point-color)';
+            state.points.forEach(p => {
+                // Only draw points that remain inside the unit square
+                if (p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1) {
+                    rCtx.beginPath();
+                    rCtx.arc(p.x, p.y, 0.015, 0, 2*Math.PI);
+                    rCtx.fill();
+                }
+            });
+
+            rCtx.restore();
+        }
+
+        function drawUnitSquare(ctx) {
+            ctx.strokeStyle = 'var(--secondary-color)';
+            ctx.lineWidth = 0.01;
+            ctx.strokeRect(0, 0, 1, 1);
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

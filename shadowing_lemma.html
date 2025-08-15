@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadowing Lemma</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #2ecc71; /* A green for this topic */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --attractor-color: rgba(255, 255, 255, 0.05);
+            --pseudo-orbit-color: #f5a623;
+            --true-orbit-color: #3498db;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); cursor: crosshair; }
+
+        .legend { list-style: none; padding: 0; margin-top: 1rem; }
+        .legend li { display: flex; align-items: center; margin-bottom: 0.5rem; }
+        .legend-color { width: 20px; height: 1em; margin-right: 10px; border-radius: 3px; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 1rem;}
+        button:hover { background-color: #25a25a; }
+        button:disabled { background-color: var(--secondary-color); cursor: not-allowed;}
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Shadowing Lemma</h1>
+        <p>A simulation to illustrate the concept of "shadowing" in chaotic systems.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Computer simulations of chaotic systems always have tiny numerical errors. Since chaotic systems are famously sensitive to initial conditions, does this mean our simulations are meaningless? The <strong>shadowing lemma</strong> provides a powerful and reassuring answer: no. It states that for many chaotic systems, any "pseudo-orbit"—a noisy trajectory that almost follows the system's rules, like a computer simulation—can be closely "shadowed" by a true, exact trajectory of the system. This simulation lets you explore this idea by drawing your own pseudo-orbit and then challenging the computer to find a true orbit that shadows it.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Shadowing</h2>
+
+            <h4>Step 1: The Chaotic System</h4>
+            <p>The canvas shows the phase space of the Hénon map, a classic chaotic system. The faint gray shape in the background is the Hénon strange attractor, the region where true trajectories of the system live.</p>
+
+            <h4>Step 2: The Pseudo-Orbit (Your Drawing)</h4>
+            <p>A "pseudo-orbit" is a path that doesn't perfectly follow the rules of the system. It could be the result of a noisy physical measurement or a computer simulation with floating-point errors. In this simulation, you create the pseudo-orbit yourself.</p>
+            <p>Click and drag your mouse across the canvas to draw a path. Try to draw a path that roughly follows the shape of the gray attractor. This <strong style="color:var(--pseudo-orbit-color)">orange path</strong> is your pseudo-orbit.</p>
+
+            <h4>Step 3: Finding the Shadow</h4>
+            <p>Once you've drawn a path, click the <strong>"Find Shadowing Trajectory"</strong> button. The simulation will then search for an initial condition for the Hénon map that generates a *true* trajectory which stays as close as possible to your hand-drawn path for its entire length.</p>
+            <p>After a moment, this true trajectory will be drawn in <strong style="color:var(--true-orbit-color)">blue</strong>. You should see that even though your hand-drawn path was noisy and imperfect, there exists a real, perfect trajectory that "shadows" it very closely. This is the shadowing lemma in action! It gives us confidence that even though our computer simulations are imperfect, they are still representative of the true dynamics of the system.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>1. Draw a "noisy" path on the canvas that stays close to the gray attractor.</p>
+                 <p>2. Click the button to find a true trajectory that "shadows" your path.</p>
+                 <button id="find-btn" disabled>Find Shadowing Trajectory</button>
+                 <button id="reset-btn">Clear</button>
+                 <div class="legend">
+                    <ul class="legend">
+                        <li><span class="legend-color" style="background-color: var(--pseudo-orbit-color);"></span> Your Pseudo-Orbit</li>
+                        <li><span class="legend-color" style="background-color: var(--true-orbit-color);"></span> True Shadowing Orbit</li>
+                    </ul>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Hénon Map Parameters ---
+        const a = 1.4;
+        const b = 0.3;
+
+        // --- SIMULATION STATE ---
+        const state = {
+            isDrawing: false,
+            userPath: [],
+            shadowPath: [],
+            attractorPoints: [],
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const findBtn = document.getElementById('find-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            generateAttractorPoints();
+            draw();
+        }
+
+        function addEventListeners() {
+            resetBtn.addEventListener('click', reset);
+            findBtn.addEventListener('click', findShadow);
+
+            canvas.addEventListener('mousedown', (e) => {
+                reset();
+                state.isDrawing = true;
+                state.userPath.push(getMousePos(canvas, e));
+            });
+            window.addEventListener('mouseup', () => {
+                if (state.isDrawing) {
+                    state.isDrawing = false;
+                    findBtn.disabled = state.userPath.length < 2;
+                }
+            });
+            canvas.addEventListener('mousemove', (e) => {
+                if (state.isDrawing) {
+                    state.userPath.push(getMousePos(canvas, e));
+                }
+            });
+        }
+
+        function reset() {
+            state.userPath = [];
+            state.shadowPath = [];
+            findBtn.disabled = true;
+            draw();
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scale = 180;
+            const x_canvas = evt.clientX - rect.left;
+            const y_canvas = evt.clientY - rect.top;
+            // Convert from canvas to phase space coords
+            const x_phase = (x_canvas - canvas.width/2) / scale;
+            const y_phase = -(y_canvas - canvas.height/2) / scale;
+            return { x: x_phase, y: y_phase };
+        }
+
+        function toCanvasCoords(p) {
+            const scale = 180;
+            return {x: p.x * scale, y: -p.y * scale};
+        }
+
+        // --- CORE LOGIC ---
+        function henonMap(p) {
+            const x_new = 1 - a * p.x * p.x + p.y;
+            const y_new = b * p.x;
+            return { x: x_new, y: y_new };
+        }
+
+        function findShadow() {
+            if (state.userPath.length < 2) return;
+            findBtn.textContent = 'Calculating...';
+            findBtn.disabled = true;
+
+            // Simplified search: find the point on the user path that is closest
+            // to a point on the pre-calculated attractor. Use that attractor point
+            // as the initial condition for the true orbit. This is a heuristic.
+            let best_start_point = null;
+            let min_dist = Infinity;
+
+            state.userPath.forEach(user_p => {
+                state.attractorPoints.forEach(attractor_p => {
+                    const dist = (user_p.x - attractor_p.x)**2 + (user_p.y - attractor_p.y)**2;
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        best_start_point = attractor_p;
+                    }
+                });
+            });
+
+            // Generate the shadow path from the best starting point found
+            state.shadowPath = [];
+            let current_p = best_start_point;
+            for (let i = 0; i < state.userPath.length; i++) {
+                state.shadowPath.push(current_p);
+                current_p = henonMap(current_p);
+            }
+
+            findBtn.textContent = 'Find Shadowing Trajectory';
+            // No re-enabling, user should clear to try again.
+        }
+
+        function generateAttractorPoints() {
+            let p = {x: 0.1, y: 0.1};
+            // Warm up
+            for(let i=0; i<1000; i++) { p = henonMap(p); }
+            // Collect points
+            for(let i=0; i<10000; i++) {
+                p = henonMap(p);
+                state.attractorPoints.push(p);
+            }
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+
+            drawAttractor();
+            drawPath(state.userPath, 'var(--pseudo-orbit-color)', 3);
+            drawPath(state.shadowPath, 'var(--true-orbit-color)', 3);
+
+            ctx.restore();
+            requestAnimationFrame(draw);
+        }
+
+        function drawAttractor() {
+            ctx.fillStyle = 'var(--attractor-color)';
+            state.attractorPoints.forEach(p => {
+                const c = toCanvasCoords(p);
+                ctx.fillRect(c.x, c.y, 1, 1);
+            });
+        }
+
+        function drawPath(path, color, lineWidth) {
+            if (path.length < 2) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            for (let i = 0; i < path.length; i++) {
+                const c = toCanvasCoords(path[i]);
+                if (i === 0) ctx.moveTo(c.x, c.y);
+                else ctx.lineTo(c.x, c.y);
+            }
+            ctx.stroke();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crises in Chaotic Systems</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A crisis red */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --attractor-color: rgba(52, 152, 219, 0.7);
+            --boundary-color: rgba(231, 76, 60, 0.8);
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Crises in Chaotic Systems</h1>
+        <p>A simulation showing how a strange attractor can be suddenly created or destroyed.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Chaotic systems can undergo sudden, dramatic, qualitative changes as a parameter is varied. These events are known as <strong>crises</strong>. This simulation demonstrates a "boundary crisis" in the famous Hénon map. You will see how a strange attractor, the region that traps chaotic trajectories, can be abruptly destroyed. As you adjust a control parameter, the attractor grows until it collides with an unstable periodic orbit on the edge of its "basin of attraction." When this happens, a hole is torn open in the basin, and trajectories that were once trapped forever are now free to escape to infinity. This provides a visual understanding of the fragile nature of some chaotic systems.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to a Chaotic Crisis</h2>
+
+            <h4>Step 1: The Strange Attractor and its Basin</h4>
+            <p>The canvas shows the phase space of the Hénon map. The <strong style="color:var(--attractor-color)">blue shape</strong> is the famous Hénon strange attractor. It's the set of points where the system's trajectory wanders chaotically forever.</p>
+            <p>This attractor is surrounded by an invisible "basin of attraction." Any trajectory starting inside the basin will eventually fall onto the attractor. Any trajectory starting outside the basin will fly off to infinity.</p>
+
+            <h4>Step 2: The Unstable Boundary</h4>
+            <p>The edge of this basin is not a simple line. It's a complex, fractal boundary. Living on this boundary are special orbits called unstable periodic orbits. The simulation highlights one such orbit in <strong style="color:var(--boundary-color)">red</strong>. This orbit is like a precarious balancing act: a point on it will cycle through the red dots forever, but any tiny nudge will send it either falling into the blue attractor or escaping to infinity.</p>
+
+            <h4>Step 3: The Boundary Crisis (The Main Event)</h4>
+            <p>The slider controls the parameter `a` of the Hénon map. This parameter changes the "stretching and folding" action of the system.</p>
+            <ol>
+                <li><strong>Set the slider below 1.4:</strong> You will see the blue strange attractor contained well within the red boundary orbit. The system is chaotic but stable—trajectories on the attractor are trapped forever.</li>
+                <li><strong>Slowly increase the slider towards 1.4:</strong> Watch as the blue attractor grows larger and gets closer and closer to the red boundary.</li>
+                <li><strong>Move the slider just above 1.4:</strong> The crisis happens! The blue attractor touches the red boundary orbit. This collision creates an escape route. The attractor is destroyed. Now, the trajectory will wander around for a while where the attractor used to be, but it will eventually find the "hole" and fly off to infinity.</li>
+            </ol>
+            <p>This sudden destruction of a chaotic attractor is a boundary crisis. It's a fundamental mechanism for how chaotic behavior can abruptly change in physical systems.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Drag the slider to change the system's parameter `a`. The crisis occurs around `a = 1.4`.</p>
+                <div class="slider-container">
+                    <label for="param-slider">Hénon Map Parameter 'a'</label>
+                    <input type="range" id="param-slider" min="1.3" max="1.42" value="1.38" step="0.001">
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Hénon Map Parameters ---
+        const b = 0.3;
+        const crisis_a = 1.4;
+
+        // --- SIMULATION STATE ---
+        const state = {
+            a: 1.38,
+            point: { x: 0.1, y: 0.1 },
+            trajectory: [],
+        };
+        // Pre-calculated unstable period-6 orbit on the basin boundary at a=1.4
+        const boundaryOrbit = [ {x: -1.066, y: -0.499}, {x: 1.25, y: -0.32}, {x: -0.82, y: 0.375}, {x: 1.213, y: -0.246}, {x: -0.66, y: 0.364}, {x: 1.05, y: -0.198} ];
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const paramSlider = document.getElementById('param-slider');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            paramSlider.addEventListener('input', () => {
+                state.a = parseFloat(paramSlider.value);
+                resetSimulation();
+            });
+        }
+
+        function resetSimulation() {
+            state.point = { x: 0.1, y: 0.1 };
+            state.trajectory = [];
+            ctx.fillStyle = '#111'; // Clear canvas
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- CORE LOGIC (Hénon Map) ---
+        function updateState() {
+            const { a, point } = state;
+            const x_new = 1 - a * point.x * point.x + point.y;
+            const y_new = b * point.x;
+
+            state.point = { x: x_new, y: y_new };
+
+            // If point escapes, reset it to see the attractor again
+            if (Math.abs(state.point.x) > 2 || Math.abs(state.point.y) > 2) {
+                if (state.a > crisis_a) {
+                    // In crisis, let it escape and then restart
+                    state.point = { x: Math.random() - 0.5, y: Math.random() - 0.5 };
+                } else {
+                    // If not in crisis, this was a transient, just reset
+                     state.point = { x: 0.1, y: 0.1 };
+                }
+                return;
+            }
+
+            state.trajectory.push(state.point);
+            if (state.trajectory.length > 5000) {
+                state.trajectory.shift();
+            }
+        }
+
+        function mainLoop() {
+            // Run multiple iterations per frame for speed
+            for(let i=0; i<50; i++) {
+                updateState();
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            // Fading effect by drawing a semi-transparent rectangle
+            ctx.fillStyle = 'rgba(17, 17, 17, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+
+            drawBoundary();
+            drawTrajectory();
+
+            ctx.restore();
+        }
+
+        function toCanvasCoords(p) {
+            const scale = 180;
+            return {x: p.x * scale, y: -p.y * scale};
+        }
+
+        function drawBoundary() {
+            ctx.fillStyle = 'var(--boundary-color)';
+            boundaryOrbit.forEach(p => {
+                const c = toCanvasCoords(p);
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 4, 0, 2*Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function drawTrajectory() {
+            if (state.trajectory.length < 1) return;
+
+            ctx.fillStyle = 'var(--attractor-color)';
+
+            // Draw last 1000 points for performance
+            const start = Math.max(0, state.trajectory.length - 1000);
+            for (let i = start; i < state.trajectory.length; i++) {
+                const p = state.trajectory[i];
+                const c = toCanvasCoords(p);
+                ctx.fillRect(c.x, c.y, 1, 1);
+            }
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

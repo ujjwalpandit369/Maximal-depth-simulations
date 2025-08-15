@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ueda Oscillator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A chaos red */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --attractor-color: "rgba(245, 166, 35, 0.7)";
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #c0392b; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Ueda Oscillator</h1>
+        <p>A simulation of a chaotic electrical circuit.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In 1961, a Japanese graduate student named Yoshisuke Ueda was studying non-linear electrical circuits using an analog computer. He discovered a system that produced bizarre, non-repeating, yet structured behavior that he called "randomly transitional phenomena." Unbeknownst to much of the Western world for years, he had discovered one of the first-ever examples of a <strong>strange attractor</strong>. This simulation implements the equation for Ueda's oscillator. By adjusting the parameters, you can explore the system's trajectory in phase space and see the formation of the beautiful and historically significant Ueda strange attractor.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Ueda's Attractor</h2>
+
+            <h4>Step 1: The Circuit and Equation</h4>
+            <p>The system Ueda studied was a simple series resonance circuit, but with a non-linear inductor, driven by an AC voltage source. Its behavior is described by the differential equation:</p>
+            <p><code>d²x/dt² + k(dx/dt) + x³ = B cos(t)</code></p>
+            <ul>
+                <li><code>x</code> represents the current flowing through the inductor.</li>
+                <li><code>dx/dt</code> (the velocity in phase space) represents the voltage across the capacitor.</li>
+                <li><code>k</code> is the damping or resistance in the circuit.</li>
+                <li><code>B</code> is the amplitude of the driving AC voltage.</li>
+            </ul>
+
+            <h4>Step 2: The Phase Space Plot</h4>
+            <p>The canvas shows the "phase space" of the oscillator. The horizontal axis is the current (x), and the vertical axis is the voltage (dx/dt). The complete state of the circuit at any moment is a single point on this graph. As the circuit evolves, this point traces a path. After a short initial time, this path settles onto a final shape called the system's "attractor."</p>
+
+            <h4>Step 3: Finding the Strange Attractor</h4>
+            <p>Unlike some systems that have simple, predictable attractors (like a single point or a closed loop), the Ueda oscillator, for certain parameters, has a <strong>strange attractor</strong>. This means its long-term behavior is:</p>
+            <ul>
+                <li><strong>Aperiodic:</strong> The trajectory never exactly repeats itself.</li>
+                <li><strong>Deterministic:</strong> The path is not random; it follows the exact rules of the equation.</li>
+                <li><strong>Fractal:</strong> The attractor has an infinitely detailed, folded structure.</li>
+            </ul>
+            <p>Use the sliders or the "Load Classic Attractor" preset to explore the system. The simulation continuously traces the trajectory, slowly revealing the intricate shape of the Ueda attractor.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Use the sliders to change the circuit's parameters. The phase space plot will update automatically.</p>
+                <div class="slider-container">
+                    <label for="k-slider">Damping (k)</label>
+                    <input type="range" id="k-slider" min="0.01" max="0.2" value="0.1" step="0.005">
+                </div>
+                <div class="slider-container">
+                    <label for="b-slider">Driving Amplitude (B)</label>
+                    <input type="range" id="b-slider" min="5" max="15" value="12.0" step="0.1">
+                </div>
+                <button id="preset-btn">Load Classic Attractor (k=0.1, B=12.0)</button>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Ueda Equation Parameters ---
+        // d²x/dt² + k(dx/dt) + x³ = Bcos(t)
+
+        // --- SIMULATION STATE ---
+        const state = {
+            k: 0.1,     // Damping
+            B: 12.0,    // Driving amplitude
+            x: 0.1, y: 0.1, // y is dx/dt
+            t: 0,
+            trajectory: [],
+        };
+        const dt = 0.01; // Time step for RK4
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const kSlider = document.getElementById('k-slider');
+        const bSlider = document.getElementById('b-slider');
+        const presetBtn = document.getElementById('preset-btn');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            kSlider.addEventListener('input', () => { state.k = parseFloat(kSlider.value); resetSimulation(); });
+            bSlider.addEventListener('input', () => { state.B = parseFloat(bSlider.value); resetSimulation(); });
+            presetBtn.addEventListener('click', loadPreset);
+        }
+
+        function loadPreset() {
+            state.k = 0.1;
+            state.B = 12.0;
+            kSlider.value = state.k;
+            bSlider.value = state.B;
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            state.x = 0.1;
+            state.y = 0.1;
+            state.t = 0;
+            state.trajectory = [];
+            ctx.fillStyle = '#111'; // Clear canvas
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- CORE LOGIC (RK4 Integrator) ---
+        // dy/dt = -k*y - x³ + B*cos(t)
+        const f = (t, x, y) => -state.k * y - x*x*x + state.B * Math.cos(t);
+
+        function updateState() {
+            const { t, x, y } = state;
+
+            const k1_x = dt * y;
+            const k1_y = dt * f(t, x, y);
+
+            const k2_x = dt * (y + 0.5 * k1_y);
+            const k2_y = dt * f(t + 0.5 * dt, x + 0.5 * k1_x, y + 0.5 * k1_y);
+
+            const k3_x = dt * (y + 0.5 * k2_y);
+            const k3_y = dt * f(t + 0.5 * dt, x + 0.5 * k2_x, y + 0.5 * k2_y);
+
+            const k4_x = dt * (y + k3_y);
+            const k4_y = dt * f(t + dt, x + k3_x, y + k3_y);
+
+            state.x += (k1_x + 2*k2_x + 2*k3_x + k4_x) / 6;
+            state.y += (k1_y + 2*k2_y + 2*k3_y + k4_y) / 6;
+            state.t += dt;
+
+            // Store points for drawing, but only after some transient time
+            if (state.t > 100) {
+                state.trajectory.push({x: state.x, y: state.y});
+            }
+            if (state.trajectory.length > 8000) {
+                state.trajectory.shift();
+            }
+        }
+
+        function mainLoop() {
+            // Run multiple iterations per frame for speed
+            for(let i=0; i<50; i++) {
+                updateState();
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            // Fading effect isn't great for this attractor, draw from scratch
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+
+            drawTrajectory();
+
+            ctx.restore();
+        }
+
+        function drawTrajectory() {
+            if (state.trajectory.length < 2) return;
+
+            const scale = 50;
+
+            for (let i = 1; i < state.trajectory.length; i++) {
+                const p1 = state.trajectory[i-1];
+                const p2 = state.trajectory[i];
+
+                // Color based on position in attractor for visual appeal
+                const hue = (Math.atan2(p1.y, p1.x) * 180 / Math.PI + 180);
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.5)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(p1.x * scale, -p1.y * scale);
+                ctx.lineTo(p2.x * scale, -p2.y * scale);
+                ctx.stroke();
+            }
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

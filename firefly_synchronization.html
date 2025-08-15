@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronization of Fireflies (Mirollo-Strogatz model)</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #2ecc71; /* A bio-luminescent green */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --flash-color: #f1c40f;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-wrap: wrap; gap: 1.5rem; min-width: 400px; justify-content: space-around;}
+
+        .viz-box { flex: 1; min-width: 300px; text-align: center; }
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color);}
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 1rem; }
+        button:hover { background-color: #25a25a; }
+        button:disabled { background-color: var(--secondary-color); cursor: not-allowed;}
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Synchronization of Fireflies (Mirollo-Strogatz model)</h1>
+        <p>A simulation of the Mirollo-Strogatz model for pulse-coupled oscillators.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>How do thousands of fireflies, acting without a leader, manage to flash in perfect unison? This phenomenon of spontaneous synchronization appears everywhere in nature, from chirping crickets to pacemaker cells in the human heart. This simulation implements the famous **Mirollo-Strogatz model**, which provides a beautifully simple explanation. Each "firefly" is an independent oscillator with an internal clock. When it "flashes," it gives a small "kick" to all its neighbors. You will see how this simple, decentralized rule is sufficient to cause the entire population to evolve from a state of random flashing to perfect, collective synchrony.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Spontaneous Order</h2>
+
+            <h4>Step 1: The Fireflies</h4>
+            <p>The left canvas shows our population of fireflies, arranged in a circle for easy viewing. Each firefly has its own internal clock, called its "phase," which goes from 0 to 1.</p>
+            <ul>
+                <li>The brightness of a firefly indicates its phase: it gets brighter as its phase approaches 1.</li>
+                <li>When a firefly's phase reaches 1, it <strong>flashes</strong> brightly and its phase resets to 0.</li>
+            </ul>
+            <p>Initially, all the fireflies have random phases and flash at different times.</p>
+
+            <h4>Step 2: The "Kick" (Pulse Coupling)</h4>
+            <p>The magic ingredient is what happens when a firefly flashes. It sends out a pulse that is received by all other fireflies. This pulse gives each of them a small "kick," instantly increasing their phase by a small amount. This is called "pulse coupling."</p>
+            <p>The "Coupling Strength" slider controls the size of this kick. A higher coupling means a stronger influence between the fireflies.</p>
+
+            <h4>Step 3: The Emergence of Synchrony</h4>
+            <p>Press "Play" and watch both canvases. The right canvas plots the phase of every firefly. Initially, the points are scattered all over. Over time, you will see them start to clump together. This is the positive feedback loop at work: a firefly that flashes might kick a neighbor over its threshold, causing it to flash earlier than it would have. This new flash then kicks others, and a cascade begins, pulling more and more fireflies into a synchronized cluster. Eventually, all the fireflies will have the same phase, forming a single line on the phase plot and flashing in perfect unison on the main canvas.</p>
+            <p>This is a classic example of **self-organization**: a complex, global pattern (synchrony) emerging from simple, local rules, with no leader or central controller.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <button id="play-pause-btn">Play</button>
+                 <button id="reset-btn">Reset</button>
+                <div class="slider-container">
+                    <label for="n-slider">Number of Fireflies</label>
+                    <input type="range" id="n-slider" min="10" max="200" value="100" step="1">
+                </div>
+                <div class="slider-container">
+                    <label for="k-slider">Coupling Strength (Kick)</label>
+                    <input type="range" id="k-slider" min="0" max="0.1" value="0.02" step="0.001">
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                 <div class="viz-box">
+                    <h4>Fireflies</h4>
+                    <canvas id="main-canvas" width="400" height="400"></canvas>
+                </div>
+                <div class="viz-box">
+                    <h4>Phases</h4>
+                    <canvas id="phase-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const state = {
+            fireflies: [], // array of phase values [0, 1]
+            numFireflies: 100,
+            coupling: 0.02,
+            isRunning: false,
+        };
+        const dt = 0.01; // Time step
+
+        // --- DOM ELEMENTS ---
+        const mainCanvas = document.getElementById('main-canvas');
+        const mCtx = mainCanvas.getContext('2d');
+        const phaseCanvas = document.getElementById('phase-canvas');
+        const pCtx = phaseCanvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const nSlider = document.getElementById('n-slider');
+        const kSlider = document.getElementById('k-slider');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            playPauseBtn.addEventListener('click', () => {
+                state.isRunning = !state.isRunning;
+                playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play';
+            });
+            resetBtn.addEventListener('click', resetSimulation);
+            nSlider.addEventListener('input', () => {
+                state.numFireflies = parseInt(nSlider.value);
+                resetSimulation();
+            });
+            kSlider.addEventListener('input', () => { state.coupling = parseFloat(kSlider.value); });
+        }
+
+        function resetSimulation() {
+            state.fireflies = [];
+            for (let i = 0; i < state.numFireflies; i++) {
+                state.fireflies.push(Math.random());
+            }
+        }
+
+        // --- CORE LOGIC ---
+        function updateState() {
+            let numFlashed = 0;
+            const flashers = [];
+
+            // Increase phase and check for flashes
+            for (let i = 0; i < state.numFireflies; i++) {
+                state.fireflies[i] += dt;
+                if (state.fireflies[i] >= 1) {
+                    flashers.push(i);
+                    numFlashed++;
+                }
+            }
+
+            if (numFlashed > 0) {
+                // Apply kicks to non-flashing fireflies
+                const kick = state.coupling * numFlashed;
+                for (let i = 0; i < state.numFireflies; i++) {
+                    // Check if this index is in flashers
+                    if (flashers.indexOf(i) === -1) {
+                        state.fireflies[i] += kick;
+                    }
+                }
+                // Reset flashed fireflies
+                flashers.forEach(i => {
+                    state.fireflies[i] = 0;
+                });
+            }
+        }
+
+        function mainLoop() {
+            if (state.isRunning) {
+                updateState();
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawMainCanvas();
+            drawPhaseCanvas();
+        }
+
+        function drawMainCanvas() {
+            mCtx.fillStyle = '#111';
+            mCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+            mCtx.save();
+            mCtx.translate(mainCanvas.width/2, mainCanvas.height/2);
+
+            const radius = mainCanvas.width * 0.4;
+
+            state.fireflies.forEach((phase, i) => {
+                const angle = (i / state.numFireflies) * 2 * Math.PI;
+                const x = radius * Math.cos(angle);
+                const y = radius * Math.sin(angle);
+
+                if (phase === 0) { // Just flashed
+                    mCtx.fillStyle = 'var(--flash-color)';
+                    mCtx.beginPath();
+                    mCtx.arc(x, y, 8, 0, 2*Math.PI);
+                    mCtx.fill();
+                } else {
+                    const brightness = Math.floor(phase * 100);
+                    mCtx.fillStyle = `hsl(60, 80%, ${brightness}%)`;
+                    mCtx.beginPath();
+                    mCtx.arc(x, y, 4, 0, 2*Math.PI);
+                    mCtx.fill();
+                }
+            });
+            mCtx.restore();
+        }
+
+        function drawPhaseCanvas() {
+            pCtx.fillStyle = '#111';
+            pCtx.fillRect(0, 0, phaseCanvas.width, phaseCanvas.height);
+
+            pCtx.fillStyle = 'var(--primary-color)';
+            const padding = 20;
+            const chartWidth = phaseCanvas.width - 2*padding;
+
+            state.fireflies.forEach((phase, i) => {
+                const x = padding + (i / state.numFireflies) * chartWidth;
+                const y = phaseCanvas.height - padding - phase * (phaseCanvas.height - 2*padding);
+                pCtx.beginPath();
+                pCtx.arc(x, y, 2, 0, 2*Math.PI);
+                pCtx.fill();
+            });
+
+            // Draw axes
+            pCtx.strokeStyle = 'var(--secondary-color)';
+            pCtx.lineWidth = 1;
+            pCtx.beginPath();
+            pCtx.moveTo(padding, padding);
+            pCtx.lineTo(padding, phaseCanvas.height - padding);
+            pCtx.lineTo(phaseCanvas.width - padding, phaseCanvas.height - padding);
+            pCtx.stroke();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
