@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Effective Potential for Orbits</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --text-color: #333;
+            --primary-color: #3f51b5; /* Indigo for space/gravity */
+            --secondary-color: #607d8b;
+            --border-color: #dfe4ea;
+            --canvas-bg: #fff;
+            --potential-color: #d81b60;
+            --energy-color: #00897b;
+            --orbit-path-color: #546e7a;
+            --planet-color: #1e88e5;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        code { background-color: #e8eaf6; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }
+        pre { background-color: #e8eaf6; padding: 1rem; border-radius: 5px; overflow-x: auto; }
+
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 2fr 1fr; }
+        }
+        #potential-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.6 / 1;
+            cursor: crosshair;
+        }
+        #orbit-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+        }
+        .canvas-container {
+             border: 1px solid var(--border-color);
+             border-radius: 5px;
+             background-color: var(--canvas-bg);
+        }
+        .controls { grid-column: 1 / -1; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; }
+        .info-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #e8eaf6;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Potential Energy: Effective Potential for Orbits</h1>
+            <p class="subtitle">Analyzing 2D orbital motion with a simple 1D potential energy graph.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div class="canvas-container">
+                    <canvas id="potential-canvas"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="orbit-canvas"></canvas>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="l-slider">Angular Momentum (L): <span id="l-value">1.00</span></label>
+                    <input type="range" id="l-slider" min="0.5" max="2.0" value="1.0" step="0.01">
+                </div>
+                <p><strong>Instructions:</strong> Adjust the angular momentum with the slider to change the shape of the potential well. Click on the potential graph to set the planet's total energy.</p>
+                <div class="info-panel">
+                    <h3>Orbit Parameters</h3>
+                    <p>Total Energy (E): <strong id="energy-val">N/A</strong></p>
+                    <p>Perihelion (Closest): <strong id="perihelion-val">N/A</strong> | Aphelion (Farthest): <strong id="aphelion-val">N/A</strong></p>
+                    <p>Orbit Type: <strong id="orbit-type">N/A</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The 1D Trick for a 2D Problem</h2>
+            <h3>The Challenge of Orbits</h3>
+            <p>Analyzing the full 2D motion of a planet can be complex. It has both radial motion (moving closer to or farther from the star) and angular motion (moving around the star). However, physicists developed a clever mathematical trick to simplify this. By combining the gravitational potential energy with a term for the energy of angular motion, they created a single <strong>1D effective potential</strong> that depends only on the radius, `r`.</p>
+
+            <h3>Two Competing Forces</h3>
+            <p>The effective potential, `U_eff(r)`, shown in the main graph, has two parts:
+            <ol>
+                <li>The <strong>Gravitational Potential (`-1/r`)</strong>: This is the familiar attractive potential that pulls the planet towards the star. It dominates at large distances.</li>
+                <li>The <strong>Angular Momentum Barrier (`L²/2r²`)</strong>: This term isn't a real "force" but represents the energy tied up in the planet's sideways motion. Because angular momentum (`L`) is conserved, a planet moving closer to its star (`r` decreases) must speed up its angular velocity to compensate. This requires a lot of kinetic energy, so it's as if there's a powerful repulsive barrier preventing the planet from getting too close to the star. This term dominates at small distances.</li>
+            </ol>
+            The sum of the attractive gravitational term and the repulsive angular momentum term creates the <strong>potential well</strong> you see in the graph.
+            </p>
+
+            <h3>Reading the Graph</h3>
+            <ul>
+                <li><strong>Energy Line (Green):</strong> When you click on the graph, you set the planet's total energy, `E`. Since energy is conserved, the planet is free to move horizontally on this graph.</li>
+                <li><strong>Turning Points:</strong> A planet cannot enter a region where its total energy `E` is less than the potential energy `U_eff`. Thus, the planet is trapped in the potential well, oscillating between the two points where the green energy line intersects the pink potential curve. These two points are the <strong>perihelion</strong> (closest approach) and <strong>aphelion</strong> (farthest distance) of the orbit.</li>
+                <li><strong>Circular Orbits:</strong> If you set the energy to the exact minimum of the potential well, the perihelion and aphelion are the same. The planet is stuck at a single radius, resulting in a perfect circular orbit.</li>
+                <li><strong>Unbound Orbits:</strong> If you set the energy to a positive value (`E > 0`), the planet is no longer trapped in the well. It has enough energy to escape the star's gravity, resulting in a hyperbolic (unbound) orbit.</li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Canvases and Contexts ---
+        const potCanvas = document.getElementById('potential-canvas');
+        const potCtx = potCanvas.getContext('2d');
+        const orbitCanvas = document.getElementById('orbit-canvas');
+        const orbitCtx = orbitCanvas.getContext('2d');
+
+        // --- Controls and Readouts ---
+        const lSlider = document.getElementById('l-slider');
+        const lValue = document.getElementById('l-value');
+        const energyValEl = document.getElementById('energy-val');
+        const perihelionValEl = document.getElementById('perihelion-val');
+        const aphelionValEl = document.getElementById('aphelion-val');
+        const orbitTypeEl = document.getElementById('orbit-type');
+
+        // --- Simulation State ---
+        let state = { L: 1.0, E: null, orbit: null };
+
+        // --- Physics Model (using simplified constants G*M*m=1, m=1) ---
+        const U_eff = (r, L) => -1 / r + (L * L) / (2 * r * r);
+
+        // --- Potential Plot Logic ---
+        const potWorld = { rMin: 0.1, rMax: 10, uMin: -0.6, uMax: 0.4 };
+        const potToScreen = (r, u) => ({
+            x: (r - potWorld.rMin) / (potWorld.rMax - potWorld.rMin) * potCanvas.width,
+            y: potCanvas.height - (u - potWorld.uMin) / (potWorld.uMax - potWorld.uMin) * potCanvas.height
+        });
+        const screenToEnergy = (y) => potWorld.uMin + (potCanvas.height - y) / potCanvas.height * (potWorld.uMax - potWorld.uMin);
+
+        function drawPotential() {
+            potCtx.clearRect(0, 0, potCanvas.width, potCanvas.height);
+
+            // Draw axes
+            const origin = potToScreen(potWorld.rMin, 0);
+            potCtx.strokeStyle = '#ccc';
+            potCtx.lineWidth = 1;
+            potCtx.beginPath();
+            potCtx.moveTo(0, origin.y); potCtx.lineTo(potCanvas.width, origin.y);
+            potCtx.stroke();
+            potCtx.fillStyle = '#333';
+            potCtx.font = "14px sans-serif";
+            potCtx.fillText("r (distance)", potCanvas.width - 100, origin.y - 10);
+            potCtx.fillText("U_eff", 10, 20);
+
+            // Draw potential curve
+            potCtx.strokeStyle = 'var(--potential-color)';
+            potCtx.lineWidth = 3;
+            potCtx.beginPath();
+            let firstPoint = true;
+            for (let r = potWorld.rMin; r < potWorld.rMax; r += 0.05) {
+                const u = U_eff(r, state.L);
+                const p = potToScreen(r, u);
+                if (firstPoint) {
+                    potCtx.moveTo(p.x, p.y);
+                    firstPoint = false;
+                } else {
+                    potCtx.lineTo(p.x, p.y);
+                }
+            }
+            potCtx.stroke();
+
+            // Draw energy line and turning points
+            if (state.E !== null) {
+                const energyY = potToScreen(0, state.E).y;
+                potCtx.strokeStyle = 'var(--energy-color)';
+                potCtx.lineWidth = 2;
+                potCtx.beginPath();
+                potCtx.moveTo(0, energyY);
+                potCtx.lineTo(potCanvas.width, energyY);
+                potCtx.stroke();
+
+                if (state.orbit && state.orbit.type === 'Bound') {
+                    potCtx.fillStyle = 'var(--energy-color)';
+                    const p1 = potToScreen(state.orbit.perihelion, state.E);
+                    potCtx.beginPath(); potCtx.arc(p1.x, p1.y, 6, 0, 2 * Math.PI); potCtx.fill();
+                    const p2 = potToScreen(state.orbit.aphelion, state.E);
+                    potCtx.beginPath(); potCtx.arc(p2.x, p2.y, 6, 0, 2 * Math.PI); potCtx.fill();
+                }
+            }
+        }
+
+        // --- Orbit Plot Logic ---
+        function drawOrbit() {
+            const w = orbitCanvas.width, h = orbitCanvas.height;
+            orbitCtx.clearRect(0, 0, w, h);
+
+            // Star
+            orbitCtx.fillStyle = '#f1c40f';
+            orbitCtx.beginPath();
+            orbitCtx.arc(w / 2, h / 2, 8, 0, 2 * Math.PI);
+            orbitCtx.fill();
+
+            if (!state.orbit) return;
+
+            if (state.orbit.type === 'Bound') {
+                const a = state.orbit.semiMajorAxis;
+                const e = state.orbit.eccentricity;
+                const scale = w / (2.5 * a * (1 + e)); // Scale to fit nicely
+                const focusOffset = e * a * scale;
+
+                orbitCtx.strokeStyle = 'var(--orbit-path-color)';
+                orbitCtx.lineWidth = 2;
+                orbitCtx.beginPath();
+                orbitCtx.ellipse(w/2 + focusOffset, h/2, a * scale, a * Math.sqrt(1 - e*e) * scale, 0, 0, 2 * Math.PI);
+                orbitCtx.stroke();
+
+                // Planet
+                const periScreen = w/2 + focusOffset - a * (1-e) * scale;
+                orbitCtx.fillStyle = 'var(--planet-color)';
+                orbitCtx.beginPath();
+                orbitCtx.arc(periScreen, h/2, 5, 0, 2 * Math.PI);
+                orbitCtx.fill();
+            } else if (state.orbit.type === 'Unbound') {
+                 orbitCtx.strokeStyle = 'var(--orbit-path-color)';
+                 orbitCtx.lineWidth = 2;
+                 orbitCtx.beginPath();
+                 orbitCtx.moveTo(0, h*0.2);
+                 orbitCtx.quadraticCurveTo(w*0.6, h*0.4, w, h);
+                 orbitCtx.stroke();
+            }
+        }
+
+        // --- Calculation ---
+        function analyzePotential() {
+            // Find minimum of potential (for circular orbit)
+            const r_circ = state.L * state.L; // dU/dr = 1/r^2 - L^2/r^3 = 0  => r = L^2
+            const E_circ = U_eff(r_circ, state.L);
+
+            if (state.E === null) {
+                state.orbit = null;
+                return;
+            }
+
+            if (state.E >= 0) {
+                state.orbit = { type: 'Unbound' };
+                return;
+            }
+
+            if (state.E < E_circ) {
+                 state.orbit = { type: 'Invalid (E < E_min)' };
+                 return;
+            }
+
+            // Numerically find turning points
+            const roots = solveU(state.E, state.L);
+            if (roots.length < 2) {
+                // This happens for circular orbit
+                if (Math.abs(state.E - E_circ) < 0.001) {
+                     state.orbit = {
+                        type: 'Bound', perihelion: r_circ, aphelion: r_circ,
+                        semiMajorAxis: r_circ, eccentricity: 0
+                    };
+                } else {
+                    state.orbit = { type: 'Invalid' };
+                }
+                return;
+            }
+
+            const [peri, aph] = roots;
+            const a = (peri + aph) / 2;
+            const e = (aph - peri) / (aph + peri);
+            state.orbit = { type: 'Bound', perihelion: peri, aphelion: aph, semiMajorAxis: a, eccentricity: e };
+        }
+
+        function solveU(E, L) {
+             // E = -1/r + L^2/(2r^2) => E*2r^2 = -2r + L^2 => 2E*r^2 + 2r - L^2 = 0
+             // This is a quadratic equation for r
+             const a = 2*E;
+             const b = 2;
+             const c = -(L*L);
+             const discriminant = b*b - 4*a*c;
+             if (discriminant < 0) return [];
+             const r1 = (-b + Math.sqrt(discriminant)) / (2*a);
+             const r2 = (-b - Math.sqrt(discriminant)) / (2*a);
+             return [r1, r2].filter(r => r > 0).sort((x,y) => x-y);
+        }
+
+        function updateUI() {
+            lValue.textContent = parseFloat(state.L).toFixed(2);
+            if (state.E === null) {
+                energyValEl.textContent = 'N/A';
+                orbitTypeEl.textContent = 'N/A';
+                perihelionValEl.textContent = 'N/A';
+                aphelionValEl.textContent = 'N/A';
+            } else {
+                energyValEl.textContent = state.E.toFixed(3);
+                orbitTypeEl.textContent = state.orbit ? state.orbit.type : 'N/A';
+                if (state.orbit && state.orbit.type === 'Bound') {
+                    perihelionValEl.textContent = state.orbit.perihelion.toFixed(2);
+                    aphelionValEl.textContent = state.orbit.aphelion.toFixed(2);
+                } else {
+                    perihelionValEl.textContent = 'N/A';
+                    aphelionValEl.textContent = 'N/A';
+                }
+            }
+        }
+
+        function fullUpdate() {
+            analyzePotential();
+            updateUI();
+            drawPotential();
+            drawOrbit();
+        }
+
+        // --- Event Handlers ---
+        lSlider.addEventListener('input', e => {
+            state.L = parseFloat(e.target.value);
+            fullUpdate();
+        });
+
+        potCanvas.addEventListener('click', e => {
+            const rect = potCanvas.getBoundingClientRect();
+            const y = e.clientY - rect.top;
+            state.E = screenToEnergy(y);
+            fullUpdate();
+        });
+
+        // --- Initial Load ---
+        function init() {
+            potCanvas.width = potCanvas.offsetWidth;
+            potCanvas.height = potCanvas.offsetHeight;
+            orbitCanvas.width = orbitCanvas.offsetWidth;
+            orbitCanvas.height = orbitCanvas.offsetHeight;
+            fullUpdate();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

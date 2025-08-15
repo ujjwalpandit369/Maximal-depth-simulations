@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Equilibrium: The Predator-Prey Cycle</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #27ae60; /* Green for ecology */
+            --secondary-color: #8e44ad;
+            --border-color: #dee2e6;
+            --canvas-bg: #fff;
+            --prey-color: #3498db;
+            --predator-color: #e74c3c;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.2 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+        }
+        button:hover { opacity: 0.85; }
+        .legend { margin-top: 1rem; text-align: center; }
+        .legend span { margin: 0 1rem; font-weight: bold; }
+        .prey-legend { color: var(--prey-color); }
+        .predator-legend { color: var(--predator-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Dynamic Equilibrium: The Predator-Prey Cycle</h1>
+            <p class="subtitle">A simulation of the Lotka-Volterra equations.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div class="canvas-container">
+                    <h3>Phase Space Plot (Predators vs. Prey)</h3>
+                    <canvas id="phase-canvas"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <h3>Population vs. Time</h3>
+                    <canvas id="time-canvas"></canvas>
+                </div>
+            </div>
+            <div class="legend">
+                <span class="prey-legend">■ Prey (Rabbits)</span>
+                <span class="predator-legend">■ Predators (Foxes)</span>
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <button id="start-stop-btn">Start</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="alpha-slider">α (Prey birth rate): <span id="alpha-val">1.0</span></label>
+                    <input type="range" id="alpha-slider" min="0.1" max="2.0" value="1.0" step="0.1">
+                </div>
+                <div class="slider-container">
+                    <label for="beta-slider">β (Predation rate): <span id="beta-val">0.1</span></label>
+                    <input type="range" id="beta-slider" min="0.01" max="0.5" value="0.1" step="0.01">
+                </div>
+                <div class="slider-container">
+                    <label for="delta-slider">δ (Predator birth rate): <span id="delta-val">0.08</span></label>
+                    <input type="range" id="delta-slider" min="0.01" max="0.2" value="0.075" step="0.005">
+                </div>
+                <div class="slider-container">
+                    <label for="gamma-slider">γ (Predator death rate): <span id="gamma-val">0.5</span></label>
+                    <input type="range" id="gamma-slider" min="0.1" max="2.0" value="0.5" step="0.1">
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The Dance of Life and Death</h2>
+            <h3>The Cycle of Nature</h3>
+            <p>In many ecosystems, the populations of predators and their prey are locked in a timeless dance. This simulation models that dance for a simple system of rabbits (prey) and foxes (predators). The cycle unfolds intuitively:
+            <ol>
+                <li>With few predators, the rabbit population grows exponentially.</li>
+                <li>More rabbits mean more food for foxes, so the fox population begins to thrive.</li>
+                <li>The increased fox population eats rabbits faster than they can reproduce, causing the rabbit population to crash.</li>
+                <li>With their food source gone, the fox population starves and its numbers plummet.</li>
+                <li>With few predators once again, the rabbit population recovers, and the cycle begins anew.</li>
+            </ol>
+            This system doesn't settle on fixed numbers but instead finds a <strong>dynamic equilibrium</strong>, oscillating in a stable cycle.
+            </p>
+            <h3>Reading the Graphs</h3>
+            <ul>
+                <li><strong>Population vs. Time:</strong> The graph on the right shows this story over time. Notice how the predator population peak (red) always comes slightly after the prey population peak (blue).</li>
+                <li><strong>Phase Space Plot:</strong> The graph on the left shows the relationship directly, plotting the number of predators against the number of prey. The system endlessly traces a closed loop, called a <strong>limit cycle</strong>. Every point on this loop represents a specific state of the ecosystem (e.g., "many rabbits, few foxes"). The circular nature of the graph is the signature of this stable, oscillating equilibrium.</li>
+            </ul>
+        </section>
+
+        <section id="core-theory">
+            <h2>The Lotka-Volterra Equations</h2>
+            <p>This classic ecological model is described by a pair of coupled first-order nonlinear differential equations:</p>
+            <pre>dx/dt = αx - βxy  (Prey Population, x)
+dy/dt = δxy - γy  (Predator Population, y)</pre>
+            <p>Each term has a clear physical meaning:
+            <ul>
+                <li><code>αx</code>: This is the natural growth rate of the prey population (x). Without predators, they would grow exponentially. <code>α</code> is their birth rate.</li>
+                <li><code>-βxy</code>: This represents the rate at which prey are eaten by predators. It's proportional to the product of both populations because the rate of encounters depends on how many of each there are. <code>β</code> is the predation rate.</li>
+                <li><code>δxy</code>: This is the growth rate of the predator population (y). It is also proportional to the encounter rate, but is modified by <code>δ</code>, the efficiency of converting prey into new predators.</li>
+                <li><code>-γy</code>: This is the natural death rate of the predator population. Without prey to eat, they would die out exponentially. <code>γ</code> is their death rate.</li>
+            </ul>
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const phaseCanvas = document.getElementById('phase-canvas');
+        const pCtx = phaseCanvas.getContext('2d');
+        const timeCanvas = document.getElementById('time-canvas');
+        const tCtx = timeCanvas.getContext('2d');
+
+        const sliders = {
+            alpha: document.getElementById('alpha-slider'),
+            beta: document.getElementById('beta-slider'),
+            delta: document.getElementById('delta-slider'),
+            gamma: document.getElementById('gamma-slider'),
+        };
+        const readouts = {
+            alpha: document.getElementById('alpha-val'),
+            beta: document.getElementById('beta-val'),
+            delta: document.getElementById('delta-val'),
+            gamma: document.getElementById('gamma-val'),
+        };
+        const startStopBtn = document.getElementById('start-stop-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let state = {
+            params: { a: 1.0, b: 0.1, d: 0.075, g: 0.5 },
+            populations: { x: 10, y: 5 },
+            history: [],
+            isRunning: false,
+            time: 0
+        };
+
+        let animationFrameId;
+
+        function updateParams() {
+            for (const key in sliders) {
+                state.params[key[0]] = parseFloat(sliders[key].value);
+                readouts[key].textContent = state.params[key[0]].toFixed(3);
+            }
+        }
+
+        function reset() {
+            state.isRunning = false;
+            startStopBtn.textContent = "Start";
+            cancelAnimationFrame(animationFrameId);
+            state.populations = { x: 10, y: 5 };
+            state.history = [{t: 0, x: 10, y: 5}];
+            state.time = 0;
+            updateParams();
+            draw();
+        }
+
+        function step() {
+            const { a, b, d, g } = state.params;
+            let { x, y } = state.populations;
+            const dt = 0.1;
+
+            const dx = (a * x - b * x * y) * dt;
+            const dy = (d * x * y - g * y) * dt;
+
+            x += dx;
+            y += dy;
+
+            state.populations = { x: Math.max(0, x), y: Math.max(0, y) };
+            state.time += dt;
+            state.history.push({ t: state.time, x: state.populations.x, y: state.populations.y });
+            if (state.history.length > 1000) state.history.shift();
+        }
+
+        function draw() {
+            drawPhasePlot();
+            drawTimePlot();
+        }
+
+        function drawPhasePlot() {
+            const w = phaseCanvas.width, h = phaseCanvas.height;
+            pCtx.clearRect(0, 0, w, h);
+
+            const world = { xMax: 30, yMax: 30 };
+            const toScreen = (x, y) => ({
+                px: (x / world.xMax) * w,
+                py: h - (y / world.yMax) * h
+            });
+
+            // Axes
+            pCtx.strokeStyle = '#ccc'; pCtx.lineWidth = 1;
+            pCtx.beginPath(); pCtx.moveTo(0, h); pCtx.lineTo(w, h); pCtx.stroke();
+            pCtx.beginPath(); pCtx.moveTo(0, h); pCtx.lineTo(0, 0); pCtx.stroke();
+            pCtx.fillStyle = '#333'; pCtx.font = "14px sans-serif";
+            pCtx.fillText("Prey", w/2, h - 5);
+            pCtx.fillText("Predators", 5, h/2);
+
+            // Path
+            pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            let first = true;
+            for (const point of state.history) {
+                const p = toScreen(point.x, point.y);
+                if (first) { pCtx.moveTo(p.px, p.py); first = false; }
+                else { pCtx.lineTo(p.px, p.py); }
+            }
+            pCtx.strokeStyle = 'rgba(0,0,0,0.3)';
+            pCtx.stroke();
+
+            // Current point
+            const currentP = toScreen(state.populations.x, state.populations.y);
+            pCtx.fillStyle = 'var(--prey-color)';
+            pCtx.beginPath(); pCtx.arc(currentP.px, currentP.py, 8, 0, 2*Math.PI); pCtx.fill();
+            pCtx.fillStyle = 'var(--predator-color)';
+            pCtx.beginPath(); pCtx.arc(currentP.px, currentP.py, 4, 0, 2*Math.PI); pCtx.fill();
+        }
+
+        function drawTimePlot() {
+            const w = timeCanvas.width, h = timeCanvas.height;
+            tCtx.clearRect(0, 0, w, h);
+
+            const yMax = Math.max(...state.history.map(p => p.x), ...state.history.map(p => p.y), 15);
+            const tMin = state.history[0].t;
+            const tMax = state.history[state.history.length - 1].t;
+            const toScreen = (t, pop) => ({
+                px: ((t - tMin) / (tMax - tMin)) * w,
+                py: h - (pop / yMax) * h
+            });
+
+            // Axes
+            tCtx.strokeStyle = '#ccc'; tCtx.lineWidth = 1;
+            tCtx.beginPath(); tCtx.moveTo(0, h); tCtx.lineTo(w, h); tCtx.stroke();
+            tCtx.fillStyle = '#333'; tCtx.font = "14px sans-serif";
+            tCtx.fillText("Time", w/2, h - 5);
+
+            // Prey line
+            tCtx.strokeStyle = 'var(--prey-color)'; tCtx.lineWidth = 2;
+            tCtx.beginPath();
+            let firstPrey = true;
+            for (const point of state.history) {
+                const p = toScreen(point.t, point.x);
+                if (firstPrey) { tCtx.moveTo(p.px, p.py); firstPrey = false; }
+                else { tCtx.lineTo(p.px, p.py); }
+            }
+            tCtx.stroke();
+
+            // Predator line
+            tCtx.strokeStyle = 'var(--predator-color)';
+            tCtx.beginPath();
+            let firstPred = true;
+            for (const point of state.history) {
+                const p = toScreen(point.t, point.y);
+                if (firstPred) { tCtx.moveTo(p.px, p.py); firstPred = false; }
+                else { tCtx.lineTo(p.px, p.py); }
+            }
+            tCtx.stroke();
+        }
+
+        function loop() {
+            if (!state.isRunning) return;
+            for (let i = 0; i < 5; i++) step(); // 5 steps per frame for speed
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        startStopBtn.addEventListener('click', () => {
+            state.isRunning = !state.isRunning;
+            startStopBtn.textContent = state.isRunning ? "Stop" : "Start";
+            if (state.isRunning) loop();
+        });
+        resetBtn.addEventListener('click', reset);
+        for (const key in sliders) {
+            sliders[key].addEventListener('input', () => {
+                updateParams();
+                if (!state.isRunning) reset();
+            });
+        }
+
+        function init() {
+            [phaseCanvas, timeCanvas].forEach(c => {
+                c.width = c.offsetWidth;
+                c.height = c.offsetHeight;
+            });
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

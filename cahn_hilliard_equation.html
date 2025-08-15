@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potential Energy: The Cahn-Hilliard Equation</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #e65100; /* Deep orange */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #000;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #eee; padding: 1rem; border-radius: 5px; overflow-x: auto; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 512px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            image-rendering: pixelated; /* Keep pixels sharp */
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Cahn-Hilliard Equation: Phase Separation</h1>
+            <p class="subtitle">A simulation of spinodal decomposition in a binary mixture.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Simulation</h2>
+            <p>The simulation starts with a random mixture of two components. Press Start to see them spontaneously separate into a web-like pattern.</p>
+            <canvas id="sim-canvas" width="256" height="256"></canvas>
+            <div>
+                <button id="start-stop-btn">Start</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Unmixing the Mixture</h2>
+            <h3>An Intuitive Analogy: Oil and Vinegar</h3>
+            <p>Imagine a bottle of oil and vinegar salad dressing. When you shake it vigorously, the oil and vinegar are temporarily mixed together. This is a high-energy, unstable state. If you let the bottle sit, you'll see the mixture spontaneously separate. The tiny droplets of oil will find each other and merge, and the same happens with the vinegar. Eventually, you have two distinct layers. The system does this because the separated state has a lower total free energy than the mixed state.</p>
+            <h3>Spinodal Decomposition</h3>
+            <p>The process shown in the simulation is a specific type of phase separation called <strong>spinodal decomposition</strong>. This happens when a mixture is very rapidly cooled (or "quenched") deep into an unstable region of its phase diagram. Instead of forming small droplets that grow (a process called nucleation), the mixture is unstable to even the tiniest fluctuations in concentration. Separation happens everywhere at once, leading to the characteristic, interconnected, spongy or web-like pattern you see. Over time, these regions will continue to grow larger, a process called <strong>coarsening</strong>.</p>
+            <p>This simulation solves the <strong>Cahn-Hilliard equation</strong>, which mathematically describes this process. It models a phenomenon called "uphill diffusion," where atoms or molecules move from regions of lower concentration to regions of higher concentration, which is the opposite of normal diffusion but is required to create the separated phases.</p>
+        </section>
+
+        <section id="core-theory">
+            <h2>The Cahn-Hilliard Equation</h2>
+            <p>The evolution of the concentration field `c(x,t)` is described by the Cahn-Hilliard equation, a fourth-order partial differential equation:</p>
+            <pre>∂c/∂t = M * ∇²(μ)</pre>
+            <p>Where `M` is mobility and `μ` is the chemical potential. The chemical potential itself depends on the concentration:</p>
+            <pre>μ = ∂f/∂c - κ∇²c</pre>
+            <p>Here, `f(c)` is the local free energy density, which has a "double-well" shape (e.g., `f(c) = A(c² - 1)²`) that favors separated states (c=-1 and c=1) over the mixed state (c=0). The term `κ∇²c` represents the gradient energy, which penalizes sharp interfaces between the phases, driving the coarsening behavior.</p>
+            <p>Solving this equation directly is difficult. This simulation uses a common and efficient technique called a <strong>spectral method</strong>. The equation is transformed into Fourier space, where the troublesome derivatives (Laplacians `∇²`) become simple multiplications. The system is evolved in Fourier space and then transformed back to real space for visualization.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const startStopBtn = document.getElementById('start-stop-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        const N = canvas.width; // Grid size
+        let c = new Float32Array(N * N); // Concentration field
+        let mu = new Float32Array(N * N); // Chemical potential
+
+        // Fourier space arrays
+        let c_hat_re = new Float32Array(N * N);
+        let c_hat_im = new Float32Array(N * N);
+        let mu_hat_re = new Float32Array(N * N);
+        let mu_hat_im = new Float32Array(N * N);
+
+        let k2 = new Float32Array(N * N); // Squared wave vectors
+
+        // Parameters
+        const M = 1.0;
+        const kappa = 1.0;
+        const dt = 0.1;
+
+        let isRunning = false;
+        let animationFrameId;
+
+        // --- Minimal 2D FFT Implementation ---
+        // Based on standard Cooley-Tukey Radix-2 algorithm
+        function fft2d(re, im, n, dir) {
+            // 1D FFT on rows
+            for (let j = 0; j < n; j++) {
+                fft_1d_slice(re, im, j * n, 1, n, dir);
+            }
+            // 1D FFT on columns
+            for (let i = 0; i < n; i++) {
+                fft_1d_slice(re, im, i, n, n, dir);
+            }
+        }
+
+        function fft_1d_slice(re, im, start, stride, n, dir) {
+            if (n <= 1) return;
+            // Radix-2 decimation-in-time
+            fft_1d_slice(re, im, start, stride * 2, n / 2, dir);
+            fft_1d_slice(re, im, start + stride, stride * 2, n / 2, dir);
+
+            const angle_step = dir * 2 * Math.PI / n;
+            for (let k = 0; k < n / 2; k++) {
+                const angle = k * angle_step;
+                const t_re = Math.cos(angle);
+                const t_im = Math.sin(angle);
+
+                const even_idx = start + k * stride * 2;
+                const odd_idx = start + stride + k * stride * 2;
+
+                const odd_re = re[odd_idx];
+                const odd_im = im[odd_idx];
+
+                const term_re = t_re * odd_re - t_im * odd_im;
+                const term_im = t_re * odd_im + t_im * odd_re;
+
+                re[odd_idx] = re[even_idx] - term_re;
+                im[odd_idx] = im[even_idx] - term_im;
+                re[even_idx] += term_re;
+                im[even_idx] += term_im;
+            }
+        }
+
+        function bit_reverse_copy(arr, n) {
+            const rev = new Float32Array(n*n);
+            for(let j=0; j<n; j++) {
+                for(let i=0; i<n; i++) {
+                     let rev_i = 0, rev_j = 0;
+                     let temp_i = i, temp_j = j;
+                     for(let k=0; k<Math.log2(n); k++) {
+                        rev_i = (rev_i << 1) | (temp_i & 1);
+                        temp_i >>= 1;
+                        rev_j = (rev_j << 1) | (temp_j & 1);
+                        temp_j >>= 1;
+                     }
+                     rev[rev_j*n + rev_i] = arr[j*n + i];
+                }
+            }
+            return rev;
+        }
+
+        function initialize() {
+            for (let i = 0; i < N * N; i++) {
+                c[i] = (Math.random() - 0.5) * 0.1;
+            }
+
+            // Precompute k^2 values
+            for (let j = 0; j < N; j++) {
+                for (let i = 0; i < N; i++) {
+                    const kx = (i < N / 2) ? i : i - N;
+                    const ky = (j < N / 2) ? j : j - N;
+                    k2[j * N + i] = (kx * kx + ky * ky) * (2 * Math.PI / N) * (2 * Math.PI / N);
+                }
+            }
+        }
+
+        function step() {
+            // df/dc = 4c(c^2 - 1)
+            for (let i = 0; i < N * N; i++) {
+                mu[i] = 4 * c[i] * (c[i] * c[i] - 1.0);
+            }
+
+            // FFT of c and mu
+            c_hat_re.set(bit_reverse_copy(c, N)); c_hat_im.fill(0);
+            mu_hat_re.set(bit_reverse_copy(mu, N)); mu_hat_im.fill(0);
+            fft2d(c_hat_re, c_hat_im, N, -1);
+            fft2d(mu_hat_re, mu_hat_im, N, -1);
+
+            // Evolve in Fourier space
+            for (let i = 0; i < N * N; i++) {
+                const k2_i = k2[i];
+                const mu_term_re = mu_hat_re[i];
+                const mu_term_im = mu_hat_im[i];
+                const c_term_re = c_hat_re[i];
+                const c_term_im = c_hat_im[i];
+
+                const numerator_re = -M * k2_i * (mu_term_re - kappa * k2_i * c_term_re);
+                const numerator_im = -M * k2_i * (mu_term_im - kappa * k2_i * c_term_im);
+
+                c_hat_re[i] += dt * numerator_re;
+                c_hat_im[i] += dt * numerator_im;
+            }
+
+            // Inverse FFT to get new c
+            fft2d(c_hat_re, c_hat_im, N, 1);
+            const inv_N2 = 1.0 / (N * N);
+            const c_new = bit_reverse_copy(c_hat_re, N);
+            for (let i = 0; i < N * N; i++) {
+                c[i] = c_new[i] * inv_N2;
+            }
+        }
+
+        function draw() {
+            const imageData = ctx.createImageData(N, N);
+            for (let i = 0; i < N * N; i++) {
+                const val = Math.floor((c[i] + 1) / 2 * 255);
+                imageData.data[i * 4 + 0] = val;
+                imageData.data[i * 4 + 1] = val;
+                imageData.data[i * 4 + 2] = val;
+                imageData.data[i * 4 + 3] = 255;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function loop() {
+            if (!isRunning) return;
+            step();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        startStopBtn.addEventListener('click', () => {
+            isRunning = !isRunning;
+            startStopBtn.textContent = isRunning ? "Stop" : "Start";
+            if (isRunning) loop();
+        });
+
+        resetBtn.addEventListener('click', () => {
+            isRunning = false;
+            startStopBtn.textContent = "Start";
+            cancelAnimationFrame(animationFrameId);
+            initialize();
+            draw();
+        });
+
+        initialize();
+        draw();
+    });
+    </script>
+</body>
+</html>

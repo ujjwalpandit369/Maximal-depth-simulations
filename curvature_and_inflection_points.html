@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curvature and Higher Derivatives of Motion</title>
+    <style>
+        :root {
+            --bg-color: #f9f9f9;
+            --text-color: #333;
+            --primary-color: #673ab7; /* Deep purple */
+            --secondary-color: #757575;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --pos-color: #2196f3;
+            --vel-color: #4caf50;
+            --acc-color: #f44336;
+            --jerk-color: #ff9800;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+
+        #main-canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 2.5 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: crosshair;
+        }
+        .derivative-plots {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        @media (min-width: 768px) {
+            .derivative-plots { grid-template-columns: repeat(3, 1fr); }
+        }
+        .derivative-plots canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1.5 / 1;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .plot-title { text-align: center; font-weight: bold; margin-bottom: 0.5rem; }
+        .pos-title { color: var(--pos-color); }
+        .vel-title { color: var(--vel-color); }
+        .acc-title { color: var(--acc-color); }
+        .jerk-title { color: var(--jerk-color); }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Graph Slopes: Curvature and Higher Derivatives</h1>
+            <p class="subtitle">An interactive tool to explore the derivatives of a motion graph.</p>
+        </header>
+
+        <section>
+            <h2>Interactive Graph</h2>
+            <p><strong>Instructions:</strong> Click and drag on the top graph to draw a smooth <strong>Position vs. Time</strong> curve. The graphs for Velocity, Acceleration, and Jerk will be generated automatically below. Hover over the top graph to see the curvature tool.</p>
+            <div class="plot-title pos-title">Position vs. Time (x-t)</div>
+            <canvas id="main-canvas"></canvas>
+             <div style="text-align: center; margin-top: 1rem;">
+                <button id="clear-btn">Clear Drawing</button>
+            </div>
+            <div class="derivative-plots">
+                <div>
+                    <div class="plot-title vel-title">Velocity vs. Time (v-t)</div>
+                    <canvas id="vel-canvas"></canvas>
+                </div>
+                <div>
+                    <div class="plot-title acc-title">Acceleration vs. Time (a-t)</div>
+                    <canvas id="acc-canvas"></canvas>
+                </div>
+                <div>
+                    <div class="plot-title jerk-title">Jerk vs. Time (j-t)</div>
+                    <canvas id="jerk-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: From Position to Jerk</h2>
+            <h3>The Language of Motion Graphs</h3>
+            <p>The graphs above tell a complete story about an object's motion.
+            <ul>
+                <li><strong>Position (x):</strong> Where the object is. This is the graph you draw.</li>
+                <li><strong>Velocity (v):</strong> The slope of the position graph (<code>dx/dt</code>). It's how fast the position is changing. A steep upward slope is high positive velocity; a steep downward slope is high negative velocity.</li>
+                <li><strong>Acceleration (a):</strong> The slope of the velocity graph (<code>dv/dt</code> or <code>d²x/dt²</code>). It's how fast the velocity is changing.</li>
+                <li><strong>Jerk (j):</strong> The slope of the acceleration graph (<code>da/dt</code> or <code>d³x/dt³</code>). It's how fast the acceleration is changing. A high jerk feels like a sudden "jolt" in a car.</li>
+            </ul>
+            </p>
+            <h3>Curvature and Acceleration</h3>
+            <p>While velocity is the slope of the x-t graph, acceleration is its <strong>curvature</strong>.
+            <ul>
+                <li>When the x-t graph is curving <strong>upwards</strong> (like a smile ◡), the acceleration is <strong>positive</strong>.</li>
+                <li>When the x-t graph is curving <strong>downwards</strong> (like a frown ◠), the acceleration is <strong>negative</strong>.</li>
+            </ul>
+            An <strong>inflection point</strong> is where the curve changes from smiling to frowning (or vice-versa). At this exact moment, the curve is momentarily straight, meaning its curvature is zero. Look at the graphs: you'll see that wherever the top graph has an inflection point, the acceleration graph crosses zero.
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvases = {
+            pos: document.getElementById('main-canvas'),
+            vel: document.getElementById('vel-canvas'),
+            acc: document.getElementById('acc-canvas'),
+            jerk: document.getElementById('jerk-canvas'),
+        };
+        const ctxs = {
+            pos: canvases.pos.getContext('2d'),
+            vel: canvases.vel.getContext('2d'),
+            acc: canvases.acc.getContext('2d'),
+            jerk: canvases.jerk.getContext('2d'),
+        };
+        const clearBtn = document.getElementById('clear-btn');
+
+        let isDrawing = false;
+        let points = [];
+        let derivatives = { v: [], a: [], j: [] };
+        let hoverTime = null;
+
+        // --- Spline and Differentiation ---
+        function getSplinePoint(t, p0, p1, p2, p3) {
+            t = Math.max(0, Math.min(1, t));
+            const t2 = t * t;
+            const t3 = t2 * t;
+            return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+        }
+
+        function interpolate() {
+            if (points.length < 2) return [];
+            const interpolated = [];
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = (i > 0) ? points[i - 1].y : points[i].y;
+                const p1 = points[i].y;
+                const p2 = points[i + 1].y;
+                const p3 = (i < points.length - 2) ? points[i + 2].y : p2;
+
+                const tStart = points[i].t;
+                const tEnd = points[i+1].t;
+
+                for (let t = tStart; t < tEnd; t += 0.01) {
+                    const local_t = (t - tStart) / (tEnd - tStart);
+                    interpolated.push({t: t, y: getSplinePoint(local_t, p0, p1, p2, p3)});
+                }
+            }
+            interpolated.push({t: points[points.length-1].t, y: points[points.length-1].y});
+            return interpolated;
+        }
+
+        function calculateDerivatives() {
+            const posData = interpolate();
+            if (posData.length < 3) {
+                derivatives = { v: [], a: [], j: [] };
+                return;
+            }
+
+            const dt = 0.01;
+            const v = [], a = [], j = [];
+
+            const findY = (t) => {
+                // simple lookup for now
+                const p = posData.find(pt => Math.abs(pt.t-t) < dt/2);
+                return p ? p.y : null;
+            };
+
+            for(let i=1; i < posData.length - 1; i++) {
+                const t = posData[i].t;
+                const y_p1 = findY(t+dt);
+                const y_m1 = findY(t-dt);
+                if (y_p1 === null || y_m1 === null) continue;
+                const vel = (y_p1 - y_m1) / (2*dt);
+                v.push({t, y: vel});
+            }
+
+            for(let i=1; i < v.length - 1; i++) {
+                const t = v[i].t;
+                const vel_p1 = v[i+1].y;
+                const vel_m1 = v[i-1].y;
+                const acc = (vel_p1 - vel_m1) / (2*dt);
+                a.push({t, y: acc});
+            }
+
+            for(let i=1; i < a.length - 1; i++) {
+                const t = a[i].t;
+                const acc_p1 = a[i+1].y;
+                const acc_m1 = a[i-1].y;
+                const jerk = (acc_p1 - acc_m1) / (2*dt);
+                j.push({t, y: jerk});
+            }
+            derivatives = { v, a, j };
+        }
+
+        // --- Drawing ---
+        function draw() {
+            const posData = interpolate();
+
+            drawPlot(ctxs.pos, posData, 'var(--pos-color)', {min:-1, max:1});
+            drawPlot(ctxs.vel, derivatives.v, 'var(--vel-color)');
+            drawPlot(ctxs.acc, derivatives.a, 'var(--acc-color)');
+            drawPlot(ctxs.jerk, derivatives.j, 'var(--jerk-color)');
+
+            if (hoverTime !== null && posData.length > 0) {
+                drawCurvature(hoverTime);
+            }
+        }
+
+        function drawPlot(ctx, data, color, yRange=null) {
+            const w = ctx.canvas.width, h = ctx.canvas.height;
+            ctx.clearRect(0,0,w,h);
+
+            if (data.length < 2) return;
+
+            let yMin, yMax;
+            if(yRange) {
+                yMin = yRange.min; yMax = yRange.max;
+            } else {
+                const yVals = data.map(p => p.y);
+                yMin = Math.min(...yVals);
+                yMax = Math.max(...yVals);
+                const range = yMax - yMin;
+                if(range < 1e-3) { yMin -= 0.5; yMax += 0.5; }
+                else { yMin -= range*0.1; yMax += range*0.1; }
+            }
+
+            const toScreen = (t, y) => ({
+                x: t * w,
+                y: h - (y - yMin) / (yMax - yMin) * h
+            });
+
+            // Axes
+            const origin = toScreen(0,0);
+            ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(w, origin.y); ctx.stroke();
+
+            // Path
+            ctx.strokeStyle = color; ctx.lineWidth = 3;
+            ctx.beginPath();
+            let p = toScreen(data[0].t, data[0].y);
+            ctx.moveTo(p.x, p.y);
+            for(let i=1; i<data.length; i++) {
+                p = toScreen(data[i].t, data[i].y);
+                ctx.lineTo(p.x,p.y);
+            }
+            ctx.stroke();
+        }
+
+        function drawCurvature(t) {
+            const vPoint = derivatives.v.find(p => Math.abs(p.t - t) < 0.005);
+            const aPoint = derivatives.a.find(p => Math.abs(p.t - t) < 0.005);
+            const posData = interpolate();
+            const posPoint = posData.find(p => Math.abs(p.t - t) < 0.005);
+
+            if (!vPoint || !aPoint || !posPoint) return;
+
+            const v = vPoint.y;
+            const a = aPoint.y;
+            const curvature = Math.abs(a) / Math.pow(1 + v*v, 1.5);
+            const radius = 1 / (curvature + 1e-6);
+
+            const yRange = {min: -1, max: 1};
+            const w = canvases.pos.width, h = canvases.pos.height;
+            const toScreen = (t, y) => ({
+                x: t * w,
+                y: h - (y - yRange.min) / (yRange.max - yRange.min) * h
+            });
+
+            const p = toScreen(posPoint.t, posPoint.y);
+
+            ctxs.pos.fillStyle = 'rgba(100,100,100,0.5)';
+            ctxs.pos.beginPath();
+            ctxs.pos.arc(p.x, p.y, 4, 0, 2*Math.PI);
+            ctxs.pos.fill();
+        }
+
+        // --- Event Handlers ---
+        canvases.pos.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            points = [];
+            const rect = canvases.pos.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+            points.push({t: x, y: -y});
+        });
+        canvases.pos.addEventListener('mousemove', (e) => {
+            const rect = canvases.pos.getBoundingClientRect();
+            hoverTime = (e.clientX - rect.left) / rect.width;
+
+            if (isDrawing) {
+                 const x = (e.clientX - rect.left) / rect.width;
+                 const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+                 if (x > points[points.length-1].t) {
+                    points.push({t: x, y: -y});
+                 }
+            }
+            calculateDerivatives();
+            draw();
+        });
+        canvases.pos.addEventListener('mouseup', () => { isDrawing = false; });
+        canvases.pos.addEventListener('mouseleave', () => { hoverTime = null; if(!isDrawing) draw(); });
+        clearBtn.addEventListener('click', () => {
+            points = [];
+            calculateDerivatives();
+            draw();
+        });
+
+        // --- Initial Load ---
+        function init() {
+            Object.values(canvases).forEach(c => {
+                c.width = c.offsetWidth;
+                c.height = c.offsetHeight;
+            });
+            draw();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

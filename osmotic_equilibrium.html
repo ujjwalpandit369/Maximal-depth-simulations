@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equilibrium: Osmosis</title>
+    <style>
+        :root {
+            --bg-color: #f0f7ff;
+            --text-color: #333;
+            --primary-color: #0277bd; /* Water blue */
+            --secondary-color: #546e7a;
+            --border-color: #b0bec5;
+            --canvas-bg: #fff;
+            --water-color: rgba(3, 169, 244, 0.6);
+            --solute-color: #d81b60;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        pre { background-color: #eceff1; padding: 1rem; border-radius: 5px; }
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1.5 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+        .info-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #e3f2fd;
+            border-radius: 5px;
+            border: 1px solid #bbdefb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Equilibrium: Osmosis</h1>
+            <p class="subtitle">A simulation of osmotic pressure across a semi-permeable membrane.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>U-Tube Osmometer</h2>
+            <p>Set an initial solute concentration and press Start to see osmosis in action.</p>
+            <canvas id="sim-canvas" width="600" height="400"></canvas>
+            <div class="slider-container">
+                <label for="conc-slider">Initial Solute Concentration (mol/L): <span id="conc-val">0.1</span></label>
+                <input type="range" id="conc-slider" min="0.01" max="0.25" value="0.1" step="0.01">
+            </div>
+            <div>
+                <button id="start-btn">Start</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <div class="info-panel">
+                <p>Osmotic Pressure (Π): <strong id="osmotic-p">...</strong> Pa | Hydrostatic Pressure (Pₖ): <strong id="hydro-p">...</strong> Pa</p>
+                <p>Height Difference (h): <strong id="height-diff">0.0</strong> cm</p>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Water's Drive to Dilute</h2>
+            <h3>What is Osmosis?</h3>
+            <p>Osmosis is the spontaneous movement of solvent molecules (like water) through a selectively permeable membrane into a region of higher solute concentration. The goal is to equalize the solute concentrations on the two sides. It's a fundamental process in biology—it's how plant roots absorb water and how our kidneys function.</p>
+            <p>In this simulation:
+            <ol>
+                <li>The U-tube is divided by a <strong>semi-permeable membrane</strong>, which allows small water molecules to pass but blocks larger solute molecules (like sugar).</li>
+                <li>The right side contains pure water (solvent), while the left side contains a solution with a specific concentration of solute.</li>
+                <li>Because the concentration of water is effectively lower on the left side (due to the space taken up by solute), there is a net flow of water from right to left to try and dilute the solution.</li>
+            </ol>
+            </p>
+            <h3>Osmotic Pressure vs. Hydrostatic Pressure</h3>
+            <p>As water flows into the left arm, the liquid level rises. This creates a height difference, `h`, which results in a downward pressure due to gravity. This is called <strong>hydrostatic pressure</strong>.
+            <ul>
+                <li><strong>Osmotic Pressure (Π):</strong> This is the "pulling" pressure generated by the concentration difference, driving water across the membrane.</li>
+                <li><strong>Hydrostatic Pressure (Pₖ):</strong> This is the "pushing" pressure generated by the weight of the extra column of liquid, which opposes the osmotic flow.</li>
+            </ul>
+            The system reaches <strong>osmotic equilibrium</strong> when the hydrostatic pressure grows large enough to exactly balance the osmotic pressure. At this point, the net flow of water across the membrane becomes zero, and the height difference stabilizes.
+            </p>
+        </section>
+
+        <section id="core-theory">
+            <h2>Core Theory</h2>
+            <p>The equilibrium state is determined by the balance of two pressures.</p>
+            <h3>1. Osmotic Pressure (van 't Hoff Equation)</h3>
+            <p>The pressure difference that must be applied to a solution to prevent the inward flow of its pure solvent across a semipermeable membrane is known as its osmotic pressure, `Π`.</p>
+            <pre>Π = i * M * R * T</pre>
+            <ul>
+                <li>`i` is the van 't Hoff factor (dimensionless). For sugar (non-ionizing), `i = 1`.</li>
+                <li>`M` is the molar concentration of the solute (mol/L or mol/m³).</li>
+                <li>`R` is the ideal gas constant (8.314 J/(mol·K)).</li>
+                <li>`T` is the absolute temperature in Kelvin (we assume 298 K or 25°C).</li>
+            </ul>
+            <h3>2. Hydrostatic Pressure</h3>
+            <p>The pressure exerted by a column of fluid due to gravity is its hydrostatic pressure, `Pₖ`.</p>
+            <pre>Pₖ = ρ * g * h</pre>
+             <ul>
+                <li>`ρ` (rho) is the density of the fluid (for water, ~1000 kg/m³).</li>
+                <li>`g` is the acceleration due to gravity (~9.81 m/s²).</li>
+                <li>`h` is the height difference of the fluid columns.</li>
+            </ul>
+            <h3>Equilibrium Condition</h3>
+            <p>Equilibrium is reached when the two pressures are equal: `Pₖ = Π`. Therefore, the final height difference is:</p>
+            <pre>h = (iMRT) / (ρg)</pre>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const concSlider = document.getElementById('conc-slider');
+        const concVal = document.getElementById('conc-val');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const osmoticPEl = document.getElementById('osmotic-p');
+        const hydroPEl = document.getElementById('hydro-p');
+        const heightDiffEl = document.getElementById('height-diff');
+
+        const state = {
+            h_left: 0.5, h_right: 0.5,
+            concentration: 0.1, // mol/L
+            isRunning: false
+        };
+
+        const R = 8.314;
+        const T = 298; // 25 C
+        const rho = 1000;
+        const g = 9.81;
+
+        let particles = [];
+        let animationFrameId;
+
+        function setupParticles() {
+            particles = [];
+            const numSolute = state.concentration * 1000; // Scaled
+            for(let i=0; i<numSolute; i++) {
+                particles.push({
+                    x: Math.random() * 0.4 + 0.05,
+                    y: Math.random() * state.h_left + (1 - state.h_left),
+                    type: 'solute'
+                });
+            }
+            for(let i=0; i<100; i++) {
+                particles.push({
+                    x: Math.random() * 0.4 + (Math.random() < 0.5 ? 0.05 : 0.55),
+                    y: Math.random(),
+                    type: 'solvent'
+                });
+            }
+        }
+
+        function draw() {
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0,0,w,h);
+
+            // Draw U-tube
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(w*0.05, h*0.95);
+            ctx.lineTo(w*0.95, h*0.95);
+            ctx.lineTo(w*0.95, h*0.1);
+            ctx.moveTo(w*0.05, h*0.95);
+            ctx.lineTo(w*0.05, h*0.1);
+            ctx.stroke();
+
+            // Draw membrane
+            ctx.beginPath();
+            ctx.moveTo(w*0.5, h*0.95);
+            ctx.lineTo(w*0.5, h*0.4);
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw water levels
+            ctx.fillStyle = 'var(--water-color)';
+            ctx.fillRect(w*0.05, h * (1 - state.h_left), w*0.45, h*state.h_left);
+            ctx.fillRect(w*0.5, h * (1 - state.h_right), w*0.45, h*state.h_right);
+
+            // Draw particles
+            particles.forEach(p => {
+                if (p.type === 'solute') {
+                    ctx.fillStyle = 'var(--solute-color)';
+                    ctx.beginPath();
+                    ctx.arc(p.x * w, p.y * h, 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function update() {
+            // Calculate pressures
+            const M_m3 = state.concentration * 1000; // mol/L to mol/m^3
+            const osmotic_p = M_m3 * R * T;
+            const height_diff_m = (state.h_left - state.h_right) * 0.4; // Canvas height as 40cm
+            const hydro_p = rho * g * height_diff_m;
+
+            osmoticPEl.textContent = osmotic_p.toFixed(0);
+            hydroPEl.textContent = hydro_p.toFixed(0);
+            heightDiffEl.textContent = (height_diff_m * 100).toFixed(2);
+
+            if (!state.isRunning) return;
+
+            const pressure_diff = osmotic_p - hydro_p;
+            if (pressure_diff < 1) { // Equilibrium
+                state.isRunning = false;
+                startBtn.textContent = "Start";
+                return;
+            }
+
+            const flow_rate = 0.00001;
+            const dh = flow_rate * pressure_diff;
+
+            state.h_left += dh;
+            state.h_right -= dh;
+
+            state.h_left = Math.min(1, state.h_left);
+            state.h_right = Math.max(0, state.h_right);
+        }
+
+        function loop() {
+            if (!state.isRunning) return;
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        function reset() {
+            state.isRunning = false;
+            startBtn.textContent = "Start";
+            cancelAnimationFrame(animationFrameId);
+            state.concentration = parseFloat(concSlider.value);
+            concVal.textContent = state.concentration.toFixed(2);
+            state.h_left = 0.5;
+            state.h_right = 0.5;
+            setupParticles();
+            update(); // for initial readout
+            draw();
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (state.isRunning) {
+                state.isRunning = false;
+                startBtn.textContent = "Start";
+            } else {
+                state.isRunning = true;
+                startBtn.textContent = "Stop";
+                loop();
+            }
+        });
+        resetBtn.addEventListener('click', reset);
+        concSlider.addEventListener('input', () => {
+            if (!state.isRunning) reset();
+            concVal.textContent = parseFloat(concSlider.value).toFixed(2);
+        });
+
+        reset();
+    });
+    </script>
+</body>
+</html>
