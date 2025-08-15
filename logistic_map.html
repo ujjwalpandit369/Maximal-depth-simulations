@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Logistic Map and Bifurcation</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #4caf50; /* Green for population dynamics */
+            --secondary-color: #f44336;
+            --border-color: #dee2e6;
+            --canvas-bg: #ffffff;
+            --accent-color: #ff9800;
+            --font-family: 'Georgia', serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:2px solid var(--primary-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .panel { flex:1; min-width:300px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-sidebar { flex:1; min-width:280px; background:var(--bg-color); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        .controls-group { margin-bottom:1.5em; }
+        input[type="range"] { width: 100%; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Logistic Map: The Route to Chaos</h1>
+    <p style="text-align:center;">Explore how a simple iterative equation, `x → r·x·(1-x)`, can lead to astonishingly complex behavior.</p>
+    <div class="simulation-area">
+        <div class="panel">
+            <p class="panel-title">Cobweb Plot</p>
+            <canvas id="cobweb-canvas"></canvas>
+        </div>
+        <div class="panel">
+            <p class="panel-title">Bifurcation Diagram</p>
+            <canvas id="bifurcation-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>System Parameters</h3>
+                <label>Growth Rate (r): <span id="r-value">3.200</span></label>
+                <input type="range" id="r-slider" min="2.5" max="4.0" value="3.2" step="0.001">
+                <label>Initial Population (x₀): <span id="x0-value">0.20</span></label>
+                <input type="range" id="x0-slider" min="0.01" max="0.99" value="0.2" step="0.01">
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Order from Chaos</h4>
+        <p>The logistic map is a simple mathematical formula that was originally intended to be a model of population growth. Despite its simplicity, it is one of the most famous examples of how chaotic behavior can arise from simple, non-linear equations.</p>
+        <h4>Step 1: The Cobweb Plot</h4>
+        <p>The left panel shows a "cobweb plot," which helps visualize the iteration.
+        <ul>
+            <li>The blue curve is the parabola `y = r·x·(1-x)`.</li>
+            <li>The gray line is `y = x`.</li>
+            <li>The red path shows what happens to our initial population `x₀`. To find the next value, we go up to the parabola, then horizontally over to the `y=x` line, then down. This new spot on the x-axis is our next value, and the process repeats.</li>
+        </ul>
+        Set the `r` slider to a low value, like <strong>2.8</strong>. Notice how the cobweb quickly spirals into a single fixed point. The population becomes stable.
+        </p>
+        <h4>Step 2: The Bifurcation Diagram</h4>
+        <p>The right panel shows the <strong>bifurcation diagram</strong>. This is the main event!
+        <br>
+        The horizontal axis is the growth rate `r` you are controlling with the slider. The vertical axis shows the long-term values that `x` eventually settles on for that value of `r`. The vertical yellow line shows the current `r` value you're inspecting with the cobweb plot.
+        </p>
+        <h4>Step 3: The Route to Chaos</h4>
+        <p>Slowly drag the `r` slider from left to right and watch both plots.
+        <ol>
+            <li><strong>`r < 3.0`</strong>: The system settles to a single point. The bifurcation diagram shows a single line.</li>
+            <li><strong>`r ≈ 3.2`</strong>: The line splits in two! This is a <strong>period-doubling bifurcation</strong>. The population no longer settles to one value, but oscillates between two. You can see this 2-cycle clearly in the cobweb plot.</li>
+            <li><strong>`r ≈ 3.5`</strong>: The two lines split into four. The system now oscillates between four values.</li>
+            <li><strong>`r > 3.57`</strong>: This period-doubling cascade happens faster and faster until the system becomes <strong>chaotic</strong>. The points on the bifurcation diagram now fill entire bands, meaning the population never settles down and appears random (though it is still deterministic).</li>
+        </ol>
+        Look closely inside the chaotic region (e.g., around `r = 3.83`). You can see strange white "windows" where the chaos suddenly disappears and is replaced by stable cycles (like a 3-cycle). This pattern of order emerging from chaos, and chaos from order, is a deep and beautiful feature of non-linear systems.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const cCanvas = document.getElementById('cobweb-canvas');
+    const cCtx = cCanvas.getContext('2d');
+    const bCanvas = document.getElementById('bifurcation-canvas');
+    const bCtx = bCanvas.getContext('2d');
+
+    // --- State ---
+    let simState = {
+        r: 3.2,
+        x0: 0.2,
+        bifurcationData: null
+    };
+
+    const logisticMap = (x, r) => r * x * (1 - x);
+
+    // --- Bifurcation Diagram Generation ---
+    function generateBifurcationData() {
+        const w = bCanvas.getBoundingClientRect().width;
+        const h = bCanvas.getBoundingClientRect().height;
+        const imgData = bCtx.createImageData(w, h);
+
+        const r_min = 2.5, r_max = 4.0;
+
+        for (let i = 0; i < w; i++) {
+            const r = r_min + (i / w) * (r_max - r_min);
+            let x = 0.5;
+
+            // Settle onto attractor
+            for (let j = 0; j < 1000; j++) {
+                x = logisticMap(x, r);
+            }
+            // Plot attractor points
+            for (let j = 0; j < 500; j++) {
+                x = logisticMap(x, r);
+                if (x >= 0 && x <= 1) {
+                    const y = Math.floor(h * (1 - x));
+                    const idx = (y * w + i) * 4;
+                    if(idx < imgData.data.length){
+                        imgData.data[idx] = 0;
+                        imgData.data[idx+1] = 0;
+                        imgData.data[idx+2] = 0;
+                        imgData.data[idx+3] = 50; // Alpha
+                    }
+                }
+            }
+        }
+        simState.bifurcationData = imgData;
+    }
+
+    // --- Drawing ---
+    function draw() {
+        drawBifurcationDiagram();
+        drawCobwebPlot();
+    }
+
+    function drawBifurcationDiagram() {
+        const w = bCanvas.getBoundingClientRect().width;
+        const h = bCanvas.getBoundingClientRect().height;
+        bCtx.fillStyle = 'var(--canvas-bg)';
+        bCtx.fillRect(0,0,w,h);
+
+        if (simState.bifurcationData) {
+            bCtx.putImageData(simState.bifurcationData, 0, 0);
+        }
+
+        // Draw cursor line for current r
+        const r_min = 2.5, r_max = 4.0;
+        const r_pos = (simState.r - r_min) / (r_max - r_min) * w;
+        bCtx.strokeStyle = 'var(--accent-color)';
+        bCtx.lineWidth = 1;
+        bCtx.beginPath();
+        bCtx.moveTo(r_pos, 0);
+        bCtx.lineTo(r_pos, h);
+        bCtx.stroke();
+    }
+
+    function drawCobwebPlot() {
+        const w = cCanvas.getBoundingClientRect().width;
+        const h = cCanvas.getBoundingClientRect().height;
+        cCtx.clearRect(0,0,w,h);
+
+        // Draw axes and y=x line
+        cCtx.strokeStyle = '#ccc';
+        cCtx.lineWidth = 1;
+        cCtx.beginPath();
+        cCtx.moveTo(0,h); cCtx.lineTo(w,h); cCtx.lineTo(w,0); // Frame
+        cCtx.moveTo(0,h); cCtx.lineTo(w,0); // y=x line
+        cCtx.stroke();
+
+        // Draw parabola
+        cCtx.strokeStyle = 'var(--secondary-color)';
+        cCtx.lineWidth = 2;
+        cCtx.beginPath();
+        for(let i=0; i<=w; i++){
+            const x = i/w;
+            const y = logisticMap(x, simState.r);
+            cCtx.lineTo(i, h * (1-y));
+        }
+        cCtx.stroke();
+
+        // Draw cobweb path
+        cCtx.strokeStyle = 'var(--primary-color)';
+        cCtx.lineWidth = 1.5;
+        cCtx.beginPath();
+        let x = simState.x0;
+        cCtx.moveTo(x*w, h);
+        for(let i=0; i<100; i++){
+            const y = logisticMap(x, simState.r);
+            cCtx.lineTo(x*w, h*(1-y));
+            cCtx.lineTo(y*w, h*(1-y));
+            x = y;
+        }
+        cCtx.stroke();
+    }
+
+    // --- Event Handling & Init ---
+    function init() {
+        // High-res canvas not needed
+        [cCanvas, bCanvas].forEach(c => {
+            const w = c.getBoundingClientRect().width;
+            c.width = w; c.height = w;
+        });
+
+        generateBifurcationData();
+
+        document.getElementById('r-slider').addEventListener('input', e => {
+            simState.r = parseFloat(e.target.value);
+            document.getElementById('r-value').textContent = simState.r.toFixed(3);
+            draw();
+        });
+        document.getElementById('x0-slider').addEventListener('input', e => {
+            simState.x0 = parseFloat(e.target.value);
+            document.getElementById('x0-value').textContent = simState.x0.toFixed(2);
+            draw();
+        });
+
+        draw();
+    }
+    init();
+});
+</script>
+</body>
+</html>

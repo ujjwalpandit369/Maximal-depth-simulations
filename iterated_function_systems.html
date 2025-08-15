@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterated Function Systems and Fractals</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #d4d4d4;
+            --primary-color: #9cdcfe; /* Light Blue */
+            --secondary-color: #ce9178; /* Orange */
+            --border-color: #555;
+            --canvas-bg: #000;
+            --accent-color: #b5cea8; /* Green */
+            --font-family: 'Consolas', 'Menlo', 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:crosshair; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); color:#1e1e1e; cursor:pointer; border:none; transition:background-color 0.2s; }
+        button.active { background-color:var(--accent-color); font-weight:bold; }
+        #info-panel { padding:1em; text-align:center; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Iterated Function Systems & The Chaos Game</h1>
+    <p>Generate intricate fractals by repeatedly applying a simple set of rules.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Fractal Attractor</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Select a Fractal</h3>
+                <button id="fractal-fern" class="active">Barnsley Fern</button>
+                <button id="fractal-sierpinski">Sierpinski Triangle</button>
+                <button id="fractal-dragon">Heighway Dragon</button>
+            </div>
+            <div class="controls-group">
+                <h3>2. Generate</h3>
+                <label>Number of Points: <span id="points-value">100,000</span></label>
+                <input type="range" id="points-slider" min="10000" max="500000" value="100000" step="10000">
+                <button id="start-btn">Start/Restart</button>
+            </div>
+            <div id="info-panel">
+                <p>Use mouse wheel to zoom. Click and drag to pan.</p>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>The Chaos Game</h4>
+        <p>How can you create something as complex and beautiful as a fern frond from a few simple rules? By playing the <strong>"chaos game."</strong> This is the algorithm that powers this fractal generator. It works like this:
+        <ol>
+            <li>Start with a random point on the screen.</li>
+            <li>Randomly pick one of a few pre-defined mathematical rules (an "affine transformation").</li>
+            <li>Apply that rule to your current point to get a new point.</li>
+            <li>Draw a dot at the new point's location.</li>
+            <li>Make the new point your current point, and go back to step 2.</li>
+        </ol>
+        When you click "Start," the simulation does this hundreds of thousands of times. It seems like it should just produce a random mess of dots, but miraculously, a highly structured, intricate shape emerges. This shape is the <strong>attractor</strong> of the system of rules (the Iterated Function System).
+        </p>
+        <h4>Exploring the Fractals</h4>
+        <p>You can choose from a few classic examples:
+        <ul>
+            <li><strong>Barnsley Fern:</strong> This famous fractal uses four transformations. One (used only 1% of the time) creates the main stem. Two others create the left and right leaflets. A final one creates the curled tip of the frond.</li>
+            <li><strong>Sierpinski Triangle:</strong> This uses three simple rules. Each rule takes a point and moves it halfway towards one of the three vertices of a large triangle.</li>
+            <li><strong>Heighway Dragon:</strong> This is built from two rules and creates a beautiful, recursive dragon-like curve.</li>
+        </ul>
+        </p>
+        <h4>Self-Similarity</h4>
+        <p>The most famous property of fractals is <strong>self-similarity</strong>. Use your mouse wheel to zoom into the Barnsley Fern. As you get closer, you'll see that each large leaflet is made up of smaller copies of the entire fern. And each of those smaller leaflets is made of even smaller copies, and so on, forever! This infinite, repeating detail is a hallmark of fractal geometry. You can click and drag the mouse to pan around the zoomed-in view.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- IFS Definitions: {a, b, c, d, e, f, p, color} ---
+    const ifsPresets = {
+        fern: {
+            rules: [
+                { a: 0.00, b: 0.00, c: 0.00, d: 0.16, e: 0.00, f: 0.00, p: 0.01, color: '#6ab04c' },
+                { a: 0.85, b: 0.04, c: -0.04, d: 0.85, e: 0.00, f: 1.60, p: 0.85, color: '#badc58' },
+                { a: 0.20, b: -0.26, c: 0.23, d: 0.22, e: 0.00, f: 1.60, p: 0.07, color: '#95a5a6' },
+                { a: -0.15, b: 0.28, c: 0.26, d: 0.24, e: 0.00, f: 0.44, p: 0.07, color: '#7f8c8d' },
+            ],
+            view: { x: 0, y: 5, scale: 80 }
+        },
+        sierpinski: {
+            rules: [
+                { a: 0.5, b: 0, c: 0, d: 0.5, e: 0, f: 0, p: 1/3, color: '#e74c3c' },
+                { a: 0.5, b: 0, c: 0, d: 0.5, e: 0.5, f: 0, p: 1/3, color: '#3498db' },
+                { a: 0.5, b: 0, c: 0, d: 0.5, e: 0.25, f: 0.5, p: 1/3, color: '#2ecc71' },
+            ],
+            view: { x: 0.5, y: 0.25, scale: 500 }
+        },
+        dragon: {
+            rules: [
+                { a: 0.5, b: -0.5, c: 0.5, d: 0.5, e: 0, f: 0, p: 0.5, color: '#9b59b6' },
+                { a: -0.5, b: -0.5, c: 0.5, d: -0.5, e: 1, f: 0, p: 0.5, color: '#3498db' },
+            ],
+            view: { x: 0.6, y: 0.3, scale: 400 }
+        }
+    };
+
+    let simState = {
+        model: 'fern',
+        numPoints: 100000,
+        view: { ...ifsPresets.fern.view },
+        running: false,
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Chaos Game Engine ---
+    let animationFrameId;
+    function runChaosGame() {
+        if(animationFrameId) cancelAnimationFrame(animationFrameId);
+        simState.running = true;
+
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        let { rules } = ifsPresets[simState.model];
+        let { x, y, scale } = simState.view;
+
+        let currentX = 0, currentY = 0;
+        let pointsToDraw = simState.numPoints;
+        const batchSize = 1000;
+
+        // Cumulative probabilities for rule selection
+        let cumulativeP = 0;
+        const cdf = rules.map(r => cumulativeP += r.p);
+
+        function drawBatch() {
+            for(let i=0; i<batchSize; i++){
+                const rand = Math.random();
+                const rule = rules.find((r, j) => rand <= cdf[j]);
+
+                const nextX = currentX * rule.a + currentY * rule.b + rule.e;
+                const nextY = currentX * rule.c + currentY * rule.d + rule.f;
+                currentX = nextX;
+                currentY = nextY;
+
+                const canvasX = (currentX - x) * scale + w/2;
+                const canvasY = h - ((currentY - y) * scale + h/2);
+
+                ctx.fillStyle = rule.color;
+                ctx.fillRect(canvasX, canvasY, 1, 1);
+            }
+            pointsToDraw -= batchSize;
+            if(pointsToDraw > 0 && simState.running) {
+                animationFrameId = requestAnimationFrame(drawBatch);
+            } else {
+                simState.running = false;
+            }
+        }
+        drawBatch();
+    }
+
+    // --- Event Handling & Init ---
+    function init() {
+        // Use raw canvas size for 1-to-1 pixel plotting
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+
+        document.querySelectorAll('.controls-group button[id^="fractal-"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.controls-group button.active').classList.remove('active');
+                btn.classList.add('active');
+                simState.model = btn.id.substring(8);
+                simState.view = { ...ifsPresets[simState.model].view };
+                runChaosGame();
+            });
+        });
+
+        document.getElementById('points-slider').addEventListener('input', e => {
+            simState.numPoints = parseInt(e.target.value);
+            document.getElementById('points-value').textContent = simState.numPoints.toLocaleString();
+        });
+
+        document.getElementById('start-btn').addEventListener('click', runChaosGame);
+
+        // Zoom and Pan
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const worldX = (mouseX - rect.width/2)/simState.view.scale + simState.view.x;
+            const worldY = (rect.height - mouseY - rect.height/2)/simState.view.scale + simState.view.y;
+
+            const zoomFactor = e.deltaY < 0 ? 1.2 : 1/1.2;
+            simState.view.scale *= zoomFactor;
+
+            simState.view.x = worldX - (mouseX - rect.width/2)/simState.view.scale;
+            simState.view.y = worldY - (rect.height - mouseY - rect.height/2)/simState.view.scale;
+
+            runChaosGame();
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            simState.mouse.down = true;
+            simState.mouse.x = e.clientX;
+            simState.mouse.y = e.clientY;
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+        canvas.addEventListener('mousemove', e => {
+            if(simState.mouse.down){
+                const dx = e.clientX - simState.mouse.x;
+                const dy = e.clientY - simState.mouse.y;
+                simState.view.x -= dx / simState.view.scale;
+                simState.view.y += dy / simState.view.scale;
+                simState.mouse.x = e.clientX;
+                simState.mouse.y = e.clientY;
+                runChaosGame();
+            }
+        });
+
+        runChaosGame();
+    }
+    init();
+});
+</script>
+</body>
+</html>

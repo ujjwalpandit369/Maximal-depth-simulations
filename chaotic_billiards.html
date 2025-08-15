@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaotic Billiards</title>
+    <style>
+        :root {
+            --bg-color: #263238;
+            --text-color: #eceff1;
+            --primary-color: #ffca28; /* Amber for billiard balls */
+            --secondary-color: #26a69a; /* Teal for table felt */
+            --border-color: #37474f;
+            --canvas-bg: #004d40; /* Dark teal felt */
+            --accent-color: #ef5350;
+            --font-family: 'Roboto', sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:250px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:4px solid #5d4037; background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1.5/1; cursor:crosshair; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:none; background-color:var(--secondary-color); color:white; box-sizing:border-box; font-family:inherit; cursor:pointer; }
+        button.active { background-color:var(--primary-color); color: #333; font-weight:bold; }
+        button.secondary { background-color:var(--accent-color); color: #333; }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Billiards on a Chaotic Table</h1>
+    <p>Discover how the shape of a billiard table determines whether the motion is predictable or chaotic.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Billiard Table</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>1. Select Table Shape</h3>
+                <button id="shape-rectangle" class="active">Rectangle (Regular)</button>
+                <button id="shape-circle">Circle (Regular)</button>
+                <button id="shape-stadium">Stadium (Chaotic)</button>
+                <button id="shape-sinai">Sinai Billiard (Chaotic)</button>
+            </div>
+            <div class="controls-group">
+                <h3>2. Interaction</h3>
+                <p style="font-size:0.9em;">Click to place a ball, drag to set its initial velocity, and release to launch.</p>
+                <button id="clone-btn" class="secondary">Launch Twin</button>
+                <button id="clear-btn">Clear Traces</button>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>Predictable vs. Chaotic Motion</h4>
+        <p>Imagine hitting a billiard ball. On a normal rectangular table, you can predict with high accuracy where the ball will go. The motion is <strong>regular</strong>. But if we change the shape of the table slightly, the motion can become completely unpredictable, or <strong>chaotic</strong>.</p>
+        <h4>Step 1: Regular Motion</h4>
+        <p>Start with the <strong>"Rectangle"</strong> or <strong>"Circle"</strong> table. These are regular, non-chaotic shapes. Click on the table to place a ball, drag your mouse to aim, and release to launch it. The ball follows a predictable path.
+        <br><br>
+        Now, click <strong>"Launch Twin"</strong>. This launches a second, blue ball from the same starting point, but with its angle changed by a tiny, almost imperceptible amount. Notice how the two paths stay close together for a very long time. A small error in your aim doesn't cause a huge difference in the outcome.
+        </p>
+        <h4>Step 2: Chaotic Motion</h4>
+        <p>Now switch to the <strong>"Stadium"</strong> table. A stadium is just a rectangle with two semicircles attached to the ends. This seemingly small change has dramatic consequences. Launch a single ball and watch its path. It seems much more complex and space-filling.
+        <br><br>
+        This is where it gets interesting. Click "Clear Traces", launch a new red ball, and then immediately click <strong>"Launch Twin"</strong>.
+        <br><br>
+        The two balls start out together, but after just a few bounces off the curved walls, their paths will diverge wildly! Within seconds, their positions will be completely different. This is <strong>sensitive dependence on initial conditions</strong>, the hallmark of chaos. Any tiny error in the initial angle is rapidly magnified by the curved boundaries.
+        </p>
+        <h4>Step 3: The Sinai Billiard</h4>
+        <p>The <strong>"Sinai Billiard"</strong> is another famous chaotic system. It's just a square table with a circular obstacle in the middle. Try the "Launch Twin" experiment here as well. You'll see the same exponential divergence. The circular obstacle acts as a "scatterer" that makes the system chaotic. These simple tabletop models are fundamental to physics for studying the transition from order to chaos.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let simState = {
+        shape: 'rectangle',
+        balls: [],
+        traces: [],
+        mouse: { down: false, start: null, end: null }
+    };
+    const ballRadius = 5;
+
+    // --- Collision & Physics ---
+    function update(dt) {
+        simState.balls.forEach((ball, idx) => {
+            let remaining_dt = dt;
+            for(let iter=0; iter<5 && remaining_dt > 1e-6; iter++){ // Max 5 bounces per frame
+                const { t_hit, normal } = findNextCollision(ball, remaining_dt);
+
+                if (t_hit <= remaining_dt) {
+                    ball.pos.x += ball.vel.x * t_hit;
+                    ball.pos.y += ball.vel.y * t_hit;
+
+                    // Reflect velocity
+                    const dot = ball.vel.x*normal.x + ball.vel.y*normal.y;
+                    ball.vel.x -= 2 * dot * normal.x;
+                    ball.vel.y -= 2 * dot * normal.y;
+
+                    remaining_dt -= t_hit;
+                } else {
+                    ball.pos.x += ball.vel.x * remaining_dt;
+                    ball.pos.y += ball.vel.y * remaining_dt;
+                    remaining_dt = 0;
+                }
+                simState.traces[idx].push({...ball.pos});
+                if(simState.traces[idx].length > 500) simState.traces[idx].shift();
+            }
+        });
+    }
+
+    function findNextCollision(ball, dt) {
+        const w = canvas.width, h = canvas.height;
+        let t_hit = Infinity, normal = {x:0, y:0};
+
+        const check = (t, nx, ny) => {
+            if(t >= 0 && t < t_hit) { t_hit = t; normal = {x:nx, y:ny}; }
+        };
+
+        if (simState.shape === 'rectangle' || simState.shape === 'stadium' || simState.shape === 'sinai') {
+            if(ball.vel.x > 0) check((w-ballRadius - ball.pos.x)/ball.vel.x, -1, 0);
+            if(ball.vel.x < 0) check((ballRadius - ball.pos.x)/ball.vel.x, 1, 0);
+            if(ball.vel.y > 0) check((h-ballRadius - ball.pos.y)/ball.vel.y, 0, -1);
+            if(ball.vel.y < 0) check((ballRadius - ball.pos.y)/ball.vel.y, 0, 1);
+        }
+        if (simState.shape === 'circle') {
+            const R = w/2-ballRadius; const cx=w/2, cy=h/2;
+            const op = {x: ball.pos.x-cx, y:ball.pos.y-cy};
+            const b = 2*(op.x*ball.vel.x + op.y*ball.vel.y);
+            const c = op.x*op.x + op.y*op.y - R*R;
+            const v2 = ball.vel.x*ball.vel.x + ball.vel.y*ball.vel.y;
+            const disc = b*b - 4*v2*c;
+            if(disc >= 0){
+                const t = (-b - Math.sqrt(disc))/(2*v2);
+                if(t > 1e-6) {
+                    const hitPos = {x:ball.pos.x+ball.vel.x*t, y:ball.pos.y+ball.vel.y*t};
+                    check(t, -(hitPos.x-cx)/R, -(hitPos.y-cy)/R);
+                }
+            }
+        }
+        if (simState.shape === 'stadium') {
+            const R = h/2-ballRadius; const L = w-h;
+            const c1 = {x:h/2, y:h/2}, c2 = {x:w-h/2, y:h/2};
+            [c1,c2].forEach(c => {
+                const op = {x:ball.pos.x-c.x, y:ball.pos.y-c.y};
+                const b=2*(op.x*ball.vel.x+op.y*ball.vel.y), v2=ball.vel.x*ball.vel.x+ball.vel.y*ball.vel.y, d=op.x*op.x+op.y*op.y-R*R;
+                const disc=b*b-4*v2*d;
+                if(disc >= 0){
+                    const t = (-b - Math.sqrt(disc))/(2*v2);
+                    const hitX = ball.pos.x+ball.vel.x*t;
+                    if(t > 1e-6 && ((c===c1 && hitX < c1.x) || (c===c2 && hitX > c2.x))){
+                         const hitPos = {x:hitX, y:ball.pos.y+ball.vel.y*t};
+                         check(t, -(hitPos.x-c.x)/R, -(hitPos.y-c.y)/R);
+                    }
+                }
+            });
+        }
+        if (simState.shape === 'sinai') {
+            const R = w/5; const cx=w/2, cy=h/2;
+            const op = {x: ball.pos.x-cx, y:ball.pos.y-cy};
+            const b = 2*(op.x*ball.vel.x + op.y*ball.vel.y);
+            const c = op.x*op.x + op.y*op.y - (R+ballRadius)*(R+ballRadius);
+            const v2 = ball.vel.x*ball.vel.x + ball.vel.y*ball.vel.y;
+            const disc = b*b - 4*v2*c;
+            if(disc >= 0){
+                const t = (-b - Math.sqrt(disc))/(2*v2);
+                if(t > 1e-6) {
+                    const hitPos = {x:ball.pos.x+ball.vel.x*t, y:ball.pos.y+ball.vel.y*t};
+                    check(t, (hitPos.x-cx)/R, (hitPos.y-cy)/R);
+                }
+            }
+        }
+        return { t_hit, normal };
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+
+        drawTable();
+
+        simState.traces.forEach((trace,i) => {
+            ctx.strokeStyle = (i===0) ? 'var(--accent-color)' : 'var(--secondary-color)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            trace.forEach((p,j) => j===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+            ctx.stroke();
+        });
+
+        simState.balls.forEach((ball,i) => {
+            ctx.fillStyle = (i===0) ? 'var(--accent-color)' : 'var(--secondary-color)';
+            ctx.beginPath();
+            ctx.arc(ball.pos.x, ball.pos.y, ballRadius, 0, 2*Math.PI);
+            ctx.fill();
+        });
+
+        // Draw aiming line
+        if(simState.mouse.down && simState.mouse.start && simState.mouse.end){
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(simState.mouse.start.x, simState.mouse.start.y);
+            ctx.lineTo(simState.mouse.end.x, simState.mouse.end.y);
+            ctx.stroke();
+        }
+    }
+
+    function drawTable() {
+        const w = canvas.width, h = canvas.height;
+        ctx.strokeStyle = 'var(--secondary-color)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if(simState.shape==='rectangle' || simState.shape==='sinai'){
+            ctx.strokeRect(0,0,w,h);
+        }
+        if(simState.shape==='circle'){
+            ctx.arc(w/2,h/2,w/2,0,2*Math.PI);
+        }
+        if(simState.shape==='stadium'){
+            ctx.moveTo(h/2,0); ctx.lineTo(w-h/2,0);
+            ctx.arc(w-h/2,h/2,h/2,-Math.PI/2,Math.PI/2);
+            ctx.lineTo(h/2,h);
+            ctx.arc(h/2,h/2,h/2,Math.PI/2,3*Math.PI/2);
+        }
+        ctx.stroke();
+        if(simState.shape==='sinai'){
+            ctx.beginPath();
+            ctx.arc(w/2,h/2,w/5,0,2*Math.PI);
+            ctx.stroke();
+        }
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        update(1);
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function init() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width; canvas.height = rect.height;
+
+        document.querySelectorAll('.controls-group button[id^="shape-"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.controls-group button.active').classList.remove('active');
+                btn.classList.add('active');
+                simState.shape = btn.id.substring(6);
+                simState.balls = []; simState.traces = [];
+            });
+        });
+        document.getElementById('clear-btn').addEventListener('click', () => { simState.balls = []; simState.traces = []; });
+        document.getElementById('clone-btn').addEventListener('click', () => {
+            if(simState.balls.length > 0){
+                const lastBall = simState.balls[simState.balls.length-1];
+                const angle = Math.atan2(lastBall.vel.y, lastBall.vel.x);
+                const speed = Math.hypot(lastBall.vel.x, lastBall.vel.y);
+                const newAngle = angle + 0.001;
+                simState.balls.push({
+                    pos: {...lastBall.pos},
+                    vel: {x: Math.cos(newAngle)*speed, y: Math.sin(newAngle)*speed}
+                });
+                simState.traces.push([{...lastBall.pos}]);
+            }
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            simState.mouse.down = true;
+            simState.mouse.start = {x:e.offsetX, y:e.offsetY};
+            simState.mouse.end = {x:e.offsetX, y:e.offsetY};
+        });
+        canvas.addEventListener('mousemove', e => {
+            if(simState.mouse.down){
+                simState.mouse.end = {x:e.offsetX, y:e.offsetY};
+            }
+        });
+        canvas.addEventListener('mouseup', e => {
+            simState.mouse.down = false;
+            const speed = 3;
+            const dx = simState.mouse.end.x - simState.mouse.start.x;
+            const dy = simState.mouse.end.y - simState.mouse.start.y;
+            const mag = Math.hypot(dx,dy) || 1;
+            const newBall = {
+                pos: {...simState.mouse.start},
+                vel: {x: dx/mag*speed, y:dy/mag*speed}
+            };
+            simState.balls.push(newBall);
+            simState.traces.push([{...newBall.pos}]);
+        });
+
+        mainLoop();
+    }
+    init();
+});
+</script>
+</body>
+</html>

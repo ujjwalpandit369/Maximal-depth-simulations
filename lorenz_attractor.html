@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lorenz Attractor</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --primary-color: #ff4757;
+            --secondary-color: #3742fa;
+            --border-color: #333;
+            --canvas-bg: #000;
+            --accent-color: #f1c40f;
+            --font-family: 'Courier New', monospace;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1100px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:3; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(255,255,255,0.05); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; aspect-ratio:1/1; cursor:move; }
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--primary-color); background-color:var(--bg-color); color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; border:none; transition:background-color 0.2s; }
+        button:hover { filter:brightness(120%); }
+        button.secondary { background-color:var(--secondary-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Lorenz Attractor: The Butterfly Effect</h1>
+    <p style="text-align:center;">A 3D visualization of the strange attractor that arose from a simple model of atmospheric convection.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Phase Space</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Lorenz Parameters</h3>
+                <label>σ (Sigma): <span id="sigma-value">10.0</span></label>
+                <input type="range" id="sigma-slider" min="1" max="50" value="10" step="0.1">
+                <label>ρ (Rho): <span id="rho-value">28.0</span></label>
+                <input type="range" id="rho-slider" min="1" max="100" value="28" step="0.1">
+                <label>β (Beta): <span id="beta-value">2.67</span></label>
+                <input type="range" id="beta-slider" min="0.5" max="5" value="2.6667" step="0.01">
+            </div>
+            <div class="controls-group">
+                <h3>Simulation Control</h3>
+                <p style="font-size:0.9em;">Click in the 3D space to set a new starting point.</p>
+                <button id="clone-btn" class="secondary">Launch Second Point</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>The Birth of the Butterfly Effect</h4>
+        <p>In 1963, meteorologist Edward Lorenz was working with a simplified computer model of atmospheric convection. He discovered that a tiny change in his initial conditions—equivalent to rounding a variable from 0.506127 to 0.506—led to a completely different long-term forecast. This was the birth of the "butterfly effect" and the discovery of one of the first and most famous <strong>strange attractors</strong>.</p>
+        <h4>Step 1: The Phase Space</h4>
+        <p>The 3D space you see is not physical space, but an abstract <strong>phase space</strong>. Each point in this space represents the complete state of Lorenz's simplified atmosphere model at one instant. The three axes represent the values of the three variables (`x`, `y`, and `z`) in his equations. As the system evolves, the point representing its state moves through this phase space, tracing a path.</p>
+        <h4>Step 2: The Attractor</h4>
+        <p>Click "Reset". A single point starts moving. Watch as it traces a path. The trajectory loops around one side, then might suddenly jump to the other lobe, loop around for a while, and then jump back. It never settles down into a simple orbit, and it never exactly repeats its path. However, the path is not random; it is confined to a specific, bounded region with a beautiful butterfly shape. This shape is the <strong>Lorenz Attractor</strong>.</p>
+        <h4>Step 3: The Butterfly Effect</h4>
+        <p>Now, let the simulation run for a few seconds. Click the <strong>"Launch Second Point"</strong> button. A second, blue tracer point will appear, starting infinitesimally close to the first red point.
+        <br><br>
+        At first, they travel together, their paths seemingly identical. But watch closely. After a few loops, they will begin to separate. One might jump to the other lobe while the first stays put. Soon, their positions will be completely uncorrelated.
+        <br><br>
+        This is a profound demonstration of <strong>sensitive dependence on initial conditions</strong>. Even the tiniest, unmeasurable difference in the starting state of a chaotic system will lead to exponentially diverging outcomes, making long-term prediction impossible. Yet, despite their divergence, both points will always remain somewhere on the same strange attractor.
+        </p>
+        <h4>Step 4: Play with Physics</h4>
+        <p>Use the sliders to change the parameters of the Lorenz equations. The standard values are `σ=10`, `ρ=28`, `β=8/3`. Chaos is known to emerge for `ρ > 24.74`. Try setting `ρ` to a lower value, like 15. You'll see that the system no longer behaves chaotically; the trajectory quickly settles into a simple, predictable fixed point. The strange attractor disappears!</p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Minimal 3D/Math Library ---
+    const Mat4={create:()=>new Float32Array(16),identity:m=>(m.fill(0),m[0]=m[5]=m[10]=m[15]=1,m),multiply:(a,b,o)=>{const r=new Float32Array(16);let i,j,k;for(i=0;i<4;i++)for(j=0;j<4;j++){let s=0;for(k=0;k<4;k++)s+=a[i+k*4]*b[k+j*4];r[i+j*4]=s}return o.set(r),o},perspective:(f,a,n,r,o)=>{const t=1/Math.tan(f/2);o.fill(0);o[0]=t/a;o[5]=t;o[10]=(r+n)/(n-r);o[11]=-1;o[14]=2*r*n/(n-r);return o},translate:(m,v,o)=>(Mat4.multiply(m,[1,0,0,0,0,1,0,0,0,0,1,0,v[0],v[1],v[2],1],o),o),rotateX:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1],o),o},rotateY:(m,r,o)=>{const c=Math.cos(r),s=Math.sin(r);Mat4.multiply(m,[c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1],o);return o}};
+
+    // --- Canvas & State ---
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d');
+    let simState = {
+        params: { sigma: 10, rho: 28, beta: 8/3 },
+        points: [],
+        traces: [],
+        view: { rotX: 0.3, rotY: 0.5, zoom: 80 },
+        mouse: { down: false, x: 0, y: 0 }
+    };
+
+    // --- Lorenz System Solver (RK4) ---
+    const lorenzDerivs = p => {
+        const {sigma, rho, beta} = simState.params;
+        return [ sigma * (p[1] - p[0]), p[0] * (rho - p[2]) - p[1], p[0] * p[1] - beta * p[2] ];
+    };
+    const rk4Step = (p, dt) => {
+        const k1 = lorenzDerivs(p);
+        const k2_in = p.map((val,i) => val + k1[i]*dt/2);
+        const k2 = lorenzDerivs(k2_in);
+        const k3_in = p.map((val,i) => val + k2[i]*dt/2);
+        const k3 = lorenzDerivs(k3_in);
+        const k4_in = p.map((val,i) => val + k3[i]*dt);
+        const k4 = lorenzDerivs(k4_in);
+        return p.map((val,i) => val + (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])*dt/6);
+    };
+
+    // --- Drawing ---
+    function draw() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'rgba(0,0,0,0.1)'; // Fading effect
+        ctx.fillRect(0,0,w,h);
+
+        const proj = Mat4.perspective(Math.PI/4, w/h, 0.1, 200, Mat4.create());
+        let view = Mat4.identity(Mat4.create());
+        view = Mat4.translate(view, [0, 0, -simState.view.zoom], view);
+        view = Mat4.rotateX(view, simState.view.rotX, Mat4.create());
+        view = Mat4.rotateY(view, simState.view.rotY, view);
+        const mvp = Mat4.multiply(proj, view, Mat4.create());
+
+        const transform = v => {
+            let [x,y,z] = v;
+            const d = mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15] || 1;
+            return { x:w/2*(1+(mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/d), y:h/2*(1-(mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/d) };
+        };
+
+        simState.traces.forEach((trace, traceIdx) => {
+            ctx.strokeStyle = (traceIdx === 0) ? 'var(--primary-color)' : 'var(--secondary-color)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            trace.forEach((p, i) => {
+                const {x, y} = transform(p);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        });
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        const dt = 0.01;
+        for(let i=0; i<simState.points.length; i++){
+            const newPoint = rk4Step(simState.points[i], dt);
+            simState.points[i] = newPoint;
+            simState.traces[i].push(newPoint);
+            if(simState.traces[i].length > 1500) simState.traces[i].shift();
+        }
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function reset(initialPoint = [0.1, 0, 0]) {
+        simState.points = [initialPoint];
+        simState.traces = [[initialPoint]];
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.fillStyle = 'var(--canvas-bg)';
+        ctx.fillRect(0,0,w,h);
+    }
+
+    function init() {
+        const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+        ctx.canvas.width = w * window.devicePixelRatio; ctx.canvas.height = h * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        document.querySelectorAll('.controls-group input').forEach(slider => {
+            slider.addEventListener('input', e => {
+                const id = e.target.id.split('-')[0];
+                simState.params[id] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = simState.params[id].toFixed(2);
+                reset();
+            });
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => reset());
+        document.getElementById('clone-btn').addEventListener('click', () => {
+            if(simState.points.length > 0){
+                const p0 = simState.points[0];
+                const p1 = [p0[0]+0.001, p0[1], p0[2]];
+                simState.points.push(p1);
+                simState.traces.push([p1]);
+            }
+        });
+
+        canvas.addEventListener('mousedown', e => { simState.mouse.down = true; simState.mouse.x = e.clientX; simState.mouse.y = e.clientY; });
+        canvas.addEventListener('mousemove', e => {
+            if (simState.mouse.down) {
+                simState.view.rotY += (e.clientX - simState.mouse.x) * 0.01;
+                simState.view.rotX += (e.clientY - simState.mouse.y) * 0.01;
+                simState.mouse.x = e.clientX; simState.mouse.y = e.clientY;
+            }
+        });
+        canvas.addEventListener('click', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left)/rect.width * 50 - 25;
+            const y = (e.clientY - rect.top)/rect.height * 50 - 25;
+            reset([x, y, simState.params.rho - 1]);
+        });
+        window.addEventListener('mouseup', () => simState.mouse.down = false);
+
+        reset();
+        mainLoop();
+    }
+    init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Double Pendulum and Chaos</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --primary-color: #e74c3c; /* Red for chaos */
+            --secondary-color: #3498db;
+            --border-color: #34495e;
+            --canvas-bg: #1a2531;
+            --accent-color: #f1c40f;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        body { font-family:var(--font-family); background-color:var(--bg-color); color:var(--text-color); margin:0; padding:1em; line-height:1.6; }
+        .container { max-width:1200px; margin:0 auto; padding:1em; }
+        h1,h2,h3 { color:var(--primary-color); border-bottom:1px solid var(--border-color); padding-bottom:0.3em; font-weight:400; }
+        h1 { color: var(--accent-color); text-align: center;}
+        .simulation-area { display:flex; flex-wrap:wrap; gap:1em; margin-bottom:1em; align-items:flex-start; }
+        .main-content { flex:2; min-width:300px; }
+        .controls-sidebar { flex:1; min-width:280px; background:rgba(0,0,0,0.2); padding:1em; border:1px solid var(--border-color); border-radius:8px; }
+        canvas { border:1px solid var(--border-color); background-color:var(--canvas-bg); width:100%; display:block; cursor:pointer; }
+        #main-canvas { aspect-ratio: 1/1; }
+        #energy-canvas { aspect-ratio: 2/1; margin-top: 1em;}
+        .panel-title { text-align:center; font-weight:bold; color:var(--primary-color); margin-bottom:0.5em; font-size:1.1em; }
+        .controls-group { margin-bottom:1.5em; }
+        button,input { width:100%; padding:0.6em; margin-bottom:0.5em; border-radius:4px; border:1px solid var(--border-color); background-color:#566573; color:var(--text-color); box-sizing:border-box; font-family:inherit; }
+        button { background-color:var(--primary-color); cursor:pointer; border:none; transition:background-color 0.2s; }
+        button:hover { filter:brightness(120%); }
+        button.secondary { background-color:var(--secondary-color); }
+        .collapsible { background-color:transparent; border:1px solid var(--border-color); border-radius:4px; color:var(--text-color); cursor:pointer; padding:12px; width:100%; text-align:left; outline:none; font-size:1.2em; margin-top:1em; }
+        .content { padding:0 18px; max-height:0; overflow:hidden; transition:max-height 0.2s ease-out; border:1px solid var(--border-color); border-top:none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>The Double Pendulum: A Window into Chaos</h1>
+    <p style="text-align:center;">Explore one of the simplest physical systems that exhibits chaotic behavior.</p>
+    <div class="simulation-area">
+        <div class="main-content">
+            <p class="panel-title">Pendulum Workspace</p>
+            <canvas id="main-canvas"></canvas>
+            <p class="panel-title" style="margin-top:1em;">Energy Plot</p>
+            <canvas id="energy-canvas"></canvas>
+        </div>
+        <div class="controls-sidebar">
+            <div class="controls-group">
+                <h3>Interaction</h3>
+                <p style="font-size:0.9em;">Drag the pendulum bobs to set initial positions, then release.</p>
+                <button id="clone-btn" class="secondary">Launch Clone</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <div class="controls-group">
+                <h3>System Parameters</h3>
+                <label>Mass 1 (m₁): <span id="m1-value">10</span></label>
+                <input type="range" id="m1-slider" min="1" max="20" value="10" step="1">
+                <label>Mass 2 (m₂): <span id="m2-value">10</span></label>
+                <input type="range" id="m2-slider" min="1" max="20" value="10" step="1">
+                <label>Length 1 (L₁): <span id="l1-value">100</span></label>
+                <input type="range" id="l1-slider" min="50" max="200" value="100" step="5">
+                <label>Length 2 (L₂): <span id="l2-value">100</span></label>
+                <input type="range" id="l2-slider" min="50" max="200" value="100" step="5">
+                 <label>Damping: <span id="damp-value">0.001</span></label>
+                <input type="range" id="damp-slider" min="0" max="0.01" value="0.001" step="0.0005">
+            </div>
+        </div>
+    </div>
+    <button type="button" class="collapsible">Beginner's Guide</button>
+    <div class="content">
+        <h4>The Butterfly Effect in Action</h4>
+        <p>A single pendulum swings back and forth in a simple, predictable way. But what happens if you attach a second pendulum to the end of the first? You get a <strong>double pendulum</strong>, a system so exquisitely sensitive that it becomes a beautiful demonstration of <strong>Chaos Theory</strong>.</p>
+        <h4>Step 1: Set the Stage</h4>
+        <p>The simulation starts paused. The main panel shows the double pendulum. You can change its physical properties, like the masses of the bobs and the lengths of the arms, using the sliders.</p>
+        <h4>Step 2: Your First Launch</h4>
+        <p>Click and drag the two red bobs to any starting position you like. When you release the mouse, the simulation starts. The pendulum begins its wild, unpredictable dance. The <span style="color:var(--secondary-color)">blue line</span> traces the chaotic path of the second bob. Notice how it never seems to exactly repeat itself.</p>
+        <h4>Step 3: Launch a Clone</h4>
+        <p>This is the most important part of the simulation. Click "Reset", set the pendulum to a new starting position, and release it. Let it swing for a second or two. Now, click the <strong>"Launch Clone"</strong> button.
+        <br><br>
+        A second, transparent "ghost" pendulum appears. It starts in the <em>exact same position</em> as the first one, but with one of its angles changed by a minuscule, invisible amount (0.001 radians).
+        <br><br>
+        At first, the two pendulums will swing in perfect sync. They look like a single pendulum. But wait. After a few seconds, you'll see the clone start to separate from the original. Soon after, their paths will be completely different and uncorrelated.
+        </p>
+        <h4>The Essence of Chaos</h4>
+        <p>This is <strong>sensitive dependence on initial conditions</strong>, famously known as the "butterfly effect." It means that even an infinitesimally small change in the starting state of a chaotic system will lead to enormous, unpredictable differences in its future state. This is why we can't predict the weather perfectly more than a week or so in advance—the atmosphere is a chaotic system, just like the double pendulum.
+        <br><br>
+        The energy plot at the bottom shows the constant, complex exchange between kinetic energy (energy of motion) and potential energy (stored energy due to height) in the system. With damping, you'll see the total energy slowly decrease over time.
+        </p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Canvas Setup ---
+    const mainCanvas = document.getElementById('main-canvas');
+    const mCtx = mainCanvas.getContext('2d');
+    const energyCanvas = document.getElementById('energy-canvas');
+    const eCtx = energyCanvas.getContext('2d');
+
+    // --- State ---
+    const g = 9.81;
+    let p1, p2, clone1, clone2;
+    let trace = [];
+    let energyData = [];
+    let simState = {
+        running: false,
+        dragging: null,
+        params: { m1:10, m2:10, l1:100, l2:100, damp: 0.001 },
+        cloneActive: false
+    };
+
+    // --- Physics Engine ---
+    function getDerivs(p) {
+        const {m1,m2,l1,l2,damp} = simState.params;
+        const {t1,w1,t2,w2} = p;
+        const dt = t1-t2;
+        const den = 2*m1 + m2 - m2*Math.cos(2*dt);
+
+        const a1_num1 = -g * (2*m1 + m2) * Math.sin(t1);
+        const a1_num2 = -m2 * g * Math.sin(t1 - 2*t2);
+        const a1_num3 = -2 * Math.sin(dt) * m2 * (w2*w2*l2 + w1*w1*l1*Math.cos(dt));
+        const a1 = (a1_num1 + a1_num2 + a1_num3) / (l1 * den);
+
+        const a2_num1 = 2 * Math.sin(dt);
+        const a2_num2 = w1*w1*l1*(m1+m2);
+        const a2_num3 = g*(m1+m2)*Math.cos(t1);
+        const a2_num4 = w2*w2*l2*m2*Math.cos(dt);
+        const a2 = (a2_num1 * (a2_num2 + a2_num3 + a2_num4)) / (l2 * den);
+
+        return {
+            t1: w1, w1: a1 - damp*w1,
+            t2: w2, w2: a2 - damp*w2
+        };
+    }
+
+    function rk4Step(p, dt) {
+        const k1 = getDerivs(p);
+        const k2_in = {}, k3_in = {}, k4_in = {};
+        for(let k in p){ k2_in[k] = p[k] + k1[k]*dt/2; k3_in[k] = p[k] + getDerivs(k2_in)[k]*dt/2; k4_in[k] = p[k] + getDerivs(k3_in)[k]*dt; }
+        const k2=getDerivs(k2_in), k3=getDerivs(k3_in), k4=getDerivs(k4_in);
+        const out = {};
+        for(let k in p){ out[k] = p[k] + (k1[k] + 2*k2[k] + 2*k3[k] + k4[k])*dt/6; }
+        return out;
+    }
+
+    // --- Drawing ---
+    function draw() {
+        const w = mainCanvas.getBoundingClientRect().width;
+        const h = mainCanvas.getBoundingClientRect().height;
+        mCtx.fillStyle = 'var(--canvas-bg)';
+        mCtx.fillRect(0,0,w,h);
+        const origin = {x: w/2, y: h/2};
+
+        // Draw trace
+        mCtx.strokeStyle = 'var(--secondary-color)';
+        mCtx.lineWidth = 1;
+        mCtx.beginPath();
+        trace.forEach((p,i) => i===0 ? mCtx.moveTo(p.x,p.y) : mCtx.lineTo(p.x,p.y));
+        mCtx.stroke();
+
+        if(simState.cloneActive) drawPendulum(clone1, clone2, origin, 0.4);
+        drawPendulum(p1, p2, origin, 1.0);
+
+        drawEnergy();
+    }
+
+    function drawPendulum(bob1, bob2, origin, alpha){
+        const {l1, l2, m1, m2} = simState.params;
+        const x1 = origin.x + l1 * Math.sin(bob1.t1);
+        const y1 = origin.y + l1 * Math.cos(bob1.t1);
+        const x2 = x1 + l2 * Math.sin(bob2.t2);
+        const y2 = y1 + l2 * Math.cos(bob2.t2);
+
+        mCtx.strokeStyle = `rgba(236, 240, 241, ${alpha})`;
+        mCtx.lineWidth = 3;
+        mCtx.beginPath();
+        mCtx.moveTo(origin.x, origin.y); mCtx.lineTo(x1, y1); mCtx.lineTo(x2, y2);
+        mCtx.stroke();
+
+        mCtx.fillStyle = `rgba(231, 76, 60, ${alpha})`;
+        mCtx.beginPath(); mCtx.arc(x1, y1, m1*0.5, 0, 2*Math.PI); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(x2, y2, m2*0.5, 0, 2*Math.PI); mCtx.fill();
+        return {x2, y2};
+    }
+
+    function drawEnergy(){
+        const w = energyCanvas.getBoundingClientRect().width;
+        const h = energyCanvas.getBoundingClientRect().height;
+        eCtx.fillStyle = 'var(--canvas-bg)';
+        eCtx.fillRect(0,0,w,h);
+
+        const maxE = energyData[0]?.total || 1;
+        eCtx.lineWidth = 2;
+        ['ke','pe','total'].forEach(type => {
+            eCtx.strokeStyle = {ke:'var(--secondary-color)', pe:'var(--primary-color)', total:'var(--accent-color)'}[type];
+            eCtx.beginPath();
+            energyData.forEach((d,i) => {
+                const x = i/energyData.length * w;
+                const y = h - (d[type]/maxE)*h*0.9;
+                i===0 ? eCtx.moveTo(x,y) : eCtx.lineTo(x,y);
+            });
+            eCtx.stroke();
+        });
+    }
+
+    // --- Main Loop & Event Handling ---
+    function mainLoop() {
+        if (!simState.running) return;
+        const dt = 0.05;
+        p1 = rk4Step(p1, dt);
+        p2 = rk4Step(p2, dt);
+        if(simState.cloneActive) {
+            clone1 = rk4Step(clone1, dt);
+            clone2 = rk4Step(clone2, dt);
+        }
+
+        const {x2,y2} = getBobPositions(p1,p2);
+        trace.push({x:x2, y:y2});
+        if(trace.length > 500) trace.shift();
+
+        // Energy
+        const {m1,m2,l1,l2} = simState.params;
+        const ke1 = 0.5*m1*l1*l1*p1.w1*p1.w1;
+        const ke2 = 0.5*m2*(l1*l1*p1.w1*p1.w1 + l2*l2*p2.w2*p2.w2 + 2*l1*l2*p1.w1*p2.w2*Math.cos(p1.t1-p2.t2));
+        const pe = - (m1+m2)*g*l1*Math.cos(p1.t1) - m2*g*l2*Math.cos(p2.t2);
+        const ke = ke1+ke2;
+        energyData.push({ke, pe, total: ke+pe + 2*g*(m1+m2)*(l1+l2)});
+        if(energyData.length > 300) energyData.shift();
+
+        draw();
+        requestAnimationFrame(mainLoop);
+    }
+
+    function getBobPositions(bob1, bob2){
+        const {l1, l2} = simState.params;
+        const w = mainCanvas.getBoundingClientRect().width, h = mainCanvas.getBoundingClientRect().height;
+        const origin = {x: w/2, y: h/2};
+        const x1 = origin.x + l1 * Math.sin(bob1.t1);
+        const y1 = origin.y + l1 * Math.cos(bob1.t1);
+        const x2 = x1 + l2 * Math.sin(bob2.t2);
+        const y2 = y1 + l2 * Math.cos(bob2.t2);
+        return {x1,y1,x2,y2};
+    }
+
+    function init() {
+        const w = mainCanvas.getBoundingClientRect().width, h = mainCanvas.getBoundingClientRect().height;
+        mCtx.canvas.width = eCtx.canvas.width = w * window.devicePixelRatio;
+        mCtx.canvas.height = eCtx.canvas.height = h * window.devicePixelRatio;
+        mCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        eCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+        document.getElementById('reset-btn').addEventListener('click', reset);
+        document.getElementById('clone-btn').addEventListener('click', () => {
+            simState.cloneActive = true;
+            clone1 = {...p1};
+            clone2 = {...p2, t2: p2.t2 + 0.0001};
+        });
+
+        mainCanvas.addEventListener('mousedown', e => {
+            const rect = mainCanvas.getBoundingClientRect();
+            const mouse = {x:e.clientX-rect.left, y:e.clientY-rect.top};
+            const {x1,y1,x2,y2} = getBobPositions(p1, p2);
+            const d1=Math.hypot(mouse.x-x1,mouse.y-y1), d2=Math.hypot(mouse.x-x2,mouse.y-y2);
+            simState.dragging = (d1 < d2) ? 1 : 2;
+            simState.running = false;
+        });
+        window.addEventListener('mouseup', () => {
+            if(simState.dragging) { simState.running = true; mainLoop(); }
+            simState.dragging = null;
+        });
+        mainCanvas.addEventListener('mousemove', e => {
+            if(!simState.dragging) return;
+            const rect = mainCanvas.getBoundingClientRect();
+            const w = rect.width, h = rect.height;
+            const origin = {x: w/2, y: h/2};
+            const mouse = {x:e.clientX-rect.left, y:e.clientY-rect.top};
+
+            if(simState.dragging === 1){
+                p1.t1 = Math.atan2(mouse.x - origin.x, mouse.y - origin.y);
+            } else {
+                const {x1,y1} = getBobPositions(p1,p2);
+                p2.t2 = Math.atan2(mouse.x - x1, mouse.y - y1);
+            }
+            draw();
+        });
+
+        document.querySelectorAll('.controls-sidebar input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', e => {
+                const id = e.target.id.split('-')[0];
+                simState.params[id] = parseFloat(e.target.value);
+                document.getElementById(`${id}-value`).textContent = e.target.value;
+            });
+        });
+
+        reset();
+    }
+
+    function reset() {
+        simState.running = false;
+        simState.cloneActive = false;
+        trace = [];
+        energyData = [];
+        p1 = { t1: Math.PI*0.8, w1: 0 };
+        p2 = { t2: Math.PI*0.1, w2: 0 };
+        draw();
+    }
+    init();
+});
+</script>
+</body>
+</html>
