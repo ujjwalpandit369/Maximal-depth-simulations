@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Assouad Dimension</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #3d5afe; /* Deep blue for math */
+            --secondary-color: #5f6368;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --fractal-color: #000;
+            --r-ball-color: rgba(255, 165, 0, 0.2);
+            --r-ball-border: rgba(255, 165, 0, 0.8);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            border: 1px solid var(--border-color); border-radius: 5px;
+            position: relative;
+        }
+        canvas {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+        }
+        #main-canvas { cursor: grab; }
+        .controls { padding: 1rem; border: 1px solid var(--border-color); border-radius: 5px; margin-top: 1rem;}
+        .slider-container label { display: block; margin-bottom: 0.25rem; }
+        input[type="range"] { width: 100%; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Assouad Dimension in Metric Spaces</h1>
+            <p class="subtitle">A tool to explore the dimension of a space at different scales.</p>
+        </header>
+
+        <section id="simulation-area">
+            <div class="sim-layout">
+                <div class="canvas-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="plot-canvas"></canvas>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="slider-container">
+                    <label for="R-slider">Viewing Window Radius (R): <span id="R-val"></span></label>
+                    <input type="range" id="R-slider" min="50" max="250" value="150" step="1">
+                </div>
+                <div class="slider-container">
+                    <label for="r-slider">Covering Ball Radius (r): <span id="r-val"></span></label>
+                    <input type="range" id="r-slider" min="2" max="50" value="20" step="1">
+                </div>
+                <p><strong>Instructions:</strong> Drag the large circle (the "viewing window") over the fractal set. Adjust the R and r sliders. The graph on the right plots `log(N)` vs `log(R/r)`, where N is the number of small balls needed for the cover. The slope of this line is the Assouad dimension.</p>
+                <button id="recalc-plot-btn">Recalculate Plot</button>
+                <h3>Measured Dimension: <span id="dim-val"></span></h3>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: The View from a Microscope</h2>
+            <h3>Fractal Dimensions</h3>
+            <p>We are used to integer dimensions: a line is 1D, a square is 2D. Fractals are complex shapes that can have fractional, or non-integer, dimensions. A famous way to measure this is "box-counting": cover the shape with boxes of size `s` and count how many you need, `N(s)`. As you make the boxes smaller, `N(s)` grows like `(1/s)ᴰ`, where `D` is the dimension. On a log-log plot, this gives a straight line with slope `D`.</p>
+            <h3>The Assouad Dimension: A Local View</h3>
+            <p>The Assouad dimension is a more powerful, "local" way of thinking about dimension. It asks: "If I look at a piece of the set inside a ball of radius `R`, how many smaller balls of radius `r` does it take to cover just that piece?" This is like looking at the set through a microscope with magnification `R/r`.</p>
+            <p>The defining property is that the number of covering balls `N(R,r)` must be bounded by `C * (R/r)ᵃ` for some exponent `α`, no matter where you place your viewing window or what scales `R` and `r` you choose. The smallest `α` that works for all possible views is the Assouad dimension. It captures the "most complex" part of the fractal at any scale.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mainCanvas = document.getElementById('main-canvas');
+        const mCtx = mainCanvas.getContext('2d');
+        const plotCanvas = document.getElementById('plot-canvas');
+        const pCtx = plotCanvas.getContext('2d');
+
+        const RSlider = document.getElementById('R-slider');
+        const rSlider = document.getElementById('r-slider');
+        const recalcPlotBtn = document.getElementById('recalc-plot-btn');
+        const RValEl = document.getElementById('R-val');
+        const rValEl = document.getElementById('r-val');
+        const dimValEl = document.getElementById('dim-val');
+
+        let fractalPoints = [];
+        let R = 150, r = 20;
+        let R_ball_pos = { x: 256, y: 256 };
+        let plotData = [];
+
+        function generateCantorDust(x, y, size, depth) {
+            if (depth === 0) {
+                fractalPoints.push({x, y});
+                return;
+            }
+            const newSize = size / 3;
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    generateCantorDust(x + i * 2 * newSize, y + j * 2 * newSize, newSize, depth - 1);
+                }
+            }
+        }
+
+        function countCoveringBalls() {
+            const pointsInRBall = fractalPoints.filter(p => {
+                return Math.hypot(p.x - R_ball_pos.x, p.y - R_ball_pos.y) < R;
+            });
+            if (pointsInRBall.length === 0) return 0;
+
+            // Greedy grid-based covering algorithm
+            let covered = new Array(pointsInRBall.length).fill(false);
+            let count = 0;
+
+            for(let i=0; i<pointsInRBall.length; i++) {
+                if (covered[i]) continue;
+
+                count++;
+                const center = pointsInRBall[i];
+                for(let j=i; j<pointsInRBall.length; j++) {
+                    if (covered[j]) continue;
+                    if (Math.hypot(pointsInRBall[j].x - center.x, pointsInRBall[j].y - center.y) < r) {
+                        covered[j] = true;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function draw() {
+            mCtx.clearRect(0,0,mainCanvas.width, mainCanvas.height);
+            // Draw fractal
+            mCtx.fillStyle = 'var(--fractal-color)';
+            fractalPoints.forEach(p => mCtx.fillRect(p.x-1, p.y-1, 2, 2));
+
+            // Draw R ball
+            mCtx.strokeStyle = 'var(--r-ball-border)';
+            mCtx.lineWidth = 1;
+            mCtx.beginPath();
+            mCtx.arc(R_ball_pos.x, R_ball_pos.y, R, 0, 2*Math.PI);
+            mCtx.stroke();
+
+            // Draw r balls
+            mCtx.fillStyle = 'var(--r-ball-color)';
+            const pointsInRBall = fractalPoints.filter(p => Math.hypot(p.x - R_ball_pos.x, p.y - R_ball_pos.y) < R);
+            let covered = new Array(pointsInRBall.length).fill(false);
+            for(let i=0; i<pointsInRBall.length; i++) {
+                if (covered[i]) continue;
+                const center = pointsInRBall[i];
+                mCtx.beginPath();
+                mCtx.arc(center.x, center.y, r, 0, 2*Math.PI);
+                mCtx.fill();
+                for(let j=i; j<pointsInRBall.length; j++) {
+                    if (Math.hypot(pointsInRBall[j].x - center.x, pointsInRBall[j].y - center.y) < r) {
+                        covered[j] = true;
+                    }
+                }
+            }
+        }
+
+        function drawPlot() {
+            const w = plotCanvas.width, h = plotCanvas.height;
+            pCtx.clearRect(0,0,w,h);
+            if (plotData.length < 2) return;
+
+            const xVals = plotData.map(p => p.x);
+            const yVals = plotData.map(p => p.y);
+            const xMin = Math.min(...xVals), xMax = Math.max(...xVals);
+            const yMin = Math.min(...yVals), yMax = Math.max(...yVals);
+
+            const toScreen = (x,y) => ({
+                px: (x - xMin) / (xMax - xMin + 1e-6) * w,
+                py: h - (y - yMin) / (yMax - yMin + 1e-6) * h
+            });
+
+            // Linear regression
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            plotData.forEach(p => {
+                sumX += p.x; sumY += p.y; sumXY += p.x * p.y; sumX2 += p.x * p.x;
+            });
+            const n = plotData.length;
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            dimValEl.textContent = slope.toFixed(3);
+            const intercept = (sumY - slope * sumX) / n;
+
+            // Draw fit line
+            pCtx.strokeStyle = 'red'; pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            let p1 = toScreen(xMin, slope * xMin + intercept);
+            let p2 = toScreen(xMax, slope * xMax + intercept);
+            pCtx.moveTo(p1.px, p1.py);
+            pCtx.lineTo(p2.px, p2.py);
+            pCtx.stroke();
+
+            // Draw points
+            pCtx.fillStyle = 'var(--primary-color)';
+            plotData.forEach(p => {
+                const scr = toScreen(p.x, p.y);
+                pCtx.beginPath(); pCtx.arc(scr.px, scr.py, 5, 0, 2*Math.PI); pCtx.fill();
+            });
+        }
+
+        function updateAll() {
+            R = parseFloat(RSlider.value);
+            r = parseFloat(rSlider.value);
+            RValEl.textContent = R.toFixed(0);
+            rValEl.textContent = r.toFixed(0);
+            draw();
+        }
+
+        recalcPlotBtn.addEventListener('click', () => {
+            plotData = [];
+            const r_min = parseFloat(rSlider.min);
+            const r_max = R / 2;
+            for(let current_r = r_min; current_r < r_max; current_r *= 1.2) {
+                r = current_r;
+                const N = countCoveringBalls();
+                if (N > 0) {
+                    plotData.push({ x: Math.log(R/r), y: Math.log(N) });
+                }
+            }
+            drawPlot();
+        });
+
+        RSlider.addEventListener('input', updateAll);
+        rSlider.addEventListener('input', updateAll);
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        mainCanvas.addEventListener('mousedown', e => {isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY;});
+        mainCanvas.addEventListener('mousemove', e => {
+            if (!isDragging) return;
+            R_ball_pos.x += e.clientX - lastMouseX;
+            R_ball_pos.y += e.clientY - lastMouseY;
+            lastMouseX = e.clientX; lastMouseY = e.clientY;
+            draw();
+        });
+        mainCanvas.addEventListener('mouseup', () => {isDragging = false;});
+
+        function init() {
+            [mainCanvas, plotCanvas].forEach(c => {
+                c.width = c.parentElement.offsetWidth;
+                c.height = c.parentElement.offsetHeight;
+            });
+            R_ball_pos = { x: mainCanvas.width/2, y: mainCanvas.height/2 };
+            fractalPoints = [];
+            generateCantorDust(mainCanvas.width*0.1, mainCanvas.height*0.1, mainCanvas.width*0.8, 4);
+            updateAll();
+            drawPlot();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

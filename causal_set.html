@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Causal Set</title>
+    <style>
+        :root {
+            --bg-color: #f7f7f7;
+            --text-color: #333;
+            --primary-color: #4caf50; /* Green for causality */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --event-color: #3f51b5;
+            --link-color: rgba(0,0,0,0.3);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-container { text-align: center; }
+        #sim-canvas {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Causal Set</h1>
+            <p class="subtitle">A simulation of a discrete, causal approach to quantum gravity.</p>
+        </header>
+
+        <section class="sim-container">
+            <h2>Causal Structure of Spacetime</h2>
+            <p>Generate a set of random spacetime "events" and see the causal links that connect them.</p>
+            <canvas id="sim-canvas"></canvas>
+            <div>
+                <label for="n-slider">Number of Events: <span id="n-val">100</span></label>
+                <input type="range" id="n-slider" min="20" max="300" value="100" step="10">
+            </div>
+            <div>
+                <button id="sprinkle-btn">Sprinkle Events</button>
+                <button id="links-btn">Show Causal Links</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: Spacetime as a Family Tree</h2>
+            <h3>Is Spacetime Smooth or Grainy?</h3>
+            <p>General Relativity describes spacetime as a smooth, continuous fabric. Quantum mechanics suggests that at the smallest scales, everything is discrete, or "grainy." Causal Set Theory (or "Causets") is an approach to quantum gravity that takes discreteness as its starting point. It proposes that spacetime is not a continuous sheet, but a collection of fundamental, indivisible "atoms" of spacetime—the events you see in the simulation.</p>
+            <h3>Causality is Everything</h3>
+            <p>In this theory, the only fundamental structure is <strong>causality</strong>. Some events can influence others, and some cannot. This creates a "partial order" on the set of events.
+            <ul>
+                <li>An event `A` causally precedes an event `B` (`A ≺ B`) if `B` is in the future light cone of `A`.</li>
+                <li>The simulation shows these relationships by drawing lines between events. To keep the diagram clean, it only draws "links"—a connection from `A` to `B` is only drawn if there is no other event `C` in between them (`A ≺ C ≺ B`). This reveals the fundamental causal scaffolding of the spacetime.</li>
+            </ul>
+            Think of it like a family tree. The people are the discrete events, and the parent-child relationships are the causal links. You can't always say if one person is "before" another (e.g., two cousins), but the overall structure of the tree is defined by the causal relationships. Causal Set Theory proposes that everything we know about spacetime—its geometry, its dimension, even the laws of physics within it—is an emergent property of this simple, underlying causal network.
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const nSlider = document.getElementById('n-slider');
+        const nVal = document.getElementById('n-val');
+        const sprinkleBtn = document.getElementById('sprinkle-btn');
+        const linksBtn = document.getElementById('links-btn');
+
+        let events = [];
+        let links = [];
+
+        function sprinkleEvents() {
+            events = [];
+            links = [];
+            const N = parseInt(nSlider.value);
+            for (let i = 0; i < N; i++) {
+                events.push({
+                    id: i,
+                    t: Math.random() * canvas.height,
+                    x: Math.random() * canvas.width
+                });
+            }
+            // Sort by time for efficiency
+            events.sort((a, b) => a.t - b.t);
+            draw();
+        }
+
+        function precedes(e1, e2) {
+            // Using c=1, so light cones are at 45 degrees
+            const dt = e2.t - e1.t;
+            if (dt <= 0) return false;
+            const dx = Math.abs(e2.x - e1.x);
+            return dx < dt;
+        }
+
+        function calculateLinks() {
+            links = [];
+            const n = events.length;
+            for (let i = 0; i < n; i++) {
+                for (let j = i + 1; j < n; j++) {
+                    const e_i = events[i];
+                    const e_j = events[j];
+
+                    if (precedes(e_i, e_j)) {
+                        let isLink = true;
+                        // Check if there is any k in between
+                        for (let k = i + 1; k < j; k++) {
+                            const e_k = events[k];
+                            if (precedes(e_i, e_k) && precedes(e_k, e_j)) {
+                                isLink = false;
+                                break;
+                            }
+                        }
+                        if (isLink) {
+                            links.push([e_i, e_j]);
+                        }
+                    }
+                }
+            }
+            draw();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            // Draw links
+            ctx.strokeStyle = 'var(--link-color)';
+            ctx.lineWidth = 1;
+            links.forEach(([p1, p2]) => {
+                ctx.beginPath();
+                ctx.moveTo(p1.x, canvas.height - p1.t);
+                ctx.lineTo(p2.x, canvas.height - p2.t);
+                ctx.stroke();
+            });
+
+            // Draw events
+            ctx.fillStyle = 'var(--event-color)';
+            events.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, canvas.height - p.t, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw axis labels
+            ctx.fillStyle = '#333';
+            ctx.font = "14px sans-serif";
+            ctx.fillText("Space (x)", canvas.width / 2, canvas.height - 5);
+            ctx.save();
+            ctx.translate(15, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText("Time (t)", 0, 0);
+            ctx.restore();
+        }
+
+        sprinkleBtn.addEventListener('click', sprinkleEvents);
+        linksBtn.addEventListener('click', calculateLinks);
+        nSlider.addEventListener('input', () => {
+            nVal.textContent = nSlider.value;
+            sprinkleEvents();
+        });
+
+        function init() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+            sprinkleEvents();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

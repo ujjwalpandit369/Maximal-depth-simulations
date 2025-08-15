@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Space of Density Matrices</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #111827;
+            --primary-color: #4f46e5; /* Indigo */
+            --secondary-color: #6b7280;
+            --border-color: #d1d5db;
+            --canvas-bg: #fff;
+            --sphere-color: rgba(79, 70, 229, 0.1);
+            --vector-color: #ef4444;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 1fr 2fr; }
+        }
+        #sim-canvas {
+            width: 100%; height: auto; aspect-ratio: 1/1;
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px; cursor: move;
+        }
+        .controls { padding: 1rem; }
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.25rem; font-weight: 500;}
+        input[type="range"] { width: 100%; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer; font-size: 0.9rem; margin: 0.25rem;
+        }
+        .info-panel {
+            margin-top: 1rem; padding: 1rem; background-color: #eef2ff;
+            border-radius: 5px; border: 1px solid #c7d2fe;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Space of Density Matrices: The Bloch Sphere</h1>
+            <p class="subtitle">A visualization of the state space for a qubit, including pure and mixed states.</p>
+        </header>
+
+        <section>
+            <div class="sim-layout">
+                 <div class="controls">
+                    <h3>Qubit State Controls</h3>
+                    <div class="slider-container">
+                        <label for="x-slider">Bloch Vector x: <span id="x-val">0.00</span></label>
+                        <input type="range" id="x-slider" min="-1" max="1" value="0" step="0.01">
+                    </div>
+                    <div class="slider-container">
+                        <label for="y-slider">Bloch Vector y: <span id="y-val">0.00</span></label>
+                        <input type="range" id="y-slider" min="-1" max="1" value="0" step="0.01">
+                    </div>
+                    <div class="slider-container">
+                        <label for="z-slider">Bloch Vector z: <span id="z-val">1.00</span></label>
+                        <input type="range" id="z-slider" min="-1" max="1" value="1" step="0.01">
+                    </div>
+                    <p><strong>Presets:</strong></p>
+                    <button id="preset-up">|↑⟩ (Pure)</button>
+                    <button id="preset-down">|↓⟩ (Pure)</button>
+                    <button id="preset-plus">|+⟩ (Pure)</button>
+                    <button id="preset-mixed">Mixed State</button>
+                    <button id="preset-max-mixed">Maximally Mixed</button>
+                    <div class="info-panel">
+                        <h3>State Properties</h3>
+                        <p>Vector Length |r|: <strong id="r-val">1.000</strong></p>
+                        <p>Purity Tr(ρ²): <strong id="purity-val">1.000</strong></p>
+                        <p>State Type: <strong id="type-val">Pure</strong></p>
+                    </div>
+                </div>
+                <div style="text-align:center;">
+                    <h3>Bloch Ball</h3>
+                    <canvas id="sim-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: From Pure States to Mixed Messes</h2>
+            <h3>The Bloch Sphere for Pure States</h3>
+            <p>A qubit is the fundamental unit of quantum computing. A "pure" quantum state, where we have perfect knowledge of the system, can be visualized as a point on the <em>surface</em> of a sphere—the Bloch Sphere. The North Pole typically represents the "spin up" state, and the South Pole represents "spin down." Points on the equator represent equal superpositions of up and down.</p>
+
+            <h3>Density Matrices and Mixed States</h3>
+            <p>What if we don't have perfect knowledge? What if our qubit has a 50% chance of being spin up and a 50% chance of being spin down? This is not a superposition; it's a classical, statistical mixture. We describe such states using a <strong>density matrix (ρ)</strong>. These <strong>mixed states</strong> live <em>inside</em> the Bloch sphere.</p>
+            <ul>
+                <li><strong>The Bloch Vector `r`:</strong> Any state, pure or mixed, can be described by a "Bloch vector" `r = (x, y, z)` that starts at the center of the sphere.</li>
+                <li><strong>Pure States:</strong> If the state is pure, the vector's length `|r|` is exactly 1, and its tip touches the surface.</li>
+                <li><strong>Mixed States:</strong> If the state is mixed, the vector is shorter (`|r| < 1`), and its tip is inside the sphere. The shorter the vector, the more "mixed" or "random" the state is.</li>
+                <li><strong>Maximally Mixed State:</strong> The state at the very center (`r=0`) has zero length. This represents a completely random state (50/50 mixture of any two opposite pure states) and is called the maximally mixed state.</li>
+            </ul>
+            <h3>Purity: A Measure of "Quantumness"</h3>
+            <p>The purity, `Tr(ρ²)`, is a mathematical way to quantify how mixed a state is. It ranges from 1 (for a pure state) down to 0.5 (for the maximally mixed state in a qubit system). Use the sliders to move the state vector around and observe how the length `|r|` and the purity change together. The space of all possible states for a qubit is not just the surface, but the entire solid <strong>Bloch ball</strong>.</p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('sim-canvas');
+        const ctx = canvas.getContext('2d');
+        const sliders = {
+            x: document.getElementById('x-slider'),
+            y: document.getElementById('y-slider'),
+            z: document.getElementById('z-slider'),
+        };
+        const readouts = {
+            x: document.getElementById('x-val'),
+            y: document.getElementById('y-val'),
+            z: document.getElementById('z-val'),
+            r: document.getElementById('r-val'),
+            purity: document.getElementById('purity-val'),
+            type: document.getElementById('type-val'),
+        };
+
+        const scene = { angleX: 0.3, angleY: 0.5, zoom: 200 };
+        let blochVector = { x: 0, y: 0, z: 1 };
+
+        function project(p3d) {
+            let { x, y, z } = p3d;
+            const rotX = Math.cos(scene.angleX) * y - Math.sin(scene.angleX) * z;
+            const rotZ_ = Math.sin(scene.angleX) * y + Math.cos(scene.angleX) * z;
+            y = rotX; z = rotZ_;
+            const rotY = Math.cos(scene.angleY) * x + Math.sin(scene.angleY) * z;
+            z = -Math.sin(scene.angleY) * x + Math.cos(scene.angleY) * z;
+            x = rotY;
+            const w = canvas.width, h = canvas.height;
+            return { x: w / 2 + x * scene.zoom, y: h / 2 - y * scene.zoom };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Sphere guides
+            ctx.strokeStyle = 'var(--sphere-color)';
+            ctx.lineWidth = 1;
+            for(let i=0; i<=10; i++) {
+                const r = i/10;
+                ctx.beginPath();
+                for(let a=0; a<=2*Math.PI; a+=0.1) {
+                    const p = {x: r*Math.cos(a), y: r*Math.sin(a), z:0};
+                    const scr = project(p);
+                    if(a===0) ctx.moveTo(scr.x, scr.y); else ctx.lineTo(scr.x, scr.y);
+                }
+                ctx.stroke();
+            }
+            // Axes
+            const xAxis = project({x:1.2,y:0,z:0}), yAxis = project({x:0,y:1.2,z:0}), zAxis = project({x:0,y:0,z:1.2});
+            const origin = project({x:0,y:0,z:0});
+            ctx.strokeStyle = '#aaa';
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(xAxis.x, xAxis.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(yAxis.x, yAxis.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(zAxis.x, zAxis.y); ctx.stroke();
+            ctx.fillStyle = '#333'; ctx.font = "14px sans-serif";
+            ctx.fillText("x", xAxis.x, xAxis.y);
+            ctx.fillText("y", yAxis.x, yAxis.y);
+            ctx.fillText("z", zAxis.x, zAxis.y);
+
+            // Draw Bloch vector
+            ctx.strokeStyle = 'var(--vector-color)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(origin.x, origin.y);
+            const tip = project(blochVector);
+            ctx.lineTo(tip.x, tip.y);
+            ctx.stroke();
+            ctx.fillStyle = 'var(--vector-color)';
+            ctx.beginPath(); ctx.arc(tip.x, tip.y, 6, 0, 2*Math.PI); ctx.fill();
+        }
+
+        function updateState() {
+            blochVector = {
+                x: parseFloat(sliders.x.value),
+                y: parseFloat(sliders.y.value),
+                z: parseFloat(sliders.z.value),
+            };
+
+            const r_len_sq = blochVector.x**2 + blochVector.y**2 + blochVector.z**2;
+            if (r_len_sq > 1) {
+                const r_len = Math.sqrt(r_len_sq);
+                blochVector.x /= r_len;
+                blochVector.y /= r_len;
+                blochVector.z /= r_len;
+                sliders.x.value = blochVector.x;
+                sliders.y.value = blochVector.y;
+                sliders.z.value = blochVector.z;
+            }
+
+            const r_len = Math.sqrt(blochVector.x**2 + blochVector.y**2 + blochVector.z**2);
+            const purity = 0.5 * (1 + r_len**2);
+
+            readouts.x.textContent = blochVector.x.toFixed(2);
+            readouts.y.textContent = blochVector.y.toFixed(2);
+            readouts.z.textContent = blochVector.z.toFixed(2);
+            readouts.r.textContent = r_len.toFixed(3);
+            readouts.purity.textContent = purity.toFixed(3);
+
+            if (Math.abs(r_len - 1.0) < 1e-3) {
+                readouts.type.textContent = "Pure";
+            } else {
+                readouts.type.textContent = "Mixed";
+            }
+            draw();
+        }
+
+        Object.values(sliders).forEach(s => s.addEventListener('input', updateState));
+
+        document.getElementById('preset-up').addEventListener('click', () => {sliders.x.value=0; sliders.y.value=0; sliders.z.value=1; updateState();});
+        document.getElementById('preset-down').addEventListener('click', () => {sliders.x.value=0; sliders.y.value=0; sliders.z.value=-1; updateState();});
+        document.getElementById('preset-plus').addEventListener('click', () => {sliders.x.value=1; sliders.y.value=0; sliders.z.value=0; updateState();});
+        document.getElementById('preset-mixed').addEventListener('click', () => {sliders.x.value=0; sliders.y.value=0; sliders.z.value=0.5; updateState();});
+        document.getElementById('preset-max-mixed').addEventListener('click', () => {sliders.x.value=0; sliders.y.value=0; sliders.z.value=0; updateState();});
+
+        let isDragging = false, lastMouseX, lastMouseY;
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            scene.angleY += dx * 0.01;
+            scene.angleX -= dy * 0.01;
+            lastMouseX = e.clientX; lastMouseY = e.clientY;
+            draw();
+        });
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+
+        function init() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            updateState();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Configuration Space of a String</title>
+    <style>
+        :root {
+            --bg-color: #f7f9fa;
+            --text-color: #333;
+            --primary-color: #d84315; /* Deep orange */
+            --secondary-color: #616161;
+            --border-color: #e0e0e0;
+            --canvas-bg: #fff;
+            --string-color: #1565c0;
+            --mode-color: #ef6c00;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        header, section {
+            background-color: var(--canvas-bg);
+            border: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        h1, h2, h3 { color: var(--primary-color); margin-top: 0; }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;}
+        .sim-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        @media (min-width: 992px) {
+            .sim-layout { grid-template-columns: 2fr 1fr; }
+        }
+        .canvas-container {
+            width: 100%; height: auto;
+            border: 1px solid var(--border-color); border-radius: 5px;
+        }
+        #string-canvas { aspect-ratio: 4/1; cursor: ns-resize; }
+        #mode-canvas { aspect-ratio: 1/1; }
+        button {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; font-size: 1rem; margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>The Configuration Space of a String</h1>
+            <p class="subtitle">Visualizing a string's motion as a path in an abstract space.</p>
+        </header>
+
+        <section>
+            <div class="sim-layout">
+                <div>
+                    <h3>Real Space: The Vibrating String</h3>
+                    <p>Click and drag vertically to "pluck" the string to a certain shape, then release to watch it vibrate.</p>
+                    <div class="canvas-container">
+                        <canvas id="string-canvas"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <h3>Configuration Space (Mode Space)</h3>
+                    <p>This shows the amplitude of Mode 2 vs. Mode 1. The complex motion of the string becomes a simple path.</p>
+                    <div class="canvas-container">
+                        <canvas id="mode-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+             <div style="text-align: center; margin-top: 1rem;">
+                <button id="reset-btn">Reset</button>
+            </div>
+        </section>
+
+        <section id="guide">
+            <h2>Guide: From Wiggles to a Single Point</h2>
+            <h3>The Shape of a String</h3>
+            <p>The top canvas shows a vibrating string, like on a guitar. Its shape is complicated, wiggling up and down. To describe the string's state at any instant, you would need to specify the vertical position of every single point along its length. This is a lot of information!</p>
+            <h3>An Infinite-Dimensional Space</h3>
+            <p>The set of all possible shapes the string can take is its <strong>configuration space</strong>. Since a shape is a function `y(x)`, this space is infinite-dimensional. This is impossible to visualize directly. However, we can use a powerful trick from physics and engineering: the Fourier series.</p>
+            <h3>Mode Space: A Simpler View</h3>
+            <p>Any shape of the vibrating string can be perfectly described as a sum of simple "normal modes" or standing waves. These are the fundamental tone, the first overtone, the second, and so on. Instead of describing the shape point-by-point, we can just list the <strong>amplitudes</strong> of these modes: `(A₁, A₂, A₃, ...)`.</p>
+            <p>This list of amplitudes is a set of coordinates for the string's configuration space. The plot on the right shows a 2D "slice" of this infinite-dimensional space, plotting the amplitude of Mode 2 vs. the amplitude of Mode 1.
+            <ul>
+                <li><strong>The String's State:</strong> The entire complex shape of the string at any moment in time corresponds to a <strong>single point</strong> on this graph.</li>
+                <li><strong>The String's Motion:</strong> As the string vibrates, this point traces a smooth, simple path (a Lissajous figure) in the mode space.</li>
+            </ul>
+            This demonstrates a deep concept: by choosing the right coordinates (the mode amplitudes), a complex dynamical problem can become much simpler to describe.
+            </p>
+        </section>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const stringCanvas = document.getElementById('string-canvas');
+        const sCtx = stringCanvas.getContext('2d');
+        const modeCanvas = document.getElementById('mode-canvas');
+        const mCtx = modeCanvas.getContext('2d');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let isPlucking = false;
+        let pluck_y = 0;
+        let amplitudes = [];
+        let time = 0;
+        const numModes = 50;
+        const modePath = [];
+
+        function calculateAmplitudes(pluck_pos_y) {
+            amplitudes = [];
+            const L = stringCanvas.width;
+            const h = -pluck_pos_y; // Invert for calculation
+            for (let n = 1; n <= numModes; n++) {
+                const term = (2 * h * L*L) / (Math.PI**2 * n**2 * (L/2)**2);
+                const sin_term = Math.sin(n * Math.PI * (L/2) / L);
+                amplitudes.push(term * sin_term);
+            }
+        }
+
+        function getStringShape(t) {
+            const shape = new Float32Array(stringCanvas.width);
+            const L = stringCanvas.width;
+            for (let n = 1; n <= numModes; n++) {
+                const An = amplitudes[n - 1];
+                const omega_n = n * Math.PI; // Simplified speed c=L
+                for (let x = 0; x < L; x++) {
+                    shape[x] += An * Math.sin(n * Math.PI * x / L) * Math.cos(omega_n * t);
+                }
+            }
+            return shape;
+        }
+
+        function draw() {
+            const w_s = stringCanvas.width, h_s = stringCanvas.height;
+            sCtx.clearRect(0,0,w_s,h_s);
+            sCtx.strokeStyle = '#ccc';
+            sCtx.beginPath(); sCtx.moveTo(0, h_s/2); sCtx.lineTo(w_s, h_s/2); sCtx.stroke();
+
+            sCtx.strokeStyle = 'var(--string-color)';
+            sCtx.lineWidth = 3;
+            sCtx.beginPath();
+
+            if (isPlucking) {
+                 sCtx.moveTo(0, h_s/2);
+                 sCtx.lineTo(w_s/2, pluck_y);
+                 sCtx.lineTo(w_s, h_s/2);
+            } else {
+                const shape = getStringShape(time);
+                sCtx.moveTo(0, h_s/2);
+                for(let x=0; x<w_s; x++) {
+                    sCtx.lineTo(x, h_s/2 - shape[x]);
+                }
+            }
+            sCtx.stroke();
+
+            drawModeSpace();
+        }
+
+        function drawModeSpace() {
+            const w_m = modeCanvas.width, h_m = modeCanvas.height;
+            mCtx.clearRect(0,0,w_m,h_m);
+
+            // Axes
+            mCtx.strokeStyle = '#ccc';
+            mCtx.beginPath(); mCtx.moveTo(0, h_m/2); mCtx.lineTo(w_m, h_m/2); mCtx.stroke();
+            mCtx.beginPath(); mCtx.moveTo(w_m/2, 0); mCtx.lineTo(w_m/2, h_m); mCtx.stroke();
+            mCtx.fillStyle = '#333'; mCtx.font = "12px sans-serif";
+            mCtx.fillText("A₁", w_m - 20, h_m/2 - 5);
+            mCtx.fillText("A₂", w_m/2 + 5, 12);
+
+            if (amplitudes.length === 0) return;
+
+            const A1_max = Math.abs(amplitudes[0]) || 1;
+            const A2_max = Math.abs(amplitudes[1]) || 1;
+
+            const toScreen = (a1, a2) => ({
+                x: w_m/2 + (a1 / A1_max) * (w_m/2 - 10),
+                y: h_m/2 - (a2 / A2_max) * (h_m/2 - 10)
+            });
+
+            // Path
+            if(modePath.length > 1) {
+                mCtx.strokeStyle = 'rgba(200,200,200,0.5)';
+                mCtx.beginPath();
+                const start = toScreen(modePath[0].a1, modePath[0].a2);
+                mCtx.moveTo(start.x, start.y);
+                for(let i=1; i<modePath.length; i++) {
+                    const p = toScreen(modePath[i].a1, modePath[i].a2);
+                    mCtx.lineTo(p.x, p.y);
+                }
+                mCtx.stroke();
+            }
+
+            // Current point
+            const a1_t = amplitudes[0] * Math.cos(1 * Math.PI * time);
+            const a2_t = amplitudes[1] * Math.cos(2 * Math.PI * time);
+            const p = toScreen(a1_t, a2_t);
+            mCtx.fillStyle = 'var(--mode-color)';
+            mCtx.beginPath(); mCtx.arc(p.x, p.y, 6, 0, 2*Math.PI); mCtx.fill();
+        }
+
+        let animationFrameId;
+        function animate() {
+            if (isPlucking) return;
+            time += 0.005;
+
+            const a1_t = amplitudes[0] * Math.cos(1 * Math.PI * time);
+            const a2_t = amplitudes[1] * Math.cos(2 * Math.PI * time);
+            modePath.push({a1: a1_t, a2: a2_t});
+            if(modePath.length > 500) modePath.shift();
+
+            draw();
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function reset() {
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+            isPlucking = false;
+            pluck_y = 0;
+            amplitudes = [];
+            time = 0;
+            modePath.length = 0;
+            draw();
+        }
+
+        stringCanvas.addEventListener('mousedown', (e) => {
+            reset();
+            isPlucking = true;
+            const rect = stringCanvas.getBoundingClientRect();
+            pluck_y = e.clientY - rect.top;
+            draw();
+        });
+        stringCanvas.addEventListener('mousemove', (e) => {
+            if (!isPlucking) return;
+            const rect = stringCanvas.getBoundingClientRect();
+            pluck_y = e.clientY - rect.top;
+            draw();
+        });
+        stringCanvas.addEventListener('mouseup', () => {
+            if (!isPlucking) return;
+            isPlucking = false;
+            calculateAmplitudes(pluck_y - stringCanvas.height/2);
+            animate();
+        });
+        resetBtn.addEventListener('click', reset);
+
+        function init() {
+            stringCanvas.width = stringCanvas.offsetWidth;
+            stringCanvas.height = stringCanvas.offsetHeight;
+            modeCanvas.width = modeCanvas.offsetWidth;
+            modeCanvas.height = modeCanvas.offsetHeight;
+            reset();
+        }
+        window.addEventListener('resize', init);
+        init();
+    });
+    </script>
+</body>
+</html>
