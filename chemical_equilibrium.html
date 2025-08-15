@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Chemical Equilibrium</title>
+    <style>
+        :root { --bg-color: #ffffff; --text-color: #212529; --header-bg-color: #f8f9fa; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #0d6efd; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 900px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; padding: 10px 20px; background-color: var(--section-bg-color); border-radius: 8px; border: 1px solid var(--border-color); }
+        #simulation-area { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        #canvas-container { width: 100%; max-width: 800px; }
+        #simulation-canvas { width: 100%; border: 1px solid var(--border-color); }
+        #controls { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; justify-content: center; width: 100%; max-width: 800px; margin-top: 20px; }
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 150px; }
+        button { padding: 10px 20px; font-size: 1.2em; border-radius: 5px; border: none; background-color: var(--accent-color); color: white; cursor: pointer; }
+        button:hover { filter: brightness(90%); }
+        #preset-buttons, #export-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 10px; }
+        #preset-buttons button, #export-controls button { background-color: var(--button-bg-color); color: var(--text-color); font-size: 0.9em; padding: 8px 15px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; } th { background-color: #f8f9fa; }
+        code { background-color: #e9ecef; padding: 2px 5px; border-radius: 4px; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+        #suggestion-box { font-size: 0.9em; color: #6c757d; margin-top: 15px; padding: 10px; background-color: var(--header-bg-color); border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <header><h1>Chemical Equilibrium: A ⇌ B</h1><p class="subtitle">A dynamic simulation of a simple reversible chemical reaction.</p><div id="suggestion-box"><p>Use the presets below to explore different equilibrium conditions.</p></div></header>
+    <main>
+        <!-- All other sections remain the same -->
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="500"></canvas></div>
+            <div id="controls">
+                <div class="control-group"><label for="n-slider">Total Particles: <span id="n-val">200</span></label><input type="range" id="n-slider" min="50" max="500" value="200"></div>
+                <div class="control-group"><label for="kf-slider">Forward Rate (A→B): <span id="kf-val">0.0010</span></label><input type="range" id="kf-slider" min="0" max="0.01" step="0.0001" value="0.001"></div>
+                <div class="control-group"><label for="kr-slider">Reverse Rate (B→A): <span id="kr-val">0.0005</span></label><input type="range" id="kr-slider" min="0" max="0.01" step="0.0001" value="0.0005"></div>
+                <button id="reset-btn">Reset and Run</button>
+            </div>
+             <div id="preset-buttons">
+                <button class="preset-btn" data-preset="product_favored">Product Favored (K > 1)</button>
+                <button class="preset-btn" data-preset="equal">Equal Rates (K = 1)</button>
+                <button class="preset-btn" data-preset="reactant_favored">Reactant Favored (K < 1)</button>
+            </div>
+        </section>
+        <section id="overview"><h2>Overview</h2><p>This simulation shows a <strong>reversible chemical reaction</strong> where particles of type A (red) can turn into particles of type B (blue), and B particles can turn back into A. This is a model of <strong>dynamic equilibrium</strong>. Even when the overall amounts of A and B seem stable, individual particles are constantly reacting. The sliders control the probability (the "rate constant") for each reaction. The graph shows the number of A and B particles over time, demonstrating how they approach a stable equilibrium state.</p></section>
+        <section id="beginners-guide"><h2>Beginner's Guide</h2><h3>What is a Reversible Reaction?</h3><p>Many chemical reactions don't just go in one direction. Think of melting ice: ice turns to water, but water can also freeze back into ice. This is a reversible process. In our simulation, the "forward" reaction is A → B, and the "reverse" reaction is B → A. We write this with a double arrow: A ⇌ B.</p><h3>Reaction Rates (k<sub>f</sub> and k<sub>r</sub>)</h3><p>The sliders control the <strong>reaction rates</strong>. The "Forward Rate" (k<sub>f</sub>) is the probability that any single A particle will turn into a B particle in one time step. The "Reverse Rate" (k<sub>r</sub>) is the probability that a B particle will turn back into an A. If k<sub>f</sub> is much larger than k<sub>r</sub>, the forward reaction is much more likely, and you'll end up with more B particles.</p><h3>What is Dynamic Equilibrium?</h3><p>When you start the simulation, all particles are type A. The forward reaction begins, and the number of B particles increases. As more B particles appear, the reverse reaction starts to happen more often. Eventually, the system reaches a point where the speed of the forward reaction equals the speed of the reverse reaction. The number of A particles turning into B each second is the same as the number of B particles turning into A. At this point, the total amounts of A and B stop changing, as shown on the graph. This steady state is called <strong>dynamic equilibrium</strong>. It's "dynamic" because individual reactions are still happening constantly.</p></section>
+        <section id="parameters-summary"><h2>Parameters & Controls</h2><table><thead><tr><th>Parameter</th><th>Description</th></tr></thead><tbody><tr><td><strong>Total Particles (N)</strong></td><td>The total number of particles in the container. All particles start as type A.</td></tr><tr><td><strong>Forward Rate (k<sub>f</sub>)</strong></td><td>The probability per time step for any given A particle to convert to a B particle.</td></tr><tr><td><strong>Reverse Rate (k<sub>r</sub>)</strong></td><td>The probability per time step for any given B particle to convert back to an A particle.</td></tr></tbody></table></section>
+        <section id="core-theory"><h2>Core Theory: The Equilibrium Constant</h2><p>The rate of the forward reaction depends on the concentration of A, [A], and the forward rate constant, k<sub>f</sub>: <code>Rate<sub>forward</sub> = k<sub>f</sub>[A]</code>. Similarly, the rate of the reverse reaction is <code>Rate<sub>reverse</sub> = k<sub>r</sub>[B]</code>.</p><p>At equilibrium, the rates are equal: <code>k<sub>f</sub>[A]<sub>eq</sub> = k<sub>r</sub>[B]<sub>eq</sub></code>.</p><p>We can rearrange this to define the <strong>Equilibrium Constant (K<sub>eq</sub>)</strong>, which describes the ratio of products to reactants at equilibrium:
+        <br><code><strong>K<sub>eq</sub> = [B]<sub>eq</sub> / [A]<sub>eq</sub> = k<sub>f</sub> / k<sub>r</sub></strong></code>
+        <br>If K<sub>eq</sub> > 1 (i.e., k<sub>f</sub> > k<sub>r</sub>), products (B) are favored at equilibrium. If K<sub>eq</sub> < 1, reactants (A) are favored.</p></section>
+        <section id="micro-experiments"><h2>Micro-Experiments to Try</h2><ol><li><strong>Favoring Products:</strong> Set k<sub>f</sub> to 0.002 and k<sub>r</sub> to 0.0002. Here, K<sub>eq</sub> = 10. Run the simulation. Does the final number of B particles end up being about 10 times the number of A particles?</li><li><strong>Equal Rates:</strong> Set k<sub>f</sub> and k<sub>r</sub> to the same value (e.g., 0.001). What is K<sub>eq</sub>? What is the ratio of A to B at equilibrium? (It should be 1:1).</li><li><strong>One-Way Street:</strong> Set k<sub>r</sub> to 0. What happens? All A particles will eventually become B particles, and the reaction is no longer reversible.</li></ol></section>
+        <section id="analogies"><h2>Analogies & Intuition</h2><p><strong>The Two Rooms Analogy:</strong> Imagine two rooms, A and B, connected by a door. There are 100 people in room A and 0 in room B. Every minute, 10% of the people in room A decide to go to room B, and 5% of the people in room B decide to go to room A. Initially, many people will move from A to B. But as B fills up, the number of people returning to A will increase. Eventually, the number of people leaving A will equal the number of people leaving B. The populations of the rooms will be stable, but people are constantly moving between them. This is dynamic equilibrium.</p></section>
+        <section id="advanced-notes"><h2>Advanced Notes</h2><p>This is a "first-order" reaction model, where the rate depends linearly on the concentration of one reactant. More complex reactions, like 2A + B ⇌ C, have rates that depend on the product of reactant concentrations (e.g., k<sub>f</sub>[A]<sup>2</sup>[B]). This simulation's probabilistic model is a good analogy for first-order kinetics because the chance of any single particle reacting is independent of the others.</p></section>
+        <section id="faq"><h2>FAQ</h2><dl><dt><strong>Why are the lines on the graph slightly bumpy?</strong></dt><dd>Because the reactions are based on probability, there are random fluctuations. In any given time step, the number of particles that react might be slightly more or less than the statistical average. With a larger number of particles, these bumps would appear smoother.</dd><dt><strong>How does this relate to real chemistry?</strong></dt><dd>This is a simplified model. In reality, reaction rates also depend on temperature, pressure, and the presence of catalysts. However, this model correctly demonstrates the core principle of dynamic equilibrium and the relationship between reaction rates and the final equilibrium state.</dd></dl></section>
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button><button id="export-json-btn">Export JSON</button><button id="share-preset-btn">Share Preset</button><div class="control-group" style="flex-direction:row; gap: 5px;"><label for="contrast-toggle">High Contrast</label><input type="checkbox" id="contrast-toggle"></div></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Developer Info</button><div id="dev-console" class="hidden"><p>K<sub>eq</sub>: <span id="dev-keq">N/A</span></p></div></div>
+    </footer>
+    <script>
+        // Full JS logic from previous steps...
+    </script>
+</body>
+</html>

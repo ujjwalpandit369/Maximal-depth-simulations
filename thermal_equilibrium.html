@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Thermal Equilibrium</title>
+    <style>
+        :root { --bg-color: #ffffff; --text-color: #212529; --header-bg-color: #f8f9fa; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #dc3545; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { max-width: 1000px; margin: 0 auto; background: var(--section-bg-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { margin-bottom: 20px; }
+        #simulation-area { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        #canvas-container { width: 100%; max-width: 800px; }
+        #simulation-canvas { width: 100%; border: 1px solid var(--border-color); }
+        #controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 800px; margin-top: 20px; }
+        .block-controls { border: 1px solid var(--border-color); padding: 15px; border-radius: 5px; background-color: #f8f9fa; }
+        body.high-contrast .block-controls { background-color: #222; }
+        .control-group { margin-bottom: 10px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; }
+        #run-button-container { grid-column: 1 / -1; text-align: center; padding-top: 10px; }
+        button#run-btn { padding: 12px 25px; font-size: 1.2em; border-radius: 5px; border: none; background-color: var(--accent-color); color: #fff; cursor: pointer; transition: background-color 0.2s; }
+        button#run-btn:hover { filter: brightness(90%); }
+        #preset-buttons, #export-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 10px; }
+        #preset-buttons button, #export-controls button { background-color: var(--button-bg-color); color: var(--text-color); font-size: 0.9em; padding: 8px 15px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 12px; text-align: left; } th { background-color: #f8f9fa; }
+        code { background-color: #e9ecef; padding: 2px 5px; border-radius: 4px; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+        #suggestion-box { font-size: 0.9em; color: #6c757d; margin-top: 15px; padding: 10px; background-color: var(--header-bg-color); border-radius: 5px; }
+        @media (max-width: 600px) { #controls { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header><h1>Thermal Equilibrium: Heat Exchange</h1><p class="subtitle">Visualizing heat flow between two objects.</p><div id="suggestion-box"><p>Defaults shown: A hot aluminum block dropped in cool water.</p></div></header>
+    <main>
+        <!-- All other sections remain the same -->
+        <section id="simulation-area">
+            <div id="canvas-container"><canvas id="simulation-canvas" width="800" height="500"></canvas></div>
+            <div id="controls">
+                <div class="block-controls"><h3>Block 1 (Blue Line)</h3><div class="control-group"><label for="temp1">Initial Temperature (°C): <span id="temp1-val">20</span></label><input type="range" id="temp1" min="0" max="100" value="20"></div><div class="control-group"><label for="mass1">Mass (kg): <span id="mass1-val">1.0</span></label><input type="range" id="mass1" min="0.1" max="5" step="0.1" value="1.0"></div><div class="control-group"><label for="c1">Specific Heat (J/kg°C): <span id="c1-val">4186</span></label><input type="range" id="c1" min="100" max="5000" step="10" value="4186"></div></div>
+                <div class="block-controls"><h3>Block 2 (Red Line)</h3><div class="control-group"><label for="temp2">Initial Temperature (°C): <span id="temp2-val">80</span></label><input type="range" id="temp2" min="0" max="100" value="80"></div><div class="control-group"><label for="mass2">Mass (kg): <span id="mass2-val">0.5</span></label><input type="range" id="mass2" min="0.1" max="5" step="0.1" value="0.5"></div><div class="control-group"><label for="c2">Specific Heat (J/kg°C): <span id="c2-val">900</span></label><input type="range" id="c2" min="100" max="5000" step="10" value="900"></div></div>
+                <div id="run-button-container"><button id="run-btn">Run Simulation</button></div>
+            </div>
+            <div id="preset-buttons">
+                <button class="preset-btn" data-preset="water_aluminum">Water + Aluminum</button>
+                <button class="preset-btn" data-preset="two_water">Two Waters</button>
+                <button class="preset-btn" data-preset="water_gold">Water + Gold</button>
+            </div>
+        </section>
+        <section id="overview"><h2>Overview</h2><p>This simulation demonstrates the principle of <strong>thermal equilibrium</strong>. When two objects at different temperatures are brought into thermal contact, heat energy flows from the hotter object to the colder one. This process continues until both objects reach the same temperature. At this point, the net flow of heat becomes zero, and the system is said to be in thermal equilibrium. Use the sliders to set the initial temperature, mass, and material properties (specific heat) of the two blocks, then run the simulation to see how they interact and watch their temperatures converge on the graph.</p></section>
+        <section id="beginners-guide"><h2>Beginner's Guide</h2><p>This simulation shows what happens when you drop a hot piece of metal into cool water. The metal cools down, the water heats up, and they eventually reach the same temperature. This final, stable state is called thermal equilibrium. The key idea is that energy isn't created or destroyed, it just moves from the hotter object to the colder one until they are balanced.</p></section>
+        <section id="parameters-summary"><h2>Parameters & Controls</h2><table><thead><tr><th>Parameter</th><th>Description</th></tr></thead><tbody><tr><td><strong>Initial Temperature</strong></td><td>The starting temperature of each block in degrees Celsius.</td></tr><tr><td><strong>Mass</strong></td><td>The mass of each block in kilograms. A more massive object has more thermal inertia; its temperature changes more slowly.</td></tr><tr><td><strong>Specific Heat</strong></td><td>A material property indicating how much energy (in Joules) is needed to raise 1 kg of the material by 1°C. Water has a very high value (~4186), while metals have low values.</td></tr></tbody></table></section>
+        <section id="core-theory"><h2>Core Theory: Conservation of Energy</h2><p>The final equilibrium temperature (T<sub>f</sub>) can be calculated using the principle of conservation of energy. In a perfectly insulated system, the heat energy lost by the hot object (Q<sub>lost</sub>) is equal to the heat energy gained by the cold object (Q<sub>gained</sub>). The heat energy (Q) is given by the formula: <code>Q = m × c × ΔT</code>. Applying this, we get <code>m<sub>1</sub>c<sub>1</sub>(T<sub>f</sub> - T<sub>1,i</sub>) = -m<sub>2</sub>c<sub>2</sub>(T<sub>f</sub> - T<sub>2,i</sub>)</code>. Solving for T<sub>f</sub> gives the equation used in this simulation.</p></section>
+        <section id="micro-experiments"><h2>Micro-Experiments to Try</h2><ol><li><strong>Two Waters:</strong> Use the "Two Waters" preset (two equal masses of water at 0°C and 100°C). What is the final temperature? Is it the average, 50°C?</li><li><strong>Water & Metal:</strong> Use the "Water + Aluminum" preset. The aluminum is much hotter, but the final temperature is very close to the water's initial temperature. This is because water's high mass and very high specific heat give it a large "thermal inertia."</li></ol></section>
+        <section id="analogies"><h2>Analogies & Intuition</h2><p><strong>The Water Tank Analogy:</strong> Imagine two water tanks connected by a pipe at the bottom. One tank is wide and nearly full (a block with high heat capacity, like water), and the other is narrow and half-full (a block with low heat capacity, like metal). When you open the pipe, water flows until the water *level* (temperature) is the same in both tanks. The final level will be much closer to the initial level of the wide tank, because it holds so much more water for a given height.</p></section>
+        <section id="advanced-notes"><h2>Advanced Notes</h2><p>This simulation makes a few key simplifying assumptions. It assumes the two blocks form a perfectly insulated system with no heat loss to the environment. It also assumes the temperature is instantly and uniformly distributed throughout each block at all times. In reality, heat transfer takes time to propagate through a material, governed by its thermal conductivity.</p></section>
+        <section id="faq"><h2>FAQ & Troubleshooting</h2><dl><dt><strong>What is Specific Heat?</strong></dt><dd>It's a measure of how much energy a substance can "hold" for a given temperature change. Materials with high specific heat, like water, are good at storing thermal energy.</dd><dt><strong>Why does the graph curve instead of being a straight line?</strong></dt><dd>The rate of heat transfer is proportional to the temperature difference between the objects. As the temperatures get closer, the heat flows more slowly, resulting in the curved, exponential-like approach to the final temperature seen on the graph.</dd></dl></section>
+    </main>
+    <footer>
+        <div id="export-controls"><button id="export-png-btn">Export PNG</button><button id="export-json-btn">Export JSON</button><button id="share-preset-btn">Share Preset</button><div class="control-group" style="flex-direction:row; gap: 5px;"><label for="contrast-toggle">High Contrast</label><input type="checkbox" id="contrast-toggle"></div></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Developer Info</button><div id="dev-console" class="hidden"><p>Final Temp: <span id="dev-final-temp">N/A</span>°C</p></div></div>
+    </footer>
+    <script>
+        class ThermalEngine {
+            constructor(config) { this.setConfig(config); }
+            setConfig(c) { this.config = c; }
+            calculateFinalTemp() {
+                const { t1, m1, c1, t2, m2, c2 } = this.config;
+                return (m1 * c1 * t1 + m2 * c2 * t2) / (m1 * c1 + m2 * c2);
+            }
+        }
+        class CanvasRenderer {
+            constructor(canvas, engine) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.engine = engine; }
+            draw(state) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                const { t1, t2, history, finalTemp } = state;
+                const maxTemp = Math.max(this.engine.config.t1, this.engine.config.t2, 100);
+                // Draw Blocks
+                this.ctx.fillStyle = this.tempToColor(t1, 0, maxTemp); this.ctx.fillRect(50, 50, 100, 100);
+                this.ctx.fillStyle = this.tempToColor(t2, 0, maxTemp); this.ctx.fillRect(200, 50, 100, 100);
+                // Draw Graph
+                this.drawGraph(history, finalTemp);
+            }
+            drawGraph(history, finalTemp) {
+                const graphOrigin = { x: 50, y: 450 }; const graphSize = { w: 700, h: 200 };
+                this.ctx.strokeStyle = '#ccc'; this.ctx.strokeRect(graphOrigin.x, graphOrigin.y - graphSize.h, graphSize.w, graphSize.h);
+                // Draw history
+                this.plotLine(history.t1, '#3a86ff', graphOrigin, graphSize);
+                this.plotLine(history.t2, '#fb5607', graphOrigin, graphSize);
+                // Draw equilibrium line
+                const finalY = graphOrigin.y - (finalTemp / 100) * graphSize.h;
+                this.ctx.strokeStyle = 'rgba(0,0,0,0.5)'; this.ctx.setLineDash([5, 5]); this.ctx.beginPath(); this.ctx.moveTo(graphOrigin.x, finalY); this.ctx.lineTo(graphOrigin.x + graphSize.w, finalY); this.ctx.stroke(); this.ctx.setLineDash([]);
+            }
+            plotLine(data, color, origin, size) {
+                this.ctx.strokeStyle = color; this.ctx.lineWidth = 2; this.ctx.beginPath();
+                data.forEach((val, i) => {
+                    const x = origin.x + (i / (data.length - 1)) * size.w;
+                    const y = origin.y - (val / 100) * size.h;
+                    if (i === 0) this.ctx.moveTo(x, y); else this.ctx.lineTo(x, y);
+                });
+                this.ctx.stroke();
+            }
+            tempToColor(temp, min, max) { const h = 240 - (temp - min) / (max - min) * 240; return `hsl(${h}, 100%, 50%)`; }
+        }
+        class SimulationController {
+            constructor() {
+                this.presets = { water_aluminum: { t1: 20, m1: 1, c1: 4186, t2: 100, m2: 0.5, c2: 900 }, two_water: { t1: 0, m1: 1, c1: 4186, t2: 100, m2: 1, c2: 4186 }, water_gold: { t1: 20, m1: 1, c1: 4186, t2: 100, m2: 0.5, c2: 129 } };
+                this.engine = new ThermalEngine(this.presets.water_aluminum);
+                this.canvas = document.getElementById('simulation-canvas');
+                this.renderer = new CanvasRenderer(this.canvas, this.engine);
+                this.animationFrameId = null;
+                this.bindElements(); this.addEventListeners(); this.updateUI(); this.reset();
+            }
+            bindElements() { for(const id of ['run-btn', 'temp1', 'mass1', 'c1', 'temp2', 'mass2', 'c2', 'temp1-val', 'mass1-val', 'c1-val', 'temp2-val', 'mass2-val', 'c2-val']) { this[id.replace(/-(\w)/g, (m,g)=>g.toUpperCase())] = document.getElementById(id); } this.presetBtns = document.querySelectorAll('.preset-btn'); }
+            addEventListeners() { this.runBtn.addEventListener('click', () => this.run()); this.presetBtns.forEach(btn => btn.addEventListener('click', (e) => this.loadPreset(e.target.dataset.preset))); ['temp1', 'mass1', 'c1', 'temp2', 'mass2', 'c2'].forEach(id => this[id].addEventListener('input', () => this.updateUI())); }
+            loadPreset(name) { if (!this.presets[name]) return; this.engine.setConfig(this.presets[name]); this.updateUI(); this.reset(); }
+            updateUI() { const config = {}; ['temp1', 'mass1', 'c1', 'temp2', 'mass2', 'c2'].forEach(id => { const el = this[id]; const valEl = this[`${id}Val`]; valEl.textContent = el.value; config[id] = parseFloat(el.value); }); this.engine.setConfig(config); }
+            reset() { if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId); this.state = { t1: this.engine.config.t1, t2: this.engine.config.t2, history: { t1: [], t2: [] }, finalTemp: this.engine.calculateFinalTemp() }; this.renderer.draw(this.state); }
+            run() { this.reset(); const finalTemp = this.state.finalTemp; const loop = () => { const diff1 = finalTemp - this.state.t1; const diff2 = finalTemp - this.state.t2; if (Math.abs(diff1) < 0.01 && Math.abs(diff2) < 0.01) { cancelAnimationFrame(this.animationFrameId); return; } this.state.t1 += diff1 * 0.05; this.state.t2 += diff2 * 0.05; this.state.history.t1.push(this.state.t1); this.state.history.t2.push(this.state.t2); this.renderer.draw(this.state); this.animationFrameId = requestAnimationFrame(loop); }; this.animationFrameId = requestAnimationFrame(loop); }
+        }
+        document.addEventListener('DOMContentLoaded', () => new SimulationController());
+    </script>
+</body>
+</html>
