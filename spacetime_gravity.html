@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Degrees of Freedom of Gravity</title>
+    <style>
+        /* Final Styles */
+        :root { --bg-color: #ffffff; --text-color: #212529; --header-bg-color: #f8f9fa; --section-bg-color: #ffffff; --border-color: #dee2e6; --accent-color: #6f42c1; --button-bg-color: #e9ecef; --button-hover-bg-color: #ced4da; }
+        body.high-contrast { --bg-color: #000; --text-color: #fff; --header-bg-color: #111; --section-bg-color: #111; --border-color: #aaa; --accent-color: #ffc107; --button-bg-color: #333; --button-hover-bg-color: #555; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color); }
+        main { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 20px; }
+        h1, h2, h3 { color: var(--accent-color); }
+        section { border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; background-color: var(--section-bg-color); }
+        #simulation-area { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        #controls { padding: 10px; }
+        #metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 10px; }
+        .metric-cell { text-align: center; font-size: 0.9em; } .metric-cell input { width: 90%; }
+        #visualization { display: grid; grid-template-rows: 2fr 1fr; gap: 10px; }
+        canvas { border: 1px solid var(--border-color); width: 100%; height: auto; }
+        #data-panels { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; }
+        .panel { flex: 1; min-width: 250px; border: 1px solid var(--border-color); padding: 10px; font-size: 0.9em; }
+        #exposition-container { border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 10px; }
+        footer { border-top: 1px solid var(--border-color); margin-top: 40px; padding-top: 20px; font-size: 0.9em; }
+        #dev-console.hidden { display: none; } #quality-check-list li.fail { color: #dc3545; } #quality-check-list li.pass { color: #28a745; }
+        @media (max-width: 900px) { #simulation-area { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header><h1>The Fabric of Spacetime</h1><p class="subtitle">An interactive exploration of the metric tensor, gauge freedom, and gravitational waves.</p></header>
+    <main>
+        <section id="simulation-area">
+            <div id="controls">
+                <h3>Metric Perturbation (h<sub>μν</sub>)</h3><div id="metric-grid"></div>
+                <button id="decompose-btn">Decompose</button> <button id="play-btn">Play Wave</button>
+                <h3>Detector</h3><div id="detector-controls"><label>Rotation: <span id="angle-val">0</span>°</label><input type="range" id="angle-slider" min="0" max="90" value="0"></div>
+            </div>
+            <div id="visualization">
+                <div id="spacetime-view"><h4>Spacetime Grid</h4><canvas id="spacetime-canvas" width="600" height="400"></canvas></div>
+                <div id="detector-view"><h4>Detector Arms</h4><canvas id="detector-canvas" width="600" height="200"></canvas></div>
+            </div>
+            <div id="data-panels">
+                <div class="panel" id="log-panel"><h3>Log</h3><div id="log-content">Perturb the metric and press 'Decompose'.</div></div>
+                <div class="panel" id="dof-sorter-panel"><h3>DoF Sorter</h3><div id="dof-sorter-content">Awaiting decomposition...</div></div>
+                <div class="panel" id="ligo-panel"><h3>LIGO Response (Strain)</h3><canvas id="ligo-graph-canvas" width="300" height="150"></canvas></div>
+            </div>
+        </section>
+        <section id="theory-panel"><h2>Theory</h2><button id="load-exposition-btn">Read the Full Exposition</button><div id="exposition-container"></div></section>
+    </main>
+    <footer>
+        <div id="export-controls"></div>
+        <div id="quality-check-panel"><h3>Quality Self-Check</h3><ul id="quality-check-list"></ul></div>
+        <div id="dev-console-container"><button id="dev-console-toggle">Dev Console</button><div id="dev-console" class="hidden"></div></div>
+    </footer>
+    <script>
+        // --- Full Simulation Logic ---
+        class SVTDecomposer { decompose(h) { const r = { s: 0, v: 0, t: 0, pa: 0, ca: 0, log: [] }; if (h.tt !== 0) { r.s++; r.log.push("h_tt: Scalar mode (time dilation)"); } if (h.tx !== 0 || h.ty !== 0 || h.tz !== 0) { r.s += 1; r.v += 1; r.log.push("h_0i: Scalar & Vector modes (frame-dragging)"); } const trace = (h.xx || 0) + (h.yy || 0) + (h.zz || 0); if (trace !== 0) { r.s++; r.log.push("Trace(h_ij): Scalar mode (spatial curvature)"); } const plus = ((h.xx || 0) - (h.yy || 0)) / 2; if (plus !== 0) { r.t++; r.pa = plus; r.log.push("h_xx-h_yy: '+' Tensor mode (GW)"); } if (h.xy !== 0) { r.t++; r.ca = h.xy; r.log.push("h_xy: 'x' Tensor mode (GW)"); } if (h.xz !== 0 || h.yz !== 0) { r.v++; r.log.push("h_iz: Vector modes"); } r.log.push(`Total: ${r.s}s, ${r.v}v, ${r.t}t`); return r; } }
+        class WavePropagator { constructor(s=20) { this.s=s; this.p=[]; this.wr=0; this.ws=0.5; for(let i=0;i<s;i++) for(let j=0;j<s;j++) for(let k=0;k<s;k++) this.p.push({x0:(i-s/2)*2,y0:(j-s/2)*2,z0:(k-s/2)*2,x:(i-s/2)*2,y:(j-s/2)*2,z:(k-s/2)*2}); } reset() { this.wr=0; for(const p of this.p) { p.x=p.x0; p.y=p.y0; p.z=p.z0; } } step(pa, ca) { this.wr+=this.ws; if(this.wr>this.s*2)this.reset(); for(const p of this.p){const d=Math.sqrt(p.x0*p.x0+p.y0*p.y0+p.z0*p.z0);if(Math.abs(d-this.wr)<1.5){const f=1/(d+1);const hp=pa*f;const hc=ca*f;p.x=p.x0*(1+hp)+p.y0*hc;p.y=p.y0*(1-hp)+p.x0*hc;}else{p.x=p.x0;p.y=p.y0;}}}}
+        class SpacetimeRenderer { constructor(c,p){this.c=c;this.p=p;this.ctx=c.getContext('2d');this.fov=400;} project(p){const s=this.fov/(this.fov+p.z);return{x:p.x*s+this.c.width/2,y:p.y*s+this.c.height/2,s:s};} draw(){this.ctx.clearRect(0,0,this.c.width,this.c.height);this.p.p.sort((a,b)=>b.z-a.z);for(const p of this.p.p){const j=this.project(p);if(j.x>0&&j.x<this.c.width&&j.y>0&&j.y<this.c.height){this.ctx.beginPath();this.ctx.arc(j.x,j.y,j.s*2,0,2*Math.PI);this.ctx.fillStyle=`rgba(0,0,0,${j.s})`;this.ctx.fill();}}}}
+        class DetectorRenderer { constructor(d,g){this.dC=d;this.dCtx=d.getContext('2d');this.gC=g;this.gCtx=g.getContext('2d');this.sh=[];} draw(p,c,a){const w=this.dC.width;const h=this.dC.height;const L=80;const r=a*Math.PI/180;const s=p*Math.cos(2*r)+c*Math.sin(2*r);this.sh.push(s);if(this.sh.length>w)this.sh.shift();const dx=L*(1+s);const dy=L*(1-s);this.dCtx.clearRect(0,0,w,h);this.dCtx.strokeStyle='black';this.dCtx.lineWidth=3;this.dCtx.save();this.dCtx.translate(w/2,h/2);this.dCtx.rotate(r);this.dCtx.beginPath();this.dCtx.moveTo(0,0);this.dCtx.lineTo(dx,0);this.dCtx.moveTo(0,0);this.dCtx.lineTo(0,dy);this.dCtx.stroke();this.dCtx.restore();const gw=this.gC.width;const gh=this.gC.height;this.gCtx.clearRect(0,0,gw,gh);this.gCtx.strokeStyle='blue';this.gCtx.lineWidth=1;this.gCtx.beginPath();for(let i=0;i<this.sh.length;i++){const x=i;const y=gh/2-this.sh[i]*gh*10;if(i===0)this.gCtx.moveTo(x,y);else this.gCtx.lineTo(x,y);}this.gCtx.stroke();}}
+        class SimulationController{constructor(){this.h={};this.wa={p:0,c:0};this.ip=false;this.da=0;this.p=new WavePropagator();this.sr=new SpacetimeRenderer(document.getElementById('spacetime-canvas'),this.p);this.dr=new DetectorRenderer(document.getElementById('detector-canvas'),document.getElementById('ligo-graph-canvas'));this.d=new SVTDecomposer();this.bindElements();this.addEventListeners();this.createMetricSliders();}bindElements(){for(const id of['metric-grid','decompose-btn','play-btn','angle-slider','angle-val','log-content','dof-sorter-content','load-exposition-btn','exposition-container']){this[id.replace(/-(\w)/g,(m,g)=>g.toUpperCase())]=document.getElementById(id);}}addEventListeners(){this.decomposeBtn.addEventListener('click',()=>this.runDecomposition());this.playBtn.addEventListener('click',()=>this.togglePlay());this.angleSlider.addEventListener('input',(e)=>{this.da=parseInt(e.target.value,10);this.angleVal.textContent=this.da;});this.loadExpositionBtn.addEventListener('click',()=>this.loadExposition());}createMetricSliders(){const l=['t','x','y','z'];for(let i=0;i<4;i++){for(let j=0;j<4;j++){const c=document.createElement('div');c.className='metric-cell';if(i<=j){const n=l[i]+l[j];this.h[n]=0;c.innerHTML=`<label for="h_${n}">h<sub>${n}</sub></label><input type="range" id="h_${n}" min="-0.1" max="0.1" step="0.01" value="0">`;c.querySelector('input').addEventListener('input',(e)=>{this.h[n]=parseFloat(e.target.value);});}this.metricGrid.appendChild(c);}}}runDecomposition(){const r=this.d.decompose(this.h);this.logContent.innerHTML=r.log.join('<br>');this.dofSorterContent.innerHTML=`Scalar: ${r.s}, Vector: ${r.v}, Tensor: ${r.t}`;this.wa={p:r.pa,c:r.ca};this.p.reset();this.dr.sh=[];}togglePlay(){this.ip=!this.ip;if(this.ip)this.animate();}animate(){if(!this.ip)return;this.p.step(this.wa.p,this.wa.c);this.sr.draw();let cp=0,cc=0;if(this.p.wr>this.p.s){const f=1/(this.p.wr+1);cp=this.wa.p*f;cc=this.wa.c*f;}this.dr.draw(cp,cc,this.da);requestAnimationFrame(()=>this.animate());}simpleMarkdownToHtml(md){return md.split('\\n').map(l=>{if(l.startsWith('## '))return`<h3>${l.substring(3)}</h3>`;if(l.startsWith('# '))return`<h2>${l.substring(2)}</h2>`;if(l.trim()==='')return'';return`<p>${l.replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</p>`;}).join('');}async loadExposition(){try{const rs=await fetch('spacetime_gravity_exposition.md');if(!rs.ok)throw new Error(`HTTP error! status: ${rs.status}`);const md=await rs.text();this.expositionContainer.innerHTML=this.simpleMarkdownToHtml(md);this.loadExpositionBtn.style.display='none';}catch(e){this.expositionContainer.innerHTML=`<p>Error: ${e.message}</p>`;}}}
+        document.addEventListener('DOMContentLoaded',()=>new SimulationController());
+    </script>
+</body>
+</html>
