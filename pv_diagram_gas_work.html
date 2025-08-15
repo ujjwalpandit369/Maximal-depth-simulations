@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P-V Diagram for a Gas: Work Done</title>
+    <style>
+        :root {
+            --bg-color: #fdf8e1;
+            --text-color: #3d3d3d;
+            --primary-color: #f39c12; /* Orange/yellow for energy/thermo */
+            --secondary-color: #c0392b;
+            --border-color: #d35400;
+            --canvas-bg: #fffbf0;
+            --accent-color: #2980b9;
+            --font-family: 'Georgia', serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #f1c40f;
+            --secondary-color: #e74c3c;
+            --border-color: #e67e22;
+            --canvas-bg: #1a1a1a;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.7;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--secondary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; display: flex; flex-wrap: wrap; gap: 1em; }
+        .pv-panel, .cylinder-panel { flex: 1; min-width: 280px; }
+        .controls-sidebar { flex: 1; min-width: 250px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 2px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; cursor: crosshair; }
+        .pv-panel canvas { aspect-ratio: 1 / 1; }
+        .cylinder-panel canvas { aspect-ratio: 1 / 2; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input, select { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--primary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        button.secondary { background-color: var(--secondary-color); }
+        button.accent { background-color: var(--accent-color); }
+        #results-display { background: #fef9e7; border: 1px solid var(--primary-color); padding: 10px; border-radius: 5px; text-align: center; margin-top: 1em; }
+        #results-display h4 { margin: 0 0 5px 0; color: var(--secondary-color); }
+        #results-display p { margin: 0; font-weight: bold; font-size: 1.4em; color: var(--primary-color); }
+        .preset-buttons button { background-color: var(--accent-color); margin-bottom: 0.5em; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8em; text-align: left; }
+        th { background-color: #fef9e7; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>P-V Diagrams & Work Done by a Gas</h1>
+        <p>Discover how the path taken on a Pressure-Volume diagram determines the work done by a gas in a piston.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <div class="pv-panel">
+                    <p class="panel-title">Click to define a path on the P-V Diagram</p>
+                    <canvas id="pv-canvas"></canvas>
+                </div>
+                <div class="cylinder-panel">
+                    <p class="panel-title">Gas Cylinder Animation</p>
+                    <canvas id="cylinder-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="controls-sidebar">
+                 <div id="results-display">
+                    <h4>Work Done by Gas</h4>
+                    <p id="work-done-value">0 J</p>
+                </div>
+                <div class="controls-group" style="margin-top: 1em;">
+                    <h3>1. Define a Process Path</h3>
+                    <p style="font-size:0.9em; text-align:center;">Click on the P-V diagram to add points, or load a preset.</p>
+                    <div class="preset-buttons">
+                        <button id="preset-isobaric-btn">Isobaric Expansion</button>
+                        <button id="preset-isochoric-btn">Isochoric Cooling</button>
+                        <button id="preset-cycle-btn">Simple A->B->A Cycle</button>
+                    </div>
+                </div>
+                <div class="controls-group">
+                    <h3>2. Run Simulation</h3>
+                    <button id="run-btn" class="secondary">Run Animation</button>
+                    <button id="clear-btn">Clear Path</button>
+                </div>
+                <div class="controls-group">
+                    <h3>Analysis Tools</h3>
+                    <label><input type="checkbox" id="shade-work-toggle" checked> Shade Area (Work)</label>
+                </div>
+                 <div class="controls-group">
+                    <h3>Settings</h3>
+                    <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to the Gas Engine!</h4>
+            <p>Ever wondered how a car engine or a steam engine produces motion? It all comes down to a gas pushing a piston. This simulation lets you control that process and see a key concept in thermodynamics: <strong>work</strong>.</p>
+
+            <h4>Step 1: The P-V Diagram</h4>
+            <p>The main square panel is a <strong>Pressure-Volume (P-V) Diagram</strong>. It's a map of the state of the gas inside the cylinder.
+            <ul>
+                <li>The vertical axis is <strong>Pressure</strong>. High up means the gas is highly compressed and pushing hard.</li>
+                <li>The horizontal axis is <strong>Volume</strong>. Far to the right means the gas has expanded and taken up a lot of space.</li>
+            </ul>
+            A single point on this diagram tells you the exact condition of the gas at one moment. A line or a "path" on the diagram tells you the story of how the gas changes from one state to another.
+            </p>
+
+            <h4>Step 2: Define a Path</h4>
+            <p>Let's create a simple process. Click the "Clear Path" button first. Now, click once on the top-left area of the P-V diagram. Then, click a second time on the top-right area. You've just defined a path that says: "Keep the pressure constant (stay at the same height on the graph) while you expand the volume (move from left to right)." This is called an <strong>isobaric expansion</strong>.</p>
+
+            <h4>Step 3: Run the Animation</h4>
+            <p>Click the red <strong>"Run Animation"</strong> button. Watch both panels! In the cylinder animation, you'll see the piston move to the right, showing the gas expanding. In the P-V diagram, you'll see a dot trace the path you created.</p>
+
+            <h4>Step 4: What is Work?</h4>
+            <p>Notice the shaded area that appears under your path on the P-V diagram. This area represents the <strong>work done by the gas</strong>. When a gas expands, it pushes on the piston, doing work on the outside world. The amount of work is exactly equal to this area. The calculated value is shown in the "Work Done" box. For your isobaric expansion, the area is a simple rectangle (`Work = Pressure × Change in Volume`).</p>
+
+            <h4>Step 5: The Importance of the Path</h4>
+            <p>This is the most important concept. Click "Clear Path". Now let's go between the same start and end points, but with a different path.
+            <ol>
+                <li>Click on the top-left (the same start point as before).</li>
+                <li>Click on the bottom-left (this is an "isochoric" or constant-volume cooling process).</li>
+                <li>Click on the bottom-right.</li>
+                <li>Finally, click on the top-right (the same end point as before).</li>
+            </ol>
+            You've created a two-step path to get from A to B. Now click "Run Animation". Notice that the <strong>area under this new path is different!</strong> The work done is much less. Even though you started and ended at the same states, the path you took changed the amount of work done. <strong>Work is path-dependent.</strong> This is a fundamental rule in thermodynamics and is why engineers design complex cycles for engines to maximize the work they get out.</p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>Work Done by an Expanding Gas</h3>
+            <p>In thermodynamics, the work (W) done by a gas on its surroundings as it expands from a volume V₁ to V₂ is given by the integral of the pressure P with respect to the volume V.</p>
+            <p><em>Equation:</em></p>
+            <pre>W = &int;<sub>V₁</sub><sup>V₂</sup> P dV</pre>
+            <p><em>Plain English:</em> Work is the sum of all the tiny bits of work done as the volume changes. Each tiny bit of work is the pressure at that moment multiplied by the tiny change in volume. Graphically, this integral is the <strong>area under the P-V curve</strong>.</p>
+
+            <h3>Common Thermodynamic Processes</h3>
+            <p>The amount of work depends on the path (the relationship between P and V).</p>
+            <ul>
+                <li><strong>Isobaric (Constant Pressure):</strong> P is constant. The integral simplifies.
+                    <br><em>Equation:</em> `W = P &middot; (V₂ - V₁)`
+                    <br><em>Numeric Example:</em> If pressure is constant at 200 kPa and volume expands from 1 m³ to 3 m³:
+                    <br>`W = 200,000 Pa &times; (3 - 1) m³ = 400,000 Joules (J)`
+                </li>
+                <li><strong>Isochoric (Constant Volume):</strong> V is constant, so dV=0.
+                    <br><em>Equation:</em> `W = 0`
+                    <br><em>Explanation:</em> If the piston doesn't move, no work is done. The area under a vertical line is zero.
+                </li>
+                 <li><strong>Isothermal (Constant Temperature, for an Ideal Gas):</strong> Pressure is inversely proportional to Volume (`P = nRT / V`).
+                    <br><em>Equation:</em> `W = nRT &middot; ln(V₂ / V₁)`
+                    <br><em>Explanation:</em> The work is the area under a hyperbola.
+                </li>
+            </ul>
+            <p><strong>Path Dependence:</strong> Because the area under the curve depends on the shape of the curve, the work done is path-dependent. A cyclic process (one that returns to the start) can do net work if it encloses an area on the P-V diagram. The net work done in a cycle is the area enclosed by the path.</p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const pvCanvas = document.getElementById('pv-canvas');
+        const cylinderCanvas = document.getElementById('cylinder-canvas');
+        const runBtn = document.getElementById('run-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const shadeWorkToggle = document.getElementById('shade-work-toggle');
+        const workDoneValue = document.getElementById('work-done-value');
+        const contrastToggle = document.getElementById('contrast-toggle');
+
+        // --- Canvas Contexts ---
+        const pCtx = pvCanvas.getContext('2d');
+        const cCtx = cylinderCanvas.getContext('2d');
+
+        // --- Simulation State ---
+        let simState = {
+            pathPoints: [], // {v, p} in normalized coords [0, 1]
+            animatedPath: [],
+            currentStep: 0,
+            isPlaying: false,
+            showShade: true,
+            workDone: 0,
+        };
+
+        const world = {
+            vMin: 1, vMax: 5, // m^3
+            pMin: 50, pMax: 250, // kPa
+        };
+
+        // --- Initialization ---
+        function init() {
+            setupCanvases();
+            attachEventListeners();
+            loadPreset('isobaric');
+            updateAll();
+        }
+
+        function setupCanvases() {
+            [pvCanvas, cylinderCanvas].forEach(canvas => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.getContext('2d').scale(dpr, dpr);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            setupCanvases();
+            updateAll();
+        });
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            pvCanvas.addEventListener('click', handleCanvasClick);
+            runBtn.addEventListener('click', runAnimation);
+            clearBtn.addEventListener('click', () => {
+                simState.pathPoints = [];
+                simState.isPlaying = false;
+                updateAll();
+            });
+            shadeWorkToggle.addEventListener('change', e => {
+                simState.showShade = e.target.checked;
+                drawPVDiagram();
+            });
+
+            document.getElementById('preset-isobaric-btn').addEventListener('click', () => loadPreset('isobaric'));
+            document.getElementById('preset-isochoric-btn').addEventListener('click', () => loadPreset('isochoric'));
+            document.getElementById('preset-cycle-btn').addEventListener('click', () => loadPreset('cycle'));
+
+            contrastToggle.addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) content.style.maxHeight = null;
+                    else content.style.maxHeight = content.scrollHeight + 'px';
+                });
+            });
+        }
+
+        function handleCanvasClick(e) {
+            const rect = pvCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const v_norm = x / rect.width;
+            const p_norm = 1 - (y / rect.height);
+
+            simState.pathPoints.push({ v: v_norm, p: p_norm });
+            simState.isPlaying = false;
+            updateAll();
+        }
+
+        function updateAll() {
+            calculateWork();
+            drawPVDiagram();
+            drawCylinder();
+            updateUI();
+        }
+
+        function updateUI() {
+            workDoneValue.textContent = `${(simState.workDone / 1000).toFixed(1)} kJ`;
+        }
+
+        function loadPreset(name) {
+            simState.pathPoints = [];
+            const presets = {
+                isobaric: () => {
+                    simState.pathPoints.push({v: 0.1, p: 0.8});
+                    simState.pathPoints.push({v: 0.8, p: 0.8});
+                },
+                isochoric: () => {
+                    simState.pathPoints.push({v: 0.2, p: 0.9});
+                    simState.pathPoints.push({v: 0.2, p: 0.2});
+                },
+                cycle: () => {
+                    simState.pathPoints.push({v: 0.2, p: 0.8}); // A
+                    simState.pathPoints.push({v: 0.8, p: 0.8}); // B
+                    simState.pathPoints.push({v: 0.8, p: 0.2}); // C
+                    simState.pathPoints.push({v: 0.2, p: 0.8}); // back to A
+                }
+            };
+            if (presets[name]) presets[name]();
+            simState.isPlaying = false;
+            updateAll();
+        }
+
+        function calculateWork() {
+            let totalWork = 0;
+            if (simState.pathPoints.length < 2) {
+                simState.workDone = 0;
+                return;
+            }
+
+            for (let i = 0; i < simState.pathPoints.length - 1; i++) {
+                const p1_norm = simState.pathPoints[i];
+                const p2_norm = simState.pathPoints[i+1];
+
+                const V1 = world.vMin + p1_norm.v * (world.vMax - world.vMin);
+                const V2 = world.vMin + p2_norm.v * (world.vMax - world.vMin);
+                const P1_kPa = world.pMin + p1_norm.p * (world.pMax - world.pMin);
+                const P2_kPa = world.pMin + p2_norm.p * (world.pMax - world.pMin);
+
+                // Trapezoidal rule for area
+                const avgP_kPa = (P1_kPa + P2_kPa) / 2;
+                const dV = V2 - V1;
+                totalWork += avgP_kPa * 1000 * dV; // P in Pa, V in m^3
+            }
+            simState.workDone = totalWork;
+        }
+
+        // --- Drawing & Animation ---
+        function drawPVDiagram() {
+            const w = pvCanvas.width / (window.devicePixelRatio || 1);
+            const h = pvCanvas.height / (window.devicePixelRatio || 1);
+            const pad = 40;
+            pCtx.clearRect(0, 0, w, h);
+
+            // Draw axes and labels
+            pCtx.strokeStyle = 'var(--text-color)';
+            pCtx.fillStyle = 'var(--text-color)';
+            pCtx.lineWidth = 1;
+            pCtx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+            pCtx.beginPath();
+            pCtx.moveTo(pad, pad); pCtx.lineTo(pad, h - pad); pCtx.lineTo(w - pad, h - pad);
+            pCtx.stroke();
+            pCtx.textAlign = 'center';
+            pCtx.fillText(`Volume (m³)`, w / 2, h - 10);
+            pCtx.save();
+            pCtx.translate(15, h / 2); pCtx.rotate(-Math.PI / 2);
+            pCtx.fillText(`Pressure (kPa)`, 0, 0);
+            pCtx.restore();
+
+            // Shade work area
+            if (simState.showShade && simState.pathPoints.length > 1) {
+                pCtx.fillStyle = 'rgba(243, 156, 18, 0.3)';
+                pCtx.beginPath();
+                const first = simState.pathPoints[0];
+                pCtx.moveTo(pad + first.v * (w - 2*pad), h - pad);
+                simState.pathPoints.forEach(p => {
+                    const x = pad + p.v * (w - 2*pad);
+                    const y = h - pad - p.p * (h - 2*pad);
+                    pCtx.lineTo(x, y);
+                });
+                const last = simState.pathPoints[simState.pathPoints.length-1];
+                pCtx.lineTo(pad + last.v * (w - 2*pad), h - pad);
+                pCtx.closePath();
+                pCtx.fill();
+            }
+
+            // Draw path
+            pCtx.strokeStyle = 'var(--secondary-color)';
+            pCtx.lineWidth = 3;
+            pCtx.beginPath();
+            simState.pathPoints.forEach((p, i) => {
+                const x = pad + p.v * (w - 2*pad);
+                const y = h - pad - p.p * (h - 2*pad);
+                if (i === 0) pCtx.moveTo(x, y);
+                else pCtx.lineTo(x, y);
+            });
+            pCtx.stroke();
+
+            // Draw points
+            pCtx.fillStyle = 'white';
+            pCtx.strokeStyle = 'var(--secondary-color)';
+            simState.pathPoints.forEach(p => {
+                const x = pad + p.v * (w - 2*pad);
+                const y = h - pad - p.p * (h - 2*pad);
+                pCtx.beginPath();
+                pCtx.arc(x, y, 6, 0, 2*Math.PI);
+                pCtx.fill();
+                pCtx.stroke();
+            });
+
+            // Draw current state during animation
+            if(simState.isPlaying && simState.currentStep < simState.animatedPath.length) {
+                const p = simState.animatedPath[simState.currentStep];
+                const x = pad + p.v * (w - 2*pad);
+                const y = h - pad - p.p * (h - 2*pad);
+                pCtx.fillStyle = 'var(--primary-color)';
+                pCtx.beginPath();
+                pCtx.arc(x, y, 8, 0, 2*Math.PI);
+                pCtx.fill();
+            }
+        }
+
+        function drawCylinder() {
+            const w = cylinderCanvas.width / (window.devicePixelRatio || 1);
+            const h = cylinderCanvas.height / (window.devicePixelRatio || 1);
+            cCtx.clearRect(0, 0, w, h);
+
+            const cylinderW = w * 0.6;
+            const cylinderX = w * 0.2;
+
+            let p_norm = 0.5, v_norm = 0.1;
+            if (!simState.isPlaying && simState.pathPoints.length > 0) {
+                const lastPoint = simState.pathPoints[simState.pathPoints.length - 1];
+                p_norm = lastPoint.p;
+                v_norm = lastPoint.v;
+            } else if (simState.isPlaying && simState.currentStep < simState.animatedPath.length) {
+                const currentPoint = simState.animatedPath[simState.currentStep];
+                p_norm = currentPoint.p;
+                v_norm = currentPoint.v;
+            }
+
+            const pistonHeight = h - 20 - (h - 40) * v_norm;
+
+            // Draw gas particles
+            const numParticles = 30 + p_norm * 70;
+            cCtx.fillStyle = `rgba(224, 82, 60, ${0.2 + p_norm * 0.6})`;
+            for (let i = 0; i < numParticles; i++) {
+                const x = cylinderX + Math.random() * cylinderW;
+                const y = pistonHeight + Math.random() * (h - pistonHeight - 10);
+                cCtx.beginPath();
+                cCtx.arc(x, y, 3, 0, 2*Math.PI);
+                cCtx.fill();
+            }
+
+            // Draw cylinder walls
+            cCtx.strokeStyle = 'var(--text-color)';
+            cCtx.lineWidth = 4;
+            cCtx.beginPath();
+            cCtx.moveTo(cylinderX, 10); cCtx.lineTo(cylinderX, h - 10); cCtx.lineTo(cylinderX + cylinderW, h - 10); cCtx.lineTo(cylinderX + cylinderW, 10);
+            cCtx.stroke();
+
+            // Draw piston
+            cCtx.fillStyle = '#7f8c8d';
+            cCtx.fillRect(cylinderX - 10, pistonHeight - 10, cylinderW + 20, 10);
+        }
+
+        function runAnimation() {
+            if (simState.pathPoints.length < 2) return;
+            simState.isPlaying = true;
+            simState.currentStep = 0;
+
+            // Create interpolated path for smooth animation
+            simState.animatedPath = [];
+            const stepsPerSegment = 50;
+            for (let i = 0; i < simState.pathPoints.length - 1; i++) {
+                const start = simState.pathPoints[i];
+                const end = simState.pathPoints[i+1];
+                for (let j = 0; j < stepsPerSegment; j++) {
+                    const t = j / stepsPerSegment;
+                    const v = start.v + t * (end.v - start.v);
+                    const p = start.p + t * (end.p - start.p);
+                    simState.animatedPath.push({v, p});
+                }
+            }
+            animationLoop();
+        }
+
+        function animationLoop() {
+            if (!simState.isPlaying) return;
+
+            updateAll();
+
+            simState.currentStep++;
+            if (simState.currentStep >= simState.animatedPath.length) {
+                simState.isPlaying = false;
+                simState.currentStep = simState.animatedPath.length - 1; // stay at end
+                updateAll(); // one final draw
+                return;
+            }
+
+            requestAnimationFrame(animationLoop);
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

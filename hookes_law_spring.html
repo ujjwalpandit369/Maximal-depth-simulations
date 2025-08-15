@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hooke's Law: Spring Constant</title>
+    <style>
+        :root {
+            --bg-color: #eef7f4;
+            --text-color: #2c3e50;
+            --primary-color: #27ae60; /* Green theme for physics */
+            --secondary-color: #2980b9;
+            --border-color: #bdc3c7;
+            --canvas-bg: #fff;
+            --accent-color: #e67e22;
+            --font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #2ecc71;
+            --secondary-color: #3498db;
+            --border-color: #7f8c8d;
+            --canvas-bg: #1a1a1a;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; display: flex; flex-wrap: wrap; gap: 1em; }
+        .animation-panel, .graph-panel { flex: 1; min-width: 280px; }
+        .controls-sidebar { flex: 1; min-width: 250px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; }
+        .animation-panel canvas { aspect-ratio: 1 / 2; }
+        .graph-panel canvas { aspect-ratio: 1 / 1; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--secondary-color); margin-bottom: 0.5em; }
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input, select { width: 100%; padding: 0.5em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; }
+        button { background-color: var(--primary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        button.secondary { background-color: var(--secondary-color); }
+        button.accent { background-color: var(--accent-color); }
+        #results-display { background: #ecf0f1; padding: 10px; border-radius: 5px; text-align: center; margin-top: 1em; }
+        #results-display h4 { margin: 0 0 5px 0; color: var(--primary-color); }
+        #results-display p { margin: 0; font-weight: bold; font-size: 1.2em; }
+        .mass-selection button { background-color: var(--secondary-color); display: inline-block; width: auto; padding: 8px 12px; margin: 4px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8em; text-align: left; }
+        th { background-color: #ecf0f1; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hooke's Law & The Spring Constant</h1>
+        <p>Investigate the relationship between the force applied to a spring and how much it stretches.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <div class="animation-panel">
+                    <p class="panel-title">Spring Animation</p>
+                    <canvas id="animation-canvas"></canvas>
+                </div>
+                <div class="graph-panel">
+                    <p class="panel-title">Force vs. Extension Graph</p>
+                    <canvas id="graph-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group">
+                    <h3>1. Set Spring Stiffness</h3>
+                    <label for="k-slider">Spring Constant (k): <span id="k-value">100</span> N/m</label>
+                    <input type="range" id="k-slider" min="20" max="500" value="100" step="10">
+                </div>
+                <div class="controls-group mass-selection">
+                    <h3>2. Choose a Mass to Hang</h3>
+                    <p>Current Mass: <span id="mass-value">0</span> g</p>
+                    <button data-mass="100">100 g</button>
+                    <button data-mass="200">200 g</button>
+                    <button data-mass="300">300 g</button>
+                    <button data-mass="400">400 g</button>
+                    <button data-mass="500">500 g</button>
+                </div>
+                <div class="controls-group">
+                    <h3>3. Record Data</h3>
+                    <button id="add-point-btn" class="accent">Add Data Point to Graph</button>
+                </div>
+                <div class="controls-group">
+                    <h3>Analysis Tools</h3>
+                    <button id="reset-graph-btn" class="secondary">Reset Graph Data</button>
+                    <label><input type="checkbox" id="best-fit-toggle" checked> Show Best-Fit Line</label>
+                </div>
+                <div id="results-display">
+                    <h4>Calculated Spring Constant</h4>
+                    <p id="calculated-k">--- N/m</p>
+                </div>
+                 <div class="controls-group" style="margin-top: 1em;">
+                    <h3>Settings</h3>
+                    <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to the Spring Lab!</h4>
+            <p>Have you ever stretched a rubber band or a spring? You might have noticed that the more you pull, the harder it pulls back. A scientist named Robert Hooke studied this and came up with a famous rule, now known as Hooke's Law. Let's discover it for ourselves!</p>
+
+            <h4>Step 1: The Setup</h4>
+            <p>On the left, you see a spring hanging from a support. On the right is a graph. This graph will plot the <strong>Force</strong> we apply to the spring versus how much it <strong>stretches</strong> (its extension).</p>
+
+            <h4>Step 2: Change the Spring</h4>
+            <p>The "Spring Constant (k)" slider in the controls changes how stiff the spring is. A high 'k' value means a very stiff spring (like from a car's suspension). A low 'k' value means a very loose, stretchy spring (like a Slinky).</p>
+
+            <h4>Step 3: Hang a Mass</h4>
+            <p>In the controls, click on one of the mass buttons, like "100 g". You'll see a 100-gram weight appear on the end of the spring, and the spring will stretch downwards. The force pulling the spring is the weight of the mass. Weight is calculated as `mass × gravity`.</p>
+
+            <h4>Step 4: Take a Measurement</h4>
+            <p>Now that the spring is stretched, click the orange <strong>"Add Data Point to Graph"</strong> button. A dot will appear on the graph. This dot's position represents the force from the 100g mass and the resulting extension of the spring.</p>
+
+            <h4>Step 5: Collect More Data</h4>
+            <p>This is how science works! One data point isn't enough. Now, click the "200 g" mass button. The spring will stretch more. Click "Add Data Point" again. A new dot appears on the graph. Repeat this for 300g, 400g, and 500g.</p>
+
+            <h4>Step 6: The Big Reveal - The Straight Line</h4>
+            <p>Look at the graph. The points you plotted should form a nearly perfect <strong>straight line</strong>! This is Hooke's Law in action: the force and the extension are directly proportional. Double the force, and you double the extension.</p>
+            <p>The simulation automatically draws a "best-fit line" through your points. The <strong>slope</strong> (the steepness) of this line is incredibly important. It tells you the spring constant 'k'. A steeper slope means a stiffer spring. Look at the "Calculated Spring Constant" in the results box. It should be very close to the "true" value you set with the slider! You've just experimentally measured a physical property of the spring.</p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>Hooke's Law</h3>
+            <p>Hooke's Law describes the restoring force (F&#x209B;) exerted by a spring when it is displaced from its equilibrium position by a distance (x).</p>
+            <p><em>Equation:</em></p>
+            <pre>F&#x209B; = -k &middot; x</pre>
+            <p><em>Plain English:</em> The force the spring uses to pull back is proportional to how far you've stretched it. The negative sign indicates the force is in the opposite direction of the displacement (it tries to return to its original position).</p>
+            <p><em>In our experiment:</em> We apply a downward force (the weight of the mass, F&#x209A;) which, at equilibrium, is equal and opposite to the spring's restoring force. So, `F&#x209A; = -F&#x209B; = kx`.</p>
+
+            <h3>Weight as a Force</h3>
+            <p>The force applied to the spring is the weight of the mass due to gravity.</p>
+            <p><em>Equation:</em></p>
+            <pre>F&#x209A; = W = m &middot; g</pre>
+            <p>Where `m` is mass in kilograms and `g` is the acceleration due to gravity (approximated as 9.8 m/s²).</p>
+            <p><em>Numeric Example:</em> For a 200g mass:</p>
+            <pre>m = 200 g = 0.2 kg
+F&#x209A; = 0.2 kg &times; 9.8 m/s² = <strong>1.96 Newtons (N)</strong></pre>
+
+            <h3>Slope of the F-vs-x Graph</h3>
+            <p>Since `F = kx`, this is in the form of a linear equation `y = mx + b`, where `y = F`, `m = k`, `x = x`, and the y-intercept `b` is 0. Therefore, the slope of the Force vs. Extension graph is the spring constant `k`.</p>
+            <p><em>Equation:</em></p>
+            <pre>k = &Delta;F / &Delta;x</pre>
+            <p><em>Plain English:</em> The spring constant is the "change in force" divided by the "change in extension." It's a measure of stiffness in Newtons per meter (N/m).</p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const animationCanvas = document.getElementById('animation-canvas');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const kSlider = document.getElementById('k-slider');
+        const kValueSpan = document.getElementById('k-value');
+        const massValueSpan = document.getElementById('mass-value');
+        const massButtons = document.querySelectorAll('.mass-selection button');
+        const addPointBtn = document.getElementById('add-point-btn');
+        const resetGraphBtn = document.getElementById('reset-graph-btn');
+        const bestFitToggle = document.getElementById('best-fit-toggle');
+        const calculatedKSpan = document.getElementById('calculated-k');
+        const contrastToggle = document.getElementById('contrast-toggle');
+
+        // --- Canvas Contexts ---
+        const aCtx = animationCanvas.getContext('2d');
+        const gCtx = graphCanvas.getContext('2d');
+
+        // --- Simulation State ---
+        const g = 9.81; // m/s^2
+        let simState = {
+            k: 100,
+            currentMass: 0, // in kg
+            dataPoints: [], // { force: N, extension: m }
+            showBestFit: true,
+        };
+
+        // --- Initialization ---
+        function init() {
+            setupCanvases();
+            attachEventListeners();
+            updateAll();
+        }
+
+        function setupCanvases() {
+            [animationCanvas, graphCanvas].forEach(canvas => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.getContext('2d').scale(dpr, dpr);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            setupCanvases();
+            updateAll();
+        });
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            kSlider.addEventListener('input', e => {
+                simState.k = parseFloat(e.target.value);
+                kValueSpan.textContent = simState.k;
+                updateAll();
+            });
+
+            massButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    simState.currentMass = parseFloat(btn.dataset.mass) / 1000; // convert g to kg
+                    massValueSpan.textContent = btn.dataset.mass;
+                    updateAll();
+                });
+            });
+
+            addPointBtn.addEventListener('click', () => {
+                if (simState.currentMass > 0) {
+                    const force = simState.currentMass * g;
+                    const extension = force / simState.k;
+                    // Add a tiny bit of random error for realism
+                    const randomFactor = 1 + (Math.random() - 0.5) * 0.05;
+                    simState.dataPoints.push({ force: force, extension: extension * randomFactor });
+                    updateAll();
+                }
+            });
+
+            resetGraphBtn.addEventListener('click', () => {
+                simState.dataPoints = [];
+                updateAll();
+            });
+
+            bestFitToggle.addEventListener('change', e => {
+                simState.showBestFit = e.target.checked;
+                drawGraph();
+            });
+
+            contrastToggle.addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) content.style.maxHeight = null;
+                    else content.style.maxHeight = content.scrollHeight + 'px';
+                });
+            });
+        }
+
+        function updateAll() {
+            drawAnimation();
+            drawGraph();
+            updateAnalytics();
+        }
+
+        function updateAnalytics() {
+            if (simState.dataPoints.length < 2) {
+                calculatedKSpan.textContent = '--- N/m';
+                return;
+            }
+
+            // Linear regression to find the slope (k)
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            const n = simState.dataPoints.length;
+
+            simState.dataPoints.forEach(p => {
+                sumX += p.extension;
+                sumY += p.force;
+                sumXY += p.extension * p.force;
+                sumX2 += p.extension * p.extension;
+            });
+
+            const denominator = n * sumX2 - sumX * sumX;
+            if (Math.abs(denominator) < 1e-9) {
+                calculatedKSpan.textContent = 'Error';
+                return;
+            }
+            const slope = (n * sumXY - sumX * sumY) / denominator;
+            calculatedKSpan.textContent = `${slope.toFixed(1)} N/m`;
+        }
+
+        // --- Drawing Functions ---
+        function drawAnimation() {
+            const w = animationCanvas.width / (window.devicePixelRatio || 1);
+            const h = animationCanvas.height / (window.devicePixelRatio || 1);
+            aCtx.clearRect(0, 0, w, h);
+
+            const topY = 20;
+            const springWidth = 20;
+            const restLength = 80;
+
+            const force = simState.currentMass * g;
+            const extension = force / simState.k;
+            const stretchedLength = restLength + (extension * 500); // Scale extension for visibility
+
+            // Support
+            aCtx.fillStyle = '#7f8c8d';
+            aCtx.fillRect(0, 0, w, topY);
+
+            // Spring
+            aCtx.strokeStyle = '#2c3e50';
+            aCtx.lineWidth = 2;
+            aCtx.beginPath();
+            aCtx.moveTo(w / 2, topY);
+            const coils = 20;
+            const coilLength = stretchedLength / coils;
+            for (let i = 0; i < coils; i++) {
+                const y = topY + (i + 0.5) * coilLength;
+                const x = w / 2 + springWidth * Math.sin(i * Math.PI);
+                aCtx.lineTo(x, y);
+            }
+            aCtx.lineTo(w/2, topY + stretchedLength);
+            aCtx.stroke();
+
+            // Mass
+            if (simState.currentMass > 0) {
+                const massSize = 20 + Math.sqrt(simState.currentMass) * 30;
+                const massY = topY + stretchedLength;
+                aCtx.fillStyle = 'var(--secondary-color)';
+                aCtx.fillRect(w / 2 - massSize / 2, massY, massSize, massSize);
+                aCtx.fillStyle = 'white';
+                aCtx.textAlign = 'center';
+                aCtx.fillText(`${simState.currentMass * 1000}g`, w / 2, massY + massSize / 2 + 5);
+            }
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width / (window.devicePixelRatio || 1);
+            const h = graphCanvas.height / (window.devicePixelRatio || 1);
+            const padding = 40;
+            gCtx.clearRect(0, 0, w, h);
+            gCtx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+
+            const maxForce = 500/1000 * g * 1.1; // Max mass of 500g
+            const maxExtension = maxForce / 20; // For smallest k=20
+
+            // Draw axes
+            gCtx.strokeStyle = '#333';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            gCtx.moveTo(padding, padding); gCtx.lineTo(padding, h - padding); gCtx.lineTo(w - padding, h - padding);
+            gCtx.stroke();
+
+            // Axis labels
+            gCtx.save();
+            gCtx.translate(15, h/2);
+            gCtx.rotate(-Math.PI/2);
+            gCtx.textAlign = 'center';
+            gCtx.fillText('Force (N)', 0, 0);
+            gCtx.restore();
+            gCtx.textAlign = 'center';
+            gCtx.fillText('Extension (m)', w/2, h - 10);
+
+            // Draw data points
+            gCtx.fillStyle = 'var(--accent-color)';
+            simState.dataPoints.forEach(p => {
+                const x = padding + (p.extension / maxExtension) * (w - 2 * padding);
+                const y = h - padding - (p.force / maxForce) * (h - 2 * padding);
+                gCtx.beginPath();
+                gCtx.arc(x, y, 5, 0, 2 * Math.PI);
+                gCtx.fill();
+            });
+
+            // Draw best-fit line
+            if (simState.showBestFit && simState.dataPoints.length >= 2) {
+                const calculatedK = parseFloat(calculatedKSpan.textContent);
+                if (!isNaN(calculatedK)) {
+                    gCtx.strokeStyle = 'var(--primary-color)';
+                    gCtx.lineWidth = 2;
+                    gCtx.beginPath();
+                    // Start point at (0,0)
+                    gCtx.moveTo(padding, h - padding);
+                    // End point
+                    const endExtension = maxExtension * 0.9;
+                    const endForce = calculatedK * endExtension;
+                    const endX = padding + (endExtension / maxExtension) * (w - 2 * padding);
+                    const endY = h - padding - (endForce / maxForce) * (h - 2 * padding);
+                    gCtx.lineTo(endX, endY);
+                    gCtx.stroke();
+                }
+            }
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

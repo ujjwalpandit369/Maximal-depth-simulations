@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stress vs. Strain Graph: Young's Modulus</title>
+    <style>
+        :root {
+            --bg-color: #ecf0f1;
+            --text-color: #34495e;
+            --primary-color: #3498db; /* Blue for engineering/steel */
+            --secondary-color: #95a5a6;
+            --border-color: #7f8c8d;
+            --canvas-bg: #ffffff;
+            --accent-color: #e74c3c;
+            --font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #5dade2;
+            --secondary-color: #bdc3c7;
+            --border-color: #95a5a6;
+            --canvas-bg: #1a1a1a;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1em; }
+        h1, h2, h3 { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 0.3em; }
+        .simulation-area { display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 1em; align-items: flex-start; }
+        .main-content { flex: 3; min-width: 300px; display: flex; flex-wrap: wrap; gap: 1em; }
+        .animation-panel, .graph-panel { flex: 1; min-width: 280px; }
+        .controls-sidebar { flex: 1; min-width: 250px; background: var(--bg-color); padding: 1em; border: 1px solid var(--border-color); border-radius: 8px; }
+        canvas { border: 1px solid var(--border-color); background-color: var(--canvas-bg); width: 100%; display: block; }
+        .animation-panel canvas { aspect-ratio: 1 / 3; }
+        .graph-panel canvas { aspect-ratio: 1 / 1; }
+        .panel-title { text-align: center; font-weight: bold; color: var(--primary-color); margin-bottom: 0.5em; font-size: 1.1em;}
+        .controls-group { margin-bottom: 1.5em; }
+        .controls-group h3 { font-size: 1.1em; margin-top: 0; margin-bottom: 0.5em; }
+        button, input, select { width: 100%; padding: 0.6em; margin-bottom: 0.5em; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--canvas-bg); color: var(--text-color); box-sizing: border-box; font-family: inherit; }
+        button { background-color: var(--primary-color); color: white; cursor: pointer; border: none; transition: background-color 0.2s; }
+        button:hover { filter: brightness(110%); }
+        button.secondary { background-color: var(--secondary-color); }
+        #info-display { background: #fff; border-left: 5px solid var(--primary-color); padding: 10px; margin-top: 1em; }
+        #info-display p { margin: 0.2em 0; font-size: 0.9em; }
+        #info-display span { font-weight: bold; color: var(--primary-color); }
+        .material-buttons button { background-color: var(--secondary-color); }
+        .material-buttons button.active { background-color: var(--primary-color); font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+        th, td { border: 1px solid var(--border-color); padding: 0.8em; text-align: left; }
+        th { background-color: #dde; }
+        .collapsible { background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-color); cursor: pointer; padding: 12px; width: 100%; text-align: left; outline: none; font-size: 1.2em; margin-top: 1em; }
+        .content { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stress vs. Strain: Young's Modulus</h1>
+        <p>Explore how different materials stretch, deform, and break under tension by analyzing their stress-strain curves.</p>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <div class="animation-panel">
+                    <p class="panel-title">Stretching Rod</p>
+                    <canvas id="animation-canvas"></canvas>
+                </div>
+                <div class="graph-panel">
+                    <p class="panel-title">Stress vs. Strain Curve</p>
+                    <canvas id="graph-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group material-buttons">
+                    <h3>1. Select a Material</h3>
+                    <button id="mat-steel" class="active">Steel</button>
+                    <button id="mat-aluminum">Aluminum</button>
+                    <button id="mat-rubber">Rubber</button>
+                </div>
+                <div class="controls-group">
+                    <h3>2. Apply Stress</h3>
+                    <label for="stress-slider">Applied Stress: <span id="stress-value">0</span> MPa</label>
+                    <input type="range" id="stress-slider" min="0" max="500" value="0" step="1">
+                </div>
+                <div class="controls-group">
+                    <h3>Analysis</h3>
+                     <label><input type="checkbox" id="labels-toggle" checked> Show Key Points</label>
+                     <button id="reset-btn" class="secondary">Reset Stress</button>
+                </div>
+                <div id="info-display">
+                    <p>Young's Modulus (E): <span id="info-modulus">--</span></p>
+                    <p>Yield Strength: <span id="info-yield">--</span></p>
+                    <p>Ultimate Strength: <span id="info-uts">--</span></p>
+                    <p>Current Strain: <span id="info-strain">--</span></p>
+                </div>
+                <div class="controls-group" style="margin-top: 1em;">
+                    <h3>Settings</h3>
+                    <label><input type="checkbox" id="contrast-toggle"> High Contrast</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">Beginner's Guide</button>
+        <div class="content">
+            <h4>Welcome to the Material Tester!</h4>
+            <p>Why is steel used for buildings, but rubber is used for tires? It's because they have very different properties when you pull on them. This simulation lets you be a materials scientist and test these properties.</p>
+
+            <h4>Step 1: The Setup</h4>
+            <p>You see a metal rod clamped at the top, and a graph. The graph is the most important part: a <strong>Stress-Strain Curve</strong>.
+            <ul>
+                <li><strong>Stress (vertical axis):</strong> This is how much force is applied per unit of area. Think of it as how hard we're pulling on the rod, normalized. We measure it in Megapascals (MPa).</li>
+                <li><strong>Strain (horizontal axis):</strong> This is how much the rod stretches, as a percentage of its original length. A strain of 0.01 means the rod has stretched by 1%.</li>
+            </ul>
+            </p>
+
+            <h4>Step 2: Choose a Material</h4>
+            <p>Start with <strong>Steel</strong>, which should be selected by default. Each material has its own unique "fingerprint" in the form of its stress-strain curve.</p>
+
+            <h4>Step 3: Pull the Rod!</h4>
+            <p>Use the <strong>"Applied Stress"</strong> slider to start pulling on the rod. As you increase the stress, you'll see two things happen: the rod in the animation gets longer, and a line is drawn on the graph.</p>
+
+            <h4>Step 4: The Elastic Region and Young's Modulus</h4>
+            <p>At first, the graph is a perfectly straight line. This is the <strong>elastic region</strong>. If you were to let go of the rod here, it would snap back to its original length, just like a rubber band. The slope of this straight line is called <strong>Young's Modulus</strong>. It's a measure of the material's stiffness. Steel has a very steep slope, meaning it's very stiff—it takes a lot of stress to cause a little strain.</p>
+
+            <h4>Step 5: The Plastic Region and Failure</h4>
+            <p>Keep increasing the stress. Eventually, the line will start to curve. This is the <strong>Yield Point</strong>. Beyond this point, the material has permanently deformed. If you let go now, it would stay stretched out. This is called <strong>plastic deformation</strong>.
+            <br>
+            As you increase the stress further, you'll reach the <strong>Ultimate Tensile Strength (UTS)</strong>—the maximum stress the material can handle. After this point, the material starts to "neck" (get thin in one spot) and quickly fails. The final point on the graph is the <strong>Fracture Point</strong>, where the rod breaks.
+            </p>
+
+            <h4>Step 6: Compare Materials</h4>
+            <p>Now, click the "Reset" button and select <strong>Rubber</strong>. Try pulling on it with the slider. The curve looks completely different! It has a very low Young's Modulus (it's not stiff at all) and can stretch to enormous strains before breaking. By comparing the curves for Steel, Aluminum, and Rubber, you can build an intuition for why they are used in such different applications.</p>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <h3>Stress (σ)</h3>
+            <p>Stress is the internal force per unit area that particles of a body exert on each other. In this tensile test, it's the applied force (F) divided by the original cross-sectional area (A₀) of the rod.</p>
+            <p><em>Equation:</em> `σ = F / A₀`
+            <br><em>Units:</em> Pascals (Pa) or Megapascals (MPa). 1 MPa = 1,000,000 Pa.</p>
+
+            <h3>Strain (ε)</h3>
+            <p>Strain is the measure of deformation. It is the change in length (ΔL) divided by the original length (L₀).</p>
+            <p><em>Equation:</em> `ε = ΔL / L₀`
+            <br><em>Units:</em> Strain is dimensionless (e.g., m/m), but is often expressed as a percentage.</p>
+
+            <h3>Young's Modulus (E)</h3>
+            <p>Also known as the elastic modulus, this is a measure of a material's stiffness in its elastic region. It is the ratio of stress to strain in the linear portion of the curve.</p>
+            <p><em>Equation:</em> `E = σ / ε` (only for elastic deformation)</p>
+            <p><em>Plain English:</em> A high Young's Modulus means a material is very stiff and hard to stretch (like steel). A low value means it is flexible (like rubber).</p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const animationCanvas = document.getElementById('animation-canvas');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const stressSlider = document.getElementById('stress-slider');
+        const stressValueSpan = document.getElementById('stress-value');
+        const materialButtons = document.querySelectorAll('.material-buttons button');
+        const resetBtn = document.getElementById('reset-btn');
+        const labelsToggle = document.getElementById('labels-toggle');
+        const infoModulus = document.getElementById('info-modulus');
+        const infoYield = document.getElementById('info-yield');
+        const infoUts = document.getElementById('info-uts');
+        const infoStrain = document.getElementById('info-strain');
+        const contrastToggle = document.getElementById('contrast-toggle');
+
+        // --- Canvas Contexts ---
+        const aCtx = animationCanvas.getContext('2d');
+        const gCtx = graphCanvas.getContext('2d');
+
+        // --- Material Properties (Stress in MPa, Strain is dimensionless) ---
+        const materials = {
+            steel: {
+                name: 'Steel',
+                E: 200, // GPa
+                yieldStrength: 250, // MPa
+                uts: 400, // MPa
+                fractureStrain: 0.25,
+                color: '#3498db',
+                // Curve function: returns strain for a given stress
+                getStrain: function(stress) {
+                    const yieldStrain = this.yieldStrength / (this.E * 1000);
+                    if (stress <= this.yieldStrength) {
+                        return stress / (this.E * 1000);
+                    }
+                    // Simplified plastic region model
+                    const plasticStress = stress - this.yieldStrength;
+                    const plasticStrain = Math.pow(plasticStress / 500, 2);
+                    return yieldStrain + plasticStrain;
+                }
+            },
+            aluminum: {
+                name: 'Aluminum',
+                E: 70, // GPa
+                yieldStrength: 95, // MPa
+                uts: 150, // MPa
+                fractureStrain: 0.35,
+                color: '#95a5a6',
+                getStrain: function(stress) {
+                    const yieldStrain = this.yieldStrength / (this.E * 1000);
+                    if (stress <= this.yieldStrength) {
+                        return stress / (this.E * 1000);
+                    }
+                    const plasticStress = stress - this.yieldStrength;
+                    const plasticStrain = Math.pow(plasticStress / 200, 1.8);
+                    return yieldStrain + plasticStrain;
+                }
+            },
+            rubber: {
+                name: 'Rubber',
+                E: 0.05, // GPa
+                yieldStrength: 1, // MPa (not really a yield point, but a proportional limit)
+                uts: 15, // MPa
+                fractureStrain: 6.0, // 600% strain
+                color: '#e74c3c',
+                getStrain: function(stress) {
+                    // Highly non-linear model for rubber
+                    if (stress <= this.yieldStrength) {
+                        return stress / (this.E * 1000);
+                    }
+                    return 0.02 + Math.pow(stress / 10, 3);
+                }
+            }
+        };
+
+        // --- Simulation State ---
+        let simState = {
+            currentMaterial: 'steel',
+            appliedStress: 0, // MPa
+            showLabels: true,
+        };
+
+        // --- Initialization ---
+        function init() {
+            setupCanvases();
+            attachEventListeners();
+            selectMaterial('steel');
+        }
+
+        function setupCanvases() {
+            [animationCanvas, graphCanvas].forEach(canvas => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.getContext('2d').scale(dpr, dpr);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            setupCanvases();
+            updateAll();
+        });
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            stressSlider.addEventListener('input', e => {
+                simState.appliedStress = parseFloat(e.target.value);
+                updateAll();
+            });
+
+            materialButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectMaterial(btn.id.substring(4));
+                });
+            });
+
+            resetBtn.addEventListener('click', () => {
+                stressSlider.value = 0;
+                simState.appliedStress = 0;
+                updateAll();
+            });
+
+            labelsToggle.addEventListener('change', e => {
+                simState.showLabels = e.target.checked;
+                drawGraph();
+            });
+
+            contrastToggle.addEventListener('change', e => document.body.classList.toggle('high-contrast', e.target.checked));
+
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) content.style.maxHeight = null;
+                    else content.style.maxHeight = content.scrollHeight + 'px';
+                });
+            });
+        }
+
+        function selectMaterial(matName) {
+            simState.currentMaterial = matName;
+            materialButtons.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`mat-${matName}`).classList.add('active');
+
+            const mat = materials[matName];
+            stressSlider.max = mat.uts * 1.1;
+            stressSlider.value = 0;
+            simState.appliedStress = 0;
+
+            updateAll();
+        }
+
+        function updateAll() {
+            drawAnimation();
+            drawGraph();
+            updateUI();
+        }
+
+        function updateUI() {
+            const mat = materials[simState.currentMaterial];
+            const currentStrain = mat.getStrain(simState.appliedStress);
+
+            stressValueSpan.textContent = simState.appliedStress.toFixed(0);
+            infoModulus.textContent = `${mat.E.toFixed(1)} GPa`;
+            infoYield.textContent = `${mat.yieldStrength.toFixed(0)} MPa`;
+            infoUts.textContent = `${mat.uts.toFixed(0)} MPa`;
+            infoStrain.textContent = `${(currentStrain * 100).toFixed(2)} %`;
+        }
+
+        // --- Drawing Functions ---
+        function drawAnimation() {
+            const w = animationCanvas.width / (window.devicePixelRatio || 1);
+            const h = animationCanvas.height / (window.devicePixelRatio || 1);
+            aCtx.clearRect(0, 0, w, h);
+
+            const mat = materials[simState.currentMaterial];
+            const strain = mat.getStrain(simState.appliedStress);
+            const fractured = simState.appliedStress > mat.uts && strain >= mat.fractureStrain;
+
+            const rodW_orig = w * 0.4;
+            const rodX = w * 0.3;
+            const rodL_orig = h * 0.8;
+
+            // Poisson's ratio effect (simplified)
+            const rodW_new = rodW_orig / (1 + strain * 0.5);
+
+            // Clamp
+            aCtx.fillStyle = '#7f8c8d';
+            aCtx.fillRect(0, 0, w, 20);
+
+            // Rod
+            aCtx.fillStyle = mat.color;
+            if (!fractured) {
+                const rodL_new = rodL_orig * (1 + strain);
+                aCtx.fillRect(rodX + (rodW_orig - rodW_new)/2, 20, rodW_new, rodL_new);
+            } else {
+                // Draw broken rod
+                const breakPoint = rodL_orig * (1 + mat.fractureStrain);
+                aCtx.beginPath();
+                aCtx.moveTo(rodX, 20);
+                aCtx.lineTo(rodX + rodW_new, 20);
+                aCtx.lineTo(rodX + rodW_new, breakPoint - 10);
+                aCtx.lineTo(rodX, breakPoint);
+                aCtx.closePath();
+                aCtx.fill();
+            }
+
+            // Force indicator
+            const arrowY = 20 + rodL_orig * (1 + strain);
+            if (!fractured && simState.appliedStress > 0) {
+                 aCtx.strokeStyle = 'var(--accent-color)';
+                 aCtx.lineWidth = 3;
+                 aCtx.beginPath();
+                 aCtx.moveTo(w/2, arrowY + 5);
+                 aCtx.lineTo(w/2, arrowY + 25);
+                 aCtx.moveTo(w/2 - 10, arrowY + 15);
+                 aCtx.lineTo(w/2, arrowY + 25);
+                 aCtx.lineTo(w/2 + 10, arrowY + 15);
+                 aCtx.stroke();
+            }
+        }
+
+        function drawGraph() {
+            const w = graphCanvas.width / (window.devicePixelRatio || 1);
+            const h = graphCanvas.height / (window.devicePixelRatio || 1);
+            const pad = 45;
+            gCtx.clearRect(0, 0, w, h);
+            gCtx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+
+            const mat = materials[simState.currentMaterial];
+            const maxStrain = mat.fractureStrain * 1.1;
+            const maxStress = mat.uts * 1.1;
+
+            // Draw axes and labels
+            gCtx.strokeStyle = 'var(--text-color)';
+            gCtx.fillStyle = 'var(--text-color)';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            gCtx.moveTo(pad, pad); gCtx.lineTo(pad, h - pad); gCtx.lineTo(w - pad, h - pad);
+            gCtx.stroke();
+            gCtx.textAlign = 'center';
+            gCtx.fillText('Strain (ε, dimensionless)', w / 2, h - 10);
+            gCtx.save();
+            gCtx.translate(15, h / 2); gCtx.rotate(-Math.PI / 2);
+            gCtx.fillText('Stress (σ, MPa)', 0, 0);
+            gCtx.restore();
+
+            // Function to convert world coords to canvas coords
+            const toCanvas = (stress, strain) => {
+                const x = pad + (strain / maxStrain) * (w - 2 * pad);
+                const y = h - pad - (stress / maxStress) * (h - 2 * pad);
+                return {x, y};
+            };
+
+            // Draw full curve lightly
+            gCtx.strokeStyle = '#ccc';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            for (let s = 0; s <= mat.uts; s += 2) {
+                const strain = mat.getStrain(s);
+                const {x, y} = toCanvas(s, strain);
+                if (s === 0) gCtx.moveTo(x,y);
+                else gCtx.lineTo(x,y);
+            }
+            gCtx.stroke();
+
+            // Draw active curve
+            gCtx.strokeStyle = mat.color;
+            gCtx.lineWidth = 3;
+            gCtx.beginPath();
+            for (let s = 0; s <= simState.appliedStress; s += 2) {
+                if (s > mat.uts) break;
+                const strain = mat.getStrain(s);
+                const {x, y} = toCanvas(s, strain);
+                if (s === 0) gCtx.moveTo(x,y);
+                else gCtx.lineTo(x,y);
+            }
+            gCtx.stroke();
+
+            // Draw current point
+            const currentStrain = mat.getStrain(simState.appliedStress);
+            if (simState.appliedStress <= mat.uts) {
+                const currentPoint = toCanvas(simState.appliedStress, currentStrain);
+                gCtx.fillStyle = mat.color;
+                gCtx.beginPath();
+                gCtx.arc(currentPoint.x, currentPoint.y, 5, 0, 2*Math.PI);
+                gCtx.fill();
+            }
+
+            // Draw labels
+            if (simState.showLabels) {
+                gCtx.fillStyle = '#333';
+                gCtx.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+
+                // Yield point
+                const yieldStrain = mat.getStrain(mat.yieldStrength);
+                const yieldPoint = toCanvas(mat.yieldStrength, yieldStrain);
+                gCtx.fillText('Yield', yieldPoint.x, yieldPoint.y - 10);
+                gCtx.strokeRect(yieldPoint.x - 2, yieldPoint.y - 2, 4, 4);
+
+                // UTS
+                const utsStrain = mat.getStrain(mat.uts);
+                const utsPoint = toCanvas(mat.uts, utsStrain);
+                gCtx.fillText('UTS', utsPoint.x, utsPoint.y - 10);
+                gCtx.strokeRect(utsPoint.x - 2, utsPoint.y - 2, 4, 4);
+
+                // Fracture
+                const fracturePoint = toCanvas(mat.uts * 0.95, mat.fractureStrain); // Approx stress at fracture
+                gCtx.fillText('Fracture', fracturePoint.x, fracturePoint.y + 15);
+                gCtx.strokeRect(fracturePoint.x - 2, fracturePoint.y - 2, 4, 4);
+            }
+        }
+
+        init();
+    });
+    </script>
+</body>
+</html>

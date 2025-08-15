@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Position vs. Time Graph: Velocity</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --border-color: #ccc;
+            --canvas-bg: #fff;
+            --accent-color: #ff6347;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --error-color: #dc3545;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .high-contrast {
+            --bg-color: #000;
+            --text-color: #fff;
+            --primary-color: #1e90ff;
+            --secondary-color: #aaa;
+            --border-color: #888;
+            --canvas-bg: #1a1a1a;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1em;
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1em;
+        }
+        h1, h2, h3 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.3em;
+        }
+        .simulation-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            margin-bottom: 1em;
+        }
+        .main-content {
+            flex: 3;
+            min-width: 300px;
+        }
+        .controls-sidebar {
+            flex: 1;
+            min-width: 250px;
+            background: var(--bg-color);
+            padding: 1em;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        canvas {
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            width: 100%;
+            aspect-ratio: 2 / 1;
+            cursor: crosshair;
+        }
+        .canvas-container {
+            position: relative;
+            margin-bottom: 1em;
+        }
+        .canvas-title {
+            text-align: center;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        .controls-group {
+            margin-bottom: 1.5em;
+        }
+        .controls-group h3 {
+            font-size: 1.1em;
+            margin-top: 0;
+            margin-bottom: 0.5em;
+        }
+        button, input[type="range"], select {
+            width: 100%;
+            padding: 0.5em;
+            margin-bottom: 0.5em;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--canvas-bg);
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+        .preset-buttons button {
+            background-color: var(--success-color);
+        }
+        .preset-buttons button:hover {
+            background-color: #218838;
+        }
+        .metadata-bar, .suggestion-box {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            background: #e9ecef;
+            padding: 0.5em 1em;
+            margin-bottom: 1em;
+            border-radius: 4px;
+        }
+        .suggestion-box span {
+            margin-right: 1em;
+        }
+        .suggestion-box button {
+            all: unset;
+            cursor: pointer;
+            text-decoration: underline;
+            color: var(--primary-color);
+            margin: 0 0.2em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.8em;
+            text-align: left;
+        }
+        th {
+            background-color: #e9ecef;
+        }
+        .collapsible {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.2em;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .active, .collapsible:hover {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        .content {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: var(--bg-color);
+        }
+        .error-panel, .warning-panel {
+            display: none;
+            padding: 1em;
+            margin: 1em 0;
+            border-radius: 4px;
+            border: 1px solid;
+        }
+        .error-panel {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .warning-panel {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeeba;
+        }
+        #perf-meter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 160px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -80px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        @media (max-width: 768px) {
+            .simulation-area {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="self-check-error" class="error-panel">
+            <strong>Initialization Error:</strong> Some components of the simulation failed to load. Please try refreshing the page. If the problem persists, please report the bug with details from the developer console.
+        </div>
+
+        <h1>Position vs. Time Graph: Velocity</h1>
+        <p>Draw a graph of an object's position over time, and watch it move accordingly. Discover the relationship between slope and velocity.</p>
+
+        <div class="metadata-bar">
+            <span>Est. Runtime: Real-time</span> |
+            <span>Recommended Device: Desktop</span> |
+            <span>Approx. HTML Size: 18 KB</span>
+        </div>
+
+        <div class="suggestion-box">
+            Tune your experience:
+            <span>Audience: <button>Beginner</button>/<button>Intermediate</button>/<button>Advanced</button></span> |
+            <span>Analogy: <button>Everyday</button>/<button>Mechanical</button>/<button>Visual</button></span> |
+            <span>Intensity: <button>Light</button>/<button>Medium</button>/<button>Heavy</button></span>
+        </div>
+
+        <div class="simulation-area">
+            <div class="main-content">
+                <div class="canvas-container">
+                    <p class="canvas-title"><strong>Top Panel:</strong> Click and drag to draw a Position vs. Time graph</p>
+                    <canvas id="position-canvas" width="800" height="400"></canvas>
+                    <div id="perf-meter">FPS: --</div>
+                </div>
+                <div class="canvas-container">
+                    <p class="canvas-title"><strong>Middle Panel:</strong> Automatically generated Velocity vs. Time graph</p>
+                    <canvas id="velocity-canvas" width="800" height="400"></canvas>
+                </div>
+                <div class="canvas-container">
+                    <p class="canvas-title"><strong>Bottom Panel:</strong> Object's motion on a 1D track</p>
+                    <canvas id="animation-canvas" width="800" height="100"></canvas>
+                </div>
+            </div>
+
+            <div class="controls-sidebar">
+                <div class="controls-group">
+                    <h3>Master Controls</h3>
+                    <div class="tooltip">
+                        <button id="play-pause-btn" aria-label="Play or Pause Simulation (Space)">Play</button>
+                        <span class="tooltiptext">Shortcut: Space</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="step-btn" class="secondary" aria-label="Advance one time step (Right Arrow)">Step</button>
+                        <span class="tooltiptext">Shortcut: &rarr;</span>
+                    </div>
+                    <div class="tooltip">
+                        <button id="reset-btn" class="secondary" aria-label="Reset Simulation (R)">Reset</button>
+                        <span class="tooltiptext">Shortcut: R</span>
+                    </div>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Simulation Speed</h3>
+                    <label for="speed-slider">Speed: <span id="speed-value">1.0</span>x</label>
+                    <input type="range" id="speed-slider" min="0.1" max="10" value="1" step="0.1">
+                </div>
+
+                <div class="controls-group preset-buttons">
+                    <h3>Load a Preset</h3>
+                    <button id="preset-constant-btn">Constant Velocity</button>
+                    <button id="preset-accel-btn">Acceleration</button>
+                    <button id="preset-complex-btn">Complex Motion</button>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Tools</h3>
+                    <label for="tangent-toggle">Show Tangent Line (Velocity):</label>
+                    <input type="checkbox" id="tangent-toggle" checked>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Export</h3>
+                    <div class="tooltip">
+                        <button id="export-png-btn" class="secondary" aria-label="Export current view as PNG (E)">Export PNG</button>
+                        <span class="tooltiptext">Shortcut: E</span>
+                    </div>
+                    <button id="export-json-btn" class="secondary">Export JSON</button>
+                    <button id="share-btn" class="secondary">Share Preset URL</button>
+                </div>
+
+                <div class="controls-group">
+                    <h3>Settings</h3>
+                    <label for="perf-mode-toggle">Performance Mode:</label>
+                    <input type="checkbox" id="perf-mode-toggle">
+                    <br>
+                    <label for="contrast-toggle">High Contrast:</label>
+                    <input type="checkbox" id="contrast-toggle">
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="collapsible">One-Paragraph Overview</button>
+        <div class="content">
+            <p>This simulation explores the fundamental concept of kinematics: the relationship between an object's position, its velocity, and time. You can draw a graph that dictates where an object should be at any given moment. When you press play, an animation shows the object following your instructions precisely. The key insight is that the steepness, or "slope," of your position-time graph directly translates to the object's speed and direction (its velocity). A steep upward slope means fast forward motion, a flat line means the object is stationary, and a downward slope means it's moving backward. This interactive tool helps build a strong intuition for how graphical representations are not just abstract drawings, but powerful descriptions of real-world motion.</p>
+        </div>
+
+        <button type="button" class="collapsible active">Beginner's Guide (Click to expand)</button>
+        <div class="content" style="max-height: 1000px;">
+            <h3>Welcome to the Motion Graph Explorer!</h3>
+            <p>If you've ever wondered how physicists describe motion, you've come to the right place. We're going to explore one of the most powerful tools they use: the <strong>Position vs. Time graph</strong>. Don't worry, it's much simpler than it sounds!</p>
+
+            <h4>Step 1: What are we looking at?</h4>
+            <p>You see three main panels:</p>
+            <ul>
+                <li><strong>Top Panel (Position vs. Time):</strong> This is your command center. Think of it as a storyboard for an object's journey. The horizontal direction (the x-axis) represents <strong>Time</strong> passing, from left to right. The vertical direction (the y-axis) represents the object's <strong>Position</strong> on a straight track. A higher point on the graph means the object is further to the right on the track; a lower point means it's further to the left.</li>
+                <li><strong>Middle Panel (Velocity vs. Time):</strong> This graph is created automatically. It shows you the object's <em>velocity</em> at every moment in time. We'll get to what this means shortly.</li>
+                <li><strong>Bottom Panel (The Animation):</strong> This is where the action happens! You'll see a small object (a blue ball) moving left and right on a track. Its movement will perfectly match the graph you draw in the top panel.</li>
+            </ul>
+
+            <h4>Step 2: Your First Drawing</h4>
+            <p>Let's try something simple. In the top panel, click your mouse on the left side, near the middle. Now, hold the mouse button down and drag it in a straight, diagonal line up and to the right. Let go of the mouse button on the far right side of the panel. You've just drawn your first position-time graph!</p>
+            <p>What did you just tell the object to do? You told it: "Start at a certain position. As time goes on, steadily move to the right (a higher position)."</p>
+
+            <h4>Step 3: Lights, Camera, Action!</h4>
+            <p>Now, find the <strong>"Play"</strong> button in the controls panel on the right and click it. Watch the bottom animation panel. The blue ball starts moving! You'll also see a vertical red line sweep across your graph, showing the current moment in time. Notice how the ball moves exactly as you instructed: it starts at the position you clicked and moves to the right. The speed of the ball is constant because the line you drew has a constant steepness.</p>
+
+            <h4>Step 4: The Secret of the Slope</h4>
+            <p>This is the most important idea of this simulation. The <strong>slope</strong> (or steepness) of your line in the position-time graph tells you the object's <strong>velocity</strong>.</p>
+            <ul>
+                <li><strong>Steep upward slope:</strong> The position changes a lot in a small amount of time. This means the object is moving very fast to the right (positive velocity).</li>
+                <li><strong>Shallow upward slope:</strong> The position changes slowly. This means the object is moving slowly to the right (small positive velocity).</li>
+                <li><strong>Flat horizontal line (zero slope):</strong> The position does not change at all as time passes. This means the object is <strong>stopped</strong>. Its velocity is zero.</li>
+                <li><strong>Downward slope:</strong> As time moves forward, the position value gets smaller (moves down the graph). This means the object is moving to the <strong>left</strong> (negative velocity). A steep downward slope means it's moving fast to the left.</li>
+            </ul>
+            <p>Try it! Click the <strong>"Reset"</strong> button. Now draw a graph that goes up, then flat, then down. Press "Play". You should see the ball move right, then stop for a moment, then move left. Look at the middle panel (Velocity vs. Time) while this happens. You'll see the velocity graph is high, then drops to zero, then goes negative, perfectly matching the slope of your position graph!</p>
+
+            <h4>Step 5: The Tangent Tool</h4>
+            <p>To help see this, make sure the "Show Tangent Line" checkbox is ticked. When you play the simulation, you'll see a short green line that stays "stuck" to your curve, always pointing along its direction at the current time. This line shows the instantaneous slope. Watch how its angle matches the velocity graph and the object's speed.</p>
+            <p>Congratulations! You've just learned the core principle of kinematics. By simply looking at the shape of a position-time graph, you can tell the story of an object's entire journey: where it went, how fast it was going, and when it stood still.</p>
+        </div>
+
+        <button type="button" class="collapsible">Parameters & Controls Summary</button>
+        <div class="content">
+            <p>This simulation's primary "parameter" is the graph you draw. However, several controls modify how the simulation runs and is displayed.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Control</th>
+                        <th>Type</th>
+                        <th>Default</th>
+                        <th>Range</th>
+                        <th>Description</th>
+                        <th>Worked Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Play/Pause</td>
+                        <td>Button</td>
+                        <td>Paused</td>
+                        <td>N/A</td>
+                        <td>Starts or stops the flow of time in the simulation.</td>
+                        <td>Clicking "Play" begins the animation of the object based on the drawn graph.</td>
+                    </tr>
+                    <tr>
+                        <td>Speed</td>
+                        <td>Slider</td>
+                        <td>1.0x</td>
+                        <td>0.1x - 10x</td>
+                        <td>Controls the playback speed of the simulation.</td>
+                        <td>Setting speed to <strong>2.0x</strong> makes the red time-cursor move twice as fast across the graph. If total time is 10s, playback will take 5s.</td>
+                    </tr>
+                    <tr>
+                        <td>Show Tangent Line</td>
+                        <td>Checkbox</td>
+                        <td>On</td>
+                        <td>On/Off</td>
+                        <td>Displays a line segment tangent to the position curve at the current time, visualizing the instantaneous velocity.</td>
+                        <td>If the p-t graph has a slope of 2 m/s at t=3s, the tangent line will have that same slope.</td>
+                    </tr>
+                    <tr>
+                        <td>Performance Mode</td>
+                        <td>Checkbox</td>
+                        <td>Off</td>
+                        <td>On/Off</td>
+                        <td>Reduces the number of points in graphs to improve performance on slower devices.</td>
+                        <td>When on, a 1000-point user-drawn curve might be simplified to 250 points for calculations.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <button type="button" class="collapsible">Try These Examples</button>
+        <div class="content">
+            <h3>Preset 1: Constant Velocity</h3>
+            <p><strong>What to expect:</strong> The object will move from left to right at a perfectly steady speed. The velocity graph will be a flat horizontal line, indicating the velocity never changes.</p>
+            <button onclick="loadPreset('constant')">Apply Preset & Run</button>
+
+            <h3>Preset 2: Acceleration</h3>
+            <p><strong>What to expect:</strong> The object will start slowly, then gradually speed up, covering more and more distance as time passes. The position graph is a curve that gets steeper. The velocity graph will be a straight, upward-sloping line.</p>
+            <button onclick="loadPreset('accel')">Apply Preset & Run</button>
+
+            <h3>Preset 3: Complex Motion</h3>
+            <p><strong>What to expect:</strong> A more complex journey. The object moves forward, slows down to a stop, reverses direction, and then stops again. Observe how each segment of the position graph corresponds to a specific action.</p>
+            <button onclick="loadPreset('complex')">Apply Preset & Run</button>
+        </div>
+
+        <button type="button" class="collapsible">Core Theory</button>
+        <div class="content">
+            <p>The simulation is built on the definition of average and instantaneous velocity.</p>
+
+            <h3>Average Velocity</h3>
+            <p>Average velocity (&#x1D735;&#x0305;) is the total change in position (displacement, &Delta;x) divided by the total change in time (&Delta;t).</p>
+            <p><em>Equation:</em></p>
+            <pre>&#x1D735;&#x0305; = &Delta;x / &Delta;t = (x_final - x_initial) / (t_final - t_initial)</pre>
+            <p><em>Plain English:</em> Your average speed on a road trip is the total distance you drove divided by the total time it took.</p>
+            <p><em>Numeric Example:</em> If you draw a line from position x=2m at t=1s to position x=10m at t=5s, the average velocity is:</p>
+            <pre>&#x1D735;&#x0305; = (10 - 2) m / (5 - 1) s = 8 m / 4 s = <strong>2 m/s</strong></pre>
+
+            <h3>Instantaneous Velocity</h3>
+            <p>Instantaneous velocity (v) is the velocity at a single, specific moment in time. It's what your car's speedometer shows. In calculus, this is found by taking the derivative of the position function with respect to time. Graphically, it is the <strong>slope of the tangent line</strong> to the position-time graph at that instant.</p>
+            <p><em>Equation:</em></p>
+            <pre>v(t) = lim (&Delta;t &rarr; 0) [&Delta;x / &Delta;t] = dx/dt</pre>
+            <p><em>Plain English:</em> We find the instantaneous velocity by calculating the average velocity over an infinitesimally small time interval.</p>
+            <p><em>Numeric Example:</em> In the simulation, we approximate this by taking two very close points on your curve. If at t=2.00s, x=4.00m and at t=2.01s, x=4.03m, the approximate instantaneous velocity is:</p>
+            <pre>v &approx; (4.03 - 4.00) m / (2.01 - 2.00) s = 0.03 m / 0.01 s = <strong>3 m/s</strong></pre>
+            <p>The velocity-time graph is a plot of this value for every point in time.</p>
+        </div>
+
+        <div id="dev-console-container" style="display: none;">
+            <h3>Developer Console</h3>
+            <pre id="dev-console-output"></pre>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const positionCanvas = document.getElementById('position-canvas');
+        const velocityCanvas = document.getElementById('velocity-canvas');
+        const animationCanvas = document.getElementById('animation-canvas');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+        const tangentToggle = document.getElementById('tangent-toggle');
+        const perfModeToggle = document.getElementById('perf-mode-toggle');
+        const contrastToggle = document.getElementById('contrast-toggle');
+        const exportPngBtn = document.getElementById('export-png-btn');
+        const exportJsonBtn = document.getElementById('export-json-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const perfMeter = document.getElementById('perf-meter');
+        const selfCheckErrorPanel = document.getElementById('self-check-error');
+
+        // --- Canvas Contexts ---
+        const pCtx = positionCanvas.getContext('2d');
+        const vCtx = velocityCanvas.getContext('2d');
+        const aCtx = animationCanvas.getContext('2d');
+
+        // --- Simulation State ---
+        let simState = {
+            isPlaying: false,
+            time: 0,
+            speed: 1,
+            duration: 10, // seconds
+            positionPoints: [], // {t, x} in normalized canvas coords [0, 1]
+            velocityPoints: [], // {t, v} in real units
+            isDrawing: false,
+            showTangent: true,
+            performanceMode: false,
+            lastTime: 0,
+            fps: 0,
+        };
+
+        const world = {
+            xMin: 0,
+            xMax: 10, // meters
+            vMin: -5, // m/s
+            vMax: 5,  // m/s
+        };
+
+        // --- Initialization ---
+        function init() {
+            if (!selfCheck()) {
+                selfCheckErrorPanel.style.display = 'block';
+                return;
+            }
+            setupCanvases();
+            attachEventListeners();
+            loadPreset('constant');
+            simState.isPlaying = false;
+            updateUI();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function selfCheck() {
+            const elements = [positionCanvas, velocityCanvas, animationCanvas, playPauseBtn, stepBtn, resetBtn, speedSlider];
+            return elements.every(el => el !== null);
+        }
+
+        function setupCanvases() {
+            [positionCanvas, velocityCanvas, animationCanvas].forEach(canvas => {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(dpr, dpr);
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            setupCanvases();
+            drawAll();
+        });
+
+        // --- Event Listeners ---
+        function attachEventListeners() {
+            positionCanvas.addEventListener('mousedown', startDrawing);
+            positionCanvas.addEventListener('mousemove', draw);
+            positionCanvas.addEventListener('mouseup', stopDrawing);
+            positionCanvas.addEventListener('mouseleave', stopDrawing);
+            positionCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+            positionCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+            positionCanvas.addEventListener('touchend', stopDrawing);
+
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            stepBtn.addEventListener('click', () => step(0.05));
+            resetBtn.addEventListener('click', resetSimulation);
+
+            speedSlider.addEventListener('input', (e) => {
+                simState.speed = parseFloat(e.target.value);
+                speedValue.textContent = simState.speed.toFixed(1);
+            });
+
+            tangentToggle.addEventListener('change', (e) => simState.showTangent = e.target.checked);
+            perfModeToggle.addEventListener('change', (e) => simState.performanceMode = e.target.checked);
+            contrastToggle.addEventListener('change', (e) => document.body.classList.toggle('high-contrast', e.target.checked));
+
+            document.querySelectorAll('.preset-buttons button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const presetName = e.target.id.split('-')[1];
+                    loadPreset(presetName);
+                });
+            });
+
+            window.loadPreset = (presetName) => {
+                const presets = {
+                    constant: () => {
+                        simState.positionPoints = [];
+                        for (let i = 0; i <= 100; i++) {
+                            const t = i / 100;
+                            simState.positionPoints.push({ t: t, x: 0.2 + t * 0.6 });
+                        }
+                    },
+                    accel: () => {
+                        simState.positionPoints = [];
+                        for (let i = 0; i <= 100; i++) {
+                            const t = i / 100;
+                            simState.positionPoints.push({ t: t, x: 0.1 + 0.8 * t * t });
+                        }
+                    },
+                    complex: () => {
+                        simState.positionPoints = [];
+                        for (let i = 0; i <= 100; i++) {
+                           const t = i / 100;
+                           const x = 0.5 + 0.4 * Math.sin(t * Math.PI * 2) - 0.2 * Math.cos(t * Math.PI * 4);
+                           simState.positionPoints.push({t: t, x: x});
+                        }
+                    }
+                };
+                if(presets[presetName]) {
+                    presets[presetName]();
+                    resetSimulation();
+                    simState.isPlaying = true;
+                }
+            };
+
+            exportPngBtn.addEventListener('click', exportPNG);
+            exportJsonBtn.addEventListener('click', exportJSON);
+            shareBtn.addEventListener('click', sharePreset);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') { e.preventDefault(); togglePlayPause(); }
+                if (e.code === 'ArrowRight') { e.preventDefault(); step(0.05); }
+                if (e.key.toLowerCase() === 'r') { e.preventDefault(); resetSimulation(); }
+                if (e.key.toLowerCase() === 'e') { e.preventDefault(); exportPNG(); }
+            });
+
+            document.querySelectorAll('.collapsible').forEach(button => {
+                button.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    const content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                    }
+                });
+            });
+        }
+
+        // --- Drawing Logic ---
+        function startDrawing(e) {
+            simState.isDrawing = true;
+            simState.positionPoints = [];
+            simState.isPlaying = false;
+            simState.time = 0;
+            updateUI();
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!simState.isDrawing) return;
+            const rect = positionCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const t = x / rect.width;
+            const pos = 1 - (y / rect.height);
+
+            if (simState.positionPoints.length === 0 || t > simState.positionPoints[simState.positionPoints.length - 1].t) {
+                 simState.positionPoints.push({ t: t, x: pos });
+            }
+            drawAll();
+        }
+
+        function stopDrawing() {
+            simState.isDrawing = false;
+            if (simState.positionPoints.length > 1) {
+                calculateVelocityGraph();
+            }
+            drawAll();
+        }
+
+        function calculateVelocityGraph() {
+            simState.velocityPoints = [];
+            if (simState.positionPoints.length < 2) return;
+
+            const simplifiedPoints = simState.performanceMode ? simplify(simState.positionPoints, 0.01) : simState.positionPoints;
+
+            for (let i = 0; i < simplifiedPoints.length - 1; i++) {
+                const p1 = simplifiedPoints[i];
+                const p2 = simplifiedPoints[i+1];
+
+                const dt = (p2.t - p1.t) * simState.duration;
+                const dx_norm = p2.x - p1.x; // in normalized coords
+                const dx_world = dx_norm * world.xMax;
+
+                if (dt > 0) {
+                    const velocity = dx_world / dt;
+                    simState.velocityPoints.push({t: p1.t, v: velocity});
+                }
+            }
+             // Add last point
+            if(simState.velocityPoints.length > 0) {
+                simState.velocityPoints.push({t: 1, v: simState.velocityPoints[simState.velocityPoints.length-1].v});
+            }
+        }
+
+        // --- Main Simulation Loop ---
+        function mainLoop(timestamp) {
+            const deltaTime = (timestamp - simState.lastTime) / 1000;
+            simState.lastTime = timestamp;
+            simState.fps = 1 / deltaTime;
+
+            if (simState.isPlaying) {
+                simState.time += deltaTime * simState.speed;
+                if (simState.time > simState.duration) {
+                    simState.time = 0;
+                }
+            }
+
+            drawAll();
+            updateUI();
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        function drawAll() {
+            drawPositionGraph();
+            drawVelocityGraph();
+            drawAnimation();
+        }
+
+        function drawGrid(ctx, w, h, xLabel, yLabel, xMin, xMax, yMin, yMax) {
+            ctx.clearRect(0, 0, w, h);
+            ctx.strokeStyle = '#ccc';
+            ctx.fillStyle = 'var(--text-color)';
+            ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+            ctx.lineWidth = 1;
+
+            // Draw axes
+            ctx.beginPath();
+            ctx.moveTo(30, 0); ctx.lineTo(30, h - 20); ctx.lineTo(w, h - 20);
+            ctx.stroke();
+
+            // Labels
+            ctx.fillText(yLabel, 5, 15);
+            ctx.fillText(xLabel, w - 50, h - 5);
+
+            // Ticks
+            for (let i = 0; i <= 10; i++) {
+                const x = 30 + (w - 30) * (i / 10);
+                const val = xMin + (xMax - xMin) * (i/10);
+                ctx.fillText(val.toFixed(1), x - 10, h - 5);
+            }
+            for (let i = 0; i <= 10; i++) {
+                const y = (h - 20) * (1 - i / 10);
+                 const val = yMin + (yMax - yMin) * (i/10);
+                ctx.fillText(val.toFixed(1), 0, y + 5);
+            }
+        }
+
+        function drawPositionGraph() {
+            const w = pCtx.canvas.width / (window.devicePixelRatio || 1);
+            const h = pCtx.canvas.height / (window.devicePixelRatio || 1);
+            drawGrid(pCtx, w, h, `Time (s)`, `Position (m)`, 0, simState.duration, 0, world.xMax);
+
+            pCtx.strokeStyle = 'blue';
+            pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            simState.positionPoints.forEach((p, i) => {
+                const canvasX = 30 + (w - 30) * p.t;
+                const canvasY = (h - 20) * (1 - p.x);
+                if (i === 0) pCtx.moveTo(canvasX, canvasY);
+                else pCtx.lineTo(canvasX, canvasY);
+            });
+            pCtx.stroke();
+
+            // Draw time cursor
+            const timeX = 30 + (w - 30) * (simState.time / simState.duration);
+            pCtx.strokeStyle = 'red';
+            pCtx.beginPath();
+            pCtx.moveTo(timeX, 0);
+            pCtx.lineTo(timeX, h - 20);
+            pCtx.stroke();
+
+            // Draw tangent
+            if (simState.showTangent && simState.positionPoints.length > 1) {
+                const currentPos = getPositionAtTime(simState.time / simState.duration);
+                const currentVel = getVelocityAtTime(simState.time / simState.duration);
+
+                const canvasX = 30 + (w - 30) * (simState.time / simState.duration);
+                const canvasY = (h - 20) * (1 - currentPos);
+
+                pCtx.strokeStyle = 'green';
+                pCtx.lineWidth = 2;
+
+                const slope = -currentVel * (h-20) / world.xMax * simState.duration / (w-30);
+
+                const lineLength = 50; // pixels
+                const angle = Math.atan(slope);
+                const dx = lineLength * Math.cos(angle);
+                const dy = lineLength * Math.sin(angle);
+
+                pCtx.beginPath();
+                pCtx.moveTo(canvasX - dx, canvasY - dy);
+                pCtx.lineTo(canvasX + dx, canvasY + dy);
+                pCtx.stroke();
+            }
+        }
+
+        function drawVelocityGraph() {
+            const w = vCtx.canvas.width / (window.devicePixelRatio || 1);
+            const h = vCtx.canvas.height / (window.devicePixelRatio || 1);
+            drawGrid(vCtx, w, h, `Time (s)`, `Velocity (m/s)`, 0, simState.duration, world.vMin, world.vMax);
+
+            vCtx.strokeStyle = 'orange';
+            vCtx.lineWidth = 2;
+            vCtx.beginPath();
+            simState.velocityPoints.forEach((p, i) => {
+                const canvasX = 30 + (w - 30) * p.t;
+                const yRange = world.vMax - world.vMin;
+                const canvasY = (h - 20) * (1 - (p.v - world.vMin) / yRange);
+                if (i === 0) vCtx.moveTo(canvasX, canvasY);
+                else vCtx.lineTo(canvasX, canvasY);
+            });
+            vCtx.stroke();
+
+            // Draw time cursor
+            const timeX = 30 + (w - 30) * (simState.time / simState.duration);
+            vCtx.strokeStyle = 'red';
+            vCtx.beginPath();
+            vCtx.moveTo(timeX, 0);
+            vCtx.lineTo(timeX, h - 20);
+            vCtx.stroke();
+        }
+
+        function drawAnimation() {
+            const w = aCtx.canvas.width / (window.devicePixelRatio || 1);
+            const h = aCtx.canvas.height / (window.devicePixelRatio || 1);
+            aCtx.clearRect(0, 0, w, h);
+
+            // Draw track
+            aCtx.strokeStyle = '#999';
+            aCtx.lineWidth = 2;
+            aCtx.beginPath();
+            aCtx.moveTo(10, h / 2);
+            aCtx.lineTo(w - 10, h / 2);
+            aCtx.stroke();
+
+            // Draw object
+            const currentPos = getPositionAtTime(simState.time / simState.duration);
+            const objectX = 10 + (w - 20) * currentPos;
+
+            aCtx.fillStyle = 'blue';
+            aCtx.beginPath();
+            aCtx.arc(objectX, h / 2, 10, 0, Math.PI * 2);
+            aCtx.fill();
+        }
+
+        function updateUI() {
+            playPauseBtn.textContent = simState.isPlaying ? 'Pause' : 'Play';
+            perfMeter.textContent = `FPS: ${simState.fps.toFixed(0)}`;
+        }
+
+        // --- Control Functions ---
+        function togglePlayPause() {
+            simState.isPlaying = !simState.isPlaying;
+            if (simState.positionPoints.length === 0) {
+                loadPreset('constant');
+            }
+            if (simState.velocityPoints.length === 0) {
+                 calculateVelocityGraph();
+            }
+            updateUI();
+        }
+
+        function step(amount) {
+            simState.isPlaying = false;
+            simState.time += amount * simState.speed;
+            if (simState.time > simState.duration) simState.time = simState.duration;
+            if (simState.time < 0) simState.time = 0;
+            updateUI();
+        }
+
+        function resetSimulation() {
+            simState.time = 0;
+            simState.isPlaying = false;
+            if (simState.positionPoints.length === 0) {
+                 loadPreset('constant');
+            } else {
+                 calculateVelocityGraph();
+            }
+            updateUI();
+        }
+
+        // --- Utility Functions ---
+        function getPositionAtTime(t) { // t is normalized [0, 1]
+            if (simState.positionPoints.length === 0) return 0.5; // Default position
+            if (t <= simState.positionPoints[0].t) return simState.positionPoints[0].x;
+            if (t >= simState.positionPoints[simState.positionPoints.length - 1].t) return simState.positionPoints[simState.positionPoints.length - 1].x;
+
+            for (let i = 0; i < simState.positionPoints.length - 1; i++) {
+                const p1 = simState.positionPoints[i];
+                const p2 = simState.positionPoints[i+1];
+                if (t >= p1.t && t <= p2.t) {
+                    const t_interp = (t - p1.t) / (p2.t - p1.t);
+                    return p1.x + t_interp * (p2.x - p1.x);
+                }
+            }
+            return simState.positionPoints[simState.positionPoints.length - 1].x;
+        }
+
+        function getVelocityAtTime(t) { // t is normalized [0,1]
+            if (simState.velocityPoints.length === 0) return 0;
+            if (t <= simState.velocityPoints[0].t) return simState.velocityPoints[0].v;
+            if (t >= simState.velocityPoints[simState.velocityPoints.length - 1].t) return simState.velocityPoints[simState.velocityPoints.length - 1].v;
+
+            for (let i = 0; i < simState.velocityPoints.length - 1; i++) {
+                const p1 = simState.velocityPoints[i];
+                const p2 = simState.velocityPoints[i+1];
+                if (t >= p1.t && t <= p2.t) {
+                    return p1.v; // Use velocity of the interval start
+                }
+            }
+            return simState.velocityPoints[simState.velocityPoints.length - 1].v;
+        }
+
+        function simplify(points, tolerance) {
+            // Basic Ramer-Douglas-Peucker implementation
+            if (points.length < 3) return points;
+            let dmax = 0;
+            let index = 0;
+            const end = points.length - 1;
+            for (let i = 1; i < end; i++) {
+                const d = perpendicularDistance(points[i], points[0], points[end]);
+                if (d > dmax) {
+                    index = i;
+                    dmax = d;
+                }
+            }
+            if (dmax > tolerance) {
+                const recResults1 = simplify(points.slice(0, index + 1), tolerance);
+                const recResults2 = simplify(points.slice(index, end + 1), tolerance);
+                return recResults1.slice(0, recResults1.length - 1).concat(recResults2);
+            } else {
+                return [points[0], points[end]];
+            }
+        }
+
+        function perpendicularDistance(point, lineStart, lineEnd) {
+            let dx = lineEnd.t - lineStart.t;
+            let dy = lineEnd.x - lineStart.x;
+            if (dx === 0 && dy === 0) return Math.hypot(point.t - lineStart.t, point.x - lineStart.x);
+            let t = ((point.t - lineStart.t) * dx + (point.x - lineStart.x) * dy) / (dx * dx + dy * dy);
+            t = Math.max(0, Math.min(1, t));
+            const nearestT = lineStart.t + t * dx;
+            const nearestX = lineStart.x + t * dy;
+            return Math.hypot(point.t - nearestT, point.x - nearestX);
+        }
+
+        function exportPNG() {
+            const combinedCanvas = document.createElement('canvas');
+            const canvases = [positionCanvas, velocityCanvas, animationCanvas];
+            const totalHeight = canvases.reduce((sum, c) => sum + c.height, 0);
+            combinedCanvas.width = positionCanvas.width;
+            combinedCanvas.height = totalHeight;
+            const ctx = combinedCanvas.getContext('2d');
+
+            let currentY = 0;
+            canvases.forEach(c => {
+                ctx.drawImage(c, 0, currentY);
+                currentY += c.height;
+            });
+
+            const link = document.createElement('a');
+            link.download = 'position-vs-time-simulation.png';
+            link.href = combinedCanvas.toDataURL();
+            link.click();
+        }
+
+        function exportJSON() {
+            const data = {
+                version: 1,
+                points: simState.positionPoints,
+                settings: {
+                    duration: simState.duration,
+                    world: world
+                }
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const link = document.createElement('a');
+            link.href = dataStr;
+            link.download = 'position-graph-preset.json';
+            link.click();
+        }
+
+        function sharePreset() {
+            const data = { p: simState.positionPoints.map(pt => ({ t: parseFloat(pt.t.toFixed(3)), x: parseFloat(pt.x.toFixed(3))})) };
+            const jsonString = JSON.stringify(data);
+            const compressed = btoa(jsonString); // Simple base64 encoding
+            const url = `${window.location.href.split('#')[0]}#preset=${compressed}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Shareable URL copied to clipboard!');
+            }, () => {
+                alert('Failed to copy URL.');
+            });
+        }
+
+        function loadFromURL() {
+            if (window.location.hash.startsWith('#preset=')) {
+                try {
+                    const compressed = window.location.hash.substring(8);
+                    const jsonString = atob(compressed);
+                    const data = JSON.parse(jsonString);
+                    if (data.p && Array.isArray(data.p)) {
+                        simState.positionPoints = data.p;
+                        resetSimulation();
+                        return true;
+                    }
+                } catch (e) {
+                    console.error("Failed to load preset from URL", e);
+                }
+            }
+            return false;
+        }
+
+        // --- Start Simulation ---
+        if (!loadFromURL()) {
+            init();
+        } else {
+            init(); // Init will handle the loaded data
+        }
+    });
+    </script>
+</body>
+</html>
