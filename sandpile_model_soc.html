@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Organized Criticality and the Sandpile Model</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #f5a623; /* A sandy orange */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-wrap: wrap; gap: 1.5rem; min-width: 400px; justify-content: space-around;}
+
+        .viz-box { flex: 1; min-width: 300px; text-align: center; }
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); image-rendering: pixelated; }
+        #main-canvas { cursor: pointer; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 1rem; }
+        button:hover { background-color: #d88e1a; }
+        button:disabled { background-color: var(--secondary-color); cursor: not-allowed;}
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Self-Organized Criticality and the Sandpile Model</h1>
+        <p>A simulation of the Bak-Tang-Wiesenfeld "sandpile" model.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Why do complex systems like earthquakes, forest fires, and stock market crashes exhibit events of all possible sizes? The concept of <strong>Self-Organized Criticality (SOC)</strong> provides a powerful explanation. This simulation explores the classic "sandpile" model, a simple system that demonstrates SOC. We add "grains of sand" one by one to a grid. When a pile gets too high, it topples, creating an "avalanche." The system naturally evolves to a "critical state" where it is perpetually on the edge of instability. In this state, the next grain of sand could cause a tiny avalanche, a huge one, or anything in between. The histogram of avalanche sizes reveals a "power-law" distribution, a statistical fingerprint of SOC and many real-world complex systems.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Sandpiles and Avalanches</h2>
+
+            <h4>Step 1: The Sandpile and the Toppling Rule</h4>
+            <p>The main canvas is a grid representing a table where we are dropping sand. Each cell can hold a certain number of sand grains, represented by its color (black=0, blue=1, green=2, yellow=3). The rule of the system is simple:</p>
+            <p><strong>If any cell accumulates 4 or more grains of sand, it becomes unstable and "topples."</strong></p>
+            <p>When a cell topples, it sends one grain of sand to each of its four neighbors (up, down, left, and right). Its own height decreases by 4.</p>
+
+            <h4>Step 2: Avalanches</h4>
+            <p>A single topple can cause a neighboring cell to become unstable, which then topples, and so on. This chain reaction is called an <strong>avalanche</strong>. The "size" of an avalanche is the total number of toppling events in one chain reaction.</p>
+
+            <h4>Step 3: Self-Organized Criticality</h4>
+            <p>If you start the simulation (press "Play"), sand will be dropped randomly onto the grid. At first, nothing much happens. The sandpiles just get taller. But eventually, the grid will fill up and reach a "critical state."</p>
+            <p>In this state, the system is perfectly balanced. The avalanches carrying sand off the edge of the table balance the new sand being added. The system has **organized itself** into this state without any fine-tuning. Now, the next grain of sand could do almost nothing, or it could trigger a massive, board-clearing avalanche. This is the essence of SOC.</p>
+
+            <h4>Step 4: The Power Law Histogram</h4>
+            <p>The graph on the right shows a histogram of the avalanche sizes that have occurred. It's a special "log-log" plot. The fact that the data tends to form a **straight line** on this plot is the signature of a **power-law distribution**. This is the statistical hallmark of SOC, and it tells us that there is no "typical" avalanche size; avalanches of all scales are a natural part of the system.</p>
+
+            <h4>How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Press "Play"</strong> to start a continuous "rain" of sand. Watch the grid fill up and the avalanches begin.</li>
+                <li><strong>Click on the Grid:</strong> You can pause the simulation and click on any cell to add a single grain of sand and manually trigger an avalanche.</li>
+                <li><strong>Watch the Histogram:</strong> As the simulation runs for a long time, you will see the log-log histogram develop its characteristic straight-line shape.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Press Play to start the sand rain, or click on the grid to add a single grain.</p>
+                 <button id="play-pause-btn">Play</button>
+                 <button id="reset-btn">Reset</button>
+            </div>
+            <div id="simulation-visuals">
+                 <div class="viz-box">
+                    <h4>Sandpile Grid</h4>
+                    <canvas id="main-canvas" width="400" height="400"></canvas>
+                </div>
+                <div class="viz-box">
+                    <h4>Avalanche Size Histogram (log-log)</h4>
+                    <canvas id="hist-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const GRID_SIZE = 100;
+        const CRITICAL_HEIGHT = 4;
+        const state = {
+            grid: [],
+            isRunning: false,
+            avalancheSizes: {},
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const histCanvas = document.getElementById('hist-canvas');
+        const hCtx = histCanvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // --- COLOR MAP ---
+        const colors = ['#111', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c'];
+
+        // --- INITIALIZATION ---
+        function setup() {
+            canvas.width = GRID_SIZE;
+            canvas.height = GRID_SIZE;
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            playPauseBtn.addEventListener('click', () => {
+                state.isRunning = !state.isRunning;
+                playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play';
+            });
+            resetBtn.addEventListener('click', resetSimulation);
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / (rect.width / GRID_SIZE));
+                const y = Math.floor((e.clientY - rect.top) / (rect.height / GRID_SIZE));
+                addSand(x, y);
+            });
+        }
+
+        function resetSimulation() {
+            state.grid = Array(GRID_SIZE).fill(0).map(() => Array(GRID_SIZE).fill(0));
+            state.avalancheSizes = {};
+        }
+
+        function addSand(x, y) {
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                state.grid[x][y]++;
+                runAvalanche();
+            }
+        }
+
+        // --- CORE LOGIC ---
+        function runAvalanche() {
+            let topple_sites = [];
+            let currentAvalancheSize = 0;
+
+            // Find all unstable sites
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    if (state.grid[x][y] >= CRITICAL_HEIGHT) {
+                        topple_sites.push({x, y});
+                    }
+                }
+            }
+
+            while (topple_sites.length > 0) {
+                currentAvalancheSize += topple_sites.length;
+                const next_topple_sites = [];
+                topple_sites.forEach(site => {
+                    state.grid[site.x][site.y] -= CRITICAL_HEIGHT;
+
+                    const neighbors = [{x:0, y:1}, {x:0, y:-1}, {x:1, y:0}, {x:-1, y:0}];
+                    neighbors.forEach(n => {
+                        const nx = site.x + n.x;
+                        const ny = site.y + n.y;
+                        if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                            state.grid[nx][ny]++;
+                            if (state.grid[nx][ny] === CRITICAL_HEIGHT) {
+                                next_topple_sites.push({x: nx, y: ny});
+                            }
+                        }
+                    });
+                });
+                topple_sites = next_topple_sites;
+            }
+
+            if (currentAvalancheSize > 0) {
+                state.avalancheSizes[currentAvalancheSize] = (state.avalancheSizes[currentAvalancheSize] || 0) + 1;
+            }
+        }
+
+        function mainLoop() {
+            if (state.isRunning) {
+                for(let i=0; i<10; i++) { // Add 10 grains per frame for speed
+                    const x = Math.floor(Math.random() * GRID_SIZE);
+                    const y = Math.floor(Math.random() * GRID_SIZE);
+                    addSand(x, y);
+                }
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawGrid();
+            drawHistogram();
+        }
+
+        function drawGrid() {
+            const imageData = ctx.createImageData(GRID_SIZE, GRID_SIZE);
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const state_val = Math.min(state.grid[x][y], colors.length - 1);
+                    const color = hexToRgb(colors[state_val]);
+                    const idx = (x + y * GRID_SIZE) * 4;
+                    imageData.data[idx] = color.r;
+                    imageData.data[idx+1] = color.g;
+                    imageData.data[idx+2] = color.b;
+                    imageData.data[idx+3] = 255;
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function drawHistogram() {
+            hCtx.fillStyle = '#111';
+            hCtx.fillRect(0, 0, histCanvas.width, histCanvas.height);
+
+            const padding = { top: 20, right: 20, bottom: 40, left: 40 };
+            const chartWidth = histCanvas.width - padding.left - padding.right;
+            const chartHeight = histCanvas.height - padding.top - padding.bottom;
+
+            // Log-log plot
+            const sizes = Object.keys(state.avalancheSizes).map(Number);
+            if (sizes.length < 2) return;
+
+            const maxLogSize = Math.log10(GRID_SIZE * GRID_SIZE);
+            const maxLogFreq = Math.log10(Math.max(...Object.values(state.avalancheSizes)));
+
+            hCtx.fillStyle = 'var(--primary-color)';
+            sizes.forEach(size => {
+                const freq = state.avalancheSizes[size];
+                const logSize = Math.log10(size);
+                const logFreq = Math.log10(freq);
+
+                const x = padding.left + (logSize / maxLogSize) * chartWidth;
+                const y = (histCanvas.height - padding.bottom) - (logFreq / maxLogFreq) * chartHeight;
+
+                hCtx.beginPath();
+                hCtx.arc(x, y, 2, 0, 2*Math.PI);
+                hCtx.fill();
+            });
+
+            // Axes labels
+            hCtx.fillStyle = '#aaa';
+            hCtx.font = '12px sans-serif';
+            hCtx.textAlign = 'center';
+            hCtx.fillText('log(Avalanche Size)', histCanvas.width / 2, histCanvas.height - 10);
+            hCtx.save();
+            hCtx.translate(15, histCanvas.height / 2);
+            hCtx.rotate(-Math.PI / 2);
+            hCtx.fillText('log(Frequency)', 0, 0);
+            hCtx.restore();
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

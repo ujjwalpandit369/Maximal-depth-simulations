@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Belousov-Zhabotinsky (BZ) Reaction</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A chemical red */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); image-rendering: pixelated; cursor: pointer;}
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; margin-right: 1rem;}
+        button:hover { background-color: #c0392b; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Belousov-Zhabotinsky (BZ) Reaction</h1>
+        <p>A simplified cellular automaton model of an oscillating chemical reaction.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 22 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Most chemical reactions proceed in one direction until they run out of reactants. The Belousov-Zhabotinsky (BZ) reaction is a famous exception. It's a "chemical oscillator," a complex mix of chemicals that can produce stunning, dynamic patterns all on its own. This simulation uses a <strong>cellular automaton</strong>—a grid of cells following simple local rules—to model the BZ reaction's behavior. By "poking" the chemical medium, you can initiate waves of activity that propagate, interact, and form beautiful concentric circles and rotating spirals. This is a classic example of a non-equilibrium system where simple rules lead to complex, emergent behavior.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Chemical Waves</h2>
+
+            <h4>Step 1: A "Petri Dish" of Cells</h4>
+            <p>The canvas represents a petri dish filled with a chemical medium. We simulate this as a grid of "cells." Each cell can be in one of many states, which we group into three categories:</p>
+            <ul>
+                <li><strong>Resting (Black):</strong> The cell is quiescent, waiting for a trigger.</li>
+                <li><strong>Excited (Bright Colors):</strong> The cell has been activated and is now "firing." It will spread its excitement to its neighbors.</li>
+                <li><strong>Refractory (Fading Colors):</strong> After firing, the cell enters a "tired" or refractory state. During this time, it cannot be excited again. This period is crucial for creating the trailing edge of the waves.</li>
+            </ul>
+
+            <h4>Step 2: Simple Rules, Complex Patterns</h4>
+            <p>The entire simulation runs on a simple set of rules that each cell follows at every time step:</p>
+            <ol>
+                <li>If a cell is **excited** or **refractory**, it simply becomes a little less so in the next step (its state value decreases by one).</li>
+                <li>If a cell is **resting**, it looks at its neighbors. If enough of its neighbors are excited, the cell itself becomes excited in the next step.</li>
+            </ol>
+            <p>That's it! These simple, local rules are enough to generate the complex, large-scale spiral and circular waves you see. The waves are a form of "emergent behavior."</p>
+
+            <h4>Step 3: How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Start the Simulation:</strong> Click the "Play/Pause" button to start the evolution.</li>
+                <li><strong>"Poke" the Medium:</strong> Click anywhere on the canvas to set a small patch of cells to the "excited" state. This will trigger a new wave. Clicking on the tail of an existing wave can break it and create a spiral.</li>
+                <li><strong>Reset:</strong> The "Reset" button clears the grid or can be used to set up different initial conditions, like a line of excited cells.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Click Play, then click on the canvas to "poke" the medium and create waves.</p>
+                 <button id="play-pause-btn">Play</button>
+                 <button id="reset-btn">Reset</button>
+                 <button id="reset-line-btn">Reset (Line)</button>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="400" height="400"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG & STATE ---
+        const GRID_SIZE = 200;
+        const NUM_STATES = 16;
+        const state = {
+            grid: [],
+            isRunning: false,
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const resetLineBtn = document.getElementById('reset-line-btn');
+
+        // --- COLOR MAP ---
+        const colors = [];
+        for (let i = 0; i < NUM_STATES; i++) {
+            const t = i / (NUM_STATES - 1);
+            if (i === 0) colors.push('#000000');
+            else {
+                // HSL color scheme from yellow -> red -> purple -> black
+                const h = 60 - t * 120;
+                const s = 100;
+                const l = 50 - t * 50;
+                colors.push(`hsl(${h}, ${s}%, ${l}%)`);
+            }
+        }
+
+        // --- INITIALIZATION ---
+        function setup() {
+            canvas.width = GRID_SIZE;
+            canvas.height = GRID_SIZE;
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            playPauseBtn.addEventListener('click', () => {
+                state.isRunning = !state.isRunning;
+                playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play';
+            });
+            resetBtn.addEventListener('click', resetSimulation);
+            resetLineBtn.addEventListener('click', () => resetSimulation('line'));
+
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / (rect.width / GRID_SIZE));
+                const y = Math.floor((e.clientY - rect.top) / (rect.height / GRID_SIZE));
+                poke(x, y);
+            });
+        }
+
+        function resetSimulation(type = 'empty') {
+            state.grid = Array(GRID_SIZE).fill(0).map(() => Array(GRID_SIZE).fill(0));
+            if (type === 'line') {
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    state.grid[i][Math.floor(GRID_SIZE/4)] = NUM_STATES - 1;
+                }
+            }
+        }
+
+        function poke(x, y) {
+            const radius = 5;
+            for (let i = -radius; i <= radius; i++) {
+                for (let j = -radius; j <= radius; j++) {
+                    if (i*i + j*j < radius*radius) {
+                        const xi = (x + i + GRID_SIZE) % GRID_SIZE;
+                        const yj = (y + j + GRID_SIZE) % GRID_SIZE;
+                        state.grid[xi][yj] = NUM_STATES - 1;
+                    }
+                }
+            }
+        }
+
+        // --- CORE LOGIC ---
+        function updateGrid() {
+            const newGrid = Array(GRID_SIZE).fill(0).map(() => Array(GRID_SIZE).fill(0));
+
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const current_state = state.grid[x][y];
+
+                    if (current_state > 0) {
+                        newGrid[x][y] = current_state - 1;
+                    } else { // Resting state
+                        let neighbor_sum = 0;
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                const xi = (x + i + GRID_SIZE) % GRID_SIZE;
+                                const yj = (y + j + GRID_SIZE) % GRID_SIZE;
+                                if (state.grid[xi][yj] === NUM_STATES - 1) {
+                                    neighbor_sum++;
+                                }
+                            }
+                        }
+
+                        // Rule from 'A New Kind of Science' simple BZ model
+                        if (neighbor_sum >= 3 && neighbor_sum <= 6) {
+                             newGrid[x][y] = NUM_STATES - 1;
+                        }
+                    }
+                }
+            }
+            state.grid = newGrid;
+        }
+
+        function mainLoop() {
+            if (state.isRunning) {
+                updateGrid();
+                draw();
+            }
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            const imageData = ctx.createImageData(GRID_SIZE, GRID_SIZE);
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    const state_val = state.grid[x][y];
+                    const color = hexToRgb(colors[state_val]);
+                    const idx = (x + y * GRID_SIZE) * 4;
+                    imageData.data[idx] = color.r;
+                    imageData.data[idx+1] = color.g;
+                    imageData.data[idx+2] = color.b;
+                    imageData.data[idx+3] = 255;
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            if (result) {
+                return {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                };
+            }
+            // Handle HSL from color map
+            const hslMatch = /hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/.exec(hex);
+            if (hslMatch) {
+                let h = parseInt(hslMatch[1]);
+                let s = parseInt(hslMatch[2]) / 100;
+                let l = parseInt(hslMatch[3]) / 100;
+                let c = (1 - Math.abs(2 * l - 1)) * s,
+                    x = c * (1 - Math.abs((h / 60) % 2 - 1)),
+                    m = l - c/2,
+                    r = 0, g = 0, b = 0;
+                if (0 <= h && h < 60) { r=c; g=x; b=0; }
+                else if (60 <= h && h < 120) { r=x; g=c; b=0; }
+                else if (120 <= h && h < 180) { r=0; g=c; b=x; }
+                else if (180 <= h && h < 240) { r=0; g=x; b=c; }
+                else if (240 <= h && h < 300) { r=x; g=0; b=c; }
+                else if (300 <= h && h < 360) { r=c; g=0; b=x; }
+                r = Math.round((r + m) * 255);
+                g = Math.round((g + m) * 255);
+                b = Math.round((b + m) * 255);
+                return { r, g, b };
+            }
+            return null;
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

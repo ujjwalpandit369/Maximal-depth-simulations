@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Duffing Oscillator</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #e74c3c; /* A chaos red */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --attractor-color: "rgba(52, 152, 219, 0.7)";
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color); }
+
+        .slider-container { margin-bottom: 1rem; }
+        .slider-container label { display: block; margin-bottom: 0.5rem; }
+        input[type="range"] { width: 100%; }
+
+        #controls-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        button { background-color: var(--secondary-color); color: var(--text-color); border: 2px solid var(--secondary-color); padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #555; }
+        button.active { border-color: var(--primary-color); }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Duffing Oscillator</h1>
+        <p>A simulation of a driven, damped oscillator with a non-linear restoring force.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: Continuous</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>The Duffing oscillator is a textbook example of how simple systems can exhibit profoundly complex behavior. It describes a "spring" that doesn't follow Hooke's Law perfectly, combined with friction (damping) and a periodic push (a driving force). While this sounds simple, the system is non-linear, and its behavior is incredibly rich. This simulation plots the system's trajectory in <strong>phase space</strong> (velocity vs. position). By adjusting the parameters, you can see the system's final state—its "attractor"—change from simple periodic motion into a complex, fractal <strong>strange attractor</strong>, the hallmark of chaos.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to a Chaotic Oscillator</h2>
+
+            <h4>Step 1: The Phase Space Plot</h4>
+            <p>The canvas shows the "phase space" of the oscillator. The horizontal axis is the oscillator's <strong>position (x)</strong>, and the vertical axis is its <strong>velocity (v)</strong>. The complete state of the oscillator at any moment is just a single point on this graph. As the oscillator moves, this point traces a path called a trajectory.</p>
+
+            <h4>Step 2: The Attractor</h4>
+            <p>After a short initial period, the trajectory will settle onto a stable, repeating pattern. This pattern is called the system's <strong>attractor</strong>. The shape of the attractor tells you everything about the long-term behavior of the system.</p>
+
+            <h4>Step 3: The Route to Chaos</h4>
+            <p>The key to this simulation is using the sliders to change the system's parameters and observing how the attractor changes. You can use the presets to see classic examples:</p>
+            <ul>
+                <li><strong>Periodic Motion:</strong> For some parameters, the oscillator settles into a simple, repeating rhythm. The attractor is a single closed loop, called a "limit cycle."</li>
+                <li><strong>Period-Doubling:</strong> As you change a parameter (like the driving force), you might see this loop split into a new loop that goes around twice before repeating. This is a "period-2" orbit. This splitting can happen again (period-4, period-8...), a process called a "period-doubling cascade," which is a classic route to chaos.</li>
+                <li><strong>Chaos:</strong> For other parameter values, the trajectory never repeats itself, but it is still confined to a specific region. It will trace out an intricate, infinitely folded shape. This is a <strong>strange attractor</strong>. It has a fractal structure.</li>
+            </ul>
+
+            <h4>How to Use the Simulation</h4>
+            <ol>
+                <li><strong>Use the Presets:</strong> The easiest way to start is to click the preset buttons ("Periodic," "Period-2," "Chaotic") to see the different types of attractors.</li>
+                <li><strong>Adjust the Sliders:</strong> Change the "Driving Amplitude," "Driving Frequency," and "Damping" to explore the parameter space. The simulation will restart and trace the new attractor.</li>
+                <li><strong>Observe the Changes:</strong> Try to find the exact points where the behavior changes, for example, where a simple loop splits into a double loop.</li>
+            </ol>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Use the sliders to change the oscillator's parameters, or load a preset. The phase space plot will update automatically.</p>
+                <div class="slider-container">
+                    <label for="gamma-slider">Driving Amplitude (γ)</label>
+                    <input type="range" id="gamma-slider" min="0.2" max="0.65" value="0.5" step="0.001">
+                </div>
+                <div class="slider-container">
+                    <label for="omega-slider">Driving Frequency (ω)</label>
+                    <input type="range" id="omega-slider" min="0.5" max="1.5" value="1.0" step="0.01">
+                </div>
+                <div class="slider-container">
+                    <label for="delta-slider">Damping (δ)</label>
+                    <input type="range" id="delta-slider" min="0.1" max="0.5" value="0.3" step="0.01">
+                </div>
+                <p>Presets:</p>
+                 <div id="controls-toolbar">
+                    <button data-preset="periodic">Periodic</button>
+                    <button data-preset="period2">Period-2</button>
+                    <button data-preset="chaotic">Chaotic</button>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="500" height="500"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Duffing Equation Parameters ---
+        // d²x/dt² + δ(dx/dt) - αx + βx³ = γcos(ωt)
+        // We'll use the standard chaotic parameters α=1, β=1
+        const alpha = 1.0;
+        const beta = 1.0;
+
+        // --- SIMULATION STATE ---
+        const state = {
+            delta: 0.3,   // Damping
+            gamma: 0.5,   // Driving amplitude
+            omega: 1.0,   // Driving frequency
+            x: 0.1, y: 0.1, // y is dx/dt (velocity)
+            t: 0,
+            trajectory: [],
+        };
+        const dt = 0.02; // Time step for RK4
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const gammaSlider = document.getElementById('gamma-slider');
+        const omegaSlider = document.getElementById('omega-slider');
+        const deltaSlider = document.getElementById('delta-slider');
+        const presetButtons = document.querySelectorAll('[data-preset]');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function addEventListeners() {
+            gammaSlider.addEventListener('input', () => { state.gamma = parseFloat(gammaSlider.value); resetSimulation(); });
+            omegaSlider.addEventListener('input', () => { state.omega = parseFloat(omegaSlider.value); resetSimulation(); });
+            deltaSlider.addEventListener('input', () => { state.delta = parseFloat(deltaSlider.value); resetSimulation(); });
+            presetButtons.forEach(btn => btn.addEventListener('click', (e) => loadPreset(e.target.dataset.preset)));
+        }
+
+        function loadPreset(preset) {
+            if (preset === 'periodic') {
+                state.gamma = 0.2; state.omega = 1.0; state.delta = 0.3;
+            } else if (preset === 'period2') {
+                state.gamma = 0.28; state.omega = 1.0; state.delta = 0.3;
+            } else if (preset === 'chaotic') {
+                state.gamma = 0.5; state.omega = 1.0; state.delta = 0.3;
+            }
+            gammaSlider.value = state.gamma;
+            omegaSlider.value = state.omega;
+            deltaSlider.value = state.delta;
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            state.x = 0.1;
+            state.y = 0.1;
+            state.t = 0;
+            state.trajectory = [];
+            ctx.fillStyle = '#111'; // Clear canvas
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- CORE LOGIC (RK4 Integrator) ---
+        const f = (t, x, y) => alpha * x - beta * x*x*x - state.delta * y + state.gamma * Math.cos(state.omega * t);
+
+        function updateState() {
+            const { t, x, y } = state;
+
+            const k1_x = dt * y;
+            const k1_y = dt * f(t, x, y);
+
+            const k2_x = dt * (y + 0.5 * k1_y);
+            const k2_y = dt * f(t + 0.5 * dt, x + 0.5 * k1_x, y + 0.5 * k1_y);
+
+            const k3_x = dt * (y + 0.5 * k2_y);
+            const k3_y = dt * f(t + 0.5 * dt, x + 0.5 * k2_x, y + 0.5 * k2_y);
+
+            const k4_x = dt * (y + k3_y);
+            const k4_y = dt * f(t + dt, x + k3_x, y + k3_y);
+
+            state.x += (k1_x + 2*k2_x + 2*k3_x + k4_x) / 6;
+            state.y += (k1_y + 2*k2_y + 2*k3_y + k4_y) / 6;
+            state.t += dt;
+
+            // Store points for drawing, but only after some transient time
+            if (state.t > 50) {
+                state.trajectory.push({x: state.x, y: state.y});
+            }
+            if (state.trajectory.length > 5000) {
+                state.trajectory.shift();
+            }
+        }
+
+        function mainLoop() {
+            // Run multiple iterations per frame for speed
+            for(let i=0; i<10; i++) {
+                updateState();
+            }
+            draw();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            // Fading effect by drawing a semi-transparent rectangle
+            ctx.fillStyle = 'rgba(17, 17, 17, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+
+            drawTrajectory();
+
+            ctx.restore();
+        }
+
+        function drawTrajectory() {
+            if (state.trajectory.length < 2) return;
+
+            const scale = 150;
+            ctx.strokeStyle = 'var(--attractor-color)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+
+            for (let i = 1; i < state.trajectory.length; i++) {
+                const p1 = state.trajectory[i-1];
+                const p2 = state.trajectory[i];
+                ctx.moveTo(p1.x * scale, -p1.y * scale);
+                ctx.lineTo(p2.x * scale, -p2.y * scale);
+            }
+            ctx.stroke();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
