@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbit Space (Quotient Manifold)</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #9013FE; /* A deep purple for abstract math */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --point-color: #f5a623;
+            --orbit-color: rgba(245, 166, 35, 0.5);
+            --domain-color: rgba(46, 204, 113, 0.1);
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-wrap: wrap; gap: 1.5rem; min-width: 400px; justify-content: space-around;}
+
+        .viz-box { flex: 1; min-width: 300px; text-align: center; }
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; cursor: crosshair; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Orbit Space (Quotient Manifold)</h1>
+        <p>A simulation showing the reduction of a space by a group action.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 25 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>In mathematics, we can often simplify a space by "gluing together" points that are equivalent under some symmetry. This process creates a new space called a <strong>quotient space</strong> or <strong>orbit space</strong>. This simulation provides a concrete example. We start with a simple 2D plane and apply a symmetry group of 90-degree rotations. By selecting a point, you can see its "orbit"—the set of all points it's equivalent to under these rotations. We then show the resulting quotient space, where each entire orbit from the original plane has been collapsed into a single point. For this specific symmetry, the flat plane remarkably transforms into a cone.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to Quotient Spaces</h2>
+
+            <h4>Step 1: The Original Space and a Symmetry</h4>
+            <p>The left panel shows our starting space: a simple 2D plane. We are going to apply a symmetry transformation to it: rotation by 90 degrees around the origin. This is a "group action."</p>
+
+            <h4>Step 2: The Orbit of a Point</h4>
+            <p>Click anywhere on the left panel. The bright orange dot is the point you selected. The four semi-transparent dots connected by a circle are the <strong>orbit</strong> of your point. This is the set of all points that can be reached from your original point by applying the symmetry operations (rotating by 0°, 90°, 180°, and 270°). From the perspective of our symmetry, all four of these points are "the same."</p>
+
+            <h4>Step 3: Creating the Quotient Space</h4>
+            <p>The core idea of a quotient space is to create a new space where each orbit is collapsed into a single point. How can we visualize this?</p>
+            <p>Notice the green shaded wedge in the left panel. This is a "fundamental domain." Every orbit has exactly one point that falls within this 90-degree wedge. We can construct the quotient space by taking just this wedge and "gluing" its two straight edges together. What shape do you get when you glue the two straight edges of a wedge of paper together? A cone!</p>
+            <p>The right panel shows this resulting <strong>quotient space</strong>. When you select a point in the plane on the left, you see its entire four-point orbit. On the right, you see the single point in the cone that represents that entire orbit.</p>
+
+            <h4>Step 4: The Special Point</h4>
+            <p>What happens if you click on the origin (0,0)? Its orbit has only one point, because rotating (0,0) doesn't move it. This special point on the plane maps to the singular tip of the cone on the right.</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Click or move your mouse on the left canvas ("Original Space") to select a point. Observe its four-point orbit and its corresponding single point in the "Quotient Space" on the right.</p>
+            </div>
+            <div id="simulation-visuals">
+                <div class="viz-box">
+                    <h4>Original Space (ℝ²)</h4>
+                    <canvas id="plane-canvas" width="400" height="400"></canvas>
+                </div>
+                <div class="viz-box">
+                    <h4>Quotient Space (ℝ²/ℤ₄)</h4>
+                    <canvas id="cone-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE ---
+        const state = {
+            selectedPoint: { x: 100, y: 50 },
+        };
+
+        // --- DOM ELEMENTS ---
+        const planeCanvas = document.getElementById('plane-canvas');
+        const pCtx = planeCanvas.getContext('2d');
+        const coneCanvas = document.getElementById('cone-canvas');
+        const cCtx = coneCanvas.getContext('2d');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            requestAnimationFrame(draw);
+        }
+
+        function addEventListeners() {
+            planeCanvas.addEventListener('mousemove', (e) => {
+                const rect = planeCanvas.getBoundingClientRect();
+                const canvasX = e.clientX - rect.left;
+                const canvasY = e.clientY - rect.top;
+                state.selectedPoint.x = canvasX - planeCanvas.width / 2;
+                state.selectedPoint.y = -(canvasY - planeCanvas.height / 2);
+            });
+        }
+
+        // --- CORE LOGIC ---
+        function getOrbit(p) {
+            return [
+                { x: p.x, y: p.y },   // 0 deg
+                { x: -p.y, y: p.x },  // 90 deg
+                { x: -p.x, y: -p.y }, // 180 deg
+                { x: p.y, y: -p.x },  // 270 deg
+            ];
+        }
+
+        function mapToQuotient(p) {
+            const r = Math.sqrt(p.x**2 + p.y**2);
+            let angle = Math.atan2(p.y, p.x);
+            // Map angle to the fundamental domain [0, PI/2]
+            angle = angle % (2*Math.PI);
+            if (angle < 0) angle += 2*Math.PI;
+            const quotientAngle = (angle % (Math.PI/2)) * 4; // Scale 90 deg to 360 deg
+            return { r, angle: quotientAngle };
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            drawPlaneCanvas();
+            drawConeCanvas();
+            requestAnimationFrame(draw);
+        }
+
+        function drawPlaneCanvas() {
+            pCtx.fillStyle = '#111';
+            pCtx.fillRect(0, 0, planeCanvas.width, planeCanvas.height);
+            pCtx.save();
+            pCtx.translate(planeCanvas.width/2, planeCanvas.height/2);
+
+            // Draw axes
+            pCtx.strokeStyle = 'var(--secondary-color)';
+            pCtx.lineWidth = 1;
+            pCtx.beginPath();
+            pCtx.moveTo(-planeCanvas.width/2, 0); pCtx.lineTo(planeCanvas.width/2, 0);
+            pCtx.moveTo(0, -planeCanvas.height/2); pCtx.lineTo(0, planeCanvas.height/2);
+            pCtx.stroke();
+
+            // Draw fundamental domain
+            pCtx.fillStyle = 'var(--domain-color)';
+            pCtx.beginPath();
+            pCtx.moveTo(0,0);
+            pCtx.lineTo(planeCanvas.width/2, 0);
+            pCtx.arc(0, 0, planeCanvas.width/2, 0, -Math.PI/2, true);
+            pCtx.closePath();
+            pCtx.fill();
+
+            // Draw orbit
+            const orbitPoints = getOrbit(state.selectedPoint);
+            const r = Math.sqrt(state.selectedPoint.x**2 + state.selectedPoint.y**2);
+
+            pCtx.strokeStyle = 'var(--orbit-color)';
+            pCtx.lineWidth = 2;
+            pCtx.beginPath();
+            pCtx.arc(0, 0, r, 0, 2*Math.PI);
+            pCtx.stroke();
+
+            orbitPoints.forEach((p, i) => {
+                pCtx.fillStyle = i === 0 ? 'var(--point-color)' : 'var(--orbit-color)';
+                pCtx.beginPath();
+                pCtx.arc(p.x, -p.y, 8, 0, 2*Math.PI);
+                pCtx.fill();
+            });
+
+            pCtx.restore();
+        }
+
+        function drawConeCanvas() {
+            cCtx.fillStyle = '#111';
+            cCtx.fillRect(0, 0, coneCanvas.width, coneCanvas.height);
+            cCtx.save();
+            cCtx.translate(coneCanvas.width/2, coneCanvas.height/2);
+
+            // Draw cone rings
+            cCtx.strokeStyle = 'var(--secondary-color)';
+            cCtx.lineWidth = 1;
+            for(let i=1; i<= 5; i++) {
+                cCtx.beginPath();
+                cCtx.arc(0, 0, i * 35, 0, 2*Math.PI);
+                cCtx.stroke();
+            }
+
+            // Draw point in quotient space
+            const quotientPoint = mapToQuotient(state.selectedPoint);
+            const x = quotientPoint.r * Math.cos(quotientPoint.angle);
+            const y = quotientPoint.r * Math.sin(quotientPoint.angle);
+
+            cCtx.fillStyle = 'var(--point-color)';
+            cCtx.beginPath();
+            cCtx.arc(x, -y, 8, 0, 2*Math.PI);
+            cCtx.fill();
+
+            cCtx.restore();
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>

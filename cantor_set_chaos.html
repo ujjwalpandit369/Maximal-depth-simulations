@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cantor Set in Phase Space</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #f5a623; /* An orange for chaos/fractals */
+            --secondary-color: #444;
+            --header-bg: #2a2a2a;
+            --control-bg: #252525;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --set-color: #e0e0e0;
+            --removed-color: #e74c3c;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; margin: 0; padding: 20px; }
+        main { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        header { text-align: center; border-bottom: 1px solid var(--secondary-color); padding-bottom: 1rem; }
+        h1, h2, h3, h4 { color: var(--primary-color); font-weight: 300; }
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 1px solid var(--secondary-color); padding-bottom: 0.5rem; margin-top: 1rem;}
+        section { background-color: var(--header-bg); padding: 1.5rem; border-radius: 8px; }
+
+        #simulation-container { display: flex; flex-wrap: wrap; gap: 1.5rem; background-color: transparent; padding: 0; }
+        #simulation-controls { flex: 1; min-width: 300px; background-color: var(--control-bg); padding: 1rem; border-radius: 8px; align-self: flex-start; }
+        #simulation-visuals { flex: 2; display: flex; flex-direction: column; gap: 1.5rem; min-width: 400px; }
+
+        canvas { width: 100%; height: auto; background-color: #111; border-radius: 4px; border: 1px solid var(--secondary-color);}
+
+        #readouts { text-align: left; background-color: #222; padding: 1rem; border-radius: 4px; }
+        #readouts p { margin: 0.5rem 0; font-size: 1.1rem; }
+        #readouts span { font-weight: bold; }
+
+        button { background-color: var(--primary-color); color: #fff; border: none; padding: 0.75rem 1rem; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #d88e1a; }
+
+        dl dt { font-weight: bold; color: var(--primary-color); margin-top: 1rem; }
+        dl dd { margin-left: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>The Cantor Set in Phase Space</h1>
+        <p>A simulation of a chaotic system that generates a Cantor set.</p>
+        <div id="metadata-bar">
+            <span>Est. runtime: N/A</span> | <span>Recommended device: Desktop</span> | <span>Approx. size: 20 KB</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>Welcome to the world of fractals! This simulation demonstrates the construction of the classic <strong>Cantor set</strong>, a bizarre and beautiful mathematical object. We start with a simple line segment and then recursively apply a single rule: remove the middle third of every segment. As you step through the iterations, you'll see a complex "dust" of points emerge. This object has profound and counter-intuitive properties: it contains an infinite number of points, yet its total length is zero. Sets like this are not just mathematical curiosities; they frequently appear in the study of <strong>chaotic systems</strong> as the attractors or invariant sets that govern the long-term behavior of the dynamics.</p>
+        </section>
+
+        <section id="beginners-guide">
+            <h2>Beginner's Guide to "Middle Thirds"</h2>
+
+            <h4>Step 1: The Rule</h4>
+            <p>The process for creating the Cantor set is surprisingly simple. You can describe it in two steps:</p>
+            <ol>
+                <li>Start with a line segment (from 0 to 1).</li>
+                <li>Remove the open middle third of every line segment you currently have.</li>
+            </ol>
+            <p>That's it. The magic comes from repeating Step 2 over and over again, forever.</p>
+
+            <h4>Step 2: The Iterations</h4>
+            <p>The simulation lets you step through this process. Each line on the canvas shows a new iteration:</p>
+            <ul>
+                <li><strong>Iteration 0:</strong> We start with the original, single line segment.</li>
+                <li><strong>Iteration 1:</strong> We remove the middle third, leaving two segments.</li>
+                <li><strong>Iteration 2:</strong> We remove the middle third of *each* of those two segments, leaving four smaller segments.</li>
+                <li><strong>Iteration 3:</strong> We remove the middle third of *each* of those four segments, leaving eight tiny segments.</li>
+            </ul>
+            <p>...and so on. Click the "Apply Next Iteration" button to see this happen.</p>
+
+            <h4>Step 3: The Bizarre Properties</h4>
+            <p>After an infinite number of iterations, the object that is left behind is the Cantor set. It has two very strange properties that you can see hints of in the simulation's readouts:</p>
+            <ul>
+                <li><strong>Zero Length:</strong> At each step, we remove 1/3 of the total length. The total length we remove is `1/3 + 2/9 + 4/27 + ...` which adds up to exactly 1. This means the final set has a total length of <strong>zero</strong>! Watch the "Total Length" readout get smaller and smaller.</li>
+                <li><strong>Infinite Points:</strong> Even though its length is zero, the set still contains an infinite number of points. All the endpoints of the segments (like 1/3, 2/3, 1/9, 2/9, etc.) are never removed. In fact, it contains as many points as the original line segment did.</li>
+            </ul>
+            <p>This combination of zero length and infinite points makes it a "fractal dust."</p>
+        </section>
+
+        <section id="simulation-container">
+            <div id="simulation-controls">
+                <h3>Controls</h3>
+                 <p>Click the button to apply the next step in the Cantor set construction.</p>
+                 <button id="next-btn">Apply Next Iteration</button>
+                 <button id="reset-btn">Reset</button>
+                 <div id="readouts">
+                    <p>Iteration: <span id="iter-readout">0</span></p>
+                    <p>Number of Segments: <span id="segments-readout">1</span></p>
+                    <p>Total Length: <span id="length-readout">1.000</span></p>
+                </div>
+            </div>
+            <div id="simulation-visuals">
+                <canvas id="main-canvas" width="600" height="400"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- STATE ---
+        const state = {
+            iterations: [],
+        };
+
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const nextBtn = document.getElementById('next-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const iterReadout = document.getElementById('iter-readout');
+        const segmentsReadout = document.getElementById('segments-readout');
+        const lengthReadout = document.getElementById('length-readout');
+
+        // --- INITIALIZATION ---
+        function setup() {
+            addEventListeners();
+            resetSimulation();
+            requestAnimationFrame(draw);
+        }
+
+        function addEventListeners() {
+            resetBtn.addEventListener('click', resetSimulation);
+            nextBtn.addEventListener('click', applyNextIteration);
+        }
+
+        function resetSimulation() {
+            state.iterations = [
+                [{ start: 0, end: 1 }] // Start with the segment [0, 1]
+            ];
+            updateReadouts();
+        }
+
+        function applyNextIteration() {
+            if (state.iterations.length > 10) return; // Limit iterations
+            const lastIteration = state.iterations[state.iterations.length - 1];
+            const newIteration = [];
+            lastIteration.forEach(segment => {
+                const length = segment.end - segment.start;
+                const one_third = length / 3;
+                newIteration.push({ start: segment.start, end: segment.start + one_third });
+                newIteration.push({ start: segment.end - one_third, end: segment.end });
+            });
+            state.iterations.push(newIteration);
+            updateReadouts();
+        }
+
+        function updateReadouts() {
+            const iterNum = state.iterations.length - 1;
+            const lastIter = state.iterations[iterNum];
+            iterReadout.textContent = iterNum;
+            segmentsReadout.textContent = lastIter.length;
+            const totalLength = (2/3)**iterNum;
+            lengthReadout.textContent = totalLength.toFixed(4);
+        }
+
+        // --- DRAWING ---
+        function draw() {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const padding = 50;
+            const drawingWidth = canvas.width - 2 * padding;
+            const V_SPACING = 30;
+            const LINE_HEIGHT = 15;
+
+            ctx.strokeStyle = 'var(--set-color)';
+            ctx.lineWidth = LINE_HEIGHT;
+
+            state.iterations.forEach((iteration, i) => {
+                const y = padding + i * V_SPACING;
+                iteration.forEach(segment => {
+                    const startX = padding + segment.start * drawingWidth;
+                    const endX = padding + segment.end * drawingWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, y);
+                    ctx.lineTo(endX, y);
+                    ctx.stroke();
+                });
+            });
+
+            requestAnimationFrame(draw);
+        }
+
+        // --- START ---
+        setup();
+    });
+    </script>
+</body>
+</html>
